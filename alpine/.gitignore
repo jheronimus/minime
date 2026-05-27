@@ -1,0 +1,17 @@
+.DS_Store
+.github/
+AGENTS.md
+docs/
+specs/
+aports/allium/dist/
+aports/minui/dist/
+aports/libretro-gw/pkg/
+aports/libretro-gw/src/core-build/output/
+aports/libretro-gw/src/core-build/src/gw/
+aports/ui/
+aports/raylib/
+out/
+upstream/
+aports/*/src/
+aports/*/pkg/
+aports/*/tmp/
