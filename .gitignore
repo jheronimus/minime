@@ -1,8 +1,5 @@
 .DS_Store
 .github/
-AGENTS.md
-docs/
-specs/
 aports/allium/dist/
 aports/minui/dist/
 aports/libretro-gw/pkg/
