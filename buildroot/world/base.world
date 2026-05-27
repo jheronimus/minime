@@ -5,8 +5,8 @@ bluez
 bluez-openrc
 dbus
 dbus-openrc
-iwd
-iwd-openrc
+wpa_supplicant
+wpa_supplicant-openrc
 iw
 linux-firmware-rtl_bt
 linux-firmware-rtw88

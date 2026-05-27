@@ -1,6 +1,6 @@
 pkgname=rg35xxsp
 pkgver=0.1.0
-pkgrel=10
+pkgrel=12
 pkgdesc="RG35xxSP board assets, overlays, and OpenRC wrappers for the SP image"
 arch="aarch64"
 url="https://github.com/sp-firmware/sp"

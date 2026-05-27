@@ -478,11 +478,18 @@ _build-image:
 			"$$root/etc/inittab"; \
 		install -D -m 0644 "$(LINUX_ROOT)/board/rg35xxsp/overlay/etc/hostname" \
 			"$$root/etc/hostname"; \
-		install -D -m 0644 "$(LINUX_ROOT)/board/rg35xxsp/overlay/etc/iwd/main.conf" \
-			"$$root/etc/iwd/main.conf"; \
+		install -D -m 0755 "$(LINUX_ROOT)/board/rg35xxsp/overlay/etc/init.d/wpa_supplicant" \
+			"$$root/etc/init.d/wpa_supplicant"; \
+		install -D -m 0644 "$(LINUX_ROOT)/board/rg35xxsp/overlay/etc/sysctl.d/00-alpine.conf" \
+			"$$root/etc/sysctl.d/00-alpine.conf"; \
+		install -D -m 0644 "$(LINUX_ROOT)/board/rg35xxsp/overlay/etc/mdev.conf" \
+			"$$root/etc/mdev.conf"; \
 		mkdir -p "$$root/mnt/sdcard"; \
 		sed -i 's/^root:[^:]*:/root::/' "$$root/etc/shadow"; \
 		ln -sf /tmp/resolv.conf "$$root/etc/resolv.conf"; \
+		mkdir -p "$$root/etc/wpa_supplicant"; \
+		ln -sf /var/run/wpa_supplicant.conf "$$root/etc/wpa_supplicant/wpa_supplicant.conf"; \
+		rm -f "$$root/etc/init.d/modules" "$$root/etc/init.d/hwdrivers"; \
 		if [ -f "$$root/lib/firmware/rtw88/rtw8821c_fw.bin.zst" ]; then \
 			zstd -d -f -c "$$root/lib/firmware/rtw88/rtw8821c_fw.bin.zst" > \
 				"$$root/lib/firmware/rtw88/rtw8821c_fw.bin"; \
@@ -517,17 +524,6 @@ _build-image:
 			exit 1; \
 		}; \
 	done; \
-	wifi_profile_name() { \
-		ssid="$$1"; \
-		case "$$ssid" in \
-			*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_\ -]*) \
-				printf =; \
-				printf '%s' "$$ssid" | od -An -tx1 | tr -d ' \n'; \
-				printf '%s\n' .psk; \
-				;; \
-			*) printf '%s.psk\n' "$$ssid" ;; \
-		esac; \
-	}; \
 	rm -rf '$(ARTIFACT_DIR)/sdcard-seed'; \
 	mkdir -p '$(ARTIFACT_DIR)/sdcard-seed/.sp/config/wifi'; \
 	cp -f '$(ROOT_DIR)/board/rg35xxsp/overlay/etc/wifi.config.template' \
@@ -547,14 +543,14 @@ _build-image:
 				>&2; \
 			exit 1; \
 		}; \
-		wifi_profile_dir='$(ARTIFACT_DIR)/sdcard-seed/.sp/config/wifi/iwd'; \
+		wifi_profile_dir='$(ARTIFACT_DIR)/sdcard-seed/.sp/config/wifi/wpa_supplicant'; \
 		mkdir -p "$$wifi_profile_dir"; \
-		wifi_profile_path="$$wifi_profile_dir/$$(wifi_profile_name "$$seed_wifi_ssid")"; \
+		wifi_profile_path="$$wifi_profile_dir/seed.conf"; \
 		{ \
-			printf '%s\n' '[Security]'; \
-			printf '%s\n' "Passphrase=$$seed_wifi_passphrase"; \
-			printf '\n%s\n' '[Settings]'; \
-			printf '%s\n' 'AutoConnect=true'; \
+			printf '%s\n' 'network={'; \
+			printf '\t%s\n' "ssid=\"$$seed_wifi_ssid\""; \
+			printf '\t%s\n' "psk=\"$$seed_wifi_passphrase\""; \
+			printf '%s\n' '}'; \
 		} > "$$wifi_profile_path"; \
 		chmod 600 "$$wifi_profile_path" 2>/dev/null || true; \
 		printf '%s\n' "$$seed_wifi_ssid" > \
@@ -590,7 +586,8 @@ _build-image:
 		if [ -f "$$stage/system-seed/bin/bbsuid" ]; then \
 			chmod 4111 "$$stage/system-seed/bin/bbsuid"; \
 		fi; \
-		mkfs.erofs -zlz4 "$$art/system.erofs" "$$stage/system-seed"; \
+		find "$$stage/system-seed" -exec touch -d @0 {} + 2>/dev/null || true; \
+		mkfs.erofs -T 0 -zlz4 "$$art/system.erofs" "$$stage/system-seed"; \
 		dd if=/dev/zero of="$$art/userdata.vfat" bs=1M count=100; \
 		mkdosfs -F 32 -n SDCARD "$$art/userdata.vfat"; \
 		seed_dir="$$art/sdcard-seed"; \
