@@ -1,10 +1,5 @@
 .DS_Store
 .github/
-aports/allium/dist/
-aports/minui/dist/
-aports/libretro-gw/pkg/
-aports/libretro-gw/src/core-build/output/
-aports/libretro-gw/src/core-build/src/gw/
 aports/ui/
 aports/raylib/
 out/
