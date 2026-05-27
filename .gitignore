@@ -3,7 +3,6 @@
 aports/ui/
 aports/raylib/
 out/
-upstream/
 aports/*/src/
 aports/*/pkg/
 aports/*/tmp/
