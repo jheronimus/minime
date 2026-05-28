@@ -44,7 +44,7 @@ generate_wpa_profile_from_config() {
   config_ssid=""
   config_pass=""
 
-  while IFS='=' read -r key val; do
+  while IFS='=' read -r key val || [ -n "$key" ]; do
     [ -n "$key" ] || continue
     # Clean carriage returns (CRLF handling)
     key=$(printf '%s' "$key" | tr -d '\r')

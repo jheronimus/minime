@@ -32,4 +32,10 @@ EOF
 # 4. Ensure proper symlink for DNS
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
+# 5. Create mount point for SD card
+mkdir -p "${TARGET_DIR}/mnt/sdcard"
+
+# 6. Remove default telnet init script to avoid conflict with custom S50telnetd
+rm -f "${TARGET_DIR}/etc/init.d/S50telnet"
+
 echo "Post-build stage completed successfully."
