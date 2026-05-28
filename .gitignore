@@ -1,9 +1,5 @@
 .DS_Store
 .github/
-aports/ui/
-aports/raylib/
 out/
-aports/*/src/
-aports/*/pkg/
-aports/*/tmp/
-aports/*/.ccache/
+buildroot/
+logs/
