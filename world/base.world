@@ -10,10 +10,8 @@ wpa_supplicant-openrc
 iw
 linux-firmware-rtl_bt
 linux-firmware-rtw88
-mesa-dri-gallium
-mesa-egl
-mesa-gbm
-mesa-gles
+kmod
+libmali
 wireless-regdb
 tzdata
 util-linux

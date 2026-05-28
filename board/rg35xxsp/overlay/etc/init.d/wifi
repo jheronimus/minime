@@ -194,6 +194,13 @@ start() {
   generate_wpa_profile_from_config
   seed_wpa_profiles
 
+  # If no network blocks were added, there is nothing to connect to.
+  # Exit gracefully so the service does not block ntpd or spam the console.
+  if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+    einfo "No Wi-Fi profiles configured; skipping connection"
+    return 0
+  fi
+
   if ! prepare_wifi_interface; then
     log_failure_diagnostics "missing-${wifi_interface}"
     return 1
