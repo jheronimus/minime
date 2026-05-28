@@ -3,7 +3,7 @@
 wifi_interface="wlan0"
 wifi_driver_module="rtw88_8821cs"
 target_ssid_file="/mnt/sdcard/.sp/config/wifi/target-ssid"
-wpa_supplicant_state_dir="/etc/wpa_supplicant"
+wpa_supplicant_state_dir="/tmp"
 wpa_supplicant_config_file="${wpa_supplicant_state_dir}/wpa_supplicant.conf"
 wifi_driver_wait_seconds=3
 wpa_cli_wait_seconds=20
