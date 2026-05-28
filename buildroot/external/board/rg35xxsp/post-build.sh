@@ -29,6 +29,14 @@ cat << 'EOF' > "${TARGET_DIR}/etc/modules-load.d/mali.conf"
 mali_kbase
 EOF
 
+# 3.5. Create modprobe options files to disable deep low-power saving states
+mkdir -p "${TARGET_DIR}/etc/modprobe.d"
+cat << 'EOF' > "${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
+options rtw88_core disable_lps_deep=y
+options rtw88_sdio disable_lps_deep=y
+EOF
+
+
 # 4. Ensure proper symlink for DNS
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
