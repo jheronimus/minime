@@ -1,0 +1,88 @@
+--- a/drivers/gpu/arm/midgard/platform/devicetree/mali_kbase_runtime_pm.c
++++ b/drivers/gpu/arm/midgard/platform/devicetree/mali_kbase_runtime_pm.c
+@@ -20,9 +20,47 @@
+ #include <linux/clk.h>
+ #include <linux/clk-provider.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/reset.h>
++#include <linux/of.h>
+ 
+ #include "mali_kbase_config_platform.h"
+ 
++static struct reset_control **gpu_resets;
++static int nr_gpu_resets;
++
++static int resets_init(struct kbase_device *kbdev)
++{
++	struct device_node *np;
++	int i;
++	int err = 0;
++
++	np = kbdev->dev->of_node;
++
++	nr_gpu_resets = of_count_phandle_with_args(np, "resets", "#reset-cells");
++	if (nr_gpu_resets <= 0) {
++		dev_info(kbdev->dev, "No resets found in dtb, skipping\n");
++		return 0;
++	}
++
++	gpu_resets = devm_kcalloc(kbdev->dev, (size_t)nr_gpu_resets, sizeof(*gpu_resets), GFP_KERNEL);
++	if (!gpu_resets)
++		return -ENOMEM;
++
++	for (i = 0; i < nr_gpu_resets; ++i) {
++		gpu_resets[i] = devm_reset_control_get_exclusive_by_index(kbdev->dev, i);
++		if (IS_ERR(gpu_resets[i])) {
++			err = PTR_ERR(gpu_resets[i]);
++			nr_gpu_resets = i;
++			break;
++		}
++	}
++
++	return err;
++}
++
+ /*
+  * When CONFIG_PM_CLK is active, the genpd framework calls
+  * pm_clk_suspend/pm_clk_resume which also manages device clocks.
+@@ -33,6 +71,7 @@
+  */
+ static void enable_gpu_power_control(struct kbase_device *kbdev)
+ {
++	int j;
+ 	unsigned int i;
+ 
+ #if defined(CONFIG_REGULATOR)
+@@ -42,6 +81,15 @@
+ 	}
+ #endif
+ 
++	if (!gpu_resets)
++		resets_init(kbdev);
++
++	for (j = 0; j < nr_gpu_resets; ++j) {
++		if (gpu_resets[j])
++			reset_control_deassert(gpu_resets[j]);
++	}
++
++	udelay(10);
++
+ 	for (i = 0; i < kbdev->nr_clocks; i++) {
+ 		if (kbdev->clocks[i])
+ 			clk_prepare_enable(kbdev->clocks[i]);
+@@ -50,6 +98,15 @@
+ 
+ static void disable_gpu_power_control(struct kbase_device *kbdev)
+ {
++	int j;
++
++	for (j = 0; j < nr_gpu_resets; ++j) {
++		if (gpu_resets[j])
++			reset_control_assert(gpu_resets[j]);
++	}
++
++	udelay(10);
++
+ 	unsigned int i;
+ 
+ 	for (i = 0; i < kbdev->nr_clocks; i++) {

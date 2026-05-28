@@ -6,3 +6,4 @@ out/
 aports/*/src/
 aports/*/pkg/
 aports/*/tmp/
+aports/*/.ccache/

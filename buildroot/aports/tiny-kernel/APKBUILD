@@ -1,12 +1,15 @@
 pkgname=tiny-kernel
-pkgver=6.18.13
-pkgrel=14
-pkgdesc="RG35xxSP kernel derived from Alpine linux-lts"
+pkgver=7.0.10
+pkgrel=1
+pkgdesc="RG35xxSP kernel derived from linux-stable"
 arch="aarch64"
 url="https://www.kernel.org"
 license="GPL-2.0-only"
-makedepends="bash bc bison dtc elfutils-dev flex linux-headers openssl-dev pahole perl python3"
-source="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$pkgver.tar.xz"
+makedepends="bash bc bison ccache dtc elfutils-dev flex linux-headers openssl-dev pahole perl python3"
+source="
+  https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-$pkgver.tar.xz
+  mali_kbase-39da994bb6fc8819e5e8c1873907dd21d17e53c1.tar.gz::https://github.com/rocknix/mali_kbase/archive/39da994bb6fc8819e5e8c1873907dd21d17e53c1.tar.gz
+"
 builddir="$srcdir/linux-$pkgver"
 options="!check"
 _board_root="$startdir/../../board/rg35xxsp"
@@ -17,10 +20,395 @@ _metadata_dir="/usr/lib/sp/artifacts/linux"
 
 prepare() {
   default_prepare
+
+  _mali_src="$srcdir/mali_kbase-39da994bb6fc8819e5e8c1873907dd21d17e53c1/product/kernel"
+
+  # Copy out-of-tree mali_kbase source to drivers/gpu/arm/midgard
+  mkdir -p "$builddir/drivers/gpu/arm"
+  rm -rf "$builddir/drivers/gpu/arm/midgard"
+  cp -a "$_mali_src/drivers/gpu/arm/midgard" \
+    "$builddir/drivers/gpu/arm/midgard"
+  find "$builddir/drivers/gpu/arm" -type f -exec touch {} +
+
+  # Patch mali_kbase IRQ lookup for kernel 6.18 compat
+  python3 -c '
+import sys
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+old = (
+    "\t\t/* We recommend using Upper case for the irq names in dts, but if\n"
+    "\t\t * there are devices in the world using Lower case then we should\n"
+    "\t\t * avoid breaking support for them. So try using names in Upper case\n"
+    "\t\t * first then try using Lower case names. If both attempts fail then\n"
+    "\t\t * we assume there is no IRQ resource specified for the GPU.\n"
+    "\t\t */\n"
+    "\t\tirq = platform_get_irq_byname(pdev, irq_names_caps[i]);\n"
+    "\t\tif (irq < 0) {\n"
+    "\t\t\tstatic const char *const irq_names[] = { \"job\", \"mmu\", \"gpu\" };\n"
+    "\n"
+    "\t\t\tirq = platform_get_irq_byname(pdev, irq_names[i]);\n"
+    "\t\t}\n"
+    "\n"
+    "\t\tif (irq < 0)"
+)
+new = (
+    "\t\tirq = platform_get_irq(pdev, i);\n"
+    "\n"
+    "\t\tif (irq < 0)"
+)
+if old not in text:
+    print("ERROR: patch target not found", file=sys.stderr)
+    sys.exit(1)
+text = text.replace(old, new)
+with open(path, "w") as f:
+    f.write(text)
+' "$builddir/drivers/gpu/arm/midgard/mali_kbase_core_linux.c"
+
+  # Patch mali_kbase devicetree runtime PM to enable clocks/regs after genpd
+  _rtpm="$builddir/drivers/gpu/arm/midgard/platform/devicetree/mali_kbase_runtime_pm.c"
+  if ! grep -q "linux/delay.h" "$_rtpm"; then
+    sed -i '/^#include <linux\/regulator\/consumer.h>/a #include <linux/delay.h>' "$_rtpm"
+  fi
+  python3 -c '
+import sys
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+old = (
+    "#ifdef KBASE_PM_RUNTIME\n"
+    "\terror = pm_runtime_get_sync(kbdev->dev);\n"
+    "\tif (error == 1) {\n"
+    "\t\t/*\n"
+    "\t\t * Let core know that the chip has not been\n"
+    "\t\t * powered off, so we can save on re-initialization.\n"
+    "\t\t */\n"
+    "\t\tret = 0;\n"
+    "\t}\n"
+    "\tdev_dbg(kbdev->dev, \"pm_runtime_get_sync returned %d\\n\", error);\n"
+    "#else\n"
+    "\tenable_gpu_power_control(kbdev);\n"
+    "#endif /* KBASE_PM_RUNTIME */\n\n"
+    "#endif /* MALI_USE_CSF */\n\n"
+    "\treturn ret;"
+)
+new = (
+    "#ifdef KBASE_PM_RUNTIME\n"
+    "\terror = pm_runtime_get_sync(kbdev->dev);\n"
+    "\tif (error == 1) {\n"
+    "\t\t/*\n"
+    "\t\t * Let core know that the chip has not been\n"
+    "\t\t * powered off, so we can save on re-initialization.\n"
+    "\t\t */\n"
+    "\t\tret = 0;\n"
+    "\t} else if (error < 0) {\n"
+    "\t\tret = error;\n"
+    "\t}\n"
+    "\tdev_dbg(kbdev->dev, \"pm_runtime_get_sync returned %d\\n\", error);\n"
+    "\tenable_gpu_power_control(kbdev);\n"
+    "\tusleep_range(1000, 2000);\n"
+    "#else\n"
+    "\tenable_gpu_power_control(kbdev);\n"
+    "#endif /* KBASE_PM_RUNTIME */\n\n"
+    "#endif /* MALI_USE_CSF */\n\n"
+    "\treturn ret;"
+)
+if old not in text:
+    print("ERROR: runtime_pm patch target not found", file=sys.stderr)
+    sys.exit(1)
+text = text.replace(old, new)
+with open(path, "w") as f:
+    f.write(text)
+' "$_rtpm"
+
+  # Patch mali_kbase devicetree runtime PM for reset handling
+  python3 -c '
+import sys
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+
+# Add reset/of includes after delay.h
+if "#include <linux/reset.h>" not in text:
+    text = text.replace(
+        "#include <linux/delay.h>\n\n#include \"mali_kbase_config_platform.h\"",
+        "#include <linux/delay.h>\n#include <linux/reset.h>\n#include <linux/of.h>\n\n#include \"mali_kbase_config_platform.h\""
+    )
+
+# Insert reset vars and init function before enable_gpu_power_control
+reset_block = """static struct reset_control **gpu_resets;
+static int nr_gpu_resets;
+
+static int resets_init(struct kbase_device *kbdev)
+{
+	struct device_node *np;
+	int i;
+	int err = 0;
+
+	np = kbdev->dev->of_node;
+
+	nr_gpu_resets = of_count_phandle_with_args(np, "resets", "#reset-cells");
+	if (nr_gpu_resets <= 0) {
+		dev_info(kbdev->dev, "No resets found in dtb, skipping\\n");
+		return 0;
+	}
+
+	gpu_resets = devm_kcalloc(kbdev->dev, (size_t)nr_gpu_resets, sizeof(*gpu_resets), GFP_KERNEL);
+	if (!gpu_resets)
+		return -ENOMEM;
+
+	for (i = 0; i < nr_gpu_resets; ++i) {
+		gpu_resets[i] = devm_reset_control_get_exclusive_by_index(kbdev->dev, i);
+		if (IS_ERR(gpu_resets[i])) {
+			err = PTR_ERR(gpu_resets[i]);
+			nr_gpu_resets = i;
+			break;
+		}
+	}
+
+	return err;
+}
+
+"""
+
+old_start = "static void enable_gpu_power_control(struct kbase_device *kbdev)"
+if old_start in text and "static struct reset_control **gpu_resets;" not in text:
+    text = text.replace(old_start, reset_block + old_start)
+
+# Modify enable_gpu_power_control to deassert resets before clocks
+old_enable = """static void enable_gpu_power_control(struct kbase_device *kbdev)
+{
+	unsigned int i;
+
+#if defined(CONFIG_REGULATOR)
+	for (i = 0; i < kbdev->nr_regulators; i++) {
+		if (kbdev->regulators[i])
+			regulator_enable(kbdev->regulators[i]);
+	}
+#endif
+
+	for (i = 0; i < kbdev->nr_clocks; i++) {
+		if (kbdev->clocks[i])
+			clk_prepare_enable(kbdev->clocks[i]);
+	}
+}"""
+
+new_enable = """static void enable_gpu_power_control(struct kbase_device *kbdev)
+{
+	unsigned int i;
+	int j;
+
+#if defined(CONFIG_REGULATOR)
+	for (i = 0; i < kbdev->nr_regulators; i++) {
+		if (kbdev->regulators[i])
+			regulator_enable(kbdev->regulators[i]);
+	}
+#endif
+
+	if (!gpu_resets)
+		resets_init(kbdev);
+
+	for (j = 0; j < nr_gpu_resets; ++j) {
+		if (gpu_resets[j])
+			reset_control_deassert(gpu_resets[j]);
+	}
+
+	udelay(10);
+
+	for (i = 0; i < kbdev->nr_clocks; i++) {
+		if (kbdev->clocks[i])
+			clk_prepare_enable(kbdev->clocks[i]);
+	}
+}"""
+
+if old_enable in text:
+    text = text.replace(old_enable, new_enable)
+else:
+    print("WARN: enable_gpu_power_control patch target not found", file=sys.stderr)
+
+# Modify disable_gpu_power_control to assert resets
+old_disable = """static void disable_gpu_power_control(struct kbase_device *kbdev)
+{
+	unsigned int i;
+
+	for (i = 0; i < kbdev->nr_clocks; i++) {
+		if (kbdev->clocks[i])
+			clk_disable_unprepare(kbdev->clocks[i]);
+	}
+
+#if defined(CONFIG_REGULATOR)
+	for (i = 0; i < kbdev->nr_regulators; i++) {
+		if (kbdev->regulators[i])
+			regulator_disable(kbdev->regulators[i]);
+	}
+#endif
+
+}"""
+
+new_disable = """static void disable_gpu_power_control(struct kbase_device *kbdev)
+{
+	unsigned int i;
+	int j;
+
+	for (j = 0; j < nr_gpu_resets; ++j) {
+		if (gpu_resets[j])
+			reset_control_assert(gpu_resets[j]);
+	}
+
+	udelay(10);
+
+	for (i = 0; i < kbdev->nr_clocks; i++) {
+		if (kbdev->clocks[i])
+			clk_disable_unprepare(kbdev->clocks[i]);
+	}
+
+#if defined(CONFIG_REGULATOR)
+	for (i = 0; i < kbdev->nr_regulators; i++) {
+		if (kbdev->regulators[i])
+			regulator_disable(kbdev->regulators[i]);
+	}
+#endif
+
+}"""
+
+if old_disable in text:
+    text = text.replace(old_disable, new_disable)
+else:
+    print("WARN: disable_gpu_power_control patch target not found", file=sys.stderr)
+
+with open(path, "w") as f:
+    f.write(text)
+' "$_rtpm"
+
+  mkdir -p "$builddir/include/uapi/gpu/arm"
+  rm -rf "$builddir/include/uapi/gpu/arm/midgard"
+  cp -a "$_mali_src/include/uapi/gpu/arm/midgard" \
+    "$builddir/include/uapi/gpu/arm/midgard"
+  for hdr in "$_mali_src/include/linux"/*.h; do
+    [ -f "$hdr" ] || continue
+    cp -f "$hdr" "$builddir/include/linux/"
+  done
+
+  # Append midgard to drivers/gpu/arm/Kconfig and Makefile
+  mkdir -p "$builddir/drivers/gpu/arm"
+  touch "$builddir/drivers/gpu/arm/Kconfig" "$builddir/drivers/gpu/arm/Makefile"
+
+  if ! grep -q "midgard" "$builddir/drivers/gpu/arm/Kconfig"; then
+    printf '\nsource "drivers/gpu/arm/midgard/Kconfig"\n' >> "$builddir/drivers/gpu/arm/Kconfig"
+  fi
+  if ! grep -q "midgard" "$builddir/drivers/gpu/arm/Makefile"; then
+    printf '\nobj-$(CONFIG_MALI_MIDGARD) += midgard/\n' >> "$builddir/drivers/gpu/arm/Makefile"
+  fi
+
+  # Wire drivers/gpu/arm into the top-level GPU build tree
+  if ! grep -q "drivers/gpu/arm/Kconfig" "$builddir/drivers/video/Kconfig"; then
+    printf '\nsource "drivers/gpu/arm/Kconfig"\n' >> "$builddir/drivers/video/Kconfig"
+  fi
+  if ! grep -q "CONFIG_MALI_MIDGARD" "$builddir/drivers/gpu/Makefile"; then
+    printf '\nobj-$(CONFIG_MALI_MIDGARD) += arm/\n' >> "$builddir/drivers/gpu/Makefile"
+  fi
+
+  # Copy custom DTS files to the kernel source tree
+  cp "$_board_root"/dts/*.dts "$builddir/arch/arm64/boot/dts/allwinner/"
+
+  # Apply robust python patches to the base DTS file to add GPU OPP and backlight
+  python3 -c '
+import sys
+path = "'"$builddir"'/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts"
+with open(path) as f:
+    text = f.read()
+
+# 1. Add operating-points-v2 to &gpu
+gpu_old = "&gpu {\n\tmali-supply = <&reg_dcdc2>;\n\tstatus = \"okay\";\n};"
+gpu_new = "&gpu {\n\tmali-supply = <&reg_dcdc2>;\n\toperating-points-v2 = <&gpu_opp_table>;\n\tstatus = \"okay\";\n};"
+if gpu_old in text:
+    text = text.replace(gpu_old, gpu_new)
+else:
+    print("WARNING: GPU node target not found for OPP table injection", file=sys.stderr)
+
+# 2. Update reg_dcdc2 voltages
+dcdc2_old = "regulator-min-microvolt = <940000>;\n\t\t\t\tregulator-max-microvolt = <940000>;"
+dcdc2_new = "regulator-min-microvolt = <900000>;\n\t\t\t\tregulator-max-microvolt = <960000>;"
+if dcdc2_old in text:
+    text = text.replace(dcdc2_old, dcdc2_new)
+else:
+    print("WARNING: dcdc2 regulator target not found", file=sys.stderr)
+
+# 3. Update &pio with lcd_backlight_pin
+pio_old = "&pio {\n\tvcc-pa-supply = <&reg_cldo3>;\n\tvcc-pc-supply = <&reg_cldo3>;\n\tvcc-pe-supply = <&reg_cldo3>;\n\tvcc-pf-supply = <&reg_cldo3>;\n\tvcc-pg-supply = <&reg_aldo4>;\n\tvcc-ph-supply = <&reg_cldo3>;\n\tvcc-pi-supply = <&reg_cldo3>;\n};"
+pio_new = "&pio {\n\tvcc-pa-supply = <&reg_cldo3>;\n\tvcc-pc-supply = <&reg_cldo3>;\n\tvcc-pe-supply = <&reg_cldo3>;\n\tvcc-pf-supply = <&reg_cldo3>;\n\tvcc-pg-supply = <&reg_aldo4>;\n\tvcc-ph-supply = <&reg_cldo3>;\n\tvcc-pi-supply = <&reg_cldo3>;\n\n\tlcd_backlight_pin: pwm0-pin {\n\t\tpins = \"PD28\";\n\t\tfunction = \"pwm0\";\n\t};\n};"
+if pio_old in text:
+    text = text.replace(pio_old, pio_new)
+else:
+    print("WARNING: pio node target not found for pinmux injection", file=sys.stderr)
+
+# 4. Append gpu_opp_table, backlight, and &pwm to the end of the file
+append_block = """
+/ {
+	gpu_opp_table: opp-table-1 {
+		compatible = "operating-points-v2";
+
+		opp-420000000 {
+			opp-hz = /bits/ 64 <420000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-456000000 {
+			opp-hz = /bits/ 64 <456000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-504000000 {
+			opp-hz = /bits/ 64 <504000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-552000000 {
+			opp-hz = /bits/ 64 <552000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-648000000 {
+			opp-hz = /bits/ 64 <648000000>;
+			opp-microvolt = <960000>;
+		};
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm 0 40000 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcd_backlight_pin>;
+	};
+};
+
+&pwm {
+	allwinner,pwm-paired-channel-clock-sources = "hosc", "hosc", "hosc";
+	allwinner,pwm-paired-channel-clock-prescales = <0>, <0>, <0>;
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmi_out {
+	hdmi_out_con: endpoint {
+		remote-endpoint = <&hdmi_con_in>;
+	};
+};
+"""
+text += append_block
+
+with open(path, "w") as f:
+    f.write(text)
+'
+
   for patch_file in "$_board_root"/patches/linux/*.patch; do
     [ -f "$patch_file" ] || continue
     patch -d "$builddir" -p1 < "$patch_file"
   done
+
   cp "$_board_root/linux.config" "$builddir/.config"
   sed -i \
     "s|^CONFIG_EXTRA_FIRMWARE_DIR=.*|CONFIG_EXTRA_FIRMWARE_DIR=\"$_board_root/firmware\"|" \
@@ -29,9 +417,20 @@ prepare() {
 
 build() {
   mkdir -p "$_artifact_dir"
-  make -C "$builddir" ARCH=arm64 olddefconfig
-  make -C "$builddir" ARCH=arm64 Image dtbs
-  make -C "$builddir" ARCH=arm64 -s kernelrelease > "$_kernel_release_file"
+  local _make_jobs
+  _make_jobs="$(nproc 2>/dev/null || echo 1)"
+  _make_jobs="$(( _make_jobs > 2 ? 2 : _make_jobs ))"
+
+  # Enable ccache for incremental kernel builds
+  export CCACHE_DIR="$startdir/.ccache"
+  export CCACHE_BASEDIR="$builddir"
+  export CCACHE_COMPILERCHECK=content
+  mkdir -p "$CCACHE_DIR"
+  export PATH="/usr/lib/ccache/bin:$PATH"
+
+  make -C "$builddir" ARCH=arm64 -j"$_make_jobs" olddefconfig
+  make -C "$builddir" ARCH=arm64 -j"$_make_jobs" Image dtbs
+  make -C "$builddir" ARCH=arm64 -j"$_make_jobs" -s kernelrelease > "$_kernel_release_file"
 }
 
 package() {
@@ -63,5 +462,6 @@ clean() {
 }
 
 sha512sums="
-361052a6d964dbe33b958d35c63a6695a0b2f9d06c21c924141f67060f2f44fd995a977129dc053ab74b3132fa3921a7e7ad8fa5d69113442b5ab9ba431a2967  linux-6.18.13.tar.xz
+6f04fa9ced78f2e7a41dfae7f707f540e7cc6dcd4d3847f0d28df58b2d18a8edb75f98c674ba935538897e89864a06681f4cd56b91f3ea3e1b7f04096cb796e7  linux-7.0.10.tar.xz
+9062e801b9f37c28c743b77e9d2c3e34ee3f2fedede5cc9c634d94470ea1f19af1a0d3d7228718a51dae3a1237e98e888eedbb3aee79f9d5959bfb17d11ccb23  mali_kbase-39da994bb6fc8819e5e8c1873907dd21d17e53c1.tar.gz
 "
