@@ -51,7 +51,8 @@ BOOTSTRAP_PACKAGES := \
 	erofs-utils \
 	patchelf \
 	file \
-	wget
+	wget \
+	libncurses-dev
 
 .PHONY: help vm shell buildroot defconfig image clean clean-vm FORCE
 
