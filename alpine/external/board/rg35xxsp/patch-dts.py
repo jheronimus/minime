@@ -122,6 +122,17 @@ def main():
         text += append_block
         print("Appended device tree extension nodes.")
         
+    # 5. Append MMC1 overrides for Wi-Fi stability (only if not already present)
+    if "max-frequency = <50000000>;" not in text:
+        append_mmc1 = """
+&mmc1 {
+	max-frequency = <50000000>;
+	/delete-property/ mmc-ddr-3_3v;
+};
+"""
+        text += append_mmc1
+        print("Appended mmc1 overrides for Wi-Fi stability.")
+        
     with open(path, "w") as f:
         f.write(text)
         
