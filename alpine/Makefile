@@ -25,6 +25,7 @@ IMAGE_PACKAGES := \
 	rg35xxsp \
 	u-boot \
 	tiny-kernel \
+	libmali \
 	sp
 
 BOOTSTRAP_PACKAGES := \
