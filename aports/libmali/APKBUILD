@@ -5,7 +5,7 @@ pkgdesc="Proprietary ARM Mali user-space driver wrappers"
 arch="aarch64"
 url="https://github.com/ROCKNIX/libmali"
 license="custom"
-depends="libdrm"
+depends="libdrm libstdc++ libgcc"
 makedepends="curl meson patchelf"
 options="!check !strip !tracedeps"
 
@@ -134,10 +134,14 @@ build() {
 		"$builddir"
 
 	meson compile -C "$builddir"
+	gcc -shared -fPIC -O2 -Wall -o "$builddir"/libmali_shim.so "$startdir"/libmali_shim.c -lpthread
 }
 
 package() {
 	DESTDIR="$pkgdir" meson install -C "$builddir"
+
+	# Install the shim library
+	install -D -m 0755 "$builddir"/libmali_shim.so "$pkgdir"/usr/lib/libmali_shim.so
 
 	# Drop headers — they conflict with distro glvnd/mesa headers
 	rm -rf "$pkgdir/usr/include"
@@ -156,6 +160,16 @@ package() {
 	if [ -f "$pkgdir"/usr/lib/libmali-hook.so.1 ]; then
 		patchelf --add-needed libmali.so.1 "$pkgdir"/usr/lib/libmali-hook.so.1
 	fi
+
+	# Inject shim dependency into libmali
+	for lib in "$pkgdir"/usr/lib/libmali*.so*; do
+		[ -f "$lib" ] || continue
+		[ -L "$lib" ] && continue
+		case "$(basename "$lib")" in
+			libmali-hook.so*|libmali_shim.so*) continue ;;
+		esac
+		patchelf --add-needed libmali_shim.so "$lib"
+	done
 
 	# Standard unversioned symlinks
 	cd "$pkgdir"/usr/lib
