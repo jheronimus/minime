@@ -1,0 +1,20 @@
+From a71efd382b6bebe500a45b64c224f72fd0fa8770 Mon Sep 17 00:00:00 2001
+From: Antigravity <antigravity@google.com>
+Date: Thu, 28 May 2026 14:35:00 +0300
+Subject: [PATCH] drm/sun4i: rgb: Support probe deferral for panels
+
+If drm_of_find_panel_or_bridge returns -EPROBE_DEFER, we must propagate the
+error so the display engine can defer probing until the panel is ready,
+rather than silently discarding the error and disabling RGB output permanently.
+
+--- a/drivers/gpu/drm/sun4i/sun4i_rgb.c
++++ b/drivers/gpu/drm/sun4i/sun4i_rgb.c
+@@ -201,6 +201,8 @@
+ 	ret = drm_of_find_panel_or_bridge(tcon->dev->of_node, 1, 0,
+ 					  &rgb->panel, &rgb->bridge);
+ 	if (ret) {
++		if (ret == -EPROBE_DEFER)
++			return -EPROBE_DEFER;
+ 		dev_info(drm->dev, "No panel or bridge found... RGB output disabled\n");
+ 		return 0;
+ 	}
