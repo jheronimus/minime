@@ -377,6 +377,8 @@ append_block = """
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm 0 40000 0>;
+		brightness-levels = <0 4 8 16 32 64 128 160 200 230 255>;
+		default-brightness-level = <8>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&lcd_backlight_pin>;
 	};
@@ -396,6 +398,18 @@ append_block = """
 	hdmi_out_con: endpoint {
 		remote-endpoint = <&hdmi_con_in>;
 	};
+};
+
+&de {
+	status = "okay";
+};
+
+&tcon_lcd0 {
+	status = "okay";
+};
+
+&tcon_lcd0_out_lcd {
+	remote-endpoint = <&panel_in_rgb>;
 };
 """
 text += append_block

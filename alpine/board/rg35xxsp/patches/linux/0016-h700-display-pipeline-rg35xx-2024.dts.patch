@@ -76,19 +76,3 @@
  	vcc-pe-supply = <&reg_cldo3>;
  	vcc-pf-supply = <&reg_cldo3>;
  	vcc-pg-supply = <&reg_aldo4>;
-@@ -427,3 +482,11 @@
- 	allwinner,pwm-paired-channel-clock-prescales = <0>, <0>, <0>;
- 	status = "okay";
- };
-+
-+&de {
-+	status = "okay";
-+};
-+
-+&tcon_lcd0 {
-+	status = "okay";
-+};
-+
-+&tcon_lcd0_out_lcd {
-+	remote-endpoint = <&panel_in_rgb>;
-+};

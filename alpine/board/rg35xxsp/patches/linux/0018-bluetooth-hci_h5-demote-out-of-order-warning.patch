@@ -1,0 +1,12 @@
+diff --git a/drivers/bluetooth/hci_h5.c b/drivers/bluetooth/hci_h5.c
+--- a/drivers/bluetooth/hci_h5.c
++++ b/drivers/bluetooth/hci_h5.c
+@@ -485,7 +485,7 @@
+ 	}
+ 
+ 	if (H5_HDR_RELIABLE(hdr) && H5_HDR_SEQ(hdr) != h5->tx_ack) {
+-		bt_dev_err(hu->hdev, "Out-of-order packet arrived (%u != %u)",
++		bt_dev_dbg(hu->hdev, "Out-of-order packet arrived (%u != %u)",
+ 			   H5_HDR_SEQ(hdr), h5->tx_ack);
+ 		set_bit(H5_TX_ACK_REQ, &h5->flags);
+ 		hci_uart_tx_wakeup(hu);
