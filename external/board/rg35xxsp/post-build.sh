@@ -29,12 +29,7 @@ cat << 'EOF' > "${TARGET_DIR}/etc/modules-load.d/mali.conf"
 mali_kbase
 EOF
 
-# 4. Clean up OpenRC-specific files in overlay if they were copied
-rm -rf "${TARGET_DIR}/etc/conf.d"
-rm -f "${TARGET_DIR}/etc/inittab" # We use standard Buildroot /etc/inittab
-rm -f "${TARGET_DIR}/etc/mdev.conf" # We use udev, not mdev
-
-# Ensure proper symlink for DNS
+# 4. Ensure proper symlink for DNS
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
 echo "Post-build stage completed successfully."
