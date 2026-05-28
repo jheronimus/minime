@@ -46,6 +46,9 @@ generate_wpa_profile_from_config() {
 
   while IFS='=' read -r key val; do
     [ -n "$key" ] || continue
+    # Clean carriage returns (CRLF handling)
+    key=$(printf '%s' "$key" | tr -d '\r')
+    val=$(printf '%s' "$val" | tr -d '\r')
     case "$key" in
       \#*) continue ;;
       SSID) config_ssid="$val" ;;
@@ -186,6 +189,10 @@ start() {
     return 1
   fi
 
+  # Start wpa_supplicant now that the interface is ready and configured!
+  mkdir -p /var/run/wpa_supplicant
+  start-stop-daemon -S -q -b -m -p "/var/run/wpa_supplicant.pid" -x /usr/sbin/wpa_supplicant -- -i"${wifi_interface}" -c"${wpa_supplicant_config_file}"
+
   if ! wait_for_wpa_supplicant_ready; then
     log_failure_diagnostics "wpa_supplicant-not-ready"
     return 1
@@ -218,6 +225,10 @@ stop() {
   if [ -f "${udhcpc_pidfile}" ]; then
     kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
     rm -f "${udhcpc_pidfile}"
+  fi
+  if [ -f "/var/run/wpa_supplicant.pid" ]; then
+    kill "$(cat "/var/run/wpa_supplicant.pid")" >/dev/null 2>&1 || true
+    rm -f "/var/run/wpa_supplicant.pid"
   fi
   ip link set "${wifi_interface}" down >/dev/null 2>&1 || true
   echo "OK"
