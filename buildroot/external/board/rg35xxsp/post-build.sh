@@ -38,4 +38,11 @@ mkdir -p "${TARGET_DIR}/mnt/sdcard"
 # 6. Remove default telnet init script to avoid conflict with custom S50telnetd
 rm -f "${TARGET_DIR}/etc/init.d/S50telnet"
 
+# 7. Remove any dropbear target files to ensure it is completely disabled/absent
+rm -rf "${TARGET_DIR}/etc/dropbear"
+rm -f "${TARGET_DIR}/etc/init.d/S50dropbear"
+rm -f "${TARGET_DIR}/usr/bin/dropbearconvert"
+rm -f "${TARGET_DIR}/usr/bin/dropbearkey"
+rm -f "${TARGET_DIR}/usr/sbin/dropbear"
+
 echo "Post-build stage completed successfully."
