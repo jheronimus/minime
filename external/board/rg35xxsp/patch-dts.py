@@ -14,6 +14,13 @@ def main():
         
     with open(path, "r") as f:
         text = f.read()
+
+    # 0. Patch aliases for MMC mapping
+    aliases_old = "\taliases {\n\t\tserial0 = &uart0;\n\t};"
+    aliases_new = "\taliases {\n\t\tserial0 = &uart0;\n\t\tmmc0 = &mmc0;\n\t\tmmc1 = &mmc1;\n\t};"
+    if aliases_old in text:
+        text = text.replace(aliases_old, aliases_new)
+        print("Patched aliases for MMC.")
         
     # 1. Patch GPU node
     gpu_old = "&gpu {\n\tmali-supply = <&reg_dcdc2>;\n\tstatus = \"okay\";\n};"
