@@ -1,0 +1,6 @@
+# Wi-Fi configuration for SP
+# Edit this file and set your network credentials.
+# The init script will generate the wpa_supplicant configuration automatically.
+
+SSID=Your network here
+Passphrase=Your passphrase here
