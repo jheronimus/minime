@@ -1,0 +1,2 @@
+source "$BR2_EXTERNAL_MINIME_PATH/package/libmali/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
