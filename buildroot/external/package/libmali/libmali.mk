@@ -4,13 +4,14 @@
 #
 ################################################################################
 
-LIBMALI_VERSION = 0fe30426b822699f0a660268a6040fdafce229d1
-LIBMALI_SITE = $(call github,ROCKNIX,libmali,$(LIBMALI_VERSION))
+LIBMALI_VERSION = 1.9.0
+LIBMALI_SITE = $(call github,jheronimus,libmali,$(LIBMALI_VERSION))
 LIBMALI_LICENSE = proprietary
-LIBMALI_LICENSE_FILES = LICENSE
+LIBMALI_LICENSE_FILES = END_USER_LICENCE_AGREEMENT.txt
 LIBMALI_INSTALL_STAGING = YES
 LIBMALI_PROVIDES = libegl libgles libgbm
 LIBMALI_DEPENDENCIES = libdrm host-patchelf
+
 
 LIBMALI_CONF_OPTS = \
 	-Darch=aarch64 \
