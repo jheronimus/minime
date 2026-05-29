@@ -33,7 +33,7 @@ fi
 
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
-FINAL_IMG="${BINARIES_DIR}/minime-rg35xxsp.img"
+FINAL_IMG="${BINARIES_DIR}/minime-h700.img"
 FINAL_IMG_GZ="${FINAL_IMG}.gz"
 
 trap "rm -rf \"${ROOTPATH_TMP}\"" EXIT
@@ -100,7 +100,7 @@ rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
 
 # Copy genimage config file to a temp location and make sure the filenames inside match
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
-sed -i 's/sp-rg35xxsp.img/minime-rg35xxsp.img/g' "${ROOTPATH_TMP}/genimage.cfg"
+sed -i 's/sp-h700.img/minime-h700.img/g' "${ROOTPATH_TMP}/genimage.cfg"
 
 genimage \
 	--rootpath "${ROOTPATH_TMP}" \
