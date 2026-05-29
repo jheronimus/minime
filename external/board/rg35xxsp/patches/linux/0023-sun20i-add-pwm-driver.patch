@@ -7,25 +7,15 @@ Subject: [PATCH 7/9] sun20i: add pwm driver
  arch/arm64/configs/defconfig |   1 +
  drivers/pwm/Kconfig          |  10 +
  drivers/pwm/Makefile         |   1 +
- drivers/pwm/pwm-sun20i.c     | 428 +++++++++++++++++++++++++++++++++++
- 4 files changed, 440 insertions(+)
+  drivers/pwm/pwm-sun20i.c     | 428 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 439 insertions(+)
  create mode 100644 drivers/pwm/pwm-sun20i.c
 
-diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
---- a/arch/arm64/configs/defconfig
-+++ b/arch/arm64/configs/defconfig
-@@ -1713,6 +1713,7 @@ CONFIG_PWM_SAMSUNG=y
- CONFIG_PWM_SL28CPLD=m
- CONFIG_PWM_STM32=m
- CONFIG_PWM_SUN4I=m
-+CONFIG_PWM_SUN20I=m
- CONFIG_PWM_TEGRA=m
- CONFIG_PWM_TIECAP=m
- CONFIG_PWM_TIEHRPWM=m
 diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index 0915c1e7d..a4a7eb286 100644
 --- a/drivers/pwm/Kconfig
 +++ b/drivers/pwm/Kconfig
-@@ -735,6 +735,16 @@ config PWM_SUN4I
+@@ -652,6 +652,16 @@ config PWM_SUN4I
  	  To compile this driver as a module, choose M here: the module
  	  will be called pwm-sun4i.
  
@@ -43,6 +33,7 @@ diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
  	tristate "Sunplus PWM support"
  	depends on ARCH_SUNPLUS || COMPILE_TEST
 diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index 9081e0c0e..85ad1fe0d 100644
 --- a/drivers/pwm/Makefile
 +++ b/drivers/pwm/Makefile
 @@ -66,6 +66,7 @@ obj-$(CONFIG_PWM_STM32)		+= pwm-stm32.o
@@ -490,4 +481,4 @@ index 000000000..7262a99ab
 +MODULE_LICENSE("GPL v2");
 -- 
 2.47.1
-
+ 
