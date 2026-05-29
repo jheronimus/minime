@@ -98,13 +98,15 @@ ln -sf busybox "${INITRD_STAGE}/bin/reboot"
 ln -sf busybox "${INITRD_STAGE}/sbin/switch_root"
 
 # Copy target shared libraries to support dynamic BusyBox linkage
-if [ -d "${SYSTEM_STAGE}/lib" ]; then
-	cp -a "${SYSTEM_STAGE}/lib/"* "${INITRD_STAGE}/lib/"
-fi
-if [ -d "${SYSTEM_STAGE}/lib64" ]; then
-	mkdir -p "${INITRD_STAGE}/lib64"
-	cp -a "${SYSTEM_STAGE}/lib64/"* "${INITRD_STAGE}/lib64/"
-fi
+# Copy ONLY the core runtime linker and standard C libraries to keep initrd extremely small
+for lib_pattern in "ld-*.so*" "libc.so*" "libc-*.so" "libm.so*" "libm-*.so" "libresolv.so*" "librt.so*" "libpthread.so*"; do
+	find "${SYSTEM_STAGE}/lib" -name "${lib_pattern}" -exec cp -d -a {} "${INITRD_STAGE}/lib/" \; 2>/dev/null || true
+	if [ -d "${SYSTEM_STAGE}/lib64" ]; then
+		mkdir -p "${INITRD_STAGE}/lib64"
+		find "${SYSTEM_STAGE}/lib64" -name "${lib_pattern}" -exec cp -d -a {} "${INITRD_STAGE}/lib64/" \; 2>/dev/null || true
+	fi
+done
+
 
 # Write the Custom init script
 cat << 'EOF' > "${INITRD_STAGE}/init"
