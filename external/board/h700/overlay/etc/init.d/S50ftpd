@@ -1,6 +1,5 @@
 #!/bin/sh
 
-DAEMON="tcpsvd"
 PIDFILE="/var/run/ftpd.pid"
 
 start() {
