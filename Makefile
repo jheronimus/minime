@@ -4,7 +4,7 @@ ROOT_DIR := $(CURDIR)
 LINUX_ROOT := /mnt/mac$(ROOT_DIR)
 
 ORB_MACHINE ?= builder
-ORB_DISTRO ?= debian
+ORB_DISTRO ?= debian:trixie
 ORB_ARCH ?= arm64
 ORB_USER ?= $(shell id -un 2>/dev/null || printf '%s\n' builder)
 
