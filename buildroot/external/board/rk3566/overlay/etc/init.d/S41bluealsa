@@ -6,7 +6,7 @@ PIDFILE="/var/run/$DAEMON.pid"
 BLUEALSA_ARGS="-p a2dp-sink -p a2dp-source"
 
 # On-demand check
-if [ "$1" = "start" ] && [ ! -f "/mnt/sdcard/.sp/config/bluetooth/enabled" ]; then
+if [ "$1" = "start" ] && [ ! -f "/mnt/sdcard/.system/config/bluetooth/enabled" ]; then
 	exit 0
 fi
 
