@@ -15,7 +15,6 @@ BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 
 PLATFORM_DIR := $(if $(filter Darwin,$(OS)),mac,linux)
 PREPARE_SCRIPT := ./scripts/$(PLATFORM_DIR)/prepare.sh
-RUN_SCRIPT := ./scripts/$(PLATFORM_DIR)/run.sh
 LINUX_ROOT := $(if $(filter Darwin,$(OS)),/mnt/mac$(ROOT_DIR),$(ROOT_DIR))
 BUILDROOT_OUTPUT_DIR := $(if $(filter Darwin,$(OS)),/home/$(ORB_USER)/buildroot-output,$(HOME)/buildroot-output)
 
@@ -24,6 +23,8 @@ MINIME_DEFCONFIG := minime_defconfig
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 LOG_DIR := $(CURDIR)/logs
 BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR)
+
+RUN_CMD = $(if $(filter Darwin,$(OS)),./scripts/mac/run.sh "make $(BUILDROOT_MAKE_ARGS) $(1)",$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1))
 
 export ORB_MACHINE ORB_USER LINUX_ROOT BUILDROOT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS
 
@@ -65,11 +66,11 @@ shell: prepare_vm
 
 defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	$(RUN_SCRIPT) "make $(BUILDROOT_MAKE_ARGS) $(MINIME_DEFCONFIG)" 2>&1 | tee "$$LOG_FILE"
+	$(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
 image: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	$(RUN_SCRIPT) "make $(BUILDROOT_MAKE_ARGS) -j$(TOPLEVEL_JLEVEL)" 2>&1 | tee "$$LOG_FILE"
+	$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
 
 copy_images:
@@ -88,9 +89,9 @@ Makefile: ;
 %: $(BUILDROOT_STAMP) prepare_vm FORCE
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/$@-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	if [[ "$@" == *menuconfig || "$@" == *nconfig || "$@" == *xconfig || "$@" == *gconfig ]]; then \
-		$(RUN_SCRIPT) "make $(BUILDROOT_MAKE_ARGS) $@"; \
+		$(call RUN_CMD,$@); \
 	else \
-		$(RUN_SCRIPT) "make $(BUILDROOT_MAKE_ARGS) $@" 2>&1 | tee "$$LOG_FILE"; \
+		$(call RUN_CMD,$@) 2>&1 | tee "$$LOG_FILE"; \
 	fi
 
 FORCE: ;
