@@ -15,25 +15,13 @@ BUILDROOT_STAMP := \
     $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 
 ifeq ($(OS),Darwin)
-    PREPARE_SCRIPT := ./scripts/mac/prepare.sh
-    PREPARE_VM_SCRIPT := ./scripts/mac/prepare_vm.sh
-    RUN_SCRIPT := ./scripts/mac/run.sh
-    SHELL_SCRIPT := ./scripts/mac/shell.sh
-    COPY_IMAGES_SCRIPT := ./scripts/mac/copy_images.sh
-    CLEAN_SCRIPT := ./scripts/mac/clean.sh
-    CLEAN_VM_SCRIPT := ./scripts/mac/clean-vm.sh
     LINUX_ROOT := /mnt/mac$(ROOT_DIR)
     BUILDROOT_OUTPUT_DIR := /home/$(ORB_USER)/buildroot-output
+    RUN_CMD = ./scripts/mac/run.sh "make $(BUILDROOT_MAKE_ARGS) $(1)"
 else
-    PREPARE_SCRIPT := ./scripts/linux/prepare.sh
-    PREPARE_VM_SCRIPT := true
-    RUN_SCRIPT := 
-    SHELL_SCRIPT := ./scripts/linux/shell.sh
-    COPY_IMAGES_SCRIPT := ./scripts/linux/copy_images.sh
-    CLEAN_SCRIPT := ./scripts/linux/clean.sh
-    CLEAN_VM_SCRIPT := ./scripts/linux/clean-vm.sh
     LINUX_ROOT := $(ROOT_DIR)
     BUILDROOT_OUTPUT_DIR := $(HOME)/buildroot-output
+    RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
 endif
 
 BR2_EXTERNAL := $(LINUX_ROOT)/external
@@ -50,12 +38,6 @@ LOG_DIR := $(CURDIR)/logs
 BUILDROOT_MAKE_ARGS := \
     BR2_EXTERNAL=$(BR2_EXTERNAL) \
     O=$(BUILDROOT_OUTPUT_DIR)
-
-ifeq ($(OS),Darwin)
-    RUN_CMD = $(RUN_SCRIPT) "make $(BUILDROOT_MAKE_ARGS) $(1)"
-else
-    RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
-endif
 
 export ORB_MACHINE \
        ORB_USER \
@@ -102,13 +84,25 @@ buildroot: $(BUILDROOT_STAMP)
 	@echo "Buildroot $(BUILDROOT_VERSION) is ready in $(BUILDROOT_DIR)"
 
 prepare_vm:
-	@$(PREPARE_VM_SCRIPT)
+ifeq ($(OS),Darwin)
+	@orb list --running --quiet 2>/dev/null | \
+		grep -qx '$(ORB_MACHINE)' || \
+		./scripts/mac/prepare.sh
+endif
 
 prepare:
-	@$(PREPARE_SCRIPT)
+ifeq ($(OS),Darwin)
+	@./scripts/mac/prepare.sh
+else
+	@./scripts/prepare-linux.sh
+endif
 
-shell:
-	@$(SHELL_SCRIPT)
+shell: prepare_vm
+ifeq ($(OS),Darwin)
+	@orb -m '$(ORB_MACHINE)' -u '$(ORB_USER)' -w '$(LINUX_ROOT)' sh
+else
+	@bash
+endif
 
 defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); \
@@ -124,13 +118,39 @@ image: $(BUILDROOT_STAMP) prepare_vm
 	@$(MAKE) copy_images
 
 copy_images:
-	@$(COPY_IMAGES_SCRIPT)
+	@mkdir -p $(CURDIR)/out
+	@echo "Copying built firmware images to out/..."
+ifeq ($(OS),Darwin)
+	@orb -m '$(ORB_MACHINE)' -u '$(ORB_USER)' sh -lc \
+		"mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && \
+		cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/ \
+		2>/dev/null || true"
+else
+	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
+	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/ 2>/dev/null || true
+endif
 
 clean:
-	@$(CLEAN_SCRIPT)
+	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/
+ifeq ($(OS),Darwin)
+	@command -v orb >/dev/null 2>&1 && \
+		orb list --running --quiet 2>/dev/null | \
+			grep -qx '$(ORB_MACHINE)' && \
+		orb -m '$(ORB_MACHINE)' -u '$(ORB_USER)' sh -c \
+			"rm -rf $(BUILDROOT_OUTPUT_DIR)" || true
+else
+	@rm -rf $(BUILDROOT_OUTPUT_DIR)
+endif
 
 clean-vm:
-	@$(CLEAN_VM_SCRIPT)
+ifeq ($(OS),Darwin)
+	@command -v orb >/dev/null 2>&1 && \
+		orb list --quiet 2>/dev/null | \
+			grep -qx '$(ORB_MACHINE)' && \
+		orb delete '$(ORB_MACHINE)' || true
+else
+	@echo "clean-vm is only applicable on macOS (Darwin)." >&2
+endif
 
 Makefile: ;
 
