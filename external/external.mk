@@ -7,11 +7,6 @@ define MINIME_COPY_DTS
 endef
 LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 
-define MINIME_PATCH_DTS
-	python3 $(BR2_EXTERNAL_MINIME_PATH)/board/rg35xxsp/patch-dts.py \
-		$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
-endef
-LINUX_POST_PATCH_HOOKS += MINIME_PATCH_DTS
 
 define MINIME_PATCH_LINUX_CONFIG
 	sed -i 's|__SIMON_BOARD_FIRMWARE_DIR__|$(BR2_EXTERNAL_MINIME_PATH)/board/rg35xxsp/firmware|g' $(LINUX_DIR)/.config
