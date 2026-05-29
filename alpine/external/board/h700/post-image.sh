@@ -31,12 +31,40 @@ if [ -z "$GENIMAGE_CFG" ]; then
 	exit 1
 fi
 
+BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
+SOC_NAME="$(basename "$BOARD_DIR")"
+
+case "$SOC_NAME" in
+	h700)
+		DEFAULT_DTB="sun50i-h700-anbernic-rg35xx-sp.dtb"
+		DTB_PATTERN="sun50i-h700-anbernic-*.dtb"
+		GENIMAGE_IMAGE_NAME="sp-h700.img"
+		;;
+	rk3326)
+		DEFAULT_DTB="rk3326-anbernic-rg351mp.dtb"
+		DTB_PATTERN="rk3326-anbernic-*.dtb"
+		GENIMAGE_IMAGE_NAME="sp-rk3326.img"
+		;;
+	rk3566)
+		DEFAULT_DTB="rk3566-anbernic-rg-arc-d.dtb"
+		DTB_PATTERN="rk356*-anbernic-*.dtb"
+		GENIMAGE_IMAGE_NAME="sp-rk3326.img"
+		;;
+	*)
+		echo "ERROR: Unknown SOC $SOC_NAME" >&2
+		exit 1
+		;;
+esac
+
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
-FINAL_IMG="${BINARIES_DIR}/minime-h700.img"
+FINAL_IMG="${BINARIES_DIR}/minime-${SOC_NAME}.img"
 FINAL_IMG_GZ="${FINAL_IMG}.gz"
 
-trap "rm -rf \"${ROOTPATH_TMP}\"" EXIT
+cleanup() {
+	rm -rf "${ROOTPATH_TMP}"
+}
+trap cleanup EXIT
 
 echo "Generating system.erofs..."
 SYSTEM_STAGE="${ROOTPATH_TMP}/system"
@@ -64,7 +92,7 @@ if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
 fi
 
 # Prepopulate fallback device.cfg
-echo "device=sun50i-h700-anbernic-rg35xx-sp.dtb" > "${USERDATA_STAGE}/.system/config/device.cfg"
+echo "device=${DEFAULT_DTB}" > "${USERDATA_STAGE}/.system/config/device.cfg"
 
 # Create the first boot expansion trigger file
 touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
@@ -77,7 +105,7 @@ cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
 # Copy all platform DTB files to .system/devices
-for dtb_file in "${BINARIES_DIR}"/sun50i-h700-anbernic-*.dtb; do
+for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
 		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/$(basename "${dtb_file}")"
 	fi
@@ -219,7 +247,7 @@ rm -rf "${GENIMAGE_TMP}"
 rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
 
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
-sed -i 's/sp-h700.img/minime-h700.img/g' "${ROOTPATH_TMP}/genimage.cfg"
+sed -i "s/${GENIMAGE_IMAGE_NAME}/minime-${SOC_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
 
 genimage \
 	--rootpath "${ROOTPATH_TMP}" \

@@ -1,11 +1,10 @@
 #!/bin/sh
 
-DAEMON="tcpsvd"
-PIDFILE="/var/run/ftpd.pid"
+PIDFILE="/var/run/telnetd.pid"
 
 start() {
-	printf "Starting ftpd: "
-	start-stop-daemon -S -q -b -m -p "$PIDFILE" -x /usr/bin/tcpsvd -- -vE 0.0.0.0 21 /usr/sbin/ftpd -w /mnt/sdcard
+	printf "Starting telnetd: "
+	start-stop-daemon -S -q -b -m -p "$PIDFILE" -x /usr/sbin/telnetd -- -F -l /usr/bin/autologin
 	status=$?
 	if [ $status -eq 0 ]; then
 		echo "OK"
@@ -16,7 +15,7 @@ start() {
 }
 
 stop() {
-	printf "Stopping ftpd: "
+	printf "Stopping telnetd: "
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ $status -eq 0 ]; then

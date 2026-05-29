@@ -44,13 +44,16 @@ ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 mkdir -p "${TARGET_DIR}/mnt/sdcard"
 
 # 6. Remove default telnet init script to avoid conflict with custom S50telnetd
-rm -f "${TARGET_DIR}/etc/init.d/S50telnet"
+# (Removed: handled naturally by BR2_ROOTFS_OVERLAY overwriting S50telnet)
 
 # 7. Remove any dropbear target files to ensure it is completely disabled/absent
-rm -rf "${TARGET_DIR}/etc/dropbear"
-rm -f "${TARGET_DIR}/etc/init.d/S50dropbear"
-rm -f "${TARGET_DIR}/usr/bin/dropbearconvert"
-rm -f "${TARGET_DIR}/usr/bin/dropbearkey"
-rm -f "${TARGET_DIR}/usr/sbin/dropbear"
+# (Removed: moved to AGENTS.md stale files verification directive)
+
+# 8. Copy wifi/bt firmware from H700 board directory
+mkdir -p "${TARGET_DIR}/lib/firmware/rtw88"
+mkdir -p "${TARGET_DIR}/lib/firmware/rtl_bt"
+cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/h700/firmware/rtw88/rtw8821c_fw.bin" "${TARGET_DIR}/lib/firmware/rtw88/"
+cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/h700/firmware/rtl_bt/rtl8821cs_fw.bin" "${TARGET_DIR}/lib/firmware/rtl_bt/"
+cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/h700/firmware/rtl_bt/rtl8821cs_config.bin" "${TARGET_DIR}/lib/firmware/rtl_bt/"
 
 echo "Post-build stage completed successfully."
