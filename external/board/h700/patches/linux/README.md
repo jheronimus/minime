@@ -10,8 +10,8 @@ The hardware and board support patches were imported from the **[ROCKNIX/distrib
 
 ## Patch Adaptations (Modified for `--fuzz=0`)
 Two patches from the original Rocknix collection had to be manually corrected to apply cleanly under Buildroot's strict `--fuzz=0` requirement:
-1. **[0034-rg35xx-2024-enable-usb-otg.patch](file:///Users/ilembitov/Projects/minime/external/board/rg35xxsp/patches/linux/0034-rg35xx-2024-enable-usb-otg.patch)** (Originally Rocknix `0152-rg35xx-2024-enable-usb-otg.patch`): Corrected empty context line space discrepancies.
-2. **[0035-enable-rgb-leds.patch](file:///Users/ilembitov/Projects/minime/external/board/rg35xxsp/patches/linux/0035-enable-rgb-leds.patch)** (Originally Rocknix `0153-enable-rgb-leds.patch`): Fixed malformed unified diff structure by restoring leading space characters on unchanged context lines.
+1. **[0034-rg35xx-2024-enable-usb-otg.patch](file:///Users/ilembitov/Projects/minime/external/board/h700/patches/linux/0034-rg35xx-2024-enable-usb-otg.patch)** (Originally Rocknix `0152-rg35xx-2024-enable-usb-otg.patch`): Corrected empty context line space discrepancies.
+2. **[0035-enable-rgb-leds.patch](file:///Users/ilembitov/Projects/minime/external/board/h700/patches/linux/0035-enable-rgb-leds.patch)** (Originally Rocknix `0153-enable-rgb-leds.patch`): Fixed malformed unified diff structure by restoring leading space characters on unchanged context lines.
 
 ## Omitted Patches
 The following patches from Rocknix's `H700` device package were omitted:

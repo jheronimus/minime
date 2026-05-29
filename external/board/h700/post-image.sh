@@ -54,6 +54,17 @@ for boot_file in Image sun50i-h700-anbernic-rg35xx-sp.dtb boot.scr; do
 	cp -f "${BINARIES_DIR}/${boot_file}" "${SYSTEM_STAGE}/"
 done
 
+# Copy all other compiled H700 device tree binary files
+copied_dtb_count=0
+for dtb_file in "${BINARIES_DIR}"/sun50i-h700-anbernic-*.dtb; do
+	if [ -f "${dtb_file}" ] && [ "$(basename "${dtb_file}")" != "sun50i-h700-anbernic-rg35xx-sp.dtb" ]; then
+		cp -f "${dtb_file}" "${SYSTEM_STAGE}/"
+		copied_dtb_count=$((copied_dtb_count + 1))
+	fi
+done
+
+echo "Successfully copied core assets and ${copied_dtb_count} additional H700 device tree binaries."
+
 # Set file timestamps to epoch 0 for reproducible build
 find "${SYSTEM_STAGE}" -exec touch -d @0 {} + 2>/dev/null || true
 
