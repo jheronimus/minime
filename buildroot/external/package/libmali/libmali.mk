@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBMALI_VERSION = 1.9.0
+LIBMALI_VERSION = h700
 LIBMALI_SITE = $(call github,jheronimus,libmali,$(LIBMALI_VERSION))
 LIBMALI_LICENSE = proprietary
 LIBMALI_LICENSE_FILES = END_USER_LICENCE_AGREEMENT.txt
