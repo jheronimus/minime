@@ -28,9 +28,7 @@ index e2039fd76b3d..a35bd6d5f17c 100644
  	reg_lcd: regulator-gpio-lcd-vdd {
  		compatible = "regulator-fixed";
  		regulator-min-microvolt = <3300000>;
-@@ -516,10 +526,13 @@
- 
- /* the AXP717 has USB type-C role switch functionality, not yet described by the binding */
+@@ -516,8 +527,11 @@
  &usbotg {
 -	dr_mode = "peripheral";   /* USB type-C receptable */
 +	dr_mode = "otg";   /* USB type-C receptable */

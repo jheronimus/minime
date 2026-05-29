@@ -7,13 +7,9 @@ Subject: [PATCH] enable uart5
  .../allwinner/sun50i-h700-anbernic-rg35xx-2024.dts |  9 ++++++++-
  1 file changed, 8 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
-index 7d89c5a19..6988f3ce4 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
-@@ -21,8 +21,9 @@
- 	aliases {
- 		mmc0 = &mmc0;
+@@ -22,6 +22,7 @@
  		mmc1 = &mmc2;
  		mmc2 = &mmc1;
  		serial0 = &uart0;
@@ -21,9 +17,7 @@ index 7d89c5a19..6988f3ce4 100644
  	};
  
  	backlight: backlight {
-@@ -535,6 +535,12 @@
- &pio {
- 	lcd_backlight_pin: pwm0-pin {
+@@ -549,6 +550,12 @@
  		pins = "PD28";
  		function = "pwm0";
  	};
@@ -34,3 +28,5 @@ index 7d89c5a19..6988f3ce4 100644
 +		function = "uart5";
 +	};
  };
+ 
+ &pwm {
