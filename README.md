@@ -1,6 +1,6 @@
 # Minime — a minimal custom firmware
 
-The goal is to provide a very basic firmware that builds fast and is easy to understand and modify. Minime can be used as base for porting firmware overlays (such as OnionUI, Allium, MinUI, or NextUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
+The goal is to provide a very basic firmware that builds fast and is easy to understand and modify. Minime can be used as base for porting firmware overlays (such as OnionUI or MinUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
 
 This is a barebones custom firmware base, built on Buildroot:
 
