@@ -45,26 +45,6 @@ mkdir -p "${SYSTEM_STAGE}"
 # Extract Buildroot's rootfs.tar to SYSTEM_STAGE
 tar -xf "${BINARIES_DIR}/rootfs.tar" -C "${SYSTEM_STAGE}"
 
-# Copy kernel boot assets directly to root of SYSTEM_STAGE
-for boot_file in Image rk3566-anbernic-rg353v.dtb boot.scr; do
-	if [ ! -f "${BINARIES_DIR}/${boot_file}" ]; then
-		echo "ERROR: missing boot image file: ${BINARIES_DIR}/${boot_file}" >&2
-		exit 1
-	fi
-	cp -f "${BINARIES_DIR}/${boot_file}" "${SYSTEM_STAGE}/"
-done
-
-# Copy all other compiled RK3566/RK3568 device tree binary files
-copied_dtb_count=0
-for dtb_file in "${BINARIES_DIR}"/rk356*-anbernic-*.dtb; do
-	if [ -f "${dtb_file}" ] && [ "$(basename "${dtb_file}")" != "rk3566-anbernic-rg353v.dtb" ]; then
-		cp -f "${dtb_file}" "${SYSTEM_STAGE}/"
-		copied_dtb_count=$((copied_dtb_count + 1))
-	fi
-done
-
-echo "Successfully copied core assets and ${copied_dtb_count} additional RK3566/RK3568 device tree binaries."
-
 # Set file timestamps to epoch 0 for reproducible build
 find "${SYSTEM_STAGE}" -exec touch -d @0 {} + 2>/dev/null || true
 
@@ -72,33 +52,162 @@ find "${SYSTEM_STAGE}" -exec touch -d @0 {} + 2>/dev/null || true
 rm -f "${BINARIES_DIR}/system.erofs"
 mkfs.erofs -T 0 -zlz4 "${BINARIES_DIR}/system.erofs" "${SYSTEM_STAGE}"
 
-echo "Generating userdata.vfat..."
+# Stage the FAT32 boot partition files
+echo "Preparing single FAT32 partition filesystem staging..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
-mkdir -p "${USERDATA_STAGE}/.system/config/wifi"
+mkdir -p "${USERDATA_STAGE}/.system/config"
+mkdir -p "${USERDATA_STAGE}/.system/devices"
 
-# Prepopulate wifi template config
+# Prepopulate simplified wifi.cfg from template
 if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
-	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi/wifi.config"
+	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi.cfg"
 fi
 
-# Create a 100MB FAT32 filesystem for userdata
+# Prepopulate fallback device.cfg
+echo "device=rk3566-anbernic-rg-arc-d.dtb" > "${USERDATA_STAGE}/.system/config/device.cfg"
+
+# Create the first boot expansion trigger file
+touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
+
+# Copy main erofs system image
+cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.system/system.erofs"
+
+# Copy kernel and U-Boot script directly to partition root
+cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/Image"
+cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
+
+# Copy all platform DTB files to .system/devices
+for dtb_file in "${BINARIES_DIR}"/rk356*-anbernic-*.dtb; do
+	if [ -f "${dtb_file}" ]; then
+		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/$(basename "${dtb_file}")"
+	fi
+done
+
+# Assemble custom boot-stage initrd
+echo "Assembling custom boot-stage loop-mount initrd..."
+INITRD_STAGE="${ROOTPATH_TMP}/initrd"
+mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" "${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+
+# Copy BusyBox binary from target rootfs and create links
+cp -f "${SYSTEM_STAGE}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
+ln -sf busybox "${INITRD_STAGE}/bin/sh"
+ln -sf busybox "${INITRD_STAGE}/bin/mount"
+ln -sf busybox "${INITRD_STAGE}/bin/umount"
+ln -sf busybox "${INITRD_STAGE}/bin/sleep"
+ln -sf busybox "${INITRD_STAGE}/bin/reboot"
+ln -sf busybox "${INITRD_STAGE}/sbin/switch_root"
+
+# Copy target shared libraries to support dynamic BusyBox linkage
+if [ -d "${SYSTEM_STAGE}/lib" ]; then
+	cp -a "${SYSTEM_STAGE}/lib/"* "${INITRD_STAGE}/lib/"
+fi
+if [ -d "${SYSTEM_STAGE}/lib64" ]; then
+	mkdir -p "${INITRD_STAGE}/lib64"
+	cp -a "${SYSTEM_STAGE}/lib64/"* "${INITRD_STAGE}/lib64/"
+fi
+
+# Write the Custom init script
+cat << 'EOF' > "${INITRD_STAGE}/init"
+#!/bin/sh
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+
+echo "Minime Boot Stage 1: Initializing SD Card..."
+
+# Wait for SD card block device
+for i in 1 2 3 4 5; do
+	[ -b /dev/mmcblk0p1 ] && break
+	sleep 1
+done
+
+if [ ! -b /dev/mmcblk0p1 ]; then
+	echo "ERROR: SD card partition /dev/mmcblk0p1 not found!"
+	exec sh
+fi
+
+echo "Minime Boot Stage 1: Mounting SD Card (MINIME)..."
+mkdir -p /mnt/card
+if ! mount -t vfat /dev/mmcblk0p1 /mnt/card; then
+	echo "ERROR: Failed to mount SD card!"
+	exec sh
+fi
+
+# FIRST BOOT EXPANSION CHECK
+if [ -f /mnt/card/.system/config/first_boot_expand ]; then
+	echo "--------------------------------------------------------"
+	echo "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
+	echo "--------------------------------------------------------"
+	# Mount card read-write
+	mount -o remount,rw /mnt/card
+	
+	echo "Backing up boot assets to RAM..."
+	mkdir -p /tmp/backup
+	cp -a /mnt/card/.system /tmp/backup/
+	cp -f /mnt/card/Image /tmp/backup/
+	cp -f /mnt/card/boot.scr /tmp/backup/
+	
+	echo "Unmounting card..."
+	umount /mnt/card
+	
+	echo "Re-writing partition table to full disk size..."
+	# Re-create partition 1 to span the full size
+	printf "d\nn\np\n1\n8192\n\nt\nc\na\nw\n" | fdisk /dev/mmcblk0
+	sleep 1
+	
+	echo "Formatting expanded FAT32 partition..."
+	mkfs.vfat -F 32 -n MINIME /dev/mmcblk0p1
+	
+	echo "Restoring boot assets from RAM..."
+	mount -t vfat /dev/mmcblk0p1 /mnt/card
+	cp -a /tmp/backup/.system /mnt/card/
+	cp -f /tmp/backup/Image /mnt/card/
+	cp -f /tmp/backup/boot.scr /mnt/card/
+	
+	# Delete first_boot_expand in restored filesystem to prevent loop expansion
+	rm -f /mnt/card/.system/config/first_boot_expand
+	
+	echo "SD Card expansion complete! Rebooting..."
+	umount /mnt/card
+	reboot -f
+fi
+
+echo "Minime Boot Stage 1: Loop-mounting rootfs..."
+mkdir -p /mnt/system
+if ! mount -t erofs -o loop /mnt/card/.system/system.erofs /mnt/system; then
+	echo "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
+	exec sh
+fi
+
+# Clean up virtual mounts
+umount /proc
+umount /sys
+
+echo "Minime Boot Stage 1: Transitioning to Stage 2..."
+exec switch_root /mnt/system /sbin/init
+EOF
+chmod +x "${INITRD_STAGE}/init"
+
+# Compile initrd.img
+(cd "${INITRD_STAGE}" && find . | cpio -H newc -o | gzip -9 > "${BINARIES_DIR}/initrd.img")
+
+# Copy initrd.img to USERDATA_STAGE
+cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
+
+echo "Generating userdata.vfat (Ultra-minimal 50MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=100
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=50
 mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 
-# Use mtools to populate VFAT userdata seed folders to avoid mounting (which requires sudo)
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system || true
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system/config || true
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system/config/wifi || true
-if [ -f "${USERDATA_STAGE}/.system/config/wifi/wifi.config" ]; then
-	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/.system/config/wifi/wifi.config" ::.system/config/wifi/wifi.config || true
-fi
+# Populate userdata.vfat recursively using mtools
+MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/Image" ::Image
+MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
+MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
 
 echo "Running genimage..."
 rm -rf "${GENIMAGE_TMP}"
 rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
 
-# Copy genimage config file to a temp location and make sure the filenames inside match
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
 sed -i 's/sp-rk3566.img/minime-rk3566.img/g' "${ROOTPATH_TMP}/genimage.cfg"
 
