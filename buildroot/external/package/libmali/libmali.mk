@@ -15,7 +15,7 @@ LIBMALI_DEPENDENCIES = libdrm host-patchelf
 
 LIBMALI_CONF_OPTS = \
 	-Darch=aarch64 \
-	-Dgpu=bifrost-g31 \
+	-Dgpu=$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU)) \
 	-Dversion=g24p0 \
 	-Dplatform=gbm \
 	-Dopencl-icd=false \
