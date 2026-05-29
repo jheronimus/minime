@@ -1,6 +1,8 @@
-# Minime — a minimal custom firmware
+# Minime — a minimal custom firmware for retro gaming handhelds
 
 The goal is to provide a very basic firmware that builds fast and is easy to understand and modify. Minime can be used as base for porting firmware overlays (such as OnionUI or MinUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
+
+Currently only Anbernic RG35xxSP v1 is tested
 
 This is a barebones custom firmware base, built on Buildroot:
 
