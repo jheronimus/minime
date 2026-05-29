@@ -73,7 +73,7 @@ touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
 cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.system/system.erofs"
 
 # Copy kernel and U-Boot script directly to partition root
-cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/Image"
+cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
 # Copy all platform DTB files to .system/devices
@@ -86,31 +86,36 @@ done
 # Assemble custom boot-stage initrd
 echo "Assembling custom boot-stage loop-mount initrd..."
 INITRD_STAGE="${ROOTPATH_TMP}/initrd"
-mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" "${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
+        "${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
+        "${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
 
 # Copy BusyBox binary from target rootfs and create links
 cp -f "${SYSTEM_STAGE}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
+# Shell & basic utilities
 ln -sf busybox "${INITRD_STAGE}/bin/sh"
 ln -sf busybox "${INITRD_STAGE}/bin/mount"
 ln -sf busybox "${INITRD_STAGE}/bin/umount"
 ln -sf busybox "${INITRD_STAGE}/bin/sleep"
 ln -sf busybox "${INITRD_STAGE}/bin/reboot"
-ln -sf busybox "${INITRD_STAGE}/sbin/switch_root"
+ln -sf busybox "${INITRD_STAGE}/bin/cp"
+ln -sf busybox "${INITRD_STAGE}/bin/mkdir"
+ln -sf busybox "${INITRD_STAGE}/bin/rm"
+ln -sf busybox "${INITRD_STAGE}/bin/cat"
+ln -sf busybox "${INITRD_STAGE}/bin/echo"
+# Disk tools (in sbin)
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/fdisk"
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkfs.vfat"
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkdosfs"
 
-# Copy target shared libraries to support dynamic BusyBox linkage
-# Copy ONLY the core runtime linker and standard C libraries to keep initrd extremely small
-for lib_pattern in "ld-*.so*" "libc.so*" "libc-*.so" "libm.so*" "libm-*.so" "libresolv.so*" "librt.so*" "libpthread.so*"; do
-	find "${SYSTEM_STAGE}/lib" -name "${lib_pattern}" -exec cp -d -a {} "${INITRD_STAGE}/lib/" \; 2>/dev/null || true
-	if [ -d "${SYSTEM_STAGE}/lib64" ]; then
-		mkdir -p "${INITRD_STAGE}/lib64"
-		find "${SYSTEM_STAGE}/lib64" -name "${lib_pattern}" -exec cp -d -a {} "${INITRD_STAGE}/lib64/" \; 2>/dev/null || true
-	fi
-done
+# BusyBox is statically linked — no shared libraries needed in the initrd.
 
 
 # Write the Custom init script
 cat << 'EOF' > "${INITRD_STAGE}/init"
 #!/bin/sh
+export PATH=/bin:/sbin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
@@ -146,7 +151,7 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	echo "Backing up boot assets to RAM..."
 	mkdir -p /tmp/backup
 	cp -a /mnt/card/.system /tmp/backup/
-	cp -f /mnt/card/Image /tmp/backup/
+	cp -f /mnt/card/tinykernel /tmp/backup/
 	cp -f /mnt/card/boot.scr /tmp/backup/
 	
 	echo "Unmounting card..."
@@ -163,7 +168,7 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	echo "Restoring boot assets from RAM..."
 	mount -t vfat /dev/mmcblk0p1 /mnt/card
 	cp -a /tmp/backup/.system /mnt/card/
-	cp -f /tmp/backup/Image /mnt/card/
+	cp -f /tmp/backup/tinykernel /mnt/card/
 	cp -f /tmp/backup/boot.scr /mnt/card/
 	
 	# Delete first_boot_expand in restored filesystem to prevent loop expansion
@@ -176,14 +181,16 @@ fi
 
 echo "Minime Boot Stage 1: Loop-mounting rootfs..."
 mkdir -p /mnt/system
-if ! mount -t erofs -o loop /mnt/card/.system/system.erofs /mnt/system; then
+if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
 	echo "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
 	exec sh
 fi
 
-# Clean up virtual mounts
-umount /proc
-umount /sys
+# Move virtual mounts and SD card mount to the new rootfs
+mount -o move /sys /mnt/system/sys
+mount -o move /proc /mnt/system/proc
+mount -o move /dev /mnt/system/dev
+mount -o move /mnt/card /mnt/system/mnt/sdcard
 
 echo "Minime Boot Stage 1: Transitioning to Stage 2..."
 exec switch_root /mnt/system /sbin/init
@@ -196,13 +203,14 @@ chmod +x "${INITRD_STAGE}/init"
 # Copy initrd.img to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
 
-echo "Generating userdata.vfat (Ultra-minimal 50MB partition)..."
+echo "Generating userdata.vfat (Ultra-minimal 80MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=50
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=80
 mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 
+
 # Populate userdata.vfat recursively using mtools
-MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/Image" ::Image
+MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/tinykernel" ::tinykernel
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
 

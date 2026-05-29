@@ -1,6 +1,8 @@
-# Minime (H700 Custom Linux/Buildroot)
+# Minime (Custom Linux/Buildroot firmware)
 
-Minimal Buildroot-based custom firmware for Anbernic RG35xxSP and other H700-based handhelds. Uses mainline kernel, libmali drivers. Autoconnects to Wi-Fi using wpa_supplicant and user-provided credentials, enables passwordless telnet and ftp via busybox.
+Minimal Buildroot-based custom firmware for Anbernic handhelds based on RK3326, H700 and RK3566 SoCs. Currently only tested on Anbernic RG35xxSP v1.
+
+Uses mainline kernel, libmali drivers. Autoconnects to Wi-Fi using wpa_supplicant and user-provided credentials, enables passwordless telnet and ftp via busybox.
 
 - `Makefile`: VM setup (OrbStack), configs, builds.
 - `external/`: Custom Buildroot tree (`BR2_EXTERNAL`).
