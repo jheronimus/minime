@@ -1,0 +1,16 @@
+config BR2_PACKAGE_MINUI
+	bool "minui"
+	help
+	  MinUI firmware overlay for minime.
+
+	  https://github.com/shauninman/MinUI
+
+if BR2_PACKAGE_MINUI
+
+config BR2_PACKAGE_MINUI_EXTRAS
+	bool "Include MinUI Extras"
+	default y
+	help
+	  Build and stage additional emulators and tools from MinUI Extras.
+
+endif

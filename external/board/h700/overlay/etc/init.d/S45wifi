@@ -38,11 +38,21 @@ seed_wpa_profiles() {
   done
 }
 
-generate_wpa_profile_from_config() {
+generate_wpa_profiles_from_config() {
   [ -f "${wifi_config_file}" ] || return 0
 
   config_ssid=""
   config_pass=""
+
+  write_wpa_block() {
+    {
+      printf '%s\n' 'network={'
+      printf '\t%s\n' "ssid=\"$1\""
+      printf '\t%s\n' "psk=\"$2\""
+      printf '%s\n' '}'
+      printf '%s\n' ''
+    } >> "${wpa_supplicant_config_file}"
+  }
 
   while IFS='=' read -r key val || [ -n "$key" ]; do
     [ -n "$key" ] || continue
@@ -51,22 +61,24 @@ generate_wpa_profile_from_config() {
     val=$(printf '%s' "$val" | tr -d '\r')
     case "$key" in
       \#*) continue ;;
-      SSID) config_ssid="$val" ;;
-      Passphrase) config_pass="$val" ;;
+      SSID)
+        if [ -n "$config_ssid" ] && [ -n "$config_pass" ]; then
+          write_wpa_block "$config_ssid" "$config_pass"
+          config_pass=""
+        fi
+        config_ssid="$val"
+        ;;
+      Passphrase)
+        config_pass="$val"
+        ;;
     esac
   done < "${wifi_config_file}"
 
-  [ -n "$config_ssid" ] || return 0
-  [ -n "$config_pass" ] || return 0
-
-  {
-    printf '%s\n' 'network={'
-    printf '\t%s\n' "ssid=\"$config_ssid\""
-    printf '\t%s\n' "psk=\"$config_pass\""
-    printf '%s\n' '}'
-    printf '%s\n' ''
-  } >> "${wpa_supplicant_config_file}"
+  if [ -n "$config_ssid" ] && [ -n "$config_pass" ]; then
+    write_wpa_block "$config_ssid" "$config_pass"
+  fi
 }
+
 
 prepare_wifi_interface() {
   i=0
@@ -176,7 +188,7 @@ start_dhcp_client() {
 start() {
   printf "Starting wifi: "
   init_wpa_supplicant_conf
-  generate_wpa_profile_from_config
+  generate_wpa_profiles_from_config
   seed_wpa_profiles
 
   if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then

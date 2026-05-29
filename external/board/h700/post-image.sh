@@ -111,6 +111,13 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	fi
 done
 
+# Copy UI files from the generic staging directory (if any)
+if [ -d "${BINARIES_DIR}/ui" ]; then
+	echo "Staging UI files onto SD card partition..."
+	cp -r "${BINARIES_DIR}/ui/"* "${USERDATA_STAGE}/"
+fi
+
+
 # Assemble custom boot-stage initrd
 echo "Assembling custom boot-stage loop-mount initrd..."
 INITRD_STAGE="${ROOTPATH_TMP}/initrd"
@@ -241,6 +248,15 @@ mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/tinykernel" ::tinykernel
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
+
+# Copy any extra root files/directories (like Tools) staged for the user
+for item in "${USERDATA_STAGE}"/*; do
+	[ -e "${item}" ] || continue
+	basename_item="$(basename "${item}")"
+	[ "${basename_item}" = "tinykernel" ] && continue
+	[ "${basename_item}" = "boot.scr" ] && continue
+	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${item}" ::
+done
 
 echo "Running genimage..."
 rm -rf "${GENIMAGE_TMP}"
