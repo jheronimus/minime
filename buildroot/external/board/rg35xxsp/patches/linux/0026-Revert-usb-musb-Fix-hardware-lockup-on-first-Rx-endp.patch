@@ -38,4 +38,4 @@ index 6869c58367f2..661c6a16f4f7 100644
  static int musb_ep_restart_resume_work(struct musb *musb, void *data)
 -- 
 2.49.0
-
+ 
