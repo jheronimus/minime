@@ -10,4 +10,4 @@ This is a barebones custom firmware base, built on Buildroot:
 
 Currently only supports the Anbernic RG35xxSP v1
 
-The goal is to provide a clean starting point for porting graphical launchers (such as OnionUI, Allium, MinUI, or NextUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
+The goal is to provide a very basic firmware that is easy and fast to build and easy to understand. This can be used as base for porting frontends and firmware overlays (such as OnionUI, Allium, MinUI, or NextUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
