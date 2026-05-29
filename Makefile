@@ -47,6 +47,7 @@ BOOTSTRAP_PACKAGES := \
 	genimage \
 	mtools \
 	dosfstools \
+	lzip \
 	parted \
 	erofs-utils \
 	patchelf \
