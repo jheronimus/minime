@@ -74,24 +74,24 @@ mkfs.erofs -T 0 -zlz4 "${BINARIES_DIR}/system.erofs" "${SYSTEM_STAGE}"
 
 echo "Generating userdata.vfat..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
-mkdir -p "${USERDATA_STAGE}/.sp/config/wifi"
+mkdir -p "${USERDATA_STAGE}/.system/config/wifi"
 
 # Prepopulate wifi template config
 if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
-	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.sp/config/wifi/wifi.config"
+	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi/wifi.config"
 fi
 
 # Create a 100MB FAT32 filesystem for userdata
 rm -f "${BINARIES_DIR}/userdata.vfat"
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=100
-mkdosfs -F 32 -n SDCARD "${BINARIES_DIR}/userdata.vfat"
+mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 
 # Use mtools to populate VFAT userdata seed folders to avoid mounting (which requires sudo)
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.sp || true
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.sp/config || true
-MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.sp/config/wifi || true
-if [ -f "${USERDATA_STAGE}/.sp/config/wifi/wifi.config" ]; then
-	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/.sp/config/wifi/wifi.config" ::.sp/config/wifi/wifi.config || true
+MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system || true
+MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system/config || true
+MTOOLS_SKIP_CHECK=1 mmd -i "${BINARIES_DIR}/userdata.vfat" ::.system/config/wifi || true
+if [ -f "${USERDATA_STAGE}/.system/config/wifi/wifi.config" ]; then
+	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/.system/config/wifi/wifi.config" ::.system/config/wifi/wifi.config || true
 fi
 
 echo "Running genimage..."
