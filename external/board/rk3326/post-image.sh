@@ -176,14 +176,16 @@ fi
 
 echo "Minime Boot Stage 1: Loop-mounting rootfs..."
 mkdir -p /mnt/system
-if ! mount -t erofs -o loop /mnt/card/.system/system.erofs /mnt/system; then
+if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
 	echo "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
 	exec sh
 fi
 
-# Clean up virtual mounts
-umount /proc
-umount /sys
+# Move virtual mounts and SD card mount to the new rootfs
+mount -o move /sys /mnt/system/sys
+mount -o move /proc /mnt/system/proc
+mount -o move /dev /mnt/system/dev
+mount -o move /mnt/card /mnt/system/mnt/sdcard
 
 echo "Minime Boot Stage 1: Transitioning to Stage 2..."
 exec switch_root /mnt/system /sbin/init
@@ -196,10 +198,11 @@ chmod +x "${INITRD_STAGE}/init"
 # Copy initrd.img to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
 
-echo "Generating userdata.vfat (Ultra-minimal 50MB partition)..."
+echo "Generating userdata.vfat (Ultra-minimal 80MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=50
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=80
 mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
+
 
 # Populate userdata.vfat recursively using mtools
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/Image" ::Image
