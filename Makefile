@@ -24,7 +24,7 @@ else
 endif
 
 BR2_EXTERNAL := $(LINUX_ROOT)/external
-MINIME_DEFCONFIG := minime_defconfig
+MINIME_DEFCONFIG := minime_h700_defconfig
 
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 LOG_DIR := $(CURDIR)/logs
