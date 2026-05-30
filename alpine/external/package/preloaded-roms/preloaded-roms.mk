@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-PRELOADED_ROMS_VERSION = fbcfac838358516cf93f96a142be0c1036046c23
+PRELOADED_ROMS_VERSION = 413e0c74465a03ece75a86d7957ff4a84afcab61
 PRELOADED_ROMS_SITE = https://github.com/jheronimus/preloaded-roms.git
 PRELOADED_ROMS_SITE_METHOD = git
 PRELOADED_ROMS_LICENSE = Free / Shareware
