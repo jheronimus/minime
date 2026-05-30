@@ -10,7 +10,7 @@ MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
 MINUI_LICENSE_FILES = README.md
 
-MINUI_DEPENDENCIES = dbus sdl2 sdl2_image sdl2_ttf zlib lz4
+MINUI_DEPENDENCIES = dbus sdl2 sdl2_image sdl2_ttf zlib
 
 MINUI_INSTALL_IMAGES = YES
 

@@ -1,6 +1,5 @@
 config BR2_PACKAGE_MINUI
 	bool "minui"
-	select BR2_PACKAGE_LZ4
 	help
 	  MinUI firmware overlay for minime.
 
