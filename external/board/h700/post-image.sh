@@ -114,7 +114,7 @@ done
 # Copy UI files from the generic staging directory (if any)
 if [ -d "${BINARIES_DIR}/ui" ]; then
 	echo "Staging UI files onto SD card partition..."
-	cp -r "${BINARIES_DIR}/ui/"* "${USERDATA_STAGE}/"
+	cp -rp "${BINARIES_DIR}/ui/." "${USERDATA_STAGE}/"
 fi
 
 
@@ -192,13 +192,18 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	echo "Unmounting card..."
 	umount /mnt/card
 	
-	echo "Re-writing partition table to full disk size..."
-	# Re-create partition 1 to span the full size
-	printf "d\nn\np\n1\n8192\n\nt\nc\na\nw\n" | fdisk /dev/mmcblk0
-	sleep 1
+	PART_SIZE=$(cat /sys/class/block/mmcblk0p1/size)
+	if [ "$PART_SIZE" -lt 1000000 ]; then
+		echo "Re-writing partition table to full disk size..."
+		# Re-create partition 1 to span the full size
+		printf "d\nn\np\n1\n8192\n\nt\nc\na\n1\nw\n" | fdisk /dev/mmcblk0
+		sleep 1
+		echo "Partition table rewritten. Rebooting to apply changes..."
+		reboot -f
+	fi
 	
 	echo "Formatting expanded FAT32 partition..."
-	mkfs.vfat -F 32 -n MINIME /dev/mmcblk0p1
+	mkdosfs -F 32 -n MINIME /dev/mmcblk0p1
 	
 	echo "Restoring boot assets from RAM..."
 	mount -t vfat /dev/mmcblk0p1 /mnt/card
@@ -238,9 +243,9 @@ chmod +x "${INITRD_STAGE}/init"
 # Copy initrd.img to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
 
-echo "Generating userdata.vfat (Ultra-minimal 80MB partition)..."
+echo "Generating userdata.vfat (Ultra-minimal 120MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=80
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=120
 mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 
 
