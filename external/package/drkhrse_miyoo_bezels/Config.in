@@ -1,0 +1,6 @@
+config BR2_PACKAGE_DRKHRSE_MIYOO_BEZELS
+	bool "drkhrse_miyoo_bezels"
+	help
+	  Miyoo Mini bezels from drkhrse.
+
+	  https://github.com/drkhrse/drkhrse_miyoo_bezels
