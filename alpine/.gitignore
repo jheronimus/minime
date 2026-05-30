@@ -5,5 +5,3 @@ buildroot/
 logs/
 reference/
 scripts/deploy.sh
-TODO.md
-AGENTS.md
