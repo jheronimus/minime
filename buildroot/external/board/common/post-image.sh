@@ -88,7 +88,7 @@ cat << 'EOF' > "${DEVICE_CFG}"
 #
 EOF
 
-if [ "$SOC_NAME" = "h700" ] || [ "$SOC_NAME" = "rk3566" ]; then
+if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
 	cat << 'EOF' >> "${DEVICE_CFG}"
 # By default, this is set to 'auto' to automatically detect your device.
 # If autodetection fails or you need to force a specific device/screen panel revision,
@@ -139,12 +139,6 @@ cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
 # Copy all platform DTB files to .system/devices (both flat and nested under vendor subdirectories)
-VENDOR_DIR=""
-if [ "$SOC_NAME" = "h700" ]; then
-	VENDOR_DIR="allwinner"
-elif [ "$SOC_NAME" = "rk3566" ] || [ "$SOC_NAME" = "rk3326" ]; then
-	VENDOR_DIR="rockchip"
-fi
 
 for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
