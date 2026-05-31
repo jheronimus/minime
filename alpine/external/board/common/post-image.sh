@@ -81,8 +81,49 @@ if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
 	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi.cfg"
 fi
 
-# Prepopulate fallback device.cfg
-echo "device=${DEFAULT_DTB}" > "${USERDATA_STAGE}/.system/config/device.cfg"
+# Prepopulate self-documenting device.cfg
+DEVICE_CFG="${USERDATA_STAGE}/.system/config/device.cfg"
+cat << 'EOF' > "${DEVICE_CFG}"
+# minime Device Configuration
+#
+EOF
+
+if [ "$SOC_NAME" = "h700" ] || [ "$SOC_NAME" = "rk3566" ]; then
+	cat << 'EOF' >> "${DEVICE_CFG}"
+# By default, this is set to 'auto' to automatically detect your device.
+# If autodetection fails or you need to force a specific device/screen panel revision,
+# uncomment and set 'device' to one of the built-in options listed below.
+#
+# Supported device options:
+EOF
+	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
+		if [ -f "${dtb_file}" ]; then
+			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+		fi
+	done
+	cat << 'EOF' >> "${DEVICE_CFG}"
+#
+device=auto
+EOF
+else
+	cat << 'EOF' >> "${DEVICE_CFG}"
+# Autodetection is not supported on this platform.
+# You must set 'device' to one of the built-in options listed below
+# matching your specific handheld device.
+#
+# Supported device options:
+EOF
+	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
+		if [ -f "${dtb_file}" ]; then
+			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+		fi
+	done
+	cat << EOF >> "${DEVICE_CFG}"
+#
+device=${DEFAULT_DTB}
+EOF
+fi
+
 
 # Create the first boot expansion trigger file
 touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
@@ -94,12 +135,26 @@ cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.system/system.erofs"
 cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
-# Copy all platform DTB files to .system/devices
+# Copy all platform DTB files to .system/devices (both flat and nested under vendor subdirectories)
+VENDOR_DIR=""
+if [ "$SOC_NAME" = "h700" ]; then
+	VENDOR_DIR="allwinner"
+elif [ "$SOC_NAME" = "rk3566" ] || [ "$SOC_NAME" = "rk3326" ]; then
+	VENDOR_DIR="rockchip"
+fi
+
 for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
+		# 1. Flat layout
 		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/$(basename "${dtb_file}")"
+		# 2. Nested layout
+		if [ -n "${VENDOR_DIR}" ]; then
+			mkdir -p "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}"
+			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/$(basename "${dtb_file}")"
+		fi
 	fi
 done
+
 
 # Copy UI files from the generic staging directory (if any)
 if [ -d "${BINARIES_DIR}/ui" ]; then
