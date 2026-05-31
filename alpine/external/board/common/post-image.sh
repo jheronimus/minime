@@ -125,7 +125,8 @@ EOF
 fi
 
 
-# Create the first boot expansion trigger file
+# Create the first boot trigger files
+touch "${USERDATA_STAGE}/.system/config/first_boot_probe"
 touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
 
 # Copy main erofs system image
@@ -220,8 +221,39 @@ if ! mount -t vfat /dev/mmcblk0p1 /mnt/card; then
 	exec sh
 fi
 
-# FIRST BOOT EXPANSION CHECK
+# FIRST BOOT PROBING CHECK (STAGE 1 - HEADLESS, ~1 SECOND)
+if [ -f /mnt/card/.system/config/first_boot_probe ]; then
+	echo "Minime Boot Stage 1: Running hardware autodetection..."
+	mount -o remount,rw /mnt/card
+
+	# Check if we are on RK3326 platform by scanning for RK3326 DTBs
+	if ls /mnt/card/.system/devices/rk3326-* >/dev/null 2>&1; then
+		if [ -d /sys/bus/sdio/devices/* ] || ls /sys/bus/sdio/devices/* >/dev/null 2>&1; then
+			echo "device=rk3326-anbernic-rg351v.dtb" > /mnt/card/.system/config/device.cfg
+		elif grep -q "0bda" /sys/bus/usb/devices/*/idVendor 2>/dev/null && grep -q "b720" /sys/bus/usb/devices/*/idProduct 2>/dev/null; then
+			echo "device=rk3326-anbernic-rg351m.dtb" > /mnt/card/.system/config/device.cfg
+		elif grep -q "1209" /sys/bus/usb/devices/*/idVendor 2>/dev/null; then
+			echo "device=rk3326-anbernic-rg351p.dtb" > /mnt/card/.system/config/device.cfg
+		else
+			echo "device=rk3326-anbernic-rg351mp.dtb" > /mnt/card/.system/config/device.cfg
+		fi
+	fi
+
+	rm -f /mnt/card/.system/config/first_boot_probe
+	umount /mnt/card
+	reboot -f
+fi
+
+# FIRST BOOT EXPANSION CHECK (STAGE 2 - GRAPHICAL CONSOLE PROGRESS)
 if [ -f /mnt/card/.system/config/first_boot_expand ]; then
+	# Since correct DTB is loaded, /dev/tty0 is operational. Print a visual progress screen.
+	if [ -c /dev/tty0 ]; then
+		echo "--------------------------------------------------------" > /dev/tty0
+		echo "  MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION" > /dev/tty0
+		echo "  PLEASE WAIT, THIS PROCESS MAY TAKE 30-45 SECONDS..." > /dev/tty0
+		echo "--------------------------------------------------------" > /dev/tty0
+	fi
+
 	echo "--------------------------------------------------------"
 	echo "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
 	echo "--------------------------------------------------------"
