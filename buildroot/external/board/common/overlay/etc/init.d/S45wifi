@@ -185,16 +185,9 @@ start_dhcp_client() {
     >> "${udhcpc_logfile}" 2>&1
 }
 
-start() {
-  printf "Starting wifi: "
-  init_wpa_supplicant_conf
-  generate_wpa_profiles_from_config
-  seed_wpa_profiles
-
-  if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
-    echo "No Wi-Fi profiles configured; skipping connection"
-    return 0
-  fi
+start_background() {
+  # Redirect stdout/stderr to keep boot console clean
+  exec >/dev/null 2>&1
 
   if ! prepare_wifi_interface; then
     log_failure_diagnostics "missing-${wifi_interface}"
@@ -218,7 +211,7 @@ start() {
   fi
 
   if wait_for_ipv4_address; then
-    echo "OK"
+    logger -t wifi "connection established (pre-DHCP)" 2>/dev/null || true
     return 0
   fi
 
@@ -228,7 +221,25 @@ start() {
     return 1
   fi
 
-  echo "OK"
+  logger -t wifi "connection established with IP" 2>/dev/null || true
+  return 0
+}
+
+start() {
+  printf "Starting wifi: "
+  init_wpa_supplicant_conf
+  generate_wpa_profiles_from_config
+  seed_wpa_profiles
+
+  if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+    echo "No Wi-Fi profiles configured; skipping connection"
+    return 0
+  fi
+
+  # Trigger background connection
+  start_background &
+
+  echo "OK (background)"
   return 0
 }
 

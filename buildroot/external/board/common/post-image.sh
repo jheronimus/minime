@@ -185,6 +185,7 @@ ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/fdisk"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkfs.vfat"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkdosfs"
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/partprobe"
 
 # BusyBox is statically linked — no shared libraries needed in the initrd.
 
@@ -261,8 +262,9 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 		# Re-create partition 1 to span the full size
 		printf "d\nn\np\n1\n8192\n\nt\nc\na\n1\nw\n" | fdisk /dev/mmcblk0
 		sleep 1
-		echo "Partition table rewritten. Rebooting to apply changes..."
-		reboot -f
+		echo "Re-reading partition table..."
+		partprobe /dev/mmcblk0
+		sleep 1
 	fi
 	
 	echo "Formatting expanded FAT32 partition..."
@@ -277,9 +279,7 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	# Delete first_boot_expand in restored filesystem to prevent loop expansion
 	rm -f /mnt/card/.system/config/first_boot_expand
 	
-	echo "SD Card expansion complete! Rebooting..."
-	umount /mnt/card
-	reboot -f
+	echo "SD Card expansion complete!"
 fi
 
 echo "Minime Boot Stage 1: Loop-mounting rootfs..."
