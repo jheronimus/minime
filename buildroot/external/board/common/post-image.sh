@@ -126,7 +126,7 @@ fi
 
 
 # Create the first boot trigger files
-if [ "$SOC_NAME" = "rk3326" ]; then
+if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 	touch "${USERDATA_STAGE}/.system/config/first_boot_probe"
 fi
 touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
@@ -225,20 +225,10 @@ fi
 
 # FIRST BOOT PROBING CHECK (STAGE 1 - HEADLESS, ~1 SECOND)
 if [ -f /mnt/card/.system/config/first_boot_probe ]; then
-	echo "Minime Boot Stage 1: Running hardware autodetection..."
 	mount -o remount,rw /mnt/card
 
-	# Check if we are on RK3326 platform by scanning for RK3326 DTBs
-	if ls /mnt/card/.system/devices/rk3326-* >/dev/null 2>&1; then
-		if [ -d /sys/bus/sdio/devices/* ] || ls /sys/bus/sdio/devices/* >/dev/null 2>&1; then
-			echo "device=rk3326-anbernic-rg351v.dtb" > /mnt/card/.system/config/device.cfg
-		elif grep -q "0bda" /sys/bus/usb/devices/*/idVendor 2>/dev/null && grep -q "b720" /sys/bus/usb/devices/*/idProduct 2>/dev/null; then
-			echo "device=rk3326-anbernic-rg351m.dtb" > /mnt/card/.system/config/device.cfg
-		elif grep -q "1209" /sys/bus/usb/devices/*/idVendor 2>/dev/null; then
-			echo "device=rk3326-anbernic-rg351p.dtb" > /mnt/card/.system/config/device.cfg
-		else
-			echo "device=rk3326-anbernic-rg351mp.dtb" > /mnt/card/.system/config/device.cfg
-		fi
+	if [ -f /sbin/first-boot-probe.sh ]; then
+		sh /sbin/first-boot-probe.sh
 	fi
 
 	rm -f /mnt/card/.system/config/first_boot_probe
@@ -315,6 +305,13 @@ echo "Minime Boot Stage 1: Transitioning to Stage 2..."
 exec switch_root /mnt/system /sbin/init
 EOF
 chmod +x "${INITRD_STAGE}/init"
+
+# Copy optional board-specific first boot probe script if it exists
+if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
+	cp -f "${BOARD_DIR}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
+	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
+fi
+
 
 # Compile initrd.img
 (cd "${INITRD_STAGE}" && find . | cpio -H newc -o | gzip -9 > "${BINARIES_DIR}/initrd.img")
