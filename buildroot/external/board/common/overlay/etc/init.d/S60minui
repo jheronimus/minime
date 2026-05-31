@@ -1,0 +1,81 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        echo "Starting MinUI loop..."
+        
+        # Dynamic model detection
+        model_dt=$(cat /proc/device-tree/model 2>/dev/null || echo "")
+        case "$model_dt" in
+            *SP*|*sp*)
+                RGXX_MODEL="RG35xxSP"
+                ;;
+            *Plus*|*plus*|*PLUS*)
+                RGXX_MODEL="RG35xxPlus"
+                ;;
+            *H*|*h*)
+                if echo "$model_dt" | grep -qi "rg35xx h"; then
+                    RGXX_MODEL="RG35xxH"
+                else
+                    RGXX_MODEL="RG35xx"
+                fi
+                ;;
+            *28*)
+                RGXX_MODEL="RG28xx"
+                ;;
+            *Cube*|*cube*)
+                RGXX_MODEL="RGcubexx"
+                ;;
+            *)
+                RGXX_MODEL="RG35xx"
+                ;;
+        esac
+        export RGXX_MODEL
+        
+        export LD_LIBRARY_PATH=/mnt/sdcard/.system/bin
+        export USERDATA_PATH=/mnt/sdcard/.system/
+        export HOME=/mnt/sdcard
+        
+        # Clear any stale next commands
+        rm -f /tmp/next
+        
+        # Start MinUI lifecycle loop in background to let boot process finish
+        (
+            while true; do
+                if [ -f /tmp/poweroff ]; then
+                    rm -f /tmp/poweroff
+                    poweroff
+                    exit 0
+                fi
+                
+                # Launch MinUI
+                /mnt/sdcard/.system/bin/minui < /dev/console > /dev/console 2>&1
+                
+                # Check for next command
+                if [ -f /tmp/next ]; then
+                    CMD=$(cat /tmp/next)
+                    rm -f /tmp/next
+                    eval "$CMD" < /dev/console > /dev/console 2>&1
+                else
+                    # Fallback or clean shutdown if no next action queued
+                    poweroff
+                    exit 0
+                fi
+            done
+        ) &
+        ;;
+    stop)
+        echo "Stopping MinUI..."
+        killall minui 2>/dev/null
+        ;;
+    restart|reload)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0
