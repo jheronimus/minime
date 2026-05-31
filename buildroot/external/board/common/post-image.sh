@@ -126,7 +126,9 @@ fi
 
 
 # Create the first boot trigger files
-touch "${USERDATA_STAGE}/.system/config/first_boot_probe"
+if [ "$SOC_NAME" = "rk3326" ]; then
+	touch "${USERDATA_STAGE}/.system/config/first_boot_probe"
+fi
 touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
 
 # Copy main erofs system image
