@@ -34,27 +34,17 @@ fi
 BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
 SOC_NAME="$(basename "$BOARD_DIR")"
 
-case "$SOC_NAME" in
-	h700)
-		DEFAULT_DTB="sun50i-h700-anbernic-rg35xx-sp.dtb"
-		DTB_PATTERN="sun50i-h700-anbernic-*.dtb"
-		GENIMAGE_IMAGE_NAME="sp-h700.img"
-		;;
-	rk3326)
-		DEFAULT_DTB="rk3326-anbernic-rg351mp.dtb"
-		DTB_PATTERN="rk3326-anbernic-*.dtb"
-		GENIMAGE_IMAGE_NAME="sp-rk3326.img"
-		;;
-	rk3566)
-		DEFAULT_DTB="rk3566-anbernic-rg-arc-d.dtb"
-		DTB_PATTERN="rk356*-anbernic-*.dtb"
-		GENIMAGE_IMAGE_NAME="sp-rk3326.img"
-		;;
-	*)
-		echo "ERROR: Unknown SOC $SOC_NAME" >&2
-		exit 1
-		;;
-esac
+if [ ! -f "${BOARD_DIR}/board.env" ]; then
+	echo "ERROR: ${BOARD_DIR}/board.env is missing!" >&2
+	exit 1
+fi
+
+. "${BOARD_DIR}/board.env"
+
+if [ -z "${DEFAULT_DTB:-}" ] || [ -z "${DTB_PATTERN:-}" ] || [ -z "${GENIMAGE_IMAGE_NAME:-}" ]; then
+	echo "ERROR: board.env must define DEFAULT_DTB, DTB_PATTERN, and GENIMAGE_IMAGE_NAME!" >&2
+	exit 1
+fi
 
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
