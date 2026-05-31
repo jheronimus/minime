@@ -2,8 +2,10 @@ include $(sort $(wildcard $(BR2_EXTERNAL_MINIME_PATH)/package/*/*.mk))
 
 # Hooks to copy custom DTS files and patch base DTS file in Linux kernel
 define MINIME_COPY_DTS
-	cp $(BR2_EXTERNAL_MINIME_PATH)/board/h700/dts/*.dts \
-		$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/
+	if [ -d $(BR2_EXTERNAL_MINIME_PATH)/board/h700/dts ]; then \
+		cp $(BR2_EXTERNAL_MINIME_PATH)/board/h700/dts/*.dts \
+			$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/; \
+	fi
 endef
 LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 

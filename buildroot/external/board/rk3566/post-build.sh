@@ -1,1 +1,0 @@
-../h700/post-build.sh
