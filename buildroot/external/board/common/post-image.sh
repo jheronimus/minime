@@ -233,14 +233,6 @@ fi
 
 # FIRST BOOT EXPANSION CHECK (STAGE 2 - GRAPHICAL CONSOLE PROGRESS)
 if [ -f /mnt/card/.system/config/first_boot_expand ]; then
-	# Since correct DTB is loaded, /dev/tty0 is operational. Print a visual progress screen.
-	if [ -c /dev/tty0 ]; then
-		echo "--------------------------------------------------------" > /dev/tty0
-		echo "  MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION" > /dev/tty0
-		echo "  PLEASE WAIT, THIS PROCESS MAY TAKE 30-45 SECONDS..." > /dev/tty0
-		echo "--------------------------------------------------------" > /dev/tty0
-	fi
-
 	echo "--------------------------------------------------------"
 	echo "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
 	echo "--------------------------------------------------------"
