@@ -18,6 +18,10 @@ libmsettings.so
 libSDL2.so
 scripts/upload_res.py
 scripts/upload_binaries.py
+scripts/test_otp.py
+scripts/__pycache__/
+__pycache__/
+*.pyc
 
 
 
