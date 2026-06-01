@@ -219,36 +219,7 @@ MALI_CreateWindow(_THIS, SDL_Window * window)
 
     displaydata = SDL_GetDisplayDriverData(0);"""
     
-    create_replacement = """#include "SDL_loadso.h"
-
-typedef struct gbm_device * (*PFNGBMCREATEDEVICEPROC)(int fd);
-
-static void * load_gbm_device(void) {
-    void *gbm_lib = SDL_LoadObject("libgbm.so.1");
-    if (!gbm_lib) {
-        gbm_lib = SDL_LoadObject("libmali.so.1");
-    }
-    if (gbm_lib) {
-        PFNGBMCREATEDEVICEPROC gbm_create_device = (PFNGBMCREATEDEVICEPROC)SDL_LoadFunction(gbm_lib, "gbm_create_device");
-        if (gbm_create_device) {
-            int fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
-            if (fd >= 0) {
-                struct gbm_device *gbm = gbm_create_device(fd);
-                if (gbm) {
-                    printf("Successfully created GBM device: %p\\n", gbm);
-                    fflush(stdout);
-                    return gbm;
-                }
-                close(fd);
-            }
-        }
-    }
-    printf("Failed to create GBM device, falling back to EGL_DEFAULT_DISPLAY\\n");
-    fflush(stdout);
-    return (void*)0;
-}
-
-int
+    create_replacement = """int
 MALI_CreateWindow(_THIS, SDL_Window * window)
 {
     SDL_WindowData *windowdata;
@@ -267,32 +238,43 @@ MALI_CreateWindow(_THIS, SDL_Window * window)
 
     if create_target in source_content:
         source_content = source_content.replace(create_target, create_replacement)
-        print("Patched MALI_CreateWindow in SDL_malivideo.c with load_gbm_device")
+        print("Patched MALI_CreateWindow in SDL_malivideo.c")
     else:
         print("Warning: MALI_CreateWindow target not found in SDL_malivideo.c")
 
-    egl_load_target = """    if (!_this->egl_data) {
-        if (SDL_EGL_LoadLibrary(_this, NULL, EGL_DEFAULT_DISPLAY, 0) < 0) {
-            /* Try again with OpenGL ES 2.0 */
-            _this->gl_config.profile_mask = SDL_GL_CONTEXT_PROFILE_ES;
-            _this->gl_config.major_version = 2;
-            _this->gl_config.minor_version = 0;
-            if (SDL_EGL_LoadLibrary(_this, NULL, EGL_DEFAULT_DISPLAY, 0) < 0) {"""
+    proc_target = """    if (displaydata->blitter) {
+        displaydata->egl_create_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_create_pixmap_ID_mapping");
+        displaydata->egl_destroy_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_destroy_pixmap_ID_mapping");"""
 
-    egl_load_replacement = """    if (!_this->egl_data) {
-        void *gbm_display = load_gbm_device();
-        if (SDL_EGL_LoadLibrary(_this, NULL, (EGLNativeDisplayType)gbm_display, 0x31D7) < 0) {
-            /* Try again with OpenGL ES 2.0 */
-            _this->gl_config.profile_mask = SDL_GL_CONTEXT_PROFILE_ES;
-            _this->gl_config.major_version = 2;
-            _this->gl_config.minor_version = 0;
-            if (SDL_EGL_LoadLibrary(_this, NULL, (EGLNativeDisplayType)gbm_display, 0x31D7) < 0) {"""
+    proc_replacement = """    if (displaydata->blitter) {
+        printf("Before SDL_EGL_GetProcAddress egl_create_pixmap_ID_mapping\\n");
+        fflush(stdout);
+        displaydata->egl_create_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_create_pixmap_ID_mapping");
+        if (!displaydata->egl_create_pixmap_ID_mapping) {
+            printf("eglGetProcAddress returned NULL, falling back to SDL_LoadFunction\\n");
+            fflush(stdout);
+            void *egl_lib = SDL_LoadObject("libEGL.so.1");
+            if (egl_lib) {
+                displaydata->egl_create_pixmap_ID_mapping = SDL_LoadFunction(egl_lib, "egl_create_pixmap_ID_mapping");
+            }
+        }
+        printf("After SDL_EGL_GetProcAddress: %p\\n", displaydata->egl_create_pixmap_ID_mapping);
+        fflush(stdout);
+        displaydata->egl_destroy_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_destroy_pixmap_ID_mapping");
+        if (!displaydata->egl_destroy_pixmap_ID_mapping) {
+            void *egl_lib = SDL_LoadObject("libEGL.so.1");
+            if (egl_lib) {
+                displaydata->egl_destroy_pixmap_ID_mapping = SDL_LoadFunction(egl_lib, "egl_destroy_pixmap_ID_mapping");
+            }
+        }
+        printf("After SDL_EGL_GetProcAddress egl_destroy_pixmap_ID_mapping: %p\\n", displaydata->egl_destroy_pixmap_ID_mapping);
+        fflush(stdout);"""
 
-    if egl_load_target in source_content:
-        source_content = source_content.replace(egl_load_target, egl_load_replacement)
-        print("Patched EGL library loading with load_gbm_device in SDL_malivideo.c")
+    if proc_target in source_content:
+        source_content = source_content.replace(proc_target, proc_replacement)
+        print("Patched ProcAddress diagnostics in SDL_malivideo.c")
     else:
-        print("Warning: EGL library loading target not found in SDL_malivideo.c")
+        print("Warning: ProcAddress target not found in SDL_malivideo.c")
 
     config_target = """    if (SDL_EGL_ChooseConfig(_this) != 0) {
         SDL_SetError("mali-fbdev: Unable to find a suitable EGL config");
