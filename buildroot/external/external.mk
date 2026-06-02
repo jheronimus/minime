@@ -40,7 +40,7 @@ SDL2_POST_CONFIGURE_HOOKS += SDL2_RESTORE_CONFIG_H
 define SDL2_ADD_MALI_SOURCES
 	if [ -d $(@D)/src/video/mali-fbdev ]; then \
 		$(SED) '/AC_DEFINE(SDL_VIDEO_DRIVER_MALI/a \            SOURCES="$$SOURCES $$srcdir/src/video/mali-fbdev/*.c"' $(@D)/configure.ac; \
-		python3 $(BR2_EXTERNAL_MINIME_PATH)/board/common/patch_mali_dma_heap.py $(@D); \
+		python3 $(BR2_EXTERNAL_MINIME_PATH)/board/h700/patch_mali_dma_heap.py $(@D); \
 	fi
 endef
 SDL2_POST_PATCH_HOOKS += SDL2_ADD_MALI_SOURCES
