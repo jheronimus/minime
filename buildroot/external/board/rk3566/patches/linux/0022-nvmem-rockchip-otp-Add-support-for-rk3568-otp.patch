@@ -105,8 +105,8 @@ index ebc3f0b24166..4432a79e4bea 100644
  static int rk3588_otp_read(void *context, unsigned int offset,
  			   void *val, size_t bytes)
  {
-@@ -274,6 +343,17 @@ static const struct rockchip_data px30_data = {
- 	.reg_read = px30_otp_read,
+@@ -282,6 +351,17 @@ static const struct rockchip_data rk3576_data = {
+ 	.reg_read = rk3588_otp_read,
  };
  
 +static const char * const rk3568_otp_clocks[] = {
@@ -123,9 +123,9 @@ index ebc3f0b24166..4432a79e4bea 100644
  static const char * const rk3588_otp_clocks[] = {
  	"otp", "apb_pclk", "phy", "arb",
  };
-@@ -294,6 +374,10 @@ static const struct of_device_id rockchip_otp_match[] = {
- 		.compatible = "rockchip,rk3308-otp",
- 		.data = &px30_data,
+@@ -308,6 +388,10 @@ static const struct of_device_id rockchip_otp_match[] = {
+ 		.compatible = "rockchip,rk3576-otp",
+ 		.data = &rk3576_data,
  	},
 +	{
 +		.compatible = "rockchip,rk3568-otp",
@@ -134,6 +134,6 @@ index ebc3f0b24166..4432a79e4bea 100644
  	{
  		.compatible = "rockchip,rk3588-otp",
  		.data = &rk3588_data,
+ 	},
 -- 
 2.34.1
-

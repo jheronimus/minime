@@ -76,6 +76,16 @@ ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 # 5. Create mount point for SD card
 mkdir -p "${TARGET_DIR}/mnt/sdcard"
 
+# 5.5. Install shared Realtek firmware from common tree if present
+common_fw_dir="${BR2_EXTERNAL_MINIME_PATH}/board/common/firmware"
+if [ -d "${common_fw_dir}" ]; then
+	find "${common_fw_dir}" -type f | while read -r fwfile; do
+		rel="${fwfile#${common_fw_dir}/}"
+		mkdir -p "${TARGET_DIR}/lib/firmware/$(dirname "${rel}")"
+		cp -f "${fwfile}" "${TARGET_DIR}/lib/firmware/${rel}"
+	done
+fi
+
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BOARD_DIR}/post-build.sh" ]; then
 	echo "Running board-specific post-build hook for $(basename "${BOARD_DIR}")..."

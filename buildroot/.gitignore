@@ -1,13 +1,13 @@
 .DS_Store
-.github/
 out/
 buildroot/
 logs/
 reference/
+docs/
 scripts/deploy.sh
 scripts/run_telnet.py
 scripts/run_telnet_robust.py
-scripts/check_rebuild.py
+scripts/get-images.sh
 TODO.md
 AGENTS.md
 .antigravitycli/

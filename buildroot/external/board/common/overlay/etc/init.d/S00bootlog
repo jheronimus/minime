@@ -1,0 +1,50 @@
+#!/bin/sh
+
+BOOT_LOG=/mnt/sdcard/minime-boot.log
+
+is_sdcard_mounted() {
+	grep -q ' /mnt/sdcard ' /proc/mounts
+}
+
+mount_sdcard() {
+	is_sdcard_mounted && return 0
+	mkdir -p /mnt/sdcard
+
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		for dev in /dev/mmcblk*p1; do
+			[ -b "$dev" ] || continue
+			if mount -t vfat "$dev" /mnt/sdcard; then
+				if [ -d /mnt/sdcard/.system ]; then
+					return 0
+				fi
+				umount /mnt/sdcard
+			fi
+		done
+		sleep 1
+	done
+
+	return 1
+}
+
+case "$1" in
+	start)
+		if mount_sdcard; then
+			{
+				echo "Minime Stage 2: /sbin/init started"
+				echo "Minime Stage 2: mounted filesystems:"
+				mount
+				echo "Minime Stage 2: kernel messages:"
+				dmesg
+			} >> "$BOOT_LOG" 2>&1
+			sync
+		fi
+		;;
+	stop|restart|reload)
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}" >&2
+		exit 1
+		;;
+esac
+
+exit 0

@@ -135,19 +135,34 @@ touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
 cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.system/system.erofs"
 
 # Copy kernel and U-Boot script directly to partition root
-cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
+if [ "${MINIME_USE_ROCKNIX_KERNEL:-n}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" ]; then
+	echo "Using ROCKNIX RK3566 kernel for test image..."
+	cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" "${USERDATA_STAGE}/tinykernel"
+else
+	cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
+fi
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
 # Copy all platform DTB files to .system/devices (both flat and nested under vendor subdirectories)
 
 for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
+		dtb_basename="$(basename "${dtb_file}")"
 		# 1. Flat layout
-		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/$(basename "${dtb_file}")"
+		if [ "${MINIME_USE_ROCKNIX_DTB:-y}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ "${dtb_basename}" = "rk3566-anbernic-rg-arc-d.dtb" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" ]; then
+			echo "Using ROCKNIX RG Arc D DTB for test image..."
+			cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
+		else
+			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
+		fi
 		# 2. Nested layout
 		if [ -n "${VENDOR_DIR}" ]; then
 			mkdir -p "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}"
-			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/$(basename "${dtb_file}")"
+			if [ "${MINIME_USE_ROCKNIX_DTB:-y}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ "${dtb_basename}" = "rk3566-anbernic-rg-arc-d.dtb" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" ]; then
+				cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
+			else
+				cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
+			fi
 		fi
 	fi
 done
@@ -172,6 +187,7 @@ cp -f "${SYSTEM_STAGE}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
 # Shell & basic utilities
 ln -sf busybox "${INITRD_STAGE}/bin/sh"
 ln -sf busybox "${INITRD_STAGE}/bin/mount"
+ln -sf busybox "${INITRD_STAGE}/bin/mountpoint"
 ln -sf busybox "${INITRD_STAGE}/bin/umount"
 ln -sf busybox "${INITRD_STAGE}/bin/sleep"
 ln -sf busybox "${INITRD_STAGE}/bin/reboot"
@@ -180,6 +196,7 @@ ln -sf busybox "${INITRD_STAGE}/bin/mkdir"
 ln -sf busybox "${INITRD_STAGE}/bin/rm"
 ln -sf busybox "${INITRD_STAGE}/bin/cat"
 ln -sf busybox "${INITRD_STAGE}/bin/echo"
+ln -sf busybox "${INITRD_STAGE}/bin/sync"
 # Disk tools (in sbin)
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/fdisk"
@@ -198,72 +215,112 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 
-echo "Minime Boot Stage 1: Initializing SD Card..."
+CARD_DEV=""
+BOOT_LOG="/mnt/card/minime-boot.log"
 
-# Wait for SD card block device
-for i in 1 2 3 4 5; do
-	[ -b /dev/mmcblk0p1 ] && break
+log_console() {
+	echo "$*"
+}
+
+log_card() {
+	echo "$*"
+	if mountpoint -q /mnt/card; then
+		{
+			echo "$*"
+			sync
+		} >> "$BOOT_LOG"
+	fi
+}
+
+log_console "Minime Boot Stage 1: Initializing SD Card..."
+
+# Wait for Linux to enumerate SD/eMMC devices.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	for dev in /dev/mmcblk*p1; do
+		[ -b "$dev" ] && CARD_DEV="$dev" && break
+	done
+	[ -n "$CARD_DEV" ] && break
 	sleep 1
 done
 
-if [ ! -b /dev/mmcblk0p1 ]; then
-	echo "ERROR: SD card partition /dev/mmcblk0p1 not found!"
+if [ -z "$CARD_DEV" ]; then
+	log_console "ERROR: no /dev/mmcblk*p1 block devices found"
 	exec sh
 fi
 
-echo "Minime Boot Stage 1: Mounting SD Card (MINIME)..."
+log_console "Minime Boot Stage 1: Searching for MINIME FAT partition..."
 mkdir -p /mnt/card
-if ! mount -t vfat /dev/mmcblk0p1 /mnt/card; then
-	echo "ERROR: Failed to mount SD card!"
+for dev in /dev/mmcblk*p1; do
+	[ -b "$dev" ] || continue
+	log_console "Trying $dev..."
+	if mount -t vfat "$dev" /mnt/card; then
+		if [ -f /mnt/card/.system/system.erofs ]; then
+			CARD_DEV="$dev"
+			: > "$BOOT_LOG"
+			log_card "Minime Boot Stage 1: mounted $CARD_DEV"
+			log_card "Minime Boot Stage 1: found .system/system.erofs"
+			break
+		fi
+		umount /mnt/card
+	fi
+done
+
+if ! mountpoint -q /mnt/card; then
+	log_console "ERROR: failed to mount a MINIME FAT partition"
 	exec sh
 fi
 
 # FIRST BOOT PROBING CHECK (STAGE 1 - HEADLESS, ~1 SECOND)
 if [ -f /mnt/card/.system/config/first_boot_probe ]; then
+	log_card "Minime Boot Stage 1: running first boot probe"
 	mount -o remount,rw /mnt/card
 
 	if [ -f /sbin/first-boot-probe.sh ]; then
-		sh /sbin/first-boot-probe.sh
+		sh /sbin/first-boot-probe.sh >> "$BOOT_LOG" 2>&1
 	fi
 
 	rm -f /mnt/card/.system/config/first_boot_probe
+	log_card "Minime Boot Stage 1: first boot probe complete, rebooting"
 	umount /mnt/card
 	reboot -f
 fi
 
 # FIRST BOOT EXPANSION CHECK (STAGE 2 - GRAPHICAL CONSOLE PROGRESS)
 if [ -f /mnt/card/.system/config/first_boot_expand ]; then
-	echo "--------------------------------------------------------"
-	echo "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
-	echo "--------------------------------------------------------"
+	log_card "--------------------------------------------------------"
+	log_card "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
+	log_card "--------------------------------------------------------"
 	# Mount card read-write
 	mount -o remount,rw /mnt/card
 	
-	echo "Backing up boot assets to RAM..."
+	log_card "Backing up boot assets to RAM..."
 	mkdir -p /tmp/backup
 	cp -a /mnt/card/.system /tmp/backup/
 	cp -f /mnt/card/tinykernel /tmp/backup/
 	cp -f /mnt/card/boot.scr /tmp/backup/
 	
-	echo "Unmounting card..."
+	log_card "Unmounting card..."
 	umount /mnt/card
 	
-	PART_SIZE=$(cat /sys/class/block/mmcblk0p1/size)
+	DISK_DEV="${CARD_DEV%p1}"
+	PART_SIZE=$(cat "/sys/class/block/${CARD_DEV#/dev/}/size")
 	if [ "$PART_SIZE" -lt 1000000 ]; then
-		echo "Re-writing partition table to full disk size..."
+		log_console "Re-writing partition table to full disk size on $DISK_DEV..."
 		# Re-create partition 1 to span the full size
-		printf "d\nn\np\n1\n8192\n\nt\nc\na\n1\nw\n" | fdisk /dev/mmcblk0
+		printf "d\nn\np\n1\n8192\n\nt\nc\na\n1\nw\n" | fdisk "$DISK_DEV"
 		sleep 1
-		echo "Re-reading partition table..."
-		partprobe /dev/mmcblk0
+		log_console "Re-reading partition table..."
+		partprobe "$DISK_DEV"
 		sleep 1
 	fi
 	
-	echo "Formatting expanded FAT32 partition..."
-	mkdosfs -F 32 -n MINIME /dev/mmcblk0p1
+	log_console "Formatting expanded FAT32 partition on $CARD_DEV..."
+	mkdosfs -F 32 -n MINIME "$CARD_DEV"
 	
-	echo "Restoring boot assets from RAM..."
-	mount -t vfat /dev/mmcblk0p1 /mnt/card
+	log_console "Restoring boot assets from RAM..."
+	mount -t vfat "$CARD_DEV" /mnt/card
+	: > "$BOOT_LOG"
+	log_card "Minime Boot Stage 1: expansion formatted $CARD_DEV"
 	cp -a /tmp/backup/.system /mnt/card/
 	cp -f /tmp/backup/tinykernel /mnt/card/
 	cp -f /tmp/backup/boot.scr /mnt/card/
@@ -271,20 +328,22 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	# Delete first_boot_expand in restored filesystem to prevent loop expansion
 	rm -f /mnt/card/.system/config/first_boot_expand
 	
-	echo "SD Card expansion complete!"
+	log_card "SD Card expansion complete!"
 fi
 
-echo "Minime Boot Stage 1: Loop-mounting rootfs..."
+log_card "Minime Boot Stage 1: Loop-mounting rootfs..."
 mkdir -p /mnt/system
 if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
-	echo "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
+	log_card "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
 	exec sh
 fi
+log_card "Minime Boot Stage 1: rootfs loop-mounted"
 
 # Move virtual mounts and SD card mount to the new rootfs
 mount -o move /sys /mnt/system/sys
 mount -o move /proc /mnt/system/proc
 mount -o move /dev /mnt/system/dev
+log_card "Minime Boot Stage 1: moving SD card mount into rootfs"
 mount -o move /mnt/card /mnt/system/mnt/sdcard
 
 echo "Minime Boot Stage 1: Transitioning to Stage 2..."
@@ -305,9 +364,9 @@ fi
 # Copy initrd.img to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
 
-echo "Generating userdata.vfat (Ultra-minimal 120MB partition)..."
+echo "Generating userdata.vfat (Ultra-minimal 256MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=120
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=256
 mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 
 
@@ -315,6 +374,10 @@ mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/tinykernel" ::tinykernel
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
+
+# Create raw pstore backing image for kernel console/oops logs.
+rm -f "${BINARIES_DIR}/pstore.bin"
+dd if=/dev/zero of="${BINARIES_DIR}/pstore.bin" bs=1M count=4
 
 # Copy any extra root files/directories (like Tools) staged for the user
 for item in "${USERDATA_STAGE}"/*; do
@@ -324,6 +387,18 @@ for item in "${USERDATA_STAGE}"/*; do
 	[ "${basename_item}" = "boot.scr" ] && continue
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${item}" ::
 done
+
+# Copy idbloader.img from U-Boot build directory if it exists and is missing in BINARIES_DIR
+if [ ! -f "${BINARIES_DIR}/idbloader.img" ]; then
+	echo "Checking for idbloader.img in U-Boot build directory..."
+	for uboot_dir in "${BUILD_DIR}"/uboot-*; do
+		if [ -f "${uboot_dir}/idbloader.img" ]; then
+			echo "Found idbloader.img in ${uboot_dir}, copying to ${BINARIES_DIR}..."
+			cp -f "${uboot_dir}/idbloader.img" "${BINARIES_DIR}/idbloader.img"
+			break
+		fi
+	done
+fi
 
 echo "Running genimage..."
 rm -rf "${GENIMAGE_TMP}"

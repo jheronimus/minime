@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bc \
     python3 \
     python3-dev \
+    python3-magic \
+    flake8 \
+    shellcheck \
     swig \
     u-boot-tools \
     cpio \
