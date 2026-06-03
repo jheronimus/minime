@@ -8,7 +8,7 @@ DOCKER_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/
 IS_PODMAN := $(shell [ "$$(basename $(DOCKER_CMD))" = "podman" ] && echo 1 || echo 0)
 
 DOCKER_IMAGE := minime-builder
-DOCKER_TTY := $(shell tty -s && echo "-it" || echo "-i")
+DOCKER_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
 ifeq ($(IS_PODMAN),1)
     # Rootless Podman uses keep-id and host directory mapping to handle user namespace permissions cleanly on Alpine
