@@ -247,13 +247,15 @@ MALI_CreateWindow(_THIS, SDL_Window * window)
         displaydata->egl_destroy_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_destroy_pixmap_ID_mapping");"""
 
     proc_replacement = """    if (displaydata->blitter) {
+        void *egl_lib;
+
         printf("Before SDL_EGL_GetProcAddress egl_create_pixmap_ID_mapping\\n");
         fflush(stdout);
         displaydata->egl_create_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_create_pixmap_ID_mapping");
         if (!displaydata->egl_create_pixmap_ID_mapping) {
             printf("eglGetProcAddress returned NULL, falling back to SDL_LoadFunction\\n");
             fflush(stdout);
-            void *egl_lib = SDL_LoadObject("libEGL.so.1");
+            egl_lib = SDL_LoadObject("libEGL.so.1");
             if (egl_lib) {
                 displaydata->egl_create_pixmap_ID_mapping = SDL_LoadFunction(egl_lib, "egl_create_pixmap_ID_mapping");
             }
@@ -262,7 +264,7 @@ MALI_CreateWindow(_THIS, SDL_Window * window)
         fflush(stdout);
         displaydata->egl_destroy_pixmap_ID_mapping = SDL_EGL_GetProcAddress(_this, "egl_destroy_pixmap_ID_mapping");
         if (!displaydata->egl_destroy_pixmap_ID_mapping) {
-            void *egl_lib = SDL_LoadObject("libEGL.so.1");
+            egl_lib = SDL_LoadObject("libEGL.so.1");
             if (egl_lib) {
                 displaydata->egl_destroy_pixmap_ID_mapping = SDL_LoadFunction(egl_lib, "egl_destroy_pixmap_ID_mapping");
             }

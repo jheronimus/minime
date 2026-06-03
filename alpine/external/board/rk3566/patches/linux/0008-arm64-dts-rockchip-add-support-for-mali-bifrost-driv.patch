@@ -13,7 +13,7 @@ index fd2214b6fad4..dd1bd1401985 100644
 +++ b/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
 @@ -559,9 +559,22 @@ gpu: gpu@fde60000 {
  		interrupt-names = "job", "mmu", "gpu";
- 		clocks = <&scmi_clk 1>, <&cru CLK_GPU>;
+ 		clocks = <&scmi_clk SCMI_CLK_GPU>, <&cru CLK_GPU>;
  		clock-names = "gpu", "bus";
 +		resets = <&cru SRST_GPU>;
  		#cooling-cells = <2>;

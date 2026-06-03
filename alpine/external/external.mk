@@ -27,16 +27,6 @@ SDL2_CONF_OPTS += --disable-video-mali
 endif
 endif
 
-define SDL2_RESTORE_CONFIG_H
-	mv $(@D)/include/SDL_config.h $(@D)/include/SDL_config.h.orig
-	(echo '#ifndef SDL_config_h_'; \
-	 echo '#define SDL_config_h_'; \
-	 echo '#include "SDL_platform.h"'; \
-	 cat $(@D)/include/SDL_config.h.orig; \
-	 echo '#endif /* SDL_config_h_ */') > $(@D)/include/SDL_config.h
-endef
-SDL2_POST_CONFIGURE_HOOKS += SDL2_RESTORE_CONFIG_H
-
 define SDL2_ADD_MALI_SOURCES
 	if [ -d $(@D)/src/video/mali-fbdev ]; then \
 		$(SED) '/AC_DEFINE(SDL_VIDEO_DRIVER_MALI/a \            SOURCES="$$SOURCES $$srcdir/src/video/mali-fbdev/*.c"' $(@D)/configure.ac; \

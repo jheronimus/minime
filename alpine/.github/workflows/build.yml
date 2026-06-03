@@ -1,0 +1,46 @@
+name: Build Minime Firmware
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Target Board'
+        required: true
+        default: 'h700'
+        type: choice
+        options:
+          - h700
+          - rk3326
+          - rk3566
+
+jobs:
+  build:
+    name: Build Firmware
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Verify/Install Dependencies
+        run: |
+          # Run prepare-linux.sh. Assumes passwordless sudo or pre-installed packages.
+          ./scripts/prepare-linux.sh
+
+      - name: Self-Healing Rebuild Check
+        run: |
+          python3 scripts/check_rebuild.py --auto-clean
+
+      - name: Build Image
+        run: |
+          BOARD_TARGET="${{ github.event.inputs.board }}"
+          if [ -z "$BOARD_TARGET" ]; then
+            BOARD_TARGET="h700"
+          fi
+          echo "Building image for board: $BOARD_TARGET"
+          make image BOARD="$BOARD_TARGET"

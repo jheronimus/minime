@@ -10,10 +10,47 @@ ipv4_wait_seconds=20
 udhcpc_pidfile="/run/udhcpc.${wifi_interface}.pid"
 udhcpc_logfile="/run/udhcpc.${wifi_interface}.log"
 diagnostic_logfile="/tmp/wifi.diagnostics"
+sdcard_logfile="/mnt/sdcard/minime-wifi.log"
 
 wpa_supplicant_seed_dir="/mnt/sdcard/.system/config/wpa_supplicant"
 wifi_config_file="/mnt/sdcard/.system/config/wifi.cfg"
 
+append_sdcard_log() {
+  [ -d /mnt/sdcard ] || return 0
+  {
+    printf '%s\n' "$*"
+    sync
+  } >> "${sdcard_logfile}" 2>/dev/null || true
+}
+
+log_wifi_snapshot() {
+  reason="$1"
+
+  [ -d /mnt/sdcard ] || return 0
+  {
+    printf '%s\n' "=== ${reason} ==="
+    printf '%s\n' "date=$(date 2>/dev/null || true)"
+    printf '%s\n' "kernel=$(uname -a 2>/dev/null || true)"
+    printf '%s\n' "wifi_config_present=$([ -f "${wifi_config_file}" ] && echo yes || echo no)"
+    printf '%s\n' "wpa_config_network_count=$(grep -c '^network={' "${wpa_supplicant_config_file}" 2>/dev/null || true)"
+    printf '%s\n' "interfaces:"
+    ip link show 2>&1 || true
+    printf '%s\n' "/sys/class/net/${wifi_interface}:"
+    ls -la "/sys/class/net/${wifi_interface}" 2>&1 || true
+    printf '%s\n' "/sys/bus/sdio/devices:"
+    ls -la /sys/bus/sdio/devices 2>&1 || true
+    printf '%s\n' "loaded modules:"
+    lsmod 2>&1 || true
+    printf '%s\n' "wpa_cli status:"
+    wpa_cli -i "${wifi_interface}" status 2>&1 || true
+    printf '%s\n' "udhcpc log:"
+    cat "${udhcpc_logfile}" 2>&1 || true
+    printf '%s\n' "kernel wifi/sdio messages:"
+    dmesg 2>&1 | grep -Ei 'rtw|rtl|wifi|wlan|sdio|mmc|cfg80211|firmware' || true
+    printf '%s\n' "=== end ${reason} ==="
+    sync
+  } >> "${sdcard_logfile}" 2>/dev/null || true
+}
 
 
 init_wpa_supplicant_conf() {
@@ -117,6 +154,9 @@ wait_for_wpa_supplicant_ready() {
 log_failure_diagnostics() {
   reason="$1"
 
+  append_sdcard_log "wifi: failure ${reason}"
+  log_wifi_snapshot "failure ${reason}"
+
   {
     printf '%s\n' "reason=${reason}"
     printf '%s ' "/sys/class/net/${wifi_interface}:"
@@ -189,6 +229,8 @@ start_background() {
   # Redirect stdout/stderr to keep boot console clean
   exec >/dev/null 2>&1
 
+  append_sdcard_log "wifi: background startup begin"
+
   if ! prepare_wifi_interface; then
     log_failure_diagnostics "missing-${wifi_interface}"
     return 1
@@ -212,6 +254,8 @@ start_background() {
 
   if wait_for_ipv4_address; then
     logger -t wifi "connection established (pre-DHCP)" 2>/dev/null || true
+    append_sdcard_log "wifi: connection established pre-DHCP"
+    log_wifi_snapshot "success pre-DHCP"
     return 0
   fi
 
@@ -222,19 +266,27 @@ start_background() {
   fi
 
   logger -t wifi "connection established with IP" 2>/dev/null || true
+  append_sdcard_log "wifi: connection established with IP"
+  log_wifi_snapshot "success with IP"
   return 0
 }
 
 start() {
   printf "Starting wifi: "
+  : > "${sdcard_logfile}" 2>/dev/null || true
+  append_sdcard_log "wifi: init script start"
   init_wpa_supplicant_conf
   generate_wpa_profiles_from_config
   seed_wpa_profiles
 
   if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+    append_sdcard_log "wifi: no profiles configured"
+    log_wifi_snapshot "no profiles configured"
     echo "No Wi-Fi profiles configured; skipping connection"
     return 0
   fi
+
+  log_wifi_snapshot "configured profiles"
 
   # Trigger background connection
   start_background &

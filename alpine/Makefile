@@ -55,7 +55,7 @@ endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_DOCKER
 
-.PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-rebuild FORCE
+.PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
 
 help:
 	@printf '%s\n' \
@@ -64,6 +64,7 @@ help:
 		"  make shell         - Open an interactive terminal shell inside the environment" \
 		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
 		"  make image         - Build complete bootable firmware image for active board" \
+		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
 		"  make clean         - Remove active board outputs and buildroot state" \
 		"  make clean-all     - Remove ALL board outputs and buildroot state" \
@@ -111,7 +112,7 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	$(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
-image: $(BUILDROOT_STAMP) prepare_vm
+image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
@@ -124,6 +125,17 @@ ifeq ($(USE_DOCKER),1)
 else
 	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
 	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)/ 2>/dev/null || true
+endif
+
+check-package: prepare_vm
+	@if [ -z "$(CHECK_PACKAGE_FILES)" ]; then \
+		echo "ERROR: set CHECK_PACKAGE_FILES='path ...'" >&2; \
+		exit 1; \
+	fi
+ifeq ($(USE_DOCKER),1)
+	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
+else
+	@python3 buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 endif
 
 check-rebuild: prepare_vm
