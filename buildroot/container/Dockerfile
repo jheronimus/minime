@@ -59,8 +59,8 @@ RUN mkdir -p /buildroot-output /home/builder/.buildroot-ccache /home/builder/.bu
     chown -R builder:builder /buildroot-output /home/builder/.buildroot-ccache /home/builder/.buildroot-dl /workspace
 
 # Set ccache variables
-ENV BR2_CCACHE_DIR=/home/builder/.buildroot-ccache
-ENV CCACHE_DIR=/home/builder/.buildroot-ccache
+ENV BR2_CCACHE_DIR=/buildroot-output/ccache
+ENV CCACHE_DIR=/buildroot-output/ccache
 
 USER builder
 WORKDIR /workspace

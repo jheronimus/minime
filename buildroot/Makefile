@@ -5,6 +5,16 @@ OS := $(shell uname -s)
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+    CONTAINER_PLATFORM := linux/amd64
+else ifeq ($(UNAME_M),arm64)
+    CONTAINER_PLATFORM := linux/arm64
+else ifeq ($(UNAME_M),aarch64)
+    CONTAINER_PLATFORM := linux/arm64
+endif
+PLATFORM_ARG := $(if $(CONTAINER_PLATFORM),--platform $(CONTAINER_PLATFORM),)
+
 USE_PODMAN ?= 1
 
 PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
@@ -15,14 +25,20 @@ PODMAN_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
 ifeq ($(IS_PODMAN),1)
     # Rootless Podman uses keep-id and host directory mapping to handle user namespace permissions cleanly on Alpine
-    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) \
+    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/buildroot-output \
+        -e CCACHE_DIR=/buildroot-output/ccache \
+        -e BR2_CCACHE_DIR=/buildroot-output/ccache \
         -v $(ROOT_DIR):/workspace \
         -v $(HOME)/buildroot-output:/buildroot-output \
         -v $(HOME)/.buildroot-ccache:/buildroot-output/ccache \
         -v $(HOME)/.buildroot-dl:/buildroot-output/dl
 else
     # Standard Docker configuration fallback
-    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) \
+    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/buildroot-output \
+        -e CCACHE_DIR=/buildroot-output/ccache \
+        -e BR2_CCACHE_DIR=/buildroot-output/ccache \
         -v $(ROOT_DIR):/workspace \
         -v minime-buildroot-output:/buildroot-output \
         -v minime-buildroot-ccache:/buildroot-output/ccache \
@@ -112,7 +128,7 @@ endif
 prepare:
 ifeq ($(USE_PODMAN),1)
 	@echo "Building container image '$(PODMAN_IMAGE)'..."
-	@$(PODMAN_CMD) build -t $(PODMAN_IMAGE) -f container/Dockerfile .
+	@$(PODMAN_CMD) build $(PLATFORM_ARG) -t $(PODMAN_IMAGE) -f container/Dockerfile .
 else
 	@./scripts/prepare-linux.sh
 endif
