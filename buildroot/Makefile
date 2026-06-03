@@ -2,29 +2,31 @@ SHELL := /bin/bash
 ROOT_DIR := $(CURDIR)
 OS := $(shell uname -s)
 
-USE_DOCKER ?= 1
+HOST_UID := $(shell id -u)
+HOST_GID := $(shell id -g)
 
-DOCKER_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker)
-IS_PODMAN := $(shell [ "$$(basename $(DOCKER_CMD))" = "podman" ] && echo 1 || echo 0)
+USE_PODMAN ?= 1
 
-DOCKER_IMAGE := minime-builder
-DOCKER_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
+PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
+IS_PODMAN := $(shell [ "$$(basename $(PODMAN_CMD))" = "podman" ] && echo 1 || echo 0)
+
+PODMAN_IMAGE := minime-builder
+PODMAN_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
 ifeq ($(IS_PODMAN),1)
     # Rootless Podman uses keep-id and host directory mapping to handle user namespace permissions cleanly on Alpine
-    DOCKER_RUN_ARGS := $(DOCKER_TTY) --rm --userns=keep-id \
+    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) \
         -v $(ROOT_DIR):/workspace \
         -v $(HOME)/buildroot-output:/buildroot-output \
-        -v $(HOME)/.buildroot-ccache:/home/pi/.buildroot-ccache \
-        -v $(HOME)/.buildroot-dl:/home/pi/.buildroot-dl
+        -v $(HOME)/.buildroot-ccache:/buildroot-output/ccache \
+        -v $(HOME)/.buildroot-dl:/buildroot-output/dl
 else
-    # Standard Docker configuration
-    DOCKER_RUN_ARGS := $(DOCKER_TTY) --rm \
+    # Standard Docker configuration fallback
+    PODMAN_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) \
         -v $(ROOT_DIR):/workspace \
         -v minime-buildroot-output:/buildroot-output \
-        -v minime-buildroot-ccache:/home/builder/.buildroot-ccache \
-        -v minime-buildroot-dl:/home/builder/.buildroot-dl \
-        --user 1000:1000
+        -v minime-buildroot-ccache:/buildroot-output/ccache \
+        -v minime-buildroot-dl:/buildroot-output/dl
 endif
 
 BUILDROOT_VERSION := 2026.02.2
@@ -39,18 +41,16 @@ ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
 endif
 
-ifeq ($(USE_DOCKER),1)
+ifeq ($(USE_PODMAN),1)
     LINUX_ROOT := /workspace
     BASE_OUTPUT_DIR := /buildroot-output
-    ifeq ($(IS_PODMAN),1)
-        BUILDROOT_CCACHE_DIR := /home/pi/.buildroot-ccache
-    else
-        BUILDROOT_CCACHE_DIR := /home/builder/.buildroot-ccache
-    endif
+    BUILDROOT_CCACHE_DIR := /buildroot-output/ccache
+    BUILDROOT_DL_DIR := /buildroot-output/dl
 else
     LINUX_ROOT := $(ROOT_DIR)
     BASE_OUTPUT_DIR := $(HOME)/buildroot-output
     BUILDROOT_CCACHE_DIR := $(HOME)/.buildroot-ccache
+    BUILDROOT_DL_DIR := $(HOME)/.buildroot-dl
 endif
 
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
@@ -60,22 +60,22 @@ MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 LOG_DIR := $(CURDIR)/logs
 
-BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR)
+BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
 
-ifeq ($(USE_DOCKER),1)
-    RUN_CMD = $(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
+ifeq ($(USE_PODMAN),1)
+    RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
 else
     RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
 endif
 
-export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_DOCKER DOCKER_CMD
+export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
 .PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
 
 help:
 	@printf '%s\n' \
 		"minime firmware build orchestrator:" \
-		"  make prepare       - Build builder Docker image (macOS) or provision host (Linux)" \
+		"  make prepare       - Build builder Podman/Docker image (macOS) or provision host (Linux)" \
 		"  make shell         - Open an interactive terminal shell inside the environment" \
 		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
 		"  make image         - Build complete bootable firmware image for active board" \
@@ -83,7 +83,7 @@ help:
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
 		"  make clean         - Remove active board outputs and buildroot state" \
 		"  make clean-all     - Remove ALL board outputs and buildroot state" \
-		"  make clean-vm      - Delete Docker volumes and container images" \
+		"  make clean-vm      - Delete container images and resources" \
 		"  make <target>      - Pass target directly to Buildroot" \
 		"" \
 		"Supported boards: $(SUPPORTED_BOARDS) (selected via BOARD=..., default: h700)"
@@ -103,23 +103,23 @@ buildroot: $(BUILDROOT_STAMP)
 	@echo "Buildroot $(BUILDROOT_VERSION) is ready in $(BUILDROOT_DIR)"
 
 prepare_vm:
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(DOCKER_CMD) daemon is not running or not accessible." >&2 && exit 1)
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
 	@if [ "$(IS_PODMAN)" = "1" ]; then mkdir -p $(HOME)/buildroot-output $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl; fi
-	@$(DOCKER_CMD) image inspect $(DOCKER_IMAGE) >/dev/null 2>&1 || $(MAKE) prepare
+	@$(PODMAN_CMD) image inspect $(PODMAN_IMAGE) >/dev/null 2>&1 || $(MAKE) prepare
 endif
 
 prepare:
-ifeq ($(USE_DOCKER),1)
-	@echo "Building container image '$(DOCKER_IMAGE)'..."
-	@$(DOCKER_CMD) build -t $(DOCKER_IMAGE) -f docker/Dockerfile .
+ifeq ($(USE_PODMAN),1)
+	@echo "Building container image '$(PODMAN_IMAGE)'..."
+	@$(PODMAN_CMD) build -t $(PODMAN_IMAGE) -f container/Dockerfile .
 else
 	@./scripts/prepare-linux.sh
 endif
 
 shell: prepare_vm
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run -it $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) /bin/bash
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run -it $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) /bin/bash
 else
 	@bash
 endif
@@ -136,8 +136,8 @@ image: $(BUILDROOT_STAMP) prepare_vm defconfig
 copy_images:
 	@mkdir -p $(CURDIR)/out/$(BOARD)
 	@echo "Copying built firmware images to out/$(BOARD)/..."
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)/ 2>/dev/null || true"
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)/ 2>/dev/null || true"
 else
 	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
 	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)/ 2>/dev/null || true
@@ -148,42 +148,42 @@ check-package: prepare_vm
 		echo "ERROR: set CHECK_PACKAGE_FILES='path ...'" >&2; \
 		exit 1; \
 	fi
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) python3 /workspace/buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 else
 	@python3 buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 endif
 
 check-rebuild: prepare_vm
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/scripts/check_rebuild.py
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) python3 /workspace/scripts/check_rebuild.py
 else
 	@python3 scripts/check_rebuild.py
 endif
 
 clean:
 	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/$(BOARD)/
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BUILDROOT_OUTPUT_DIR)
 endif
 
 clean-all: clean
 	@rm -rf $(CURDIR)/out/
-ifeq ($(USE_DOCKER),1)
-	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BASE_OUTPUT_DIR) 2>/dev/null || true
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(BASE_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BASE_OUTPUT_DIR)
 endif
 
 clean-vm:
-ifeq ($(USE_DOCKER),1)
-	@echo "Deleting container named volumes and build image..."
-	@if [ "$(IS_PODMAN)" = "0" ]; then $(DOCKER_CMD) volume rm minime-buildroot-output minime-buildroot-ccache minime-buildroot-dl 2>/dev/null || true; fi
-	@$(DOCKER_CMD) rmi $(DOCKER_IMAGE) 2>/dev/null || true
+ifeq ($(USE_PODMAN),1)
+	@echo "Deleting container images..."
+	@if [ "$(IS_PODMAN)" = "0" ]; then $(PODMAN_CMD) volume rm minime-buildroot-output minime-buildroot-ccache minime-buildroot-dl 2>/dev/null || true; fi
+	@$(PODMAN_CMD) rmi $(PODMAN_IMAGE) 2>/dev/null || true
 else
-	@echo "clean-vm is only applicable when using Docker/Podman." >&2
+	@echo "clean-vm is only applicable when using Podman." >&2
 endif
 
 Makefile: ;

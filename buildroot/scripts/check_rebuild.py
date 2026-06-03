@@ -14,7 +14,7 @@ args = parser.parse_args()
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXTERNAL = os.path.join(WORKSPACE, "external")
 
-# Retrieve BR2_EXTERNAL buildroot-output directory, defaulting to Docker's volume or host path
+# Retrieve BR2_EXTERNAL buildroot-output directory, defaulting to Podman/container's output directory or host path
 BUILD_DIR = "/buildroot-output"
 if not os.path.exists(BUILD_DIR):
     BUILD_DIR = os.path.expanduser("~/buildroot-output")

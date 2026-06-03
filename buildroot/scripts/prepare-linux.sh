@@ -34,7 +34,19 @@ if [ -f /etc/os-release ]; then
         sudo apt-get install -y $BOOTSTRAP_PACKAGES
         echo "Host is ready."
     elif [ "$IS_ALPINE" -eq 1 ]; then
-        echo "Host is Alpine Linux. Utilizing Docker/Podman for containerized compilation."
+        echo "Host is Alpine Linux. Ensuring Podman is installed..."
+        if ! command -v podman >/dev/null 2>&1; then
+            if command -v doas >/dev/null 2>&1; then
+                doas apk update
+                doas apk add podman shadow
+            elif command -v sudo >/dev/null 2>&1; then
+                sudo apk update
+                sudo apk add podman shadow
+            else
+                echo "ERROR: Neither doas nor sudo found. Please install manually: apk add podman shadow" >&2
+                exit 1
+            fi
+        fi
         echo "Host is ready."
     else
         echo "ERROR: Linux distribution '${NAME:-Unknown}' is not supported. Please install required packages manually." >&2
