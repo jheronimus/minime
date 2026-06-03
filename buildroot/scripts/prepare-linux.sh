@@ -37,7 +37,7 @@ if [ -f /etc/os-release ]; then
         echo "Host is Alpine Linux."
         echo "Installing packages on host (requires sudo)..."
         
-        ALPINE_PACKAGES="build-base bison flex gettext texinfo unzip help2man rsync git curl ccache cmake mold ninja elfutils-dev openssl-dev bc python3 python3-dev swig u-boot-tools cpio mtools dosfstools lzip parted patchelf findutils file wget ncurses-dev gcompat libc6-compat bash"
+        ALPINE_PACKAGES="build-base bison flex gettext gettext-dev texinfo unzip help2man rsync git curl ccache cmake mold ninja elfutils-dev openssl-dev bc python3 python3-dev swig u-boot-tools cpio mtools dosfstools lzip parted patchelf findutils file wget ncurses-dev gcompat libc6-compat bash"
         
         sudo apk update
         # shellcheck disable=SC2086
