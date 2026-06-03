@@ -38,6 +38,12 @@ else
     BUILDROOT_CCACHE_DIR := $(HOME)/.buildroot-ccache
 endif
 
+# Detect Alpine Linux to automatically configure host libraries (e.g. libintl)
+IS_ALPINE := $(shell [ -f /etc/alpine-release ] && echo 1 || echo 0)
+ifeq ($(IS_ALPINE),1)
+    export HOST_LDFLAGS ?= -lintl
+endif
+
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
 MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
