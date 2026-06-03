@@ -110,11 +110,11 @@ endif
 
 defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	$(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
+	set -o pipefail; $(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
 image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
+	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
 
 copy_images:
@@ -177,7 +177,7 @@ Makefile: ;
 	if [[ "$@" == *menuconfig || "$@" == *nconfig || "$@" == *xconfig || "$@" == *gconfig ]]; then \
 		$(call RUN_CMD,$@); \
 	else \
-		$(call RUN_CMD,$@) 2>&1 | tee "$$LOG_FILE"; \
+		set -o pipefail; $(call RUN_CMD,$@) 2>&1 | tee "$$LOG_FILE"; \
 	fi
 
 FORCE: ;
