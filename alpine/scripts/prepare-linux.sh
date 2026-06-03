@@ -34,14 +34,7 @@ if [ -f /etc/os-release ]; then
         sudo apt-get install -y $BOOTSTRAP_PACKAGES
         echo "Host is ready."
     elif [ "$IS_ALPINE" -eq 1 ]; then
-        echo "Host is Alpine Linux."
-        echo "Installing packages on host (requires sudo)..."
-        
-        ALPINE_PACKAGES="build-base bison flex gettext gettext-dev texinfo unzip help2man rsync git curl ccache cmake mold ninja elfutils-dev openssl-dev bc python3 python3-dev swig u-boot-tools cpio mtools dosfstools lzip parted patchelf findutils file wget ncurses-dev gcompat libc6-compat bash"
-        
-        sudo apk update
-        # shellcheck disable=SC2086
-        sudo apk add $ALPINE_PACKAGES
+        echo "Host is Alpine Linux. Utilizing Docker/Podman for containerized compilation."
         echo "Host is ready."
     else
         echo "ERROR: Linux distribution '${NAME:-Unknown}' is not supported. Please install required packages manually." >&2

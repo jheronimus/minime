@@ -2,19 +2,30 @@ SHELL := /bin/bash
 ROOT_DIR := $(CURDIR)
 OS := $(shell uname -s)
 
-USE_DOCKER ?= 0
-ifeq ($(OS),Darwin)
-    USE_DOCKER := 1
-endif
+USE_DOCKER ?= 1
+
+DOCKER_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo docker)
+IS_PODMAN := $(shell [ "$$(basename $(DOCKER_CMD))" = "podman" ] && echo 1 || echo 0)
 
 DOCKER_IMAGE := minime-builder
 DOCKER_TTY := $(shell tty -s && echo "-it" || echo "-i")
-DOCKER_RUN_ARGS := $(DOCKER_TTY) --rm \
-    -v $(ROOT_DIR):/workspace \
-    -v minime-buildroot-output:/buildroot-output \
-    -v minime-buildroot-ccache:/home/builder/.buildroot-ccache \
-    -v minime-buildroot-dl:/home/builder/.buildroot-dl \
-    --user 1000:1000
+
+ifeq ($(IS_PODMAN),1)
+    # Rootless Podman uses keep-id and host directory mapping to handle user namespace permissions cleanly on Alpine
+    DOCKER_RUN_ARGS := $(DOCKER_TTY) --rm --userns=keep-id \
+        -v $(ROOT_DIR):/workspace \
+        -v $(HOME)/buildroot-output:/buildroot-output \
+        -v $(HOME)/.buildroot-ccache:/home/pi/.buildroot-ccache \
+        -v $(HOME)/.buildroot-dl:/home/pi/.buildroot-dl
+else
+    # Standard Docker configuration
+    DOCKER_RUN_ARGS := $(DOCKER_TTY) --rm \
+        -v $(ROOT_DIR):/workspace \
+        -v minime-buildroot-output:/buildroot-output \
+        -v minime-buildroot-ccache:/home/builder/.buildroot-ccache \
+        -v minime-buildroot-dl:/home/builder/.buildroot-dl \
+        --user 1000:1000
+endif
 
 BUILDROOT_VERSION := 2026.02.2
 BUILDROOT_ARCHIVE := buildroot-$(BUILDROOT_VERSION).tar.gz
@@ -31,17 +42,15 @@ endif
 ifeq ($(USE_DOCKER),1)
     LINUX_ROOT := /workspace
     BASE_OUTPUT_DIR := /buildroot-output
-    BUILDROOT_CCACHE_DIR := /home/builder/.buildroot-ccache
+    ifeq ($(IS_PODMAN),1)
+        BUILDROOT_CCACHE_DIR := /home/pi/.buildroot-ccache
+    else
+        BUILDROOT_CCACHE_DIR := /home/builder/.buildroot-ccache
+    endif
 else
     LINUX_ROOT := $(ROOT_DIR)
     BASE_OUTPUT_DIR := $(HOME)/buildroot-output
     BUILDROOT_CCACHE_DIR := $(HOME)/.buildroot-ccache
-endif
-
-# Detect Alpine Linux to automatically configure host libraries (e.g. libintl)
-IS_ALPINE := $(shell [ -f /etc/alpine-release ] && echo 1 || echo 0)
-ifeq ($(IS_ALPINE),1)
-    export HOST_LDFLAGS ?= -lintl
 endif
 
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
@@ -54,12 +63,12 @@ LOG_DIR := $(CURDIR)/logs
 BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR)
 
 ifeq ($(USE_DOCKER),1)
-    RUN_CMD = docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
+    RUN_CMD = $(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
 else
     RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
 endif
 
-export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_DOCKER
+export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_DOCKER DOCKER_CMD
 
 .PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
 
@@ -95,21 +104,22 @@ buildroot: $(BUILDROOT_STAMP)
 
 prepare_vm:
 ifeq ($(USE_DOCKER),1)
-	@docker info >/dev/null 2>&1 || (echo "ERROR: Docker daemon is not running. Please start Colima or Docker first." >&2 && exit 1)
-	@docker image inspect $(DOCKER_IMAGE) >/dev/null 2>&1 || $(MAKE) prepare
+	@$(DOCKER_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(DOCKER_CMD) daemon is not running or not accessible." >&2 && exit 1)
+	@if [ "$(IS_PODMAN)" = "1" ]; then mkdir -p $(HOME)/buildroot-output $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl; fi
+	@$(DOCKER_CMD) image inspect $(DOCKER_IMAGE) >/dev/null 2>&1 || $(MAKE) prepare
 endif
 
 prepare:
 ifeq ($(USE_DOCKER),1)
-	@echo "Building Docker image '$(DOCKER_IMAGE)'..."
-	@docker build -t $(DOCKER_IMAGE) -f docker/Dockerfile .
+	@echo "Building container image '$(DOCKER_IMAGE)'..."
+	@$(DOCKER_CMD) build -t $(DOCKER_IMAGE) -f docker/Dockerfile .
 else
 	@./scripts/prepare-linux.sh
 endif
 
 shell: prepare_vm
 ifeq ($(USE_DOCKER),1)
-	@docker run -it $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) /bin/bash
+	@$(DOCKER_CMD) run -it $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) /bin/bash
 else
 	@bash
 endif
@@ -127,7 +137,7 @@ copy_images:
 	@mkdir -p $(CURDIR)/out/$(BOARD)
 	@echo "Copying built firmware images to out/$(BOARD)/..."
 ifeq ($(USE_DOCKER),1)
-	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)/ 2>/dev/null || true"
+	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)/ 2>/dev/null || true"
 else
 	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
 	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)/ 2>/dev/null || true
@@ -139,14 +149,14 @@ check-package: prepare_vm
 		exit 1; \
 	fi
 ifeq ($(USE_DOCKER),1)
-	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
+	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 else
 	@python3 buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 endif
 
 check-rebuild: prepare_vm
 ifeq ($(USE_DOCKER),1)
-	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/scripts/check_rebuild.py
+	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) python3 /workspace/scripts/check_rebuild.py
 else
 	@python3 scripts/check_rebuild.py
 endif
@@ -154,7 +164,7 @@ endif
 clean:
 	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/$(BOARD)/
 ifeq ($(USE_DOCKER),1)
-	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
+	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BUILDROOT_OUTPUT_DIR)
 endif
@@ -162,18 +172,18 @@ endif
 clean-all: clean
 	@rm -rf $(CURDIR)/out/
 ifeq ($(USE_DOCKER),1)
-	@docker run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BASE_OUTPUT_DIR) 2>/dev/null || true
+	@$(DOCKER_CMD) run $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE) rm -rf $(BASE_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BASE_OUTPUT_DIR)
 endif
 
 clean-vm:
 ifeq ($(USE_DOCKER),1)
-	@echo "Deleting Docker named volumes and build image..."
-	@docker volume rm minime-buildroot-output minime-buildroot-ccache minime-buildroot-dl 2>/dev/null || true
-	@docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
+	@echo "Deleting container named volumes and build image..."
+	@if [ "$(IS_PODMAN)" = "0" ]; then $(DOCKER_CMD) volume rm minime-buildroot-output minime-buildroot-ccache minime-buildroot-dl 2>/dev/null || true; fi
+	@$(DOCKER_CMD) rmi $(DOCKER_IMAGE) 2>/dev/null || true
 else
-	@echo "clean-vm is only applicable when using Docker." >&2
+	@echo "clean-vm is only applicable when using Docker/Podman." >&2
 endif
 
 Makefile: ;
