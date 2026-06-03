@@ -1,6 +1,6 @@
 --- a/libfakeroot.c
 +++ b/libfakeroot.c
-@@ -87,9 +87,11 @@
+@@ -87,10 +87,12 @@
  #define SEND_GET_STAT(a,b) send_get_stat(a,b)
  #define SEND_GET_STAT64(a,b) send_get_stat64(a,b)
  #define SEND_GET_XATTR64(a,b,c) send_get_xattr64(a,b,c)
