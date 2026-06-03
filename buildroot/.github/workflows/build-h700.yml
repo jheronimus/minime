@@ -1,0 +1,39 @@
+name: Build Minime (H700)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'external/board/h700/**'
+      - 'external/configs/minime_h700_defconfig'
+      - 'external/board/common/**'
+      - 'external/package/**'
+      - 'Makefile'
+      - 'scripts/**'
+      - '.github/workflows/build-h700.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build H700 Firmware
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Verify/Install Dependencies
+        run: |
+          ./scripts/prepare-linux.sh
+
+      - name: Self-Healing Rebuild Check
+        run: |
+          python3 scripts/check_rebuild.py --auto-clean
+
+      - name: Build Image
+        run: |
+          echo "Building image for board: h700"
+          make image BOARD=h700
