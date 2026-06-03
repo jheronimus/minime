@@ -1,0 +1,39 @@
+name: Build Minime (RK3326)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'external/board/rk3326/**'
+      - 'external/configs/minime_rk3326_defconfig'
+      - 'external/board/common/**'
+      - 'external/package/**'
+      - 'Makefile'
+      - 'scripts/**'
+      - '.github/workflows/build-rk3326.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build RK3326 Firmware
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Verify/Install Dependencies
+        run: |
+          ./scripts/prepare-linux.sh
+
+      - name: Self-Healing Rebuild Check
+        run: |
+          python3 scripts/check_rebuild.py --auto-clean
+
+      - name: Build Image
+        run: |
+          echo "Building image for board: rk3326"
+          make image BOARD=rk3326
