@@ -68,7 +68,7 @@ for target_dir, stamp_dir in build_targets:
         config_mtime = os.path.getmtime(dot_config)
         if config_mtime > toolchain_stamp:
             print("⚠️  WARNING: Core system configuration (.config) changed after toolchain build!")
-            if args.auto-clean:
+            if args.auto_clean:
                 print(f"🧹 Auto-cleaning: Running 'make clean BOARD={board_name}'...")
                 subprocess.run(["make", "clean", f"BOARD={board_name}"], cwd=WORKSPACE, check=True)
                 print("✨ Clean complete. Re-run the build to start fresh.")
@@ -100,7 +100,7 @@ for target_dir, stamp_dir in build_targets:
             rules_newest = max(os.path.getmtime(f) for f in rules_files)
             if rules_newest > os.path.getmtime(stamp_configured):
                 print(f"❌ PACKAGE OUT-OF-DATE: '{pkg}' build rules or configuration changed.")
-                if args.auto-clean:
+                if args.auto_clean:
                     print(f"   🧹 Auto-cleaning: Running 'make {pkg}-dirclean BOARD={board_name}'...")
                     subprocess.run(["make", f"{pkg}-dirclean", f"BOARD={board_name}"], cwd=WORKSPACE, check=True)
                 else:
@@ -119,7 +119,7 @@ for target_dir, stamp_dir in build_targets:
             newest_patch = max(os.path.getmtime(p) for p in patches)
             if os.path.exists(stamp_patched) and newest_patch > os.path.getmtime(stamp_patched):
                 print(f"❌ PATCHES OUT-OF-DATE: '{pkg}' has newer patches that have not been applied.")
-                if args.auto-clean:
+                if args.auto_clean:
                     print(f"   🧹 Auto-cleaning: Running 'make {pkg}-dirclean BOARD={board_name}'...")
                     subprocess.run(["make", f"{pkg}-dirclean", f"BOARD={board_name}"], cwd=WORKSPACE, check=True)
                 else:
