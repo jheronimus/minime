@@ -15,7 +15,7 @@ Two patches from the original Rocknix collection had to be manually corrected to
 
 ## Omitted Patches
 The following patches from Rocknix's `H700` device package were omitted:
-- **`0140-rg35xx-2024-use-rocknix-joypad-driver.patch`**: Omitted to use standard mainline kernel input subsystems instead of Rocknix's custom joypad driver.
+- **`0140-rg35xx-2024-use-rocknix-joypad-driver.patch`**: Omitted in favor of the standard mainline kernel input subsystems. Analog sticks on multiplexed-ADC devices (like RG35XX-H) are supported natively using built-in Linux drivers (`CONFIG_JOYSTICK_ADC`, `CONFIG_IIO_MUX`, `CONFIG_MUX_GPIO`, and `CONFIG_MULTIPLEXER`), which are enabled in our kernel configuration fragment.
 - **`0144-Update-sun50i-h700-anbernic-rg35xx-h.dts.patch`**: Omitted as it is device-specific to RG35XX-H and not required for this firmware's core configurations.
 - **`0150-add-forcefeedback.patch`**: Omitted as rumble support is not needed for the minimal baseline image.
 - **`0203-sound-soc-Add-sunxi_v2-for-h616-ahub.patch.disabled`**: Omitted as it is disabled upstream in Rocknix.
