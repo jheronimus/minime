@@ -12,10 +12,10 @@ TODO.md
 AGENTS.md
 .antigravitycli/
 local.mk
-minui
-minarch
-libmsettings.so
-libSDL2.so
+/minui
+/minarch
+/libmsettings.so
+/libSDL2.so
 scripts/upload_res.py
 scripts/upload_binaries.py
 scripts/test_otp.py

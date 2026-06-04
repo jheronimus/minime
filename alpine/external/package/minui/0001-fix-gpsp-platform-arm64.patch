@@ -1,0 +1,23 @@
+Fix gpsp core compilation platform setting for arm64 target architecture.
+
+The GBA core (gpsp) makefile in MinUI overrides gpsp_MAKE to make platform=unix.
+This causes it to target x86 dynarec assembly when compiled on a x86_64 container host.
+By setting platform=arm64, we force it to target arm64, which compiles cleanly on
+our aarch64 cross-compiler.
+
+Upstream: N/A
+Signed-off-by: Antigravity <antigravity@google.com>
+
+diff --git a/workspace/minime/cores/makefile b/workspace/minime/cores/makefile
+index 71afc84..9d42fa6 100644
+--- a/workspace/minime/cores/makefile
++++ b/workspace/minime/cores/makefile
+@@ -32,7 +32,7 @@ snes9x2005_plus_REPO = https://github.com/libretro/snes9x2005
+ # Override make commands to compile with platform=unix for 64-bit Linux compatibility
+ fceumm_MAKE = make platform=unix
+ gambatte_MAKE = make platform=unix
+-gpsp_MAKE = make platform=unix
++gpsp_MAKE = make platform=arm64
+ pcsx_rearmed_MAKE = make -f Makefile.libretro platform=unix
+ picodrive_MAKE = make -f Makefile.libretro platform=unix GIT_REVISION=""
+ snes9x2005_plus_MAKE = make platform=unix USE_BLARGG_APU=1

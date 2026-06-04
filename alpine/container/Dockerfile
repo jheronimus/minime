@@ -54,9 +54,9 @@ ENV LC_ALL=en_US.UTF-8
 RUN groupadd -g 1000 builder && \
     useradd -u 1000 -g builder -d /home/builder -m -s /bin/bash builder
 
-# Pre-create volume mountpoints inside the container with correct permissions
 RUN mkdir -p /buildroot-output /home/builder/.buildroot-ccache /home/builder/.buildroot-dl /workspace && \
-    chown -R builder:builder /buildroot-output /home/builder/.buildroot-ccache /home/builder/.buildroot-dl /workspace
+    chown -R builder:builder /buildroot-output /home/builder/.buildroot-ccache /home/builder/.buildroot-dl /workspace && \
+    chmod 777 /buildroot-output /home/builder/.buildroot-ccache /home/builder/.buildroot-dl /workspace
 
 # Set ccache variables
 ENV BR2_CCACHE_DIR=/buildroot-output/ccache
