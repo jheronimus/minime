@@ -59,9 +59,9 @@ diff --git a/arch/arm64/boot/dts/rockchip/rk3566-anbernic-rg353x.dtsi b/arch/arm
 index 13c679e84446..687199430d84 100644
 --- a/arch/arm64/boot/dts/rockchip/rk3566-anbernic-rg353x.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk3566-anbernic-rg353x.dtsi
-@@ -166,6 +166,40 @@ backlight: backlight {
+@@ -166,6 +166,39 @@ backlight: backlight {
  		compatible = "pwm-backlight";
- 		power-supply = <&vcc_lcd>;
+ 		power-supply = <&vcc_sys>;
  		pwms = <&pwm4 0 25000 0>;
 +		brightness-levels = <
 +			  0   1   2   3   4   5   6   7
@@ -98,7 +98,6 @@ index 13c679e84446..687199430d84 100644
 +			248 249 250 251 252 253 254 255>;
 +		default-brightness-level = <77>;
  	};
- };
  
 diff --git a/arch/arm64/boot/dts/rockchip/rk3566-powkiddy-x55.dts b/arch/arm64/boot/dts/rockchip/rk3566-powkiddy-x55.dts
 index f0becd04e070..85893fe88789 100644
