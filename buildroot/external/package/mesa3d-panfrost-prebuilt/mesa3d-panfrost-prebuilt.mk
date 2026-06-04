@@ -13,7 +13,7 @@ define MESA3D_PANFROST_PREBUILT_INSTALL_TARGET_CMDS
 	# Extract precompiled libraries directly into /usr/lib/panfrost on the target
 	mkdir -p $(TARGET_DIR)/usr/lib/panfrost
 	tar -C $(TARGET_DIR)/usr/lib/panfrost --strip-components=1 \
-		-xzf $(MESA3D_PANFROST_PREBUILT_DIR)/$(MESA3D_PANFROST_PREBUILT_SOURCE)
+		-xzf $(MESA3D_PANFROST_PREBUILT_DIR)/panfrost-prebuilts-v$(MESA3D_PANFROST_PREBUILT_VERSION).tar.gz
 endef
 
 $(eval $(generic-package))
