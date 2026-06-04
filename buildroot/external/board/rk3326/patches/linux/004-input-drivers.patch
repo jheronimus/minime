@@ -6817,7 +6817,7 @@ index 000000000000..f7832a8158d4
 diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
 --- a/drivers/power/supply/rk817_charger.c
 +++ b/drivers/power/supply/rk817_charger.c
-@@ -683,4 +683,4 @@
+@@ -683,3 +683,3 @@
  static const struct power_supply_desc rk817_bat_desc = {
 -	.name = "rk817-battery",
 +	.name = "battery",
