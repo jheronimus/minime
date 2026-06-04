@@ -58,12 +58,9 @@ rtw88_8821c
 rtw88_8821cs
 EOF
 
-# Mali kernel driver
-cat << 'EOF' > "${TARGET_DIR}/etc/modules-load.d/mali.conf"
-mali_kbase
-EOF
 
 # 3.5. Create modprobe options files to disable deep low-power saving states
+
 mkdir -p "${TARGET_DIR}/etc/modprobe.d"
 cat << 'EOF' > "${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
 options rtw88_core disable_lps_deep=y

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MESA3D_PANFROST_PREBUILT
+	bool "mesa3d-panfrost-prebuilt"
+	depends on BR2_aarch64
+	help
+	  Precompiled Mesa (Panfrost) + LLVM binaries for dynamic switching.
