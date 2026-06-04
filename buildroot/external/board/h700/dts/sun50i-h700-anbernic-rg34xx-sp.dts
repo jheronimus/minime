@@ -16,8 +16,4 @@
 	compatible = "anbernic,rg34xx-sp-panel", "panel-mipi-dpi-spi";
 };
 
-&joypad {
-	invert-absrx;
-	invert-absry;
-	amux-count = <4>;
-};
+

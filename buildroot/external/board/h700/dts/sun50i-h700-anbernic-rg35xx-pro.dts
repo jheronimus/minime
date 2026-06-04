@@ -12,6 +12,4 @@
 	rocknix-dt-id = "sun50i-h700-anbernic-rg35xx-pro";
 };
 
-&joypad {
-	amux-count = <4>;
-};
+
