@@ -79,6 +79,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pwm3_pin>;
 	};
+
+	leds {
+		led-rgb {
+			function = LED_FUNCTION_KBD_BACKLIGHT;
+			color = <LED_COLOR_ID_RGB>;
+			gpios = <&pio 8 7 GPIO_ACTIVE_HIGH>; /* PI7 */
+		};
+	};
 };
 
 &gpadc {
@@ -113,13 +121,7 @@
 	status = "okay";	
 };
 
-&leds {
-	led-rgb {
-		function = LED_FUNCTION_KBD_BACKLIGHT;
-		color = <LED_COLOR_ID_RGB>;
-		gpios = <&pio 8 7 GPIO_ACTIVE_HIGH>; /* PI7 */
-	};	
-};
+
 
 &panel {
 	compatible = "anbernic,rg40xx-panel", "panel-mipi-dpi-spi";
