@@ -35,11 +35,11 @@ endef
 define MINUI_INSTALL_IMAGES_CMDS
 	mkdir -p $(BINARIES_DIR)/ui/.system/bin
 	mkdir -p $(BINARIES_DIR)/ui/.system/cores
-	
+
 	# Install main launcher binary
 	cp -f $(@D)/workspace/all/minui/build/minime/minui.elf $(BINARIES_DIR)/ui/.system/bin/minui
 	cp -f $(@D)/workspace/all/minarch/build/minime/minarch.elf $(BINARIES_DIR)/ui/.system/bin/minarch
-	
+
 	# Install stock (base) RetroArch cores
 	cp -f $(@D)/workspace/minime/cores/output/fceumm_libretro.so $(BINARIES_DIR)/ui/.system/cores/
 	cp -f $(@D)/workspace/minime/cores/output/gambatte_libretro.so $(BINARIES_DIR)/ui/.system/cores/
@@ -47,19 +47,19 @@ define MINUI_INSTALL_IMAGES_CMDS
 	cp -f $(@D)/workspace/minime/cores/output/picodrive_libretro.so $(BINARIES_DIR)/ui/.system/cores/
 	cp -f $(@D)/workspace/minime/cores/output/snes9x2005_plus_libretro.so $(BINARIES_DIR)/ui/.system/cores/
 	cp -f $(@D)/workspace/minime/cores/output/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	
+
 	# Install Clock tool
 	mkdir -p $(BINARIES_DIR)/ui/Tools/Clock.pak
 	cp -f $(@D)/workspace/all/clock/build/minime/clock.elf $(BINARIES_DIR)/ui/Tools/Clock.pak/
 	printf '%s\n' '#!/bin/sh' 'cd $$(dirname "$$0")' 'exec ./clock.elf' > $(BINARIES_DIR)/ui/Tools/Clock.pak/launch.sh
 	chmod +x $(BINARIES_DIR)/ui/Tools/Clock.pak/launch.sh
-	
+
 	# Install Settings tool
 	mkdir -p $(BINARIES_DIR)/ui/Tools/Settings.pak
 	cp -f $(@D)/workspace/all/settings/build/minime/settings.elf $(BINARIES_DIR)/ui/Tools/Settings.pak/
 	printf '%s\n' '#!/bin/sh' 'cd $$(dirname "$$0")' 'exec ./settings.elf' > $(BINARIES_DIR)/ui/Tools/Settings.pak/launch.sh
 	chmod +x $(BINARIES_DIR)/ui/Tools/Settings.pak/launch.sh
-	
+
 	# Install extras if enabled
 	$(if $(filter y,$(BR2_PACKAGE_MINUI_EXTRAS)),\
 		cp -f $(@D)/workspace/minime/cores/output/fake08_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
