@@ -81,7 +81,7 @@ for target_dir, stamp_dir in build_targets:
     if os.path.exists(stamp_dir):
         for item in os.listdir(stamp_dir):
             item_path = os.path.join(stamp_dir, item)
-            if not os.path.isdir(item_path) or item.startswith('.') or item == "buildroot-config":
+            if not os.path.isdir(item_path) or item.startswith('.') or item.startswith('buildroot'):
                 continue
             stamp_built = os.path.join(item_path, ".stamp_built")
             if not os.path.exists(stamp_built):
