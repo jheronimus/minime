@@ -78,10 +78,7 @@ diff --git a/drivers/net/wireless/Kconfig b/drivers/net/wireless/Kconfig
 index cb1c15012dd0..de5e37846397 100644
 --- a/drivers/net/wireless/Kconfig
 +++ b/drivers/net/wireless/Kconfig
-@@ -35,6 +35,7 @@
- source "drivers/net/wireless/st/Kconfig"
- source "drivers/net/wireless/ti/Kconfig"
- source "drivers/net/wireless/zydas/Kconfig"
+@@ -38,3 +38,4 @@
  source "drivers/net/wireless/quantenna/Kconfig"
 +source "drivers/net/wireless/esp8089/Kconfig"
  
