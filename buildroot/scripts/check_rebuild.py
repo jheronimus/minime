@@ -77,6 +77,24 @@ for target_dir, stamp_dir in build_targets:
                 print("👉 RECOMMENDED ACTION: A full rebuild is recommended ('make clean && make image')\n")
                 has_warnings = True
 
+    # 1b. Check for incomplete/failed package builds (Self-Healing)
+    if os.path.exists(stamp_dir):
+        for item in os.listdir(stamp_dir):
+            item_path = os.path.join(stamp_dir, item)
+            if not os.path.isdir(item_path) or item.startswith('.') or item == "buildroot-config":
+                continue
+            stamp_built = os.path.join(item_path, ".stamp_built")
+            if not os.path.exists(stamp_built):
+                parts = item.split('-')
+                pkg_name = "-".join(parts[:-1]) if len(parts) > 1 else item
+                print(f"⚠️  WARNING: Package '{pkg_name}' ({item}) build was interrupted or failed in the previous run.")
+                if args.auto_clean:
+                    print(f"   🧹 Auto-cleaning: Running 'make {pkg_name}-dirclean BOARD={board_name}'...")
+                    subprocess.run(["make", f"{pkg_name}-dirclean", f"BOARD={board_name}"], cwd=WORKSPACE, check=True)
+                else:
+                    print(f"   👉 RECOMMENDED ACTION: Run 'make {pkg_name}-dirclean BOARD={board_name}' to reset it.\n")
+                    has_warnings = True
+
     # 2. Check Package rules & Patches
     for pkg in os.listdir(packages_dir):
         pkg_dir = os.path.join(packages_dir, pkg)
