@@ -132,3 +132,15 @@
 &panel {
 	compatible = "anbernic,rgcubexx-panel", "panel-mipi-dpi-spi";
 };
+
+&pio {
+	joy_mux_pin: joy-mux-pin {
+		pins = "PI0";
+		function = "gpio_out";
+	};
+
+	pwm3_pin: pwm3-pin {
+		pins = "PI13";
+		function = "pwm3";
+	};
+};
