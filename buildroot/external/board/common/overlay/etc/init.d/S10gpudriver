@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# S10gpudriver: Selectively load GPU kernel drivers and handle boot-loop protection
+#
+
+CONFIG_FILE="/mnt/sdcard/.system/gpu.cfg"
+SENTINEL_FILE="/mnt/sdcard/.system/gpu_fail"
+BOOT_LOG="/mnt/sdcard/minime-boot.log"
+
+# Default fallback
+DRIVER="libmali"
+
+# Load current config if SD card is mounted
+if [ -f "$CONFIG_FILE" ]; then
+    DRIVER=$(cat "$CONFIG_FILE")
+fi
+
+case "$1" in
+    start)
+        echo "Initializing GPU Subsystem..."
+
+        # 1. Boot-Loop Sentinel Detection
+        if [ -f "$SENTINEL_FILE" ]; then
+            echo "[GPU WARNING] Boot failure detected with previous driver. Reverting to libmali." >> "$BOOT_LOG" 2>&1
+            DRIVER="libmali"
+            echo "libmali" > "$CONFIG_FILE"
+            rm -f "$SENTINEL_FILE"
+            sync
+        fi
+
+        # 2. Driver-Specific Module Binding
+        if [ "$DRIVER" = "panfrost" ]; then
+            echo "Activating Panfrost driver..."
+            
+            # Write sentinel before loading module
+            echo "panfrost" > "$SENTINEL_FILE"
+            sync
+            
+            # Load Panfrost and its scheduler dependencies
+            modprobe drm_sched
+            modprobe panfrost
+        else
+            echo "Activating libmali driver..."
+            
+            # Load proprietary Mali kernel space helper
+            modprobe mali_kbase
+        fi
+        ;;
+    stop)
+        echo "Unloading GPU drivers..."
+        rmmod panfrost 2>/dev/null
+        rmmod drm_sched 2>/dev/null
+        rmmod mali_kbase 2>/dev/null
+        ;;
+    restart|reload)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
