@@ -6,6 +6,12 @@ define MINIME_COPY_DTS
 		cp $(BR2_EXTERNAL_MINIME_PATH)/board/h700/dts/*.dts \
 			$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/; \
 	fi
+	if [ -d $(BR2_EXTERNAL_MINIME_PATH)/board/rk3326/dts ]; then \
+		cp $(BR2_EXTERNAL_MINIME_PATH)/board/rk3326/dts/*.dts \
+			$(LINUX_DIR)/arch/arm64/boot/dts/rockchip/; \
+		echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \
+		echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \
+	fi
 endef
 LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 

@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/dts-v1/;
+#include "rk3326-anbernic-rg351m.dtsi"
+
+/ {
+	model = "Anbernic RG351MP";
+	compatible = "anbernic,rg351mp", "rockchip,rk3326";
+};
+
+&internal_display {
+	compatible = "anbernic,rg351v-panel", "newvision,nv3051d";
+	vdd-supply = <&vcc_lcd>;
+};
