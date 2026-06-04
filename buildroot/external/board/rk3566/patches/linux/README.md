@@ -10,11 +10,13 @@ The hardware and board support patches were imported from the **[ROCKNIX/distrib
 
 ## Omitted Patches
 To ensure a mainline-clean and highly optimized system, we have omitted several patches that are specific only to Powkiddy or non-Anbernic devices:
+* **`0005-arm64-dts-rockchip-fixup-anbernic-controls.patch`**: Omitted to use mainline kernel `gpio-keys` and standard `adc-joystick` input systems instead of Rocknix's custom out-of-tree joypad driver.
 * **`0009-arm64-dts-rockchip-fix-shoulders-triggers-on-powkidd.patch`**: Powkiddy-specific hardware button fixes.
 * **`0010-drm-panel-st7703-request-higher-pixelclock-for-RGB30.patch`**: Powkiddy RGB30 pixel clock adjustment.
 * **`0012-arm64-dts-rockchip-update-powkiddy-x55-dts-to-suppor.patch`**: Powkiddy x55 specific patch.
 * **`0016-arm64-dts-rockchip-add-device-tree-for-powkiddy-x35s.patch`**: Powkiddy x35s device tree addition.
 * **`0018-arm64-dts-rockchip-add-device-tree-for-powkiddy-rgb2.patch`**: Powkiddy rgb20 device tree addition.
+
 
 ## Mainline Kernel 7.0.10 Adaptation Changes
 

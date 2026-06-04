@@ -22,6 +22,4 @@ scripts/test_otp.py
 scripts/__pycache__/
 __pycache__/
 *.pyc
-
-
-
+rocknix_distribution/
