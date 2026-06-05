@@ -10,7 +10,7 @@ MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
 MINUI_LICENSE_FILES = README.md
 
-MINUI_DEPENDENCIES = dbus lz4 sdl2 sdl2_image sdl2_ttf zlib
+MINUI_DEPENDENCIES = dbus host-patchelf lz4 sdl2 sdl2_image sdl2_ttf zlib
 
 MINUI_INSTALL_IMAGES = YES
 
@@ -39,6 +39,13 @@ define MINUI_INSTALL_IMAGES_CMDS
 	# Install main launcher binary
 	cp -f $(@D)/workspace/all/minui/build/minime/minui.elf $(BINARIES_DIR)/ui/.system/bin/minui
 	cp -f $(@D)/workspace/all/minarch/build/minime/minarch.elf $(BINARIES_DIR)/ui/.system/bin/minarch
+	cp -f $(@D)/workspace/minime/libmsettings/libmsettings.so $(BINARIES_DIR)/ui/.system/bin/
+	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.system/bin/minui
+	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.system/bin/minarch
+
+	# Install shared MinUI assets
+	mkdir -p $(BINARIES_DIR)/ui/.system/res
+	cp -rp $(@D)/skeleton/SYSTEM/res/. $(BINARIES_DIR)/ui/.system/res/
 
 	# Install stock (base) RetroArch cores
 	cp -f $(@D)/workspace/minime/cores/output/fceumm_libretro.so $(BINARIES_DIR)/ui/.system/cores/

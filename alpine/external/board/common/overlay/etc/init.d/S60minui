@@ -36,6 +36,9 @@ case "$1" in
         export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
         export USERDATA_PATH=/mnt/sdcard/.system/
         export HOME=/mnt/sdcard
+        if grep -Eq "allwinner|h700" /proc/device-tree/compatible 2>/dev/null; then
+            export SDL_VIDEODRIVER=mali
+        fi
         
         # 2. Clear GPU Failure boot-loop sentinel on successful GUI launch
         rm -f /mnt/sdcard/.system/gpu_fail

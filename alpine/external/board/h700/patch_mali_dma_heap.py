@@ -2,6 +2,61 @@
 import os
 import sys
 
+def patch_configure(configure_path):
+    print(f"Patching {configure_path}...")
+    with open(configure_path, "r") as f:
+        configure_content = f.read()
+
+    help_target = "  --enable-video-kmsdrm   use KMSDRM video driver [default=yes]\n"
+    help_replacement = (
+        help_target
+        + "  --enable-video-mali     use Mali video driver [default=no]\n"
+    )
+    if "--enable-video-mali" not in configure_content:
+        if help_target in configure_content:
+            configure_content = configure_content.replace(help_target, help_replacement, 1)
+            print("Patched configure help for --enable-video-mali")
+        else:
+            print("Warning: configure help target not found")
+
+    block_anchor = "        if test x$video_kmsdrm = xyes; then\n"
+    mali_block = """        # Check whether --enable-video-mali was given.
+if test ${enable_video_mali+y}
+then :
+  enableval=$enable_video_mali;
+else case e in #(
+  e) enable_video_mali=yes ;;
+esac
+fi
+
+        if test x$enable_video = xyes && test x$enable_video_mali = xyes; then
+
+printf "%s\\n" "#define SDL_VIDEO_DRIVER_MALI 1" >>confdefs.h
+
+            SOURCES="$SOURCES $srcdir/src/video/mali-fbdev/*.c"
+            SUMMARY_video="${SUMMARY_video} mali"
+        fi
+
+"""
+    if "enable_video_mali" not in configure_content:
+        if block_anchor in configure_content:
+            configure_content = configure_content.replace(block_anchor, mali_block + block_anchor, 1)
+            print("Patched configure logic for SDL_VIDEO_DRIVER_MALI")
+        else:
+            print("Warning: configure block anchor not found")
+
+    opts_target = "enable_video_kmsdrm\nenable_kmsdrm_shared"
+    opts_replacement = "enable_video_kmsdrm\nenable_video_mali\nenable_kmsdrm_shared"
+    if opts_replacement not in configure_content:
+        if opts_target in configure_content:
+            configure_content = configure_content.replace(opts_target, opts_replacement, 1)
+            print("Patched configure option allowlist for --enable-video-mali")
+        else:
+            print("Warning: configure option allowlist target not found")
+
+    with open(configure_path, "w") as f:
+        f.write(configure_content)
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: patch_mali_dma_heap.py <sdl2_build_dir>")
@@ -11,10 +66,16 @@ def main():
     header_path = os.path.join(build_dir, "src/video/mali-fbdev/SDL_malivideo.h")
     source_path = os.path.join(build_dir, "src/video/mali-fbdev/SDL_malivideo.c")
     mali_h_path = os.path.join(build_dir, "src/video/mali-fbdev/mali.h")
+    configure_path = os.path.join(build_dir, "configure")
 
     if not os.path.exists(header_path) or not os.path.exists(source_path):
         print("Mali FBDEV source files not found. Patch might not have been applied yet.")
         sys.exit(1)
+
+    if os.path.exists(configure_path):
+        patch_configure(configure_path)
+    else:
+        print("Warning: configure not found")
 
     # 0. Patch mali.h (32-bit types for alignment)
     if os.path.exists(mali_h_path):

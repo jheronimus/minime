@@ -218,7 +218,7 @@ start_dhcp_client() {
   rm -f "${udhcpc_pidfile}"
   : > "${udhcpc_logfile}"
 
-  udhcpc -b -R -O search -O staticroutes \
+  udhcpc -b -R -x hostname:"$(hostname)" -F "$(hostname)" -O search -O staticroutes \
     -p "${udhcpc_pidfile}" \
     -i "${wifi_interface}" \
     -s /usr/share/udhcpc/default.script \

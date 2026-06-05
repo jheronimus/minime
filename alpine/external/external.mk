@@ -21,9 +21,9 @@ define MINIME_PATCH_LINUX_CONFIG
 endef
 LINUX_POST_CONFIGURE_HOOKS += MINIME_PATCH_LINUX_CONFIG
 
-SDL2_AUTORECONF = YES
+SDL2_MALI_PATCHES = $(strip $(foreach dir,$(call qstrip,$(BR2_GLOBAL_PATCH_DIR)),$(wildcard $(dir)/sdl2/*add-mali-fbdev*)))
 
-ifeq ($(wildcard $(call qstrip,$(BR2_GLOBAL_PATCH_DIR))/sdl2/*add-mali-fbdev*),)
+ifeq ($(SDL2_MALI_PATCHES),)
 SDL2_CONF_OPTS += --disable-video-mali
 else
 ifeq ($(BR2_PACKAGE_LIBMALI),y)
