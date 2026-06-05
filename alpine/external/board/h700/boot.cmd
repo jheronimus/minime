@@ -1,4 +1,4 @@
-setenv bootargs console=ttyS0,115200 console=tty1 root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 vt.global_cursor_default=1 rtw88_core.disable_lps_deep=Y
+setenv bootargs console=ttyS0,115200 console=tty1 root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 vt.global_cursor_default=1 rtw88_core.disable_lps_deep=Y cma=128M drm_kms_helper.drm_fbdev_overalloc=200
 setenv default_device sun50i-h700-anbernic-rg35xx-sp.dtb
 setenv device auto
 fatload mmc 0:1 ${scriptaddr} .system/config/device.cfg && env import -t ${scriptaddr} ${filesize}

@@ -32,19 +32,8 @@ case "$1" in
         esac
         export RGXX_MODEL
         
-        # 1. Read graphics configuration and dynamic redirect
-        GPU_DRIVER="libmali"
-        if [ -f "/mnt/sdcard/.system/gpu.cfg" ]; then
-            GPU_DRIVER=$(cat "/mnt/sdcard/.system/gpu.cfg")
-        fi
-
-        if [ "$GPU_DRIVER" = "panfrost" ]; then
-            export LD_LIBRARY_PATH="/usr/lib/panfrost:/mnt/sdcard/.system/bin"
-            export LIBGL_DRIVERS_PATH="/usr/lib/panfrost/dri"
-        else
-            export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
-        fi
-
+        # 1. Set graphics library paths for libmali
+        export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
         export USERDATA_PATH=/mnt/sdcard/.system/
         export HOME=/mnt/sdcard
         
