@@ -298,6 +298,13 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	cp -a /mnt/card/.system /tmp/backup/
 	cp -f /mnt/card/tinykernel /tmp/backup/
 	cp -f /mnt/card/boot.scr /tmp/backup/
+	for item in /mnt/card/*; do
+		[ -e "$item" ] || continue
+		item_name="${item##*/}"
+		[ "$item_name" = "tinykernel" ] && continue
+		[ "$item_name" = "boot.scr" ] && continue
+		cp -a "$item" /tmp/backup/
+	done
 	
 	log_card "Unmounting card..."
 	umount /mnt/card
@@ -324,6 +331,13 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	cp -a /tmp/backup/.system /mnt/card/
 	cp -f /tmp/backup/tinykernel /mnt/card/
 	cp -f /tmp/backup/boot.scr /mnt/card/
+	for item in /tmp/backup/*; do
+		[ -e "$item" ] || continue
+		item_name="${item##*/}"
+		[ "$item_name" = "tinykernel" ] && continue
+		[ "$item_name" = "boot.scr" ] && continue
+		cp -a "$item" /mnt/card/
+	done
 	
 	# Delete first_boot_expand in restored filesystem to prevent loop expansion
 	rm -f /mnt/card/.system/config/first_boot_expand
