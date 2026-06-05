@@ -63,11 +63,27 @@ for target_dir, stamp_dir in build_targets:
     if stamps:
         toolchain_stamp = os.path.getmtime(stamps[0])
 
-    dot_config = os.path.join(target_dir, ".config")
-    if toolchain_stamp and os.path.exists(dot_config):
-        config_mtime = os.path.getmtime(dot_config)
-        if config_mtime > toolchain_stamp:
-            print("⚠️  WARNING: Core system configuration (.config) changed after toolchain build!")
+    if toolchain_stamp:
+        # Core configuration source files that actually define the build
+        config_files = [
+            os.path.join(WORKSPACE, "external", "configs", f"minime_{board_name}_defconfig"),
+            os.path.join(WORKSPACE, "external", "board", "common", "busybox.config"),
+            os.path.join(WORKSPACE, "external", "board", "common", "tiny-base.config"),
+        ]
+        board_dir = os.path.join(WORKSPACE, "external", "board", board_name)
+        if os.path.exists(board_dir):
+            for root, _, files in os.walk(board_dir):
+                for f in files:
+                    if f.endswith(".config") or f == "board.env":
+                        config_files.append(os.path.join(root, f))
+
+        newest_config_time = 0
+        for f in config_files:
+            if os.path.exists(f):
+                newest_config_time = max(newest_config_time, os.path.getmtime(f))
+
+        if newest_config_time > toolchain_stamp:
+            print(f"⚠️  WARNING: Core system configuration files changed after toolchain build for board {board_name}!")
             if args.auto_clean:
                 print(f"🧹 Auto-cleaning: Running 'make clean BOARD={board_name}'...")
                 subprocess.run(["make", "clean", f"BOARD={board_name}"], cwd=WORKSPACE, check=True)
