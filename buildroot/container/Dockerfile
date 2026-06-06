@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ninja-build \
     libelf-dev \
     libssl-dev \
+    libedit-dev \
     bc \
     python3 \
     python3-dev \
