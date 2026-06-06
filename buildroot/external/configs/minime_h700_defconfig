@@ -25,7 +25,7 @@ BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_MINIME_PATH)/board/h700/t
 BR2_LINUX_KERNEL_DTS_SUPPORT=y
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="allwinner/sun50i-h700-anbernic-rg28xx allwinner/sun50i-h700-anbernic-rg34xx allwinner/sun50i-h700-anbernic-rg34xx-sp allwinner/sun50i-h700-anbernic-rg35xx-2024 allwinner/sun50i-h700-anbernic-rg35xx-2024-rev6-panel allwinner/sun50i-h700-anbernic-rg35xx-h allwinner/sun50i-h700-anbernic-rg35xx-h-rev6-panel allwinner/sun50i-h700-anbernic-rg35xx-plus allwinner/sun50i-h700-anbernic-rg35xx-plus-rev6-panel allwinner/sun50i-h700-anbernic-rg35xx-pro allwinner/sun50i-h700-anbernic-rg35xx-sp allwinner/sun50i-h700-anbernic-rg35xx-sp-v2-panel allwinner/sun50i-h700-anbernic-rg40xx-h allwinner/sun50i-h700-anbernic-rg40xx-h-v2-panel allwinner/sun50i-h700-anbernic-rg40xx-v allwinner/sun50i-h700-anbernic-rg40xx-v-v2-panel allwinner/sun50i-h700-anbernic-rgcubexx"
 BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_MINIME_PATH)/board/common/busybox.config"
-BR2_PACKAGE_MESA3D_PANFROST_PREBUILT=y
+BR2_PACKAGE_PANFROST=y
 BR2_PACKAGE_WIRELESS_REGDB=y
 BR2_PACKAGE_WPA_SUPPLICANT=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
@@ -60,6 +60,9 @@ BR2_PACKAGE_DOSFSTOOLS=y
 BR2_PACKAGE_DOSFSTOOLS_MKFS_FAT=y
 
 # Media and graphics libraries
+BR2_PACKAGE_ZSTD=y
+BR2_PACKAGE_LIBXML2=y
+BR2_PACKAGE_LIBFFI=y
 BR2_PACKAGE_SDL2=y
 BR2_PACKAGE_SDL2_KMSDRM=y
 BR2_PACKAGE_SDL2_OPENGLES=y
@@ -71,4 +74,3 @@ BR2_PACKAGE_SDL2_TTF=y
 BR2_PACKAGE_MINUI=y
 BR2_PACKAGE_MINUI_EXTRAS=y
 BR2_PACKAGE_DRKHRSE_MIYOO_BEZELS=y
-

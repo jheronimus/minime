@@ -1,5 +1,5 @@
 # Locally computed
-sha256  76cfd6f4c52335aee8edd8c3bf133e89d77005f4ae88dae53305b719c01c709f  mesa3d-panfrost-prebuilt-25.0.7.tar.gz
+sha256  92fd7b8ca61da8452f03419ad0a695f76b672908edfd7bb8ecf683f604dc5b89  panfrost-25.0.7r2.tar.gz
 
 # License file
 sha256  2da256cdfe7d27d558240e736f64cafc0b05c7a789a4de612ef18cc74ee43d49  COPYING

@@ -6,9 +6,8 @@
 case "$1" in
     start)
         echo "Initializing GPU Subsystem..."
-        if grep -Eq "allwinner|h700" /proc/device-tree/compatible 2>/dev/null; then
+        if [ -d /usr/lib/panfrost ]; then
             echo "Activating Panfrost driver..."
-            modprobe drm_sched
             modprobe panfrost
         else
             echo "Activating libmali driver..."
@@ -18,7 +17,7 @@ case "$1" in
     stop)
         echo "Unloading GPU drivers..."
         rmmod panfrost 2>/dev/null
-        rmmod drm_sched 2>/dev/null
+        rmmod gpu_sched 2>/dev/null
         rmmod mali_kbase 2>/dev/null
         ;;
     restart|reload)
