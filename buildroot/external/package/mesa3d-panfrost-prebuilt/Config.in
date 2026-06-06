@@ -1,5 +1,23 @@
 config BR2_PACKAGE_MESA3D_PANFROST_PREBUILT
 	bool "mesa3d-panfrost-prebuilt"
 	depends on BR2_aarch64
+	select BR2_PACKAGE_HAS_LIBEGL
+	select BR2_PACKAGE_HAS_LIBGLES
+	select BR2_PACKAGE_HAS_LIBGBM
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_MESA3D_HEADERS
 	help
 	  Precompiled Mesa (Panfrost) + LLVM binaries for dynamic switching.
+
+if BR2_PACKAGE_MESA3D_PANFROST_PREBUILT
+
+config BR2_PACKAGE_PROVIDES_LIBEGL
+	default "mesa3d-panfrost-prebuilt"
+
+config BR2_PACKAGE_PROVIDES_LIBGLES
+	default "mesa3d-panfrost-prebuilt"
+
+config BR2_PACKAGE_PROVIDES_LIBGBM
+	default "mesa3d-panfrost-prebuilt"
+
+endif
