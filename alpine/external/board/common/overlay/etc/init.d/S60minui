@@ -33,9 +33,10 @@ case "$1" in
         export RGXX_MODEL
         
         # 1. Set graphics library paths
-        if grep -Eq "allwinner|h700" /proc/device-tree/compatible 2>/dev/null; then
+        if [ -d /usr/lib/panfrost ]; then
             export LD_LIBRARY_PATH="/usr/lib/panfrost:/mnt/sdcard/.system/bin"
             export LIBGL_DRIVERS_PATH="/usr/lib/panfrost/dri"
+            export GBM_BACKENDS_PATH="/usr/lib/panfrost/gbm"
             export MESA_LOADER_DRIVER_OVERRIDE=panfrost
             export SDL_VIDEODRIVER=kmsdrm
         else
