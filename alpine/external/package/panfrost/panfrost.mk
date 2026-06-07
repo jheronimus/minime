@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-PANFROST_VERSION = 25.0.7r2
-PANFROST_SITE = $(call github,jheronimus,panfrost-prebuilts,v$(PANFROST_VERSION))
+PANFROST_VERSION = 25.0.7r3
+PANFROST_SITE = https://github.com/jheronimus/minime/releases/download/panfrost-v$(PANFROST_VERSION)
 PANFROST_LICENSE = MIT, GPL-2.0, LGPL-2.1
 PANFROST_LICENSE_FILES = COPYING
 PANFROST_INSTALL_STAGING = YES
@@ -14,16 +14,8 @@ PANFROST_PROVIDES = libegl libgles libgbm
 
 define PANFROST_INSTALL_LIBS
 	mkdir -p $(1)/usr/lib/panfrost
-	tar -C $(1)/usr/lib/panfrost --strip-components=4 \
-		-xzf $(PANFROST_DIR)/panfrost-prebuilts-v$(PANFROST_VERSION).tar.gz
-	if [ ! -f $(1)/usr/lib/panfrost/gbm/dri_gbm.so ]; then \
-		echo "ERROR: panfrost prebuilt is missing gbm/dri_gbm.so" >&2; \
-		exit 1; \
-	fi
-	if [ ! -f $(1)/usr/lib/panfrost/libdrm_amdgpu.so.1 ]; then \
-		echo "ERROR: panfrost prebuilt is missing libdrm_amdgpu.so.1" >&2; \
-		exit 1; \
-	fi
+	cp -dpfr $(PANFROST_DIR)/* $(1)/usr/lib/panfrost/
+	ln -sf ../libedit.so.0 $(1)/usr/lib/panfrost/libedit.so.2
 endef
 
 define PANFROST_INSTALL_PKGCONFIG

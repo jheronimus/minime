@@ -145,6 +145,7 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 	set -o pipefail; $(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
 image: $(BUILDROOT_STAMP) prepare_vm defconfig
+	@./scripts/check_panfrost_release.sh $(BUILDROOT_DL_DIR) $(BOARD)
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
@@ -202,7 +203,74 @@ else
 	@echo "clean-vm is only applicable when using Podman." >&2
 endif
 
+panfrost: $(BUILDROOT_STAMP) prepare_vm
+	@echo "Configuring bootstrap build for $(BOARD)..."
+	@$(MAKE) defconfig BOARD=$(BOARD)
+	@if [ "$(USE_PODMAN)" = "1" ]; then \
+		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
+			echo '# BR2_PACKAGE_PANFROST is not set' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D_OPENGL_GLES=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D_GBM=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_LLVM=y' >> /buildroot-output/$(BOARD)/.config"; \
+	else \
+		echo "# BR2_PACKAGE_PANFROST is not set" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D_OPENGL_GLES=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D_GBM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_LLVM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+	fi
+	@$(call RUN_CMD,olddefconfig)
+	@echo "Building Mesa and LLVM from source..."
+	@$(call RUN_CMD,mesa3d llvm)
+	@echo "Packaging prebuilt libraries..."
+	@PANFROST_VER=$$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3); \
+	if [ "$(USE_PODMAN)" = "1" ]; then \
+		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
+			TMP_DIR=\$\$(mktemp -d) && \
+			mkdir -p \$\$TMP_DIR && \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libEGL.so* \$\$TMP_DIR/ && \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libGLESv2.so* \$\$TMP_DIR/ && \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libgbm.so* \$\$TMP_DIR/ && \
+			if [ -f $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-19.so ]; then \
+				cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-*.so* \$\$TMP_DIR/; \
+			fi; \
+			mkdir -p \$\$TMP_DIR/dri && \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/dri/panfrost_dri.so \$\$TMP_DIR/dri/ && \
+			if [ -d $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm ]; then \
+				mkdir -p \$\$TMP_DIR/gbm && \
+				cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm/* \$\$TMP_DIR/gbm/; \
+			fi; \
+			mkdir -p /workspace/out && \
+			tar -czf /workspace/out/panfrost-\$\$PANFROST_VER.tar.gz -C \$\$TMP_DIR . && \
+			rm -rf \$\$TMP_DIR"; \
+	else \
+		TMP_DIR=$$(mktemp -d); \
+		mkdir -p $$TMP_DIR; \
+		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libEGL.so* $$TMP_DIR/; \
+		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libGLESv2.so* $$TMP_DIR/; \
+		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libgbm.so* $$TMP_DIR/; \
+		if [ -f $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-19.so ]; then \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-*.so* $$TMP_DIR/; \
+		fi; \
+		mkdir -p $$TMP_DIR/dri; \
+		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/dri/panfrost_dri.so $$TMP_DIR/dri/; \
+		if [ -d $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm ]; then \
+			mkdir -p $$TMP_DIR/gbm; \
+			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm/* $$TMP_DIR/gbm/; \
+		fi; \
+		mkdir -p $(CURDIR)/out; \
+		tar -czf $(CURDIR)/out/panfrost-$$PANFROST_VER.tar.gz -C $$TMP_DIR .; \
+		rm -rf $$TMP_DIR; \
+	fi; \
+	echo "Prebuilt archive out/panfrost-$$PANFROST_VER.tar.gz created successfully."
+
 Makefile: ;
+
 
 %: $(BUILDROOT_STAMP) prepare_vm FORCE
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/$@-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \

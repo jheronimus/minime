@@ -1,0 +1,42 @@
+name: Build and Release Panfrost Prebuilt
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Panbuilt Binaries
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Verify/Install Dependencies
+        run: |
+          ./scripts/prepare-linux.sh
+
+      - name: Build and Package Panfrost
+        run: |
+          echo "Triggering build and packaging for Panfrost..."
+          make panfrost BOARD=h700
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PANFROST_VER=$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3)
+          echo "Detected version: $PANFROST_VER"
+          
+          # Delete existing tag/release if it exists to allow overwriting/re-running
+          if gh release view "panfrost-v$PANFROST_VER" >/dev/null 2>&1; then
+            echo "Release panfrost-v$PANFROST_VER already exists. Deleting it to update assets..."
+            gh release delete "panfrost-v$PANFROST_VER" --yes
+            git push --delete origin "panfrost-v$PANFROST_VER" || true
+          fi
+          
+          echo "Creating Release panfrost-v$PANFROST_VER..."
+          gh release create "panfrost-v$PANFROST_VER" out/panfrost-$PANFROST_VER.tar.gz \
+            --title "Panfrost Prebuilt v$PANFROST_VER" \
+            --notes "Buildroot-native precompiled graphics stack (Mesa/LLVM) for version $PANFROST_VER"
