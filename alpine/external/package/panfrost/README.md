@@ -29,5 +29,5 @@ The package still accepts the first flat archive layout for existing local cache
 ## Dependencies
 
 The archive contains Mesa/LLVM Panfrost runtime files only. Shared system libs such as
-`libdrm`, `libzstd`, `libffi`, `libxml2`, `libedit`, and `libz3` are built by Buildroot
-and declared in both `Config.in` and `panfrost.mk` for deterministic ordering.
+`expat`, `libdrm`, `zlib`, and `libzstd` are built by Buildroot and declared in both
+`Config.in` and `panfrost.mk` for deterministic ordering.

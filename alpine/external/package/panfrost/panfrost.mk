@@ -9,7 +9,7 @@ PANFROST_SITE = https://github.com/jheronimus/minime/releases/download/panfrost-
 PANFROST_LICENSE = MIT, Apache-2.0 with LLVM-exception, GPL-2.0, LGPL-2.1
 PANFROST_LICENSE_FILES = COPYING
 PANFROST_INSTALL_STAGING = YES
-PANFROST_DEPENDENCIES = mesa3d-headers libdrm zstd libxml2 libffi libedit z3
+PANFROST_DEPENDENCIES = mesa3d-headers expat libdrm zlib zstd
 PANFROST_PROVIDES = libegl libgles libgbm
 
 # New prebuilts are packaged as a sysroot-like tree:
@@ -24,7 +24,6 @@ define PANFROST_INSTALL_LIBS
 			! -name usr ! -name COPYING ! -name licenses \
 			-exec cp -dpfr {} $(1)/usr/lib/panfrost/ \;; \
 	fi
-	ln -sf ../libedit.so.0 $(1)/usr/lib/panfrost/libedit.so.2
 endef
 
 define PANFROST_INSTALL_PKGCONFIG_FALLBACK
