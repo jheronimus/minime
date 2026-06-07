@@ -4,13 +4,11 @@ config BR2_PACKAGE_PANFROST
 	select BR2_PACKAGE_HAS_LIBEGL
 	select BR2_PACKAGE_HAS_LIBGLES
 	select BR2_PACKAGE_HAS_LIBGBM
+	select BR2_PACKAGE_EXPAT
 	select BR2_PACKAGE_LIBDRM
 	select BR2_PACKAGE_MESA3D_HEADERS
+	select BR2_PACKAGE_ZLIB
 	select BR2_PACKAGE_ZSTD
-	select BR2_PACKAGE_LIBXML2
-	select BR2_PACKAGE_LIBFFI
-	select BR2_PACKAGE_LIBEDIT
-	select BR2_PACKAGE_Z3
 	help
 	  Precompiled Mesa (Panfrost) + LLVM binaries
 	  for dynamic switching.
