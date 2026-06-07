@@ -220,7 +220,7 @@ panfrost: $(BUILDROOT_STAMP) prepare_vm
 			echo 'BR2_PACKAGE_MESA3D=y' >> /buildroot-output/$(BOARD)/.config && \
 			echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> /buildroot-output/$(BOARD)/.config && \
 			echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D_OPENGL_GLES=y' >> /buildroot-output/$(BOARD)/.config && \
+			echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> /buildroot-output/$(BOARD)/.config && \
 			echo 'BR2_PACKAGE_MESA3D_GBM=y' >> /buildroot-output/$(BOARD)/.config && \
 			echo 'BR2_PACKAGE_LLVM=y' >> /buildroot-output/$(BOARD)/.config"; \
 	else \
@@ -228,13 +228,13 @@ panfrost: $(BUILDROOT_STAMP) prepare_vm
 		echo "BR2_PACKAGE_MESA3D=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
 		echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
 		echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D_OPENGL_GLES=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
 		echo "BR2_PACKAGE_MESA3D_GBM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
 		echo "BR2_PACKAGE_LLVM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
 	fi
 	@$(call RUN_CMD,olddefconfig)
 	@echo "Building Mesa and LLVM from source..."
-	@$(call RUN_CMD,mesa3d llvm)
+	@$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL) mesa3d llvm)
 	@echo "Packaging prebuilt libraries..."
 	@PANFROST_VER=$$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3); \
 	if [ "$(USE_PODMAN)" = "1" ]; then \
