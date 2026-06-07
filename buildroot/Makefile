@@ -70,6 +70,7 @@ else
 endif
 
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
+PANFROST_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/panfrost-$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
 MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
 
@@ -77,16 +78,19 @@ TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev
 LOG_DIR := $(CURDIR)/logs
 
 BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
+PANFROST_BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(PANFROST_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
 
 ifeq ($(USE_PODMAN),1)
     RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
+    PANFROST_RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(PANFROST_BUILDROOT_MAKE_ARGS) $(1)
 else
     RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
+    PANFROST_RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(PANFROST_BUILDROOT_MAKE_ARGS) $(1)
 endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image panfrost check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
+.PHONY: help prepare shell buildroot defconfig image panfrost h700-uboot check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
 
 help:
 	@printf '%s\n' \
@@ -96,6 +100,7 @@ help:
 		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
 		"  make image         - Build complete bootable firmware image for active board" \
 		"  make panfrost      - Build and package the Panfrost prebuilt archive" \
+		"  make h700-uboot    - Build and copy the H700 U-Boot prebuilt file" \
 		"  make check-panfrost-prebuilt - Check that the Panfrost archive exists" \
 		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
@@ -212,41 +217,109 @@ else
 endif
 
 panfrost: $(BUILDROOT_STAMP) prepare_vm
-	@echo "Configuring bootstrap build for $(BOARD)..."
-	@$(MAKE) defconfig BOARD=$(BOARD)
+	@echo "Configuring Panfrost bootstrap build for $(BOARD) in $(PANFROST_OUTPUT_DIR)..."
+	@$(call PANFROST_RUN_CMD,$(MINIME_DEFCONFIG))
 	@if [ "$(USE_PODMAN)" = "1" ]; then \
 		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
-			echo '# BR2_PACKAGE_PANFROST is not set' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_MESA3D_GBM=y' >> /buildroot-output/$(BOARD)/.config && \
-			echo 'BR2_PACKAGE_LLVM=y' >> /buildroot-output/$(BOARD)/.config"; \
+			set -e; \
+			sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $(PANFROST_OUTPUT_DIR)/.config; \
+			echo '# BR2_PACKAGE_PANFROST is not set' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_MESA3D_GBM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+			echo 'BR2_PACKAGE_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config"; \
 	else \
-		echo "# BR2_PACKAGE_PANFROST is not set" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_MESA3D_GBM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
-		echo "BR2_PACKAGE_LLVM=y" >> $(BUILDROOT_OUTPUT_DIR)/.config; \
+		CONFIG=$(PANFROST_OUTPUT_DIR)/.config; \
+		sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $$CONFIG; \
+		echo "# BR2_PACKAGE_PANFROST is not set" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D_LLVM=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_MESA3D_GBM=y" >> $$CONFIG; \
+		echo "BR2_PACKAGE_LLVM=y" >> $$CONFIG; \
 	fi
-	@$(call RUN_CMD,olddefconfig)
+	@$(call PANFROST_RUN_CMD,olddefconfig)
 	@echo "Building Mesa and LLVM from source..."
-	@$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL) mesa3d llvm)
+	@$(call PANFROST_RUN_CMD,-j$(TOPLEVEL_JLEVEL) mesa3d llvm)
 	@echo "Packaging prebuilt libraries..."
 	@PANFROST_VER=$$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3); \
 	if [ "$(USE_PODMAN)" = "1" ]; then \
 		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) \
 			/workspace/scripts/package_panfrost_prebuilt.sh \
-			$(BUILDROOT_OUTPUT_DIR) "$$PANFROST_VER" \
+			$(PANFROST_OUTPUT_DIR) "$$PANFROST_VER" \
 			/workspace/out/panfrost-$$PANFROST_VER.tar.gz; \
 	else \
 		./scripts/package_panfrost_prebuilt.sh \
-			$(BUILDROOT_OUTPUT_DIR) "$$PANFROST_VER" \
+			$(PANFROST_OUTPUT_DIR) "$$PANFROST_VER" \
 			$(CURDIR)/out/panfrost-$$PANFROST_VER.tar.gz; \
 	fi
+
+h700-uboot: $(BUILDROOT_STAMP) prepare_vm
+	@if [ "$(BOARD)" != "h700" ]; then \
+		echo "ERROR: h700-uboot only supports BOARD=h700" >&2; \
+		exit 1; \
+	fi
+	@echo "Configuring source U-Boot build for h700..."
+	@$(MAKE) defconfig BOARD=h700
+	@if [ "$(USE_PODMAN)" = "1" ]; then \
+		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
+			grep -v -E '^(# BR2_TARGET_ARM_TRUSTED_FIRMWARE is not set|# BR2_TARGET_UBOOT is not set)' /buildroot-output/h700/.config > /buildroot-output/h700/.config.tmp && \
+			mv /buildroot-output/h700/.config.tmp /buildroot-output/h700/.config && \
+			printf '%s\n' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE=y' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION=y' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION_VALUE=\"v2.15.0\"' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_PLATFORM=\"sun50i_h616\"' \
+			'BR2_TARGET_UBOOT=y' \
+			'BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG=y' \
+			'BR2_TARGET_UBOOT_CUSTOM_VERSION=y' \
+			'BR2_TARGET_UBOOT_CUSTOM_VERSION_VALUE=\"2026.04\"' \
+			'BR2_TARGET_UBOOT_BOARD_DEFCONFIG=\"anbernic_rg35xx_h700\"' \
+			'BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES=\"/workspace/external/board/h700/uboot.config\"' \
+			'BR2_TARGET_UBOOT_NEEDS_DTC=y' \
+			'BR2_TARGET_UBOOT_NEEDS_PYLIBFDT=y' \
+			'BR2_TARGET_UBOOT_NEEDS_OPENSSL=y' \
+			'BR2_TARGET_UBOOT_NEEDS_ATF_BL31=y' \
+			'BR2_TARGET_UBOOT_SPL=y' \
+			'BR2_TARGET_UBOOT_SPL_NAME=\"u-boot-sunxi-with-spl.bin\"' \
+			>> /buildroot-output/h700/.config"; \
+	else \
+		grep -v -E '^(# BR2_TARGET_ARM_TRUSTED_FIRMWARE is not set|# BR2_TARGET_UBOOT is not set)' $(BUILDROOT_OUTPUT_DIR)/.config > $(BUILDROOT_OUTPUT_DIR)/.config.tmp; \
+		mv $(BUILDROOT_OUTPUT_DIR)/.config.tmp $(BUILDROOT_OUTPUT_DIR)/.config; \
+		printf '%s\n' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE=y' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION=y' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION_VALUE="v2.15.0"' \
+			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_PLATFORM="sun50i_h616"' \
+			'BR2_TARGET_UBOOT=y' \
+			'BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG=y' \
+			'BR2_TARGET_UBOOT_CUSTOM_VERSION=y' \
+			'BR2_TARGET_UBOOT_CUSTOM_VERSION_VALUE="2026.04"' \
+			'BR2_TARGET_UBOOT_BOARD_DEFCONFIG="anbernic_rg35xx_h700"' \
+			'BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL)/board/h700/uboot.config"' \
+			'BR2_TARGET_UBOOT_NEEDS_DTC=y' \
+			'BR2_TARGET_UBOOT_NEEDS_PYLIBFDT=y' \
+			'BR2_TARGET_UBOOT_NEEDS_OPENSSL=y' \
+			'BR2_TARGET_UBOOT_NEEDS_ATF_BL31=y' \
+			'BR2_TARGET_UBOOT_SPL=y' \
+			'BR2_TARGET_UBOOT_SPL_NAME="u-boot-sunxi-with-spl.bin"' \
+			>> $(BUILDROOT_OUTPUT_DIR)/.config; \
+	fi
+	@$(call RUN_CMD,olddefconfig)
+	@echo "Building H700 U-Boot from source..."
+	@$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL) arm-trusted-firmware uboot)
+	@echo "Copying H700 U-Boot prebuilt into external/board/h700/prebuilt/..."
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "mkdir -p /workspace/external/board/h700/prebuilt && cp -f /buildroot-output/h700/images/u-boot-sunxi-with-spl.bin /workspace/external/board/h700/prebuilt/u-boot-sunxi-with-spl.bin"
+else
+	@mkdir -p external/board/h700/prebuilt
+	@cp -f $(BUILDROOT_OUTPUT_DIR)/images/u-boot-sunxi-with-spl.bin external/board/h700/prebuilt/u-boot-sunxi-with-spl.bin
+endif
 
 Makefile: ;
 
