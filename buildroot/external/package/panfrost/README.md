@@ -1,17 +1,33 @@
 # Panfrost Prebuilt Package
 
-Contains precompiled Mesa/LLVM binaries for dynamic GPU driver switching.
+Contains precompiled Mesa Panfrost and LLVM runtime files built with the Buildroot toolchain.
+
+Normal image builds only consume the archive. They do not bootstrap Mesa/LLVM when the archive is missing.
 
 ## Rebuilding Prebuilts
-To compile the precompiled libraries from source using the Buildroot toolchain:
-1. Run `make panfrost BOARD=<board>` (default: `h700`).
-2. This compiles Mesa and LLVM and outputs a tarball: `out/panfrost-<version>.tar.gz`.
 
-## Updating & Deploying
-1. Manually update `PANFROST_VERSION` in [panfrost.mk](file:///Users/ilembitov/Projects/minime/external/package/panfrost/panfrost.mk) (e.g., `25.0.7r3`).
-2. Commit and push the changes to trigger the manual GitHub Actions workflow.
-3. The workflow will build, package, and upload `panfrost-<version>.tar.gz` to the `minime` GitHub Release assets.
+1. Run `make panfrost BOARD=<board>` (default: `h700`).
+2. Upload `out/panfrost-<version>.tar.gz` to the matching GitHub Release:
+   `panfrost-v<version>`.
+3. If enforcing Buildroot source hashes, compute the archive hash and update
+   `panfrost.hash` when the release asset changes.
+
+## Archive Layout
+
+New archives use a sysroot-like layout:
+
+```text
+COPYING
+licenses/
+usr/include/
+usr/lib/pkgconfig/
+usr/lib/panfrost/
+```
+
+The package still accepts the first flat archive layout for existing local caches.
 
 ## Dependencies
-* System dependencies (`libzstd`, `libffi`, `libxml2`, `libedit`, `libz3`) are NOT packaged in the tarball.
-* They are declared in [Config.in](file:///Users/ilembitov/Projects/minime/external/package/panfrost/Config.in) and compiled from source by Buildroot at target image build time.
+
+The archive contains Mesa/LLVM Panfrost runtime files only. Shared system libs such as
+`libdrm`, `libzstd`, `libffi`, `libxml2`, `libedit`, and `libz3` are built by Buildroot
+and declared in both `Config.in` and `panfrost.mk` for deterministic ordering.

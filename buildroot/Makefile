@@ -86,7 +86,7 @@ endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
+.PHONY: help prepare shell buildroot defconfig image panfrost check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
 
 help:
 	@printf '%s\n' \
@@ -95,6 +95,8 @@ help:
 		"  make shell         - Open an interactive terminal shell inside the environment" \
 		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
 		"  make image         - Build complete bootable firmware image for active board" \
+		"  make panfrost      - Build and package the Panfrost prebuilt archive" \
+		"  make check-panfrost-prebuilt - Check that the Panfrost archive exists" \
 		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
 		"  make clean         - Remove active board outputs and buildroot state" \
@@ -144,8 +146,7 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
-image: $(BUILDROOT_STAMP) prepare_vm defconfig
-	@./scripts/check_panfrost_release.sh $(BUILDROOT_DL_DIR) $(BOARD)
+image: $(BUILDROOT_STAMP) prepare_vm defconfig check-panfrost-prebuilt
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
@@ -177,6 +178,13 @@ ifeq ($(USE_PODMAN),1)
 else
 	@python3 scripts/check_rebuild.py
 endif
+
+check-panfrost-prebuilt:
+	@if grep -q '^BR2_PACKAGE_PANFROST=y' external/configs/$(MINIME_DEFCONFIG); then \
+		./scripts/check_panfrost_release.sh $(BUILDROOT_DL_DIR); \
+	else \
+		echo "Panfrost prebuilt is not enabled for $(BOARD). Skipping check."; \
+	fi
 
 clean:
 	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/$(BOARD)/
@@ -230,44 +238,15 @@ panfrost: $(BUILDROOT_STAMP) prepare_vm
 	@echo "Packaging prebuilt libraries..."
 	@PANFROST_VER=$$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3); \
 	if [ "$(USE_PODMAN)" = "1" ]; then \
-		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
-			TMP_DIR=\$\$(mktemp -d) && \
-			mkdir -p \$\$TMP_DIR && \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libEGL.so* \$\$TMP_DIR/ && \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libGLESv2.so* \$\$TMP_DIR/ && \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libgbm.so* \$\$TMP_DIR/ && \
-			if [ -f $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-19.so ]; then \
-				cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-*.so* \$\$TMP_DIR/; \
-			fi; \
-			mkdir -p \$\$TMP_DIR/dri && \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/dri/panfrost_dri.so \$\$TMP_DIR/dri/ && \
-			if [ -d $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm ]; then \
-				mkdir -p \$\$TMP_DIR/gbm && \
-				cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm/* \$\$TMP_DIR/gbm/; \
-			fi; \
-			mkdir -p /workspace/out && \
-			tar -czf /workspace/out/panfrost-\$\$PANFROST_VER.tar.gz -C \$\$TMP_DIR . && \
-			rm -rf \$\$TMP_DIR"; \
+		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) \
+			/workspace/scripts/package_panfrost_prebuilt.sh \
+			$(BUILDROOT_OUTPUT_DIR) "$$PANFROST_VER" \
+			/workspace/out/panfrost-$$PANFROST_VER.tar.gz; \
 	else \
-		TMP_DIR=$$(mktemp -d); \
-		mkdir -p $$TMP_DIR; \
-		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libEGL.so* $$TMP_DIR/; \
-		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libGLESv2.so* $$TMP_DIR/; \
-		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libgbm.so* $$TMP_DIR/; \
-		if [ -f $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-19.so ]; then \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/libLLVM-*.so* $$TMP_DIR/; \
-		fi; \
-		mkdir -p $$TMP_DIR/dri; \
-		cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/dri/panfrost_dri.so $$TMP_DIR/dri/; \
-		if [ -d $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm ]; then \
-			mkdir -p $$TMP_DIR/gbm; \
-			cp -dpfr $(BUILDROOT_OUTPUT_DIR)/target/usr/lib/gbm/* $$TMP_DIR/gbm/; \
-		fi; \
-		mkdir -p $(CURDIR)/out; \
-		tar -czf $(CURDIR)/out/panfrost-$$PANFROST_VER.tar.gz -C $$TMP_DIR .; \
-		rm -rf $$TMP_DIR; \
-	fi; \
-	echo "Prebuilt archive out/panfrost-$$PANFROST_VER.tar.gz created successfully."
+		./scripts/package_panfrost_prebuilt.sh \
+			$(BUILDROOT_OUTPUT_DIR) "$$PANFROST_VER" \
+			$(CURDIR)/out/panfrost-$$PANFROST_VER.tar.gz; \
+	fi
 
 Makefile: ;
 
