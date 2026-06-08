@@ -3,6 +3,9 @@ name: Build and Release Panfrost Prebuilt
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Panbuilt Binaries
