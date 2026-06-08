@@ -20,11 +20,13 @@ New archives use a sysroot-like layout:
 COPYING
 licenses/
 usr/include/
+usr/lib/
+usr/lib/dri/
+usr/lib/gbm/
 usr/lib/pkgconfig/
-usr/lib/panfrost/
 ```
 
-The package still accepts the first flat archive layout for existing local caches.
+The package still accepts older `usr/lib/panfrost/` and flat archive layouts for existing local caches.
 
 ## Dependencies
 

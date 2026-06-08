@@ -16,11 +16,11 @@ build_dir="${output_dir}/build"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT INT TERM
 
-panfrost_lib_dir="${tmp_dir}/usr/lib/panfrost"
+lib_dir="${tmp_dir}/usr/lib"
 pkgconfig_dir="${tmp_dir}/usr/lib/pkgconfig"
 include_dir="${tmp_dir}/usr/include"
 
-mkdir -p "${panfrost_lib_dir}" "${pkgconfig_dir}" "${include_dir}"
+mkdir -p "${lib_dir}" "${pkgconfig_dir}" "${include_dir}"
 
 copy_glob() {
 	pattern="$1"
@@ -29,7 +29,7 @@ copy_glob() {
 		echo "ERROR: required file pattern not found: ${pattern}" >&2
 		exit 1
 	fi
-	cp -dpfr "$@" "${panfrost_lib_dir}/"
+	cp -dpfr "$@" "${lib_dir}/"
 }
 
 copy_glob "${target_dir}/usr/lib/libEGL.so"*
@@ -38,23 +38,23 @@ copy_glob "${target_dir}/usr/lib/libgbm.so"*
 
 for llvm_lib in "${target_dir}"/usr/lib/libLLVM-*.so* "${target_dir}"/usr/lib/libLLVM.so.*; do
 	[ -e "${llvm_lib}" ] || continue
-	cp -dpfr "${llvm_lib}" "${panfrost_lib_dir}/"
+	cp -dpfr "${llvm_lib}" "${lib_dir}/"
 done
 
-mkdir -p "${panfrost_lib_dir}/dri"
+mkdir -p "${lib_dir}/dri"
 if [ -e "${target_dir}/usr/lib/dri/panfrost_dri.so" ]; then
-	cp -dpfr "${target_dir}/usr/lib/dri/panfrost_dri.so" "${panfrost_lib_dir}/dri/"
+	cp -dpfr "${target_dir}/usr/lib/dri/panfrost_dri.so" "${lib_dir}/dri/"
 elif [ -e "${target_dir}/usr/lib/libgallium-${version%r*}.so" ]; then
-	cp -dpfr "${target_dir}/usr/lib/libgallium-${version%r*}.so" "${panfrost_lib_dir}/"
-	ln -s "../libgallium-${version%r*}.so" "${panfrost_lib_dir}/dri/panfrost_dri.so"
+	cp -dpfr "${target_dir}/usr/lib/libgallium-${version%r*}.so" "${lib_dir}/"
+	ln -s "../libgallium-${version%r*}.so" "${lib_dir}/dri/panfrost_dri.so"
 else
 	echo "ERROR: neither panfrost_dri.so nor libgallium-${version%r*}.so found" >&2
 	exit 1
 fi
 
 if [ -d "${target_dir}/usr/lib/gbm" ]; then
-	mkdir -p "${panfrost_lib_dir}/gbm"
-	cp -dpfr "${target_dir}/usr/lib/gbm/"* "${panfrost_lib_dir}/gbm/"
+	mkdir -p "${lib_dir}/gbm"
+	cp -dpfr "${target_dir}/usr/lib/gbm/"* "${lib_dir}/gbm/"
 fi
 
 for pc in egl.pc glesv2.pc gbm.pc; do
