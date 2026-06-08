@@ -22,19 +22,23 @@ include_dir="${tmp_dir}/usr/include"
 
 mkdir -p "${lib_dir}" "${pkgconfig_dir}" "${include_dir}"
 
-copy_glob() {
-	pattern="$1"
-	set -- ${pattern}
-	if [ ! -e "$1" ]; then
-		echo "ERROR: required file pattern not found: ${pattern}" >&2
+copy_lib_family() {
+	family="$1"
+	found=false
+	for lib in "${target_dir}/usr/lib/${family}"*; do
+		[ -e "${lib}" ] || continue
+		found=true
+		cp -dpfr "${lib}" "${lib_dir}/"
+	done
+	if [ "${found}" = false ]; then
+		echo "ERROR: required library family not found: ${family}" >&2
 		exit 1
 	fi
-	cp -dpfr "$@" "${lib_dir}/"
 }
 
-copy_glob "${target_dir}/usr/lib/libEGL.so"*
-copy_glob "${target_dir}/usr/lib/libGLESv2.so"*
-copy_glob "${target_dir}/usr/lib/libgbm.so"*
+copy_lib_family libEGL.so
+copy_lib_family libGLESv2.so
+copy_lib_family libgbm.so
 
 for llvm_lib in "${target_dir}"/usr/lib/libLLVM-*.so* "${target_dir}"/usr/lib/libLLVM.so.*; do
 	[ -e "${llvm_lib}" ] || continue
@@ -139,6 +143,25 @@ for package_dir in "${build_dir}/mesa3d-"* "${build_dir}/llvm-project-"* "${buil
 		-name 'NOTICE*' \
 	\) -exec cp -dpfr {} "${dest_dir}/" \;
 done
+
+symlink_list="${tmp_dir}/.symlinks"
+find "${tmp_dir}" -type l -print > "${symlink_list}"
+while IFS= read -r symlink; do
+	target="$(readlink "${symlink}")"
+	case "${target}" in
+		/*)
+			target_path="${tmp_dir}${target}"
+			;;
+		*)
+			target_path="$(dirname "${symlink}")/${target}"
+			;;
+	esac
+	if [ ! -e "${target_path}" ]; then
+		echo "ERROR: dangling symlink in prebuilt archive: ${symlink} -> ${target}" >&2
+		exit 1
+	fi
+done < "${symlink_list}"
+rm -f "${symlink_list}"
 
 mkdir -p "$(dirname "${archive_path}")"
 tar -czf "${archive_path}" -C "${tmp_dir}" .
