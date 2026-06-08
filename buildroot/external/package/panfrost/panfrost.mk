@@ -24,6 +24,10 @@ define PANFROST_INSTALL_LIBS
 			! -name usr ! -name COPYING ! -name licenses \
 			-exec cp -dpfr {} $(1)/usr/lib/panfrost/ \;; \
 	fi
+	for lib in EGL GLESv2 gbm; do \
+		find $(1)/usr/lib/panfrost -maxdepth 1 -name "lib$${lib}.so*" \
+			-exec sh -c 'for path do ln -snf "panfrost/$$(basename "$$path")" "$(1)/usr/lib/$$(basename "$$path")"; done' sh {} +; \
+	done
 endef
 
 define PANFROST_INSTALL_PKGCONFIG_FALLBACK
@@ -36,7 +40,7 @@ define PANFROST_INSTALL_PKGCONFIG_FALLBACK
 		'Name: egl' \
 		'Description: Mesa Panfrost EGL' \
 		'Version: $(PANFROST_VERSION)' \
-		'Libs: -L$${libdir}/panfrost -lEGL' \
+		'Libs: -L$${libdir} -lEGL' \
 		'Cflags: -I$${includedir}' \
 		> $(STAGING_DIR)/usr/lib/pkgconfig/egl.pc
 	printf '%s\n' \
@@ -47,7 +51,7 @@ define PANFROST_INSTALL_PKGCONFIG_FALLBACK
 		'Name: glesv2' \
 		'Description: Mesa Panfrost OpenGL ES 2' \
 		'Version: $(PANFROST_VERSION)' \
-		'Libs: -L$${libdir}/panfrost -lGLESv2' \
+		'Libs: -L$${libdir} -lGLESv2' \
 		'Cflags: -I$${includedir}' \
 		> $(STAGING_DIR)/usr/lib/pkgconfig/glesv2.pc
 	printf '%s\n' \
@@ -58,7 +62,7 @@ define PANFROST_INSTALL_PKGCONFIG_FALLBACK
 		'Name: gbm' \
 		'Description: Mesa Panfrost GBM' \
 		'Version: $(PANFROST_VERSION)' \
-		'Libs: -L$${libdir}/panfrost -lgbm' \
+		'Libs: -L$${libdir} -lgbm' \
 		'Cflags: -I$${includedir}' \
 		> $(STAGING_DIR)/usr/lib/pkgconfig/gbm.pc
 endef
