@@ -72,7 +72,7 @@ includedir=\${prefix}/include
 Name: egl
 Description: Mesa Panfrost EGL
 Version: ${version}
-Libs: -L\${libdir}/panfrost -lEGL
+Libs: -L\${libdir} -lEGL
 Cflags: -I\${includedir}
 EOF
 fi
@@ -86,7 +86,7 @@ includedir=\${prefix}/include
 Name: glesv2
 Description: Mesa Panfrost OpenGL ES 2
 Version: ${version}
-Libs: -L\${libdir}/panfrost -lGLESv2
+Libs: -L\${libdir} -lGLESv2
 Cflags: -I\${includedir}
 EOF
 fi
@@ -100,7 +100,7 @@ includedir=\${prefix}/include
 Name: gbm
 Description: Mesa Panfrost GBM
 Version: ${version}
-Libs: -L\${libdir}/panfrost -lgbm
+Libs: -L\${libdir} -lgbm
 Cflags: -I\${includedir}
 EOF
 fi
