@@ -42,7 +42,15 @@ for llvm_lib in "${target_dir}"/usr/lib/libLLVM-*.so* "${target_dir}"/usr/lib/li
 done
 
 mkdir -p "${panfrost_lib_dir}/dri"
-cp -dpfr "${target_dir}/usr/lib/dri/panfrost_dri.so" "${panfrost_lib_dir}/dri/"
+if [ -e "${target_dir}/usr/lib/dri/panfrost_dri.so" ]; then
+	cp -dpfr "${target_dir}/usr/lib/dri/panfrost_dri.so" "${panfrost_lib_dir}/dri/"
+elif [ -e "${target_dir}/usr/lib/libgallium-${version%r*}.so" ]; then
+	cp -dpfr "${target_dir}/usr/lib/libgallium-${version%r*}.so" "${panfrost_lib_dir}/"
+	ln -s "../libgallium-${version%r*}.so" "${panfrost_lib_dir}/dri/panfrost_dri.so"
+else
+	echo "ERROR: neither panfrost_dri.so nor libgallium-${version%r*}.so found" >&2
+	exit 1
+fi
 
 if [ -d "${target_dir}/usr/lib/gbm" ]; then
 	mkdir -p "${panfrost_lib_dir}/gbm"
