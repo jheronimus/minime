@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-PANFROST_VERSION = 26.0.1r1
+PANFROST_VERSION = 26.0.1r2
 PANFROST_SITE = https://github.com/jheronimus/minime/releases/download/panfrost-v$(PANFROST_VERSION)
 PANFROST_LICENSE = MIT, Apache-2.0 with LLVM-exception, GPL-2.0, LGPL-2.1
 PANFROST_LICENSE_FILES = COPYING
@@ -13,21 +13,27 @@ PANFROST_DEPENDENCIES = mesa3d-headers expat libdrm zlib zstd
 PANFROST_PROVIDES = libegl libgles libgbm
 
 # New prebuilts are packaged as a sysroot-like tree:
-#   usr/lib/panfrost, usr/lib/pkgconfig, usr/include, COPYING
-# Keep support for the first flat archives to avoid breaking existing caches.
+#   usr/lib, usr/lib/pkgconfig, usr/include, COPYING
+# Keep support for older usr/lib/panfrost and flat archives to avoid breaking caches.
 define PANFROST_INSTALL_LIBS
-	mkdir -p $(1)/usr/lib/panfrost
-	if [ -d $(@D)/usr/lib/panfrost ]; then \
-		cp -dpfr $(@D)/usr/lib/panfrost/* $(1)/usr/lib/panfrost/; \
+	mkdir -p $(1)/usr/lib
+	if [ -e $(@D)/usr/lib/libEGL.so ] || [ -e $(@D)/usr/lib/libGLESv2.so ] || [ -e $(@D)/usr/lib/libgbm.so ]; then \
+		find $(@D)/usr/lib -mindepth 1 -maxdepth 1 ! -name pkgconfig \
+			-exec cp -dpfr {} $(1)/usr/lib/ \;; \
 	else \
-		find $(@D) -mindepth 1 -maxdepth 1 \
-			! -name usr ! -name COPYING ! -name licenses \
-			-exec cp -dpfr {} $(1)/usr/lib/panfrost/ \;; \
+		mkdir -p $(1)/usr/lib/panfrost; \
+		if [ -d $(@D)/usr/lib/panfrost ]; then \
+			cp -dpfr $(@D)/usr/lib/panfrost/* $(1)/usr/lib/panfrost/; \
+		else \
+			find $(@D) -mindepth 1 -maxdepth 1 \
+				! -name usr ! -name COPYING ! -name licenses \
+				-exec cp -dpfr {} $(1)/usr/lib/panfrost/ \;; \
+		fi; \
+		for lib in EGL GLESv2 gbm; do \
+			find $(1)/usr/lib/panfrost -maxdepth 1 -name "lib$${lib}.so*" \
+				-exec sh -c 'for path do ln -snf "panfrost/$$(basename "$$path")" "$(1)/usr/lib/$$(basename "$$path")"; done' sh {} +; \
+		done; \
 	fi
-	for lib in EGL GLESv2 gbm; do \
-		find $(1)/usr/lib/panfrost -maxdepth 1 -name "lib$${lib}.so*" \
-			-exec sh -c 'for path do ln -snf "panfrost/$$(basename "$$path")" "$(1)/usr/lib/$$(basename "$$path")"; done' sh {} +; \
-	done
 endef
 
 define PANFROST_INSTALL_PKGCONFIG_FALLBACK
