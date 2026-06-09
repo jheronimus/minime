@@ -76,6 +76,22 @@ USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${USERDATA_STAGE}/.system/config"
 mkdir -p "${USERDATA_STAGE}/.system/devices"
 
+# Create standard roms, bios, and saves folder structure on SD card root
+mkdir -p "${USERDATA_STAGE}/roms"
+mkdir -p "${USERDATA_STAGE}/bios"
+mkdir -p "${USERDATA_STAGE}/saves"
+
+for system in arc gb gba nes snes psx gg sms md pce ss; do
+	mkdir -p "${USERDATA_STAGE}/roms/${system}"
+	mkdir -p "${USERDATA_STAGE}/saves/${system}"
+done
+
+# Commented out systems (no emulators shipped yet):
+# for system in lynx ngp vb pkm pico8 wswan mduck watara; do
+# 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
+# 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
+# done
+
 # Prepopulate simplified wifi.cfg from template
 if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
 	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi.cfg"
