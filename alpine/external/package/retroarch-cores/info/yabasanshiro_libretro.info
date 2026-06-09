@@ -1,0 +1,20 @@
+# Software Information
+display_name = "Sega - Saturn (YabaSanshiro)"
+authors = "DevMiyax|Yabause Team"
+supported_extensions = "cue|iso|chd"
+corename = "YabaSanshiro"
+license = "GPLv2"
+permissions = ""
+categories = "Emulator"
+display_version = "v3.4.2"
+
+# Hardware Information
+manufacturer = "Sega"
+systemname = "Sega Saturn"
+systemid = "saturn"
+
+# Libretro Features
+supports_no_game = "false"
+database = "Sega - Saturn"
+
+description = "YabaSanshiro is a fast and optimized port of the Yabause Sega Saturn emulator, utilizing dynamic recompilers (dynarec) and hardware accelerated rendering. It is particularly suited for resource-constrained ARM architectures, though Sega Saturn emulation remains highly demanding."

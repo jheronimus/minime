@@ -1,0 +1,10 @@
+config BR2_PACKAGE_RETROARCH_FRONTEND
+	bool "retroarch-frontend"
+	select BR2_PACKAGE_RETROARCH_CORES
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_SDL2_KMSDRM
+	select BR2_PACKAGE_SDL2_OPENGLES
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ZLIB
+	help
+	  RetroArch frontend for minime.
