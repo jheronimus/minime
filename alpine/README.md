@@ -7,7 +7,7 @@ Currently only Anbernic RG35xxSP v1 is tested
 This is a barebones custom firmware base, built on Buildroot:
 
 - it uses a mainline kernel with hardware patches imported from Rocknix, optimized using `tinyconfig`;
-- it configures a single read-only EROFS partition for the root filesystem and a single FAT32 partition for everything else;
+- it configures a single FAT32 partition for the system. Rootfs is a read-only erofs image on that partition;
 - it comes with wpa_supplicant for Wi-Fi, alsa for sound, bluez for Bluetooth, libmali for graphics;
 - it launches a passwordless BusyBox Telnet and FTP server on boot, allowing you to remotely control the console and upload files.
 
