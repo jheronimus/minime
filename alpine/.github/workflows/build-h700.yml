@@ -56,6 +56,11 @@ jobs:
         run: |
           python3 scripts/check_rebuild.py --auto-clean
 
+      - name: Clean H700 build output
+        run: |
+          echo "Performing full clean of h700 build output..."
+          make clean BOARD=h700
+
       - name: Build Image
         run: |
           echo "Building image for board: h700"
