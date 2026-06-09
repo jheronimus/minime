@@ -34,9 +34,11 @@ jobs:
           PANFROST_VER="$(grep '^PANFROST_VERSION =' external/package/panfrost/panfrost.mk | cut -d' ' -f3)"
           DL_DIR="${HOME}/.buildroot-dl"
           if [ -d "/buildroot-output" ]; then DL_DIR="/buildroot-output/dl"; fi
+          # Always purge cached panfrost tarballs so Buildroot re-downloads from GitHub releases.
           for f in "${DL_DIR}"/panfrost/panfrost-*.tar.gz; do
               [ -e "$f" ] || continue
-              case "$f" in *"${PANFROST_VER}".tar.gz) ;; *) rm -f "$f"; echo "Removed stale: $f" ;; esac
+              echo "Removing cached tarball: $f"
+              rm -f "$f"
           done
           rm -rf /buildroot-output/h700/build/panfrost-*
           rm -rf /buildroot-output/h700/target/usr/lib/panfrost
