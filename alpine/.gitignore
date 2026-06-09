@@ -3,13 +3,11 @@ out/
 buildroot/
 logs/
 reference/
-docs/
 scripts/deploy.sh
 scripts/run_telnet.py
 scripts/run_telnet_robust.py
 scripts/get-images.sh
 TODO.md
-AGENTS.md
 .antigravitycli/
 local.mk
 /minui
@@ -23,4 +21,3 @@ scripts/__pycache__/
 __pycache__/
 *.pyc
 rocknix_distribution/
-specs/
