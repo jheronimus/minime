@@ -88,14 +88,20 @@ if [ -d "${TARGET_DIR}/usr/lib/panfrost" ]; then
 	rm -f "${TARGET_DIR}/etc/udev/rules.d/50-mali.rules"
 	rm -f "${TARGET_DIR}/etc/udev/rules.d/99-mali.rules"
 	rm -f "${TARGET_DIR}/etc/profile.d/mali-priority.sh"
-	rm -f "${TARGET_DIR}"/usr/lib/libEGL.so*
-	rm -f "${TARGET_DIR}"/usr/lib/libGLESv1_CM.so*
-	rm -f "${TARGET_DIR}"/usr/lib/libGLESv2.so*
-	rm -f "${TARGET_DIR}"/usr/lib/libOpenCL.so*
-	rm -f "${TARGET_DIR}"/usr/lib/libgbm.so*
 	rm -f "${TARGET_DIR}"/usr/lib/libmali*
 	rm -f "${TARGET_DIR}"/usr/lib/libminime_clock_shim.so*
 	find "${TARGET_DIR}/lib/modules" -path "*/updates/mali_kbase.ko" -delete
+
+	# Only strip mali EGL/GLES/GBM wrappers if libmali itself is still present.
+	# When Panfrost is the sole driver these files are real or symlinked panfrost
+	# libraries and must be preserved.
+	if [ -f "${TARGET_DIR}/usr/lib/libmali.so" ] || [ -f "${TARGET_DIR}/usr/lib/libmali.so.1" ]; then
+		rm -f "${TARGET_DIR}"/usr/lib/libEGL.so*
+		rm -f "${TARGET_DIR}"/usr/lib/libGLESv1_CM.so*
+		rm -f "${TARGET_DIR}"/usr/lib/libGLESv2.so*
+		rm -f "${TARGET_DIR}"/usr/lib/libOpenCL.so*
+		rm -f "${TARGET_DIR}"/usr/lib/libgbm.so*
+	fi
 
 	kernel_version="$(find "${TARGET_DIR}/lib/modules" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | head -n 1)"
 	if [ -n "${kernel_version}" ] && command -v depmod >/dev/null 2>&1; then
