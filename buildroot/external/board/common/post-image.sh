@@ -322,7 +322,7 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	fi
 	
 	log_console "Formatting expanded FAT32 partition on $CARD_DEV..."
-	mkdosfs -F 32 -n MINIME "$CARD_DEV"
+	mkdosfs -F 32 -n minime "$CARD_DEV"
 	
 	log_console "Restoring boot assets from RAM..."
 	mount -t vfat "$CARD_DEV" /mnt/card
@@ -353,10 +353,13 @@ if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
 fi
 log_card "Minime Boot Stage 1: rootfs loop-mounted"
 
-# DEBUG: temporarily skip vtcon1 unbind so we can see console output
-# from Stage 2 init.  If the system boots successfully we will see
-# fbcon messages instead of a frozen screen.
-# echo 0 > /sys/class/vtconsole/vtcon1/bind 2>/dev/null || true
+# Clear framebuffer console before unbinding to erase stale initrd text.
+printf '\033[2J\033[H' > /dev/console 2>/dev/null || true
+
+# Unbind framebuffer console before transitioning to the real rootfs.
+# This prevents fbcon from competing with KMSDRM clients (e.g. MinUI SDL2)
+# for the display plane after boot.
+echo 0 > /sys/class/vtconsole/vtcon1/bind 2>/dev/null || true
 
 # Also ensure backlight is at a visible level.  minui later reads
 # msettings.bin, but having backlight off at boot makes the display
@@ -365,13 +368,12 @@ for bl in /sys/class/backlight/*/brightness; do
 	[ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
 done
 
-# DEBUG: verify target init exists and is executable before switch_root
+# Hard check that target init exists and is executable before switch_root
 if [ ! -x /mnt/system/sbin/init ]; then
 	log_card "ERROR: /mnt/system/sbin/init is missing or not executable"
 	ls -la /mnt/system/sbin/init >> "$BOOT_LOG" 2>&1 || true
 	exec sh
 fi
-log_card "DEBUG: /mnt/system/sbin/init exists and is executable"
 
 # Move virtual mounts and SD card mount to the new rootfs
 mount -o move /sys /mnt/system/sys
@@ -379,11 +381,6 @@ mount -o move /proc /mnt/system/proc
 mount -o move /dev /mnt/system/dev
 log_card "Minime Boot Stage 1: moving SD card mount into rootfs"
 mount -o move /mnt/card /mnt/system/mnt/sdcard
-
-log_card "DEBUG: all mounts moved, about to switch_root"
-log_card "DEBUG: /mnt/system/mnt/sdcard contents:"
-ls -la /mnt/system/mnt/sdcard >> "$BOOT_LOG" 2>&1 || true
-sync
 
 log_card "Minime Boot Stage 1: Transitioning to Stage 2..."
 exec switch_root /mnt/system /sbin/init
@@ -406,7 +403,7 @@ cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
 echo "Generating userdata.vfat (Ultra-minimal 256MB partition)..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=256
-mkdosfs -F 32 -n MINIME "${BINARIES_DIR}/userdata.vfat"
+mkdosfs -F 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 
 # Populate userdata.vfat recursively using mtools
