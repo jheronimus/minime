@@ -353,6 +353,11 @@ if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
 fi
 log_card "Minime Boot Stage 1: rootfs loop-mounted"
 
+# Unbind framebuffer console before transitioning to the real rootfs.
+# This prevents fbcon from competing with KMSDRM clients (e.g. MinUI SDL2)
+# for the display plane after boot.
+echo 0 > /sys/class/vtconsole/vtcon1/bind 2>/dev/null || true
+
 # Move virtual mounts and SD card mount to the new rootfs
 mount -o move /sys /mnt/system/sys
 mount -o move /proc /mnt/system/proc
