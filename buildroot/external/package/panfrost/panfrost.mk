@@ -18,8 +18,13 @@ PANFROST_PROVIDES = libegl libgles libgbm
 define PANFROST_INSTALL_LIBS
 	mkdir -p $(1)/usr/lib
 	if [ -e $(@D)/usr/lib/libEGL.so ] || [ -e $(@D)/usr/lib/libGLESv2.so ] || [ -e $(@D)/usr/lib/libgbm.so ]; then \
-		find $(@D)/usr/lib -mindepth 1 -maxdepth 1 ! -name pkgconfig \
-			-exec cp -dpfr {} $(1)/usr/lib/ \;; \
+		mkdir -p $(1)/usr/lib/panfrost; \
+		find $(@D)/usr/lib -mindepth 1 -maxdepth 1 ! -name pkgconfig ! -name panfrost \
+			-exec cp -dpfr {} $(1)/usr/lib/panfrost/ \;; \
+		for lib in EGL GLESv2 gbm; do \
+			find $(1)/usr/lib/panfrost -maxdepth 1 -name "lib$${lib}.so*" \
+				-exec sh -c 'for path do ln -snf "panfrost/$$(basename "$$path")" "$(1)/usr/lib/$$(basename "$$path")"; done' sh {} +; \
+		done; \
 	else \
 		mkdir -p $(1)/usr/lib/panfrost; \
 		if [ -d $(@D)/usr/lib/panfrost ]; then \
