@@ -29,37 +29,9 @@ jobs:
         run: |
           ./scripts/prepare-linux.sh
 
-      - name: Clean stale Panfrost prebuilt cache
-        run: |
-          PANFROST_VER="$(grep '^PANFROST_VERSION =' external/package/panfrost/panfrost.mk | cut -d' ' -f3)"
-          DL_DIR="${HOME}/.buildroot-dl"
-          if [ -d "/buildroot-output" ]; then DL_DIR="/buildroot-output/dl"; fi
-          # Always purge cached panfrost tarballs so Buildroot re-downloads from GitHub releases.
-          for f in "${DL_DIR}"/panfrost/panfrost-*.tar.gz; do
-              [ -e "$f" ] || continue
-              echo "Removing cached tarball: $f"
-              rm -f "$f"
-          done
-          rm -rf /buildroot-output/h700/build/panfrost-*
-          rm -rf /buildroot-output/h700/target/usr/lib/panfrost
-          rm -f /buildroot-output/h700/target/usr/lib/libEGL.so*
-          rm -f /buildroot-output/h700/target/usr/lib/libGLESv2.so*
-          rm -f /buildroot-output/h700/target/usr/lib/libgbm.so*
-          rm -f /buildroot-output/h700/target/usr/lib/libgallium*
-          rm -f /buildroot-output/h700/target/usr/lib/libSPIRV*
-          rm -f /buildroot-output/h700/target/usr/lib/libLLVM*
-          rm -rf /buildroot-output/h700/target/usr/lib/dri
-          rm -rf /buildroot-output/h700/target/usr/lib/gbm
-          echo "Panfrost artifacts cleaned for version ${PANFROST_VER}"
-
       - name: Self-Healing Rebuild Check
         run: |
           python3 scripts/check_rebuild.py --auto-clean
-
-      - name: Clean H700 build output
-        run: |
-          echo "Performing full clean of h700 build output..."
-          make clean BOARD=h700
 
       - name: Build Image
         run: |

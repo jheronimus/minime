@@ -45,7 +45,7 @@ else
         -v minime-buildroot-dl:/buildroot-output/dl
 endif
 
-BUILDROOT_VERSION := 2026.02.2
+BUILDROOT_VERSION := 2026.05
 BUILDROOT_ARCHIVE := buildroot-$(BUILDROOT_VERSION).tar.gz
 BUILDROOT_URL := https://buildroot.org/downloads/$(BUILDROOT_ARCHIVE)
 BUILDROOT_DIR := buildroot
@@ -198,6 +198,14 @@ ifeq ($(USE_PODMAN),1)
 else
 	@rm -rf $(BUILDROOT_OUTPUT_DIR)
 endif
+ifneq ($(filter panfrost,$(MAKECMDGOALS)),)
+	@echo "Cleaning Panfrost bootstrap build output..."
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(PANFROST_OUTPUT_DIR) 2>/dev/null || true
+else
+	@rm -rf $(PANFROST_OUTPUT_DIR)
+endif
+endif
 
 clean-all: clean
 	@rm -rf $(CURDIR)/out/
@@ -217,33 +225,37 @@ else
 endif
 
 panfrost: $(BUILDROOT_STAMP) prepare_vm
-	@echo "Configuring Panfrost bootstrap build for $(BOARD) in $(PANFROST_OUTPUT_DIR)..."
-	@$(call PANFROST_RUN_CMD,$(MINIME_DEFCONFIG))
-	@if [ "$(USE_PODMAN)" = "1" ]; then \
-		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
-			set -e; \
-			sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $(PANFROST_OUTPUT_DIR)/.config; \
-			echo '# BR2_PACKAGE_PANFROST is not set' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_MESA3D_GBM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-			echo 'BR2_PACKAGE_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config"; \
+	@if [ ! -f "$(PANFROST_OUTPUT_DIR)/.config" ]; then \
+		echo "Configuring Panfrost bootstrap build for $(BOARD) in $(PANFROST_OUTPUT_DIR)..."; \
+		$(call PANFROST_RUN_CMD,$(MINIME_DEFCONFIG)); \
+		if [ "$(USE_PODMAN)" = "1" ]; then \
+			$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
+				set -e; \
+				sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $(PANFROST_OUTPUT_DIR)/.config; \
+				echo '# BR2_PACKAGE_PANFROST is not set' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_MESA3D_GBM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
+				echo 'BR2_PACKAGE_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config"; \
+		else \
+			CONFIG=$(PANFROST_OUTPUT_DIR)/.config; \
+			sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $$CONFIG; \
+			echo "# BR2_PACKAGE_PANFROST is not set" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D_LLVM=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_MESA3D_GBM=y" >> $$CONFIG; \
+			echo "BR2_PACKAGE_LLVM=y" >> $$CONFIG; \
+		fi; \
+		$(call PANFROST_RUN_CMD,olddefconfig); \
 	else \
-		CONFIG=$(PANFROST_OUTPUT_DIR)/.config; \
-		sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $$CONFIG; \
-		echo "# BR2_PACKAGE_PANFROST is not set" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D_LLVM=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_MESA3D_GBM=y" >> $$CONFIG; \
-		echo "BR2_PACKAGE_LLVM=y" >> $$CONFIG; \
+		echo "Panfrost bootstrap build is already configured in $(PANFROST_OUTPUT_DIR). Skipping configuration."; \
 	fi
-	@$(call PANFROST_RUN_CMD,olddefconfig)
 	@echo "Building Mesa and LLVM from source..."
 	@$(call PANFROST_RUN_CMD,-j$(TOPLEVEL_JLEVEL) mesa3d llvm)
 	@echo "Packaging prebuilt libraries..."

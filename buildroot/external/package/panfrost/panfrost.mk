@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-PANFROST_VERSION = 26.0.1r4
+PANFROST_VERSION = 26.1.2r1
 PANFROST_SITE = https://github.com/minime-os/minime/releases/download/panfrost-v$(PANFROST_VERSION)
 PANFROST_LICENSE = MIT, Apache-2.0 with LLVM-exception, GPL-2.0, LGPL-2.1
 PANFROST_LICENSE_FILES = COPYING
@@ -104,5 +104,27 @@ endef
 define PANFROST_INSTALL_TARGET_CMDS
 	$(call PANFROST_INSTALL_LIBS,$(TARGET_DIR))
 endef
+
+define PANFROST_CLEAN_OLD_FILES
+	rm -rf $(1)/usr/lib/panfrost
+	rm -f $(1)/usr/lib/libEGL.so*
+	rm -f $(1)/usr/lib/libGLESv2.so*
+	rm -f $(1)/usr/lib/libgbm.so*
+	rm -f $(1)/usr/lib/libgallium*
+	rm -f $(1)/usr/lib/libSPIRV*
+	rm -f $(1)/usr/lib/libLLVM*
+	rm -rf $(1)/usr/lib/dri
+	rm -rf $(1)/usr/lib/gbm
+endef
+
+define PANFROST_CLEAN_STAGING
+	$(call PANFROST_CLEAN_OLD_FILES,$(STAGING_DIR))
+endef
+PANFROST_PRE_INSTALL_STAGING_HOOKS += PANFROST_CLEAN_STAGING
+
+define PANFROST_CLEAN_TARGET
+	$(call PANFROST_CLEAN_OLD_FILES,$(TARGET_DIR))
+endef
+PANFROST_PRE_INSTALL_TARGET_HOOKS += PANFROST_CLEAN_TARGET
 
 $(eval $(generic-package))
