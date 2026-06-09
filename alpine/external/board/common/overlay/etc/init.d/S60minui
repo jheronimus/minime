@@ -56,7 +56,9 @@ case "$1" in
         # Clear any stale next commands
         rm -f /tmp/next
         
-        # Start MinUI lifecycle loop in background to let boot process finish
+        # Start MinUI lifecycle loop in background to let boot process finish.
+        # Redirect minui output directly to SD card log so it persists even
+        # if minui has not exited when we inspect the card.
         (
             while true; do
                 if [ -f /tmp/poweroff ]; then
@@ -65,11 +67,13 @@ case "$1" in
                     exit 0
                 fi
                 
-                # Launch MinUI and capture output
-                echo "Launching MinUI..."
-                /mnt/sdcard/.system/bin/minui < /dev/console > /tmp/minui.log 2>&1
+                # Launch MinUI and capture output to persistent log
+                echo "Launching MinUI..." >> /mnt/sdcard/minime-boot.log
+                /mnt/sdcard/.system/bin/minui < /dev/console >> /mnt/sdcard/minime-boot.log 2>&1
                 MINUI_EXIT_CODE=$?
-                cat /tmp/minui.log > /dev/console
+
+                echo "minui exited with code $MINUI_EXIT_CODE" >> /mnt/sdcard/minime-boot.log
+                sync
                 
                 # Check for next command
                 if [ -f /tmp/next ]; then
@@ -78,14 +82,9 @@ case "$1" in
                     eval "$CMD" < /dev/console > /dev/console 2>&1
                 else
                     # Fallback or clean shutdown if no next action queued
-                    echo "minui exited with code $MINUI_EXIT_CODE" >> /mnt/sdcard/minime-boot.log
-                    echo "--- minui.log ---" >> /mnt/sdcard/minime-boot.log
-                    cat /tmp/minui.log >> /mnt/sdcard/minime-boot.log
-                    echo "-----------------" >> /mnt/sdcard/minime-boot.log
+                    echo "MinUI exited. Prevented shutdown for debugging." >> /mnt/sdcard/minime-boot.log
+                    echo "System will stay online. Connect via telnet." >> /mnt/sdcard/minime-boot.log
                     sync
-
-                    echo "MinUI exited. Prevented shutdown for debugging."
-                    echo "System will stay online. Connect via telnet."
                     sleep 3600
                     exit 0
                 fi
