@@ -45,6 +45,12 @@ for llvm_lib in "${target_dir}"/usr/lib/libLLVM-*.so* "${target_dir}"/usr/lib/li
 	cp -dpfr "${llvm_lib}" "${lib_dir}/"
 done
 
+# Copy SPIRV-Tools runtime libraries (Mesa/Gallium dependency)
+for spirv_lib in "${target_dir}"/usr/lib/libSPIRV-Tools*.so*; do
+	[ -e "${spirv_lib}" ] || continue
+	cp -dpfr "${spirv_lib}" "${lib_dir}/"
+done
+
 mkdir -p "${lib_dir}/dri"
 if [ -e "${target_dir}/usr/lib/dri/panfrost_dri.so" ]; then
 	cp -dpfr "${target_dir}/usr/lib/dri/panfrost_dri.so" "${lib_dir}/dri/"
