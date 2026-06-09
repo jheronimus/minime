@@ -5,7 +5,7 @@
 ################################################################################
 
 PANFROST_VERSION = 26.0.1r4
-PANFROST_SITE = https://github.com/jheronimus/minime/releases/download/panfrost-v$(PANFROST_VERSION)
+PANFROST_SITE = https://github.com/minime-os/minime/releases/download/panfrost-v$(PANFROST_VERSION)
 PANFROST_LICENSE = MIT, Apache-2.0 with LLVM-exception, GPL-2.0, LGPL-2.1
 PANFROST_LICENSE_FILES = COPYING
 PANFROST_INSTALL_STAGING = YES

@@ -5,7 +5,7 @@
 ################################################################################
 
 MALI_KBASE_VERSION = h700
-MALI_KBASE_SITE = $(call github,jheronimus,mali_kbase,$(MALI_KBASE_VERSION))
+MALI_KBASE_SITE = $(call github,minime-os,mali-kbase,$(MALI_KBASE_VERSION))
 MALI_KBASE_LICENSE = GPL-2.0
 MALI_KBASE_LICENSE_FILES = COPYING
 

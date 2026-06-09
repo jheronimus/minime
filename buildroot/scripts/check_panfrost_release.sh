@@ -22,7 +22,7 @@ if [ -f "${LOCAL_FILE}" ]; then
 	exit 0
 fi
 
-URL="https://github.com/jheronimus/minime/releases/download/panfrost-v${PANFROST_VER}/panfrost-${PANFROST_VER}.tar.gz"
+URL="https://github.com/minime-os/minime/releases/download/panfrost-v${PANFROST_VER}/panfrost-${PANFROST_VER}.tar.gz"
 echo "Checking Panfrost prebuilt archive: ${URL}"
 
 HTTP_STATUS="$(curl -sIL -o /dev/null -w "%{http_code}" --connect-timeout 5 "${URL}" || echo "000")"
