@@ -169,7 +169,7 @@ def main():
     md.append("This document tracks the full list of all target and host packages Buildroot is configured to build for Minime OS images. This inventory is automatically kept up-to-date by running the documentation generation script.")
     md.append("")
     md.append("> [!NOTE]")
-    md.append("> This list was generated automatically. To update it, run: `make packages-doc` in the `minime/` directory.")
+    md.append("> This list was generated automatically. To update it, run: `make packages-list` in the `minime/` directory.")
     md.append("")
     md.append("## Target Packages")
     md.append("")
