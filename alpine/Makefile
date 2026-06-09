@@ -90,7 +90,7 @@ endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image panfrost h700-uboot check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild FORCE
+.PHONY: help prepare shell buildroot defconfig image panfrost h700-uboot check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild packages-doc FORCE
 
 help:
 	@printf '%s\n' \
@@ -104,6 +104,7 @@ help:
 		"  make check-panfrost-prebuilt - Check that the Panfrost archive exists" \
 		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
+		"  make packages-doc  - Generate and update target/host package documentation" \
 		"  make clean         - Remove active board outputs and buildroot state" \
 		"  make clean-all     - Remove ALL board outputs and buildroot state" \
 		"  make clean-vm      - Delete container images and resources" \
@@ -183,6 +184,10 @@ ifeq ($(USE_PODMAN),1)
 else
 	@python3 scripts/check_rebuild.py
 endif
+
+packages-doc:
+	python3 scripts/generate_packages_doc.py
+
 
 check-panfrost-prebuilt:
 	@if grep -q '^BR2_PACKAGE_PANFROST=y' external/configs/$(MINIME_DEFCONFIG); then \
