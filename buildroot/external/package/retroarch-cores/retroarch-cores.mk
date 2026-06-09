@@ -5,6 +5,7 @@
 ################################################################################
 
 RETROARCH_CORES_VERSION = 1.0
+RETROARCH_CORES_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores
 RETROARCH_CORES_SITE_METHOD = local
 RETROARCH_CORES_SOURCE =
 RETROARCH_CORES_DEPENDENCIES = zlib
