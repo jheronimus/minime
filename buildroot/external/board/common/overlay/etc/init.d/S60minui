@@ -45,6 +45,11 @@ case "$1" in
         export USERDATA_PATH=/mnt/sdcard/.system/
         export HOME=/mnt/sdcard
         
+        # Ensure backlight is visible; minui may later override via msettings.bin
+        for bl in /sys/class/backlight/*/brightness; do
+            [ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
+        done
+        
         # 2. Clear GPU Failure boot-loop sentinel on successful GUI launch
         rm -f /mnt/sdcard/.system/gpu_fail
 

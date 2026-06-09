@@ -358,6 +358,13 @@ log_card "Minime Boot Stage 1: rootfs loop-mounted"
 # for the display plane after boot.
 echo 0 > /sys/class/vtconsole/vtcon1/bind 2>/dev/null || true
 
+# Also ensure backlight is at a visible level.  minui later reads
+# msettings.bin, but having backlight off at boot makes the display
+# invisible until userspace takes over.
+for bl in /sys/class/backlight/*/brightness; do
+	[ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
+done
+
 # Move virtual mounts and SD card mount to the new rootfs
 mount -o move /sys /mnt/system/sys
 mount -o move /proc /mnt/system/proc
