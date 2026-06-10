@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     locales \
     && rm -rf /var/lib/apt/lists/*
 
+# Use mold as the default linker for significantly faster linking
+RUN update-alternatives --install /usr/bin/ld ld /usr/bin/mold 100
+
 # Set up locales
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8
