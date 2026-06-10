@@ -120,8 +120,17 @@ $(BUILDROOT_STAMP):
 		else curl -fL -o "$(BUILDROOT_ARCHIVE)" "$(BUILDROOT_URL)"; fi; \
 		rm -rf $(BUILDROOT_DIR); mkdir -p $(BUILDROOT_DIR); \
 		tar xf $(BUILDROOT_ARCHIVE) --strip-components=1 -C $(BUILDROOT_DIR); \
+		if [ -d support/buildroot-patches ]; then \
+			echo "Applying patches to Buildroot..."; \
+			for p in support/buildroot-patches/*.patch; do \
+				[ -e "$$p" ] || continue; \
+				echo "Applying $$p..."; \
+				patch -p1 -d $(BUILDROOT_DIR) < "$$p"; \
+			done; \
+		fi; \
 		touch $(BUILDROOT_STAMP); rm -f $(BUILDROOT_ARCHIVE); \
 	} 2>&1 | tee "$$LOG_FILE"
+
 
 buildroot: $(BUILDROOT_STAMP)
 	@echo "Buildroot $(BUILDROOT_VERSION) is ready in $(BUILDROOT_DIR)"
