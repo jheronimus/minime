@@ -6,19 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install complete Buildroot dependencies and tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    bison \
-    flex \
-    gettext \
-    texinfo \
     unzip \
-    help2man \
     rsync \
     git \
     curl \
     ccache \
     cmake \
     mold \
-    ninja-build \
     libelf-dev \
     libssl-dev \
     libedit-dev \
@@ -28,7 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-magic \
     flake8 \
     shellcheck \
-    swig \
     u-boot-tools \
     cpio \
     genimage \
@@ -37,7 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lzip \
     parted \
     erofs-utils \
-    patchelf \
     file \
     wget \
     libncurses-dev \
