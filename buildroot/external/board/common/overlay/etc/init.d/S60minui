@@ -58,6 +58,12 @@ case "$1" in
         # Clear any stale next commands
         rm -f /tmp/next
         
+        # DEBUG: MinUI auto-start disabled for troubleshooting.
+        # Remove these two lines to re-enable automatic MinUI launch on boot.
+        echo "MinUI auto-start disabled for debugging."
+        echo "Run '/etc/init.d/S60minui start' manually to launch GUI."
+        exit 0
+        
         # Start MinUI lifecycle loop in background to let boot process finish.
         # Redirect minui output directly to SD card log so it persists even
         # if minui has not exited when we inspect the card.
