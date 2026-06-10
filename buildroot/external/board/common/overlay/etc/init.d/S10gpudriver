@@ -6,13 +6,14 @@
 case "$1" in
     start)
         echo "Initializing GPU Subsystem..."
-        # Try Panfrost first (H700 and other Mali Midgard/Bifrost devices).
-        # Fall back to proprietary Mali KBASE for RK boards.
-        if modprobe panfrost 2>/dev/null; then
-            echo "Activating Panfrost driver..."
-        else
+        # Prefer proprietary mali_kbase when available (libmali userspace path).
+        # Fall back to open-source panfrost (mesa3d-from-source path).
+        if modinfo mali_kbase >/dev/null 2>&1; then
             echo "Activating libmali driver..."
-            modprobe mali_kbase 2>/dev/null || true
+            modprobe mali_kbase
+        else
+            echo "Activating Panfrost driver..."
+            modprobe panfrost
         fi
         ;;
     stop)
