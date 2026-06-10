@@ -33,10 +33,13 @@ case "$1" in
         export RGXX_MODEL
         
         # 1. Set graphics library paths
-        if [ -d /usr/lib/panfrost ]; then
-            export LD_LIBRARY_PATH="/usr/lib/panfrost:/mnt/sdcard/.system/bin"
-            export LIBGL_DRIVERS_PATH="/usr/lib/panfrost/dri"
-            export GBM_BACKENDS_PATH="/usr/lib/panfrost/gbm"
+        # Detect Panfrost (H700) vs libmali (RK boards).
+        # The old prebuilt package used /usr/lib/panfrost; mesa3d-from-source
+        # installs directly to /usr/lib.
+        if [ -d /sys/bus/platform/drivers/panfrost ] || [ -d /usr/lib/panfrost ]; then
+            export LD_LIBRARY_PATH="/usr/lib:/mnt/sdcard/.system/bin"
+            export LIBGL_DRIVERS_PATH="/usr/lib/dri"
+            export GBM_BACKENDS_PATH="/usr/lib/gbm"
             export MESA_LOADER_DRIVER_OVERRIDE=panfrost
             export SDL_VIDEODRIVER=kmsdrm
         else
