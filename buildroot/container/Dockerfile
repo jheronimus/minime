@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ccache \
     cmake \
     mold \
+    zstd \
     libelf-dev \
     libssl-dev \
     libedit-dev \
