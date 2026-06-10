@@ -6,6 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install complete Buildroot dependencies and tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    bison \
+    flex \
     unzip \
     rsync \
     git \

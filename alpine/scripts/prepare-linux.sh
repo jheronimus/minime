@@ -2,7 +2,7 @@
 
 set -eu
 
-BOOTSTRAP_PACKAGES="build-essential unzip rsync git curl ccache cmake mold libelf-dev libssl-dev bc python3 python3-dev u-boot-tools cpio genimage mtools dosfstools lzip parted erofs-utils file wget libncurses-dev"
+BOOTSTRAP_PACKAGES="build-essential bison flex unzip rsync git curl ccache cmake mold libelf-dev libssl-dev bc python3 python3-dev u-boot-tools cpio genimage mtools dosfstools lzip parted erofs-utils file wget libncurses-dev"
 
 echo "Verifying Linux distribution on host..."
 if [ -f /etc/os-release ]; then
