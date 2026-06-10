@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - panfrost-source-build
     paths:
       - 'external/board/h700/**'
       - 'external/configs/minime_h700_defconfig'
