@@ -70,7 +70,6 @@ else
 endif
 
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
-PANFROST_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/panfrost-$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
 MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
 
@@ -78,19 +77,16 @@ TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev
 LOG_DIR := $(CURDIR)/logs
 
 BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
-PANFROST_BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(PANFROST_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
 
 ifeq ($(USE_PODMAN),1)
     RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
-    PANFROST_RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(PANFROST_BUILDROOT_MAKE_ARGS) $(1)
 else
     RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
-    PANFROST_RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(PANFROST_BUILDROOT_MAKE_ARGS) $(1)
 endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image panfrost h700-uboot check-panfrost-prebuilt clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild packages-list FORCE
+.PHONY: help prepare shell buildroot defconfig image h700-uboot clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild packages-list FORCE
 
 help:
 	@printf '%s\n' \
@@ -99,9 +95,7 @@ help:
 		"  make shell         - Open an interactive terminal shell inside the environment" \
 		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
 		"  make image         - Build complete bootable firmware image for active board" \
-		"  make panfrost      - Build and package the Panfrost prebuilt archive" \
 		"  make h700-uboot    - Build and copy the H700 U-Boot prebuilt file" \
-		"  make check-panfrost-prebuilt - Check that the Panfrost archive exists" \
 		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
 		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
 		"  make packages-list - Generate and update target/host package documentation" \
@@ -161,7 +155,7 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
 
-image: $(BUILDROOT_STAMP) prepare_vm defconfig check-panfrost-prebuilt
+image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
@@ -197,28 +191,12 @@ endif
 packages-list:
 	python3 scripts/generate_packages_doc.py
 
-
-check-panfrost-prebuilt:
-	@if grep -q '^BR2_PACKAGE_PANFROST=y' external/configs/$(MINIME_DEFCONFIG); then \
-		./scripts/check_panfrost_release.sh $(BUILDROOT_DL_DIR); \
-	else \
-		echo "Panfrost prebuilt is not enabled for $(BOARD). Skipping check."; \
-	fi
-
 clean:
 	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/$(BOARD)/
 ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BUILDROOT_OUTPUT_DIR)
-endif
-ifneq ($(filter panfrost,$(MAKECMDGOALS)),)
-	@echo "Cleaning Panfrost bootstrap build output..."
-ifeq ($(USE_PODMAN),1)
-	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(PANFROST_OUTPUT_DIR) 2>/dev/null || true
-else
-	@rm -rf $(PANFROST_OUTPUT_DIR)
-endif
 endif
 
 clean-all: clean
@@ -237,53 +215,6 @@ ifeq ($(USE_PODMAN),1)
 else
 	@echo "clean-vm is only applicable when using Podman." >&2
 endif
-
-panfrost: $(BUILDROOT_STAMP) prepare_vm
-	@if [ ! -f "$(PANFROST_OUTPUT_DIR)/.config" ]; then \
-		echo "Configuring Panfrost bootstrap build for $(BOARD) in $(PANFROST_OUTPUT_DIR)..."; \
-		$(call PANFROST_RUN_CMD,$(MINIME_DEFCONFIG)); \
-		if [ "$(USE_PODMAN)" = "1" ]; then \
-			$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
-				set -e; \
-				sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $(PANFROST_OUTPUT_DIR)/.config; \
-				echo '# BR2_PACKAGE_PANFROST is not set' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D_OPENGL_EGL=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D_OPENGL_ES=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_MESA3D_GBM=y' >> $(PANFROST_OUTPUT_DIR)/.config; \
-				echo 'BR2_PACKAGE_LLVM=y' >> $(PANFROST_OUTPUT_DIR)/.config"; \
-		else \
-			CONFIG=$(PANFROST_OUTPUT_DIR)/.config; \
-			sed -i '/^BR2_PACKAGE_PANFROST=/d; /^# BR2_PACKAGE_PANFROST is not set/d; /^BR2_PACKAGE_MESA3D=/d; /^BR2_PACKAGE_MESA3D_LLVM=/d; /^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=/d; /^BR2_PACKAGE_MESA3D_OPENGL_EGL=/d; /^BR2_PACKAGE_MESA3D_OPENGL_ES=/d; /^BR2_PACKAGE_MESA3D_GBM=/d; /^BR2_PACKAGE_LLVM=/d' $$CONFIG; \
-			echo "# BR2_PACKAGE_PANFROST is not set" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D_LLVM=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D_OPENGL_EGL=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D_OPENGL_ES=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_MESA3D_GBM=y" >> $$CONFIG; \
-			echo "BR2_PACKAGE_LLVM=y" >> $$CONFIG; \
-		fi; \
-		$(call PANFROST_RUN_CMD,olddefconfig); \
-	else \
-		echo "Panfrost bootstrap build is already configured in $(PANFROST_OUTPUT_DIR). Skipping configuration."; \
-	fi
-	@echo "Building Mesa and LLVM from source..."
-	@$(call PANFROST_RUN_CMD,-j$(TOPLEVEL_JLEVEL) mesa3d llvm)
-	@echo "Packaging prebuilt libraries..."
-	@PANFROST_VER=$$(grep "PANFROST_VERSION =" external/package/panfrost/panfrost.mk | cut -d' ' -f3); \
-	if [ "$(USE_PODMAN)" = "1" ]; then \
-		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) \
-			/workspace/scripts/package_panfrost_prebuilt.sh \
-			$(PANFROST_OUTPUT_DIR) "$$PANFROST_VER" \
-			/workspace/out/panfrost-$$PANFROST_VER.tar.gz; \
-	else \
-		./scripts/package_panfrost_prebuilt.sh \
-			$(PANFROST_OUTPUT_DIR) "$$PANFROST_VER" \
-			$(CURDIR)/out/panfrost-$$PANFROST_VER.tar.gz; \
-	fi
 
 h700-uboot: $(BUILDROOT_STAMP) prepare_vm
 	@if [ "$(BOARD)" != "h700" ]; then \
