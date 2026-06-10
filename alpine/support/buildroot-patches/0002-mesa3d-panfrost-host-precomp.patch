@@ -1,0 +1,20 @@
+diff -urN a/package/mesa3d/mesa3d.mk b/package/mesa3d/mesa3d.mk
+--- a/package/mesa3d/mesa3d.mk
++++ b/package/mesa3d/mesa3d.mk
+@@ -158,6 +158,13 @@ ifeq ($(BR2_PACKAGE_MESA3D_NEEDS_PRECOMP_COMPILER),y)
+ MESA3D_CONF_OPTS += -Dmesa-clc=system -Dprecomp-compiler=system
+ MESA3D_DEPENDENCIES += host-mesa3d spirv-llvm-translator spirv-tools
+ endif
++
++# Panfrost can be built without target LLVM. When NEEDS_PRECOMP_COMPILER is
++# not active (no LLVM-dependent driver selected), we still need host-mesa3d
++# for panfrost_compile and mesa_clc native tools.
++ifeq ($(BR2_PACKAGE_MESA3D_NEEDS_PRECOMP_COMPILER),)
++ifneq ($(BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_PANFROST)$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_PANFROST),)
++MESA3D_CONF_OPTS += -Dmesa-clc=system -Dprecomp-compiler=system
++MESA3D_DEPENDENCIES += host-mesa3d
++endif
++endif
+ 
+ ifeq ($(BR2_PACKAGE_MESA3D_VULKAN_DRIVER),)
+ MESA3D_CONF_OPTS += \
