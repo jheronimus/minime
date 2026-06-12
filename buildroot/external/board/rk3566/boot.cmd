@@ -62,12 +62,11 @@ else
 fi
 env export -t ${scriptaddr} bootlog
 fatwrite ${bootdevtype} ${bootdevnum} ${scriptaddr} minime-uboot-05-initrd.log ${filesize}
-setexpr initrd_end ${ramdisk_addr_r} + ${initrd_size}
 fdt addr ${fdt_addr_r}
 fdt resize
 fdt set /chosen bootargs "${bootargs}"
-fdt chosen ${ramdisk_addr_r} ${initrd_end}
-setenv bootlog "minime uboot: calling booti kernel=${kernel_addr_r} fdt=${fdt_addr_r} initrd=${ramdisk_addr_r}:${initrd_size} end=${initrd_end}"
+fdt chosen ${ramdisk_addr_r} ${initrd_size}
+setenv bootlog "minime uboot: calling booti kernel=${kernel_addr_r} fdt=${fdt_addr_r} initrd=${ramdisk_addr_r}:${initrd_size}"
 env export -t ${scriptaddr} bootlog
 fatwrite ${bootdevtype} ${bootdevnum} ${scriptaddr} minime-uboot-06-booti.log ${filesize}
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
