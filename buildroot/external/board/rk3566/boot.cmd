@@ -1,4 +1,4 @@
-setenv bootargs console=ttyS2,1500000 console=tty0 root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 vt.global_cursor_default=1 rtw88_core.disable_lps_deep=Y pstore_blk.blkdev=PARTUUID=6f2de7ab-8764-4d2f-9253-9db2a7a57718 pstore_blk.kmsg_size=64 pstore_blk.console_size=512 best_effort=y
+setenv bootargs console=ttyS2,1500000 console=tty0 root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 vt.global_cursor_default=1 fbcon=rotate:3 rtw88_core.disable_lps_deep=Y pstore_blk.blkdev=PARTUUID=6f2de7ab-8764-4d2f-9253-9db2a7a57718 pstore_blk.kmsg_size=64 pstore_blk.console_size=512 best_effort=y
 setenv bootdevtype mmc
 setenv bootdevnum 0:1
 if test -n "${devtype}" && test -n "${devnum}" && test -n "${distro_bootpart}"; then
