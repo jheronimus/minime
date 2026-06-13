@@ -75,14 +75,15 @@ echo "Preparing single FAT32 partition filesystem staging..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${USERDATA_STAGE}/.minime/config"
 mkdir -p "${USERDATA_STAGE}/.minime/devices"
-mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.cores"
+mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.ui/config"
+mkdir -p "${USERDATA_STAGE}/.cores" "${USERDATA_STAGE}/.cores/config"
 
 # Create standard roms, bios, and saves folder structure on SD card root
 mkdir -p "${USERDATA_STAGE}/roms"
 mkdir -p "${USERDATA_STAGE}/bios"
 mkdir -p "${USERDATA_STAGE}/saves"
 
-for system in arc gb gba nes snes psx gg sms md pce ss; do
+for system in gb gbc gba nes snes md gg sms pce psx ss; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
 done
@@ -97,6 +98,10 @@ done
 if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
 	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.minime/config/wifi.cfg"
 fi
+
+# Prepopulate core mapping contract
+cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/common/config/cores.cfg" \
+	"${USERDATA_STAGE}/.minime/config/cores.cfg"
 
 # Prepopulate self-documenting device.cfg
 DEVICE_CFG="${USERDATA_STAGE}/.minime/config/device.cfg"

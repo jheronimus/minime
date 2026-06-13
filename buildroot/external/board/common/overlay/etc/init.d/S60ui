@@ -1,0 +1,99 @@
+#!/bin/sh
+
+# Generic Minime UI service.
+# Exports the SD-card layout contract and delegates to the UI package's
+# launch.sh.  This script intentionally does not know UI internals.
+
+UI_LAUNCHER="/mnt/sdcard/.ui/launch.sh"
+
+case "$1" in
+    start)
+        echo "Starting UI..."
+
+        # Dynamic model detection for Anbernic H700 family
+        model_dt=$(cat /proc/device-tree/model 2>/dev/null || echo "")
+        case "$model_dt" in
+            *SP*|*sp*) RGXX_MODEL="RG35xxSP" ;;
+            *Plus*|*plus*|*PLUS*) RGXX_MODEL="RG35xxPlus" ;;
+            *H*|*h*)
+                if echo "$model_dt" | grep -qi "rg35xx h"; then
+                    RGXX_MODEL="RG35xxH"
+                else
+                    RGXX_MODEL="RG35xx"
+                fi
+                ;;
+            *28*) RGXX_MODEL="RG28xx" ;;
+            *Cube*|*cube*) RGXX_MODEL="RGcubexx" ;;
+            *) RGXX_MODEL="RG35xx" ;;
+        esac
+        export RGXX_MODEL
+
+        # Minime SD-card layout contract.
+        export SDCARD_PATH=/mnt/sdcard
+        export ROMS_PATH="$SDCARD_PATH/roms"
+        export SAVES_PATH="$SDCARD_PATH/saves"
+        export BIOS_PATH="$SDCARD_PATH/bios"
+        export CORES_PATH="$SDCARD_PATH/.cores"
+        export UI_PATH="$SDCARD_PATH/.ui"
+
+        # Ensure backlight is visible until userspace takes over.
+        for bl in /sys/class/backlight/*/brightness; do
+            [ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
+        done
+
+        # Clear GPU failure boot-loop sentinel on successful UI launch.
+        rm -f "$SDCARD_PATH/.minime/gpu_fail"
+
+        # Clear any stale next commands.
+        rm -f /tmp/next
+
+        # DEBUG: UI auto-start disabled for troubleshooting.
+        # Remove these two lines to re-enable automatic UI launch on boot.
+        echo "UI auto-start disabled for debugging."
+        echo "Run '/etc/init.d/S60ui start' manually to launch GUI."
+        exit 0
+
+        # UI lifecycle loop runs in the background so boot can finish.
+        (
+            while true; do
+                if [ -f /tmp/poweroff ]; then
+                    rm -f /tmp/poweroff
+                    poweroff
+                    exit 0
+                fi
+
+                if [ -x "$UI_LAUNCHER" ]; then
+                    "$UI_LAUNCHER" < /dev/console > /tmp/ui.log 2>&1
+                else
+                    echo "Missing UI launcher: $UI_LAUNCHER" > /tmp/ui.log
+                    sleep 5
+                    continue
+                fi
+
+                # Check for next command
+                if [ -f /tmp/next ]; then
+                    CMD=$(cat /tmp/next)
+                    rm -f /tmp/next
+                    eval "$CMD" < /dev/console > /dev/console 2>&1
+                else
+                    sleep 3600
+                    exit 0
+                fi
+            done
+        ) &
+        ;;
+    stop)
+        echo "Stopping UI..."
+        killall minui minarch settings 2>/dev/null || true
+        ;;
+    restart|reload)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0
