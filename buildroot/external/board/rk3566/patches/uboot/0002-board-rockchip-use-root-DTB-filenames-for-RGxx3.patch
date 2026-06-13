@@ -3,7 +3,7 @@ Subject: [PATCH] board: rockchip: use root DTB filenames for RGxx3
 
 ROCKNIX stores RK3566 device trees under /device_trees without the
 rockchip/ prefix. Minime stores the same DTB filenames under
-.system/devices. Keep U-Boot's detected fdtfile compatible with those
+.minime/devices. Keep U-Boot's detected fdtfile compatible with those
 boot partition paths.
 
 Imported from ROCKNIX RK3566 Generic U-Boot support and adapted for

@@ -11,8 +11,8 @@ udhcpc_pidfile="/run/udhcpc.${wifi_interface}.pid"
 udhcpc_logfile="/run/udhcpc.${wifi_interface}.log"
 diagnostic_logfile="/tmp/wifi.diagnostics"
 
-wpa_supplicant_seed_dir="/mnt/sdcard/.system/config/wpa_supplicant"
-wifi_config_file="/mnt/sdcard/.system/config/wifi.cfg"
+wpa_supplicant_seed_dir="/mnt/sdcard/.minime/config/wpa_supplicant"
+wifi_config_file="/mnt/sdcard/.minime/config/wifi.cfg"
 
 init_wpa_supplicant_conf() {
   mkdir -p "${wpa_supplicant_state_dir}"

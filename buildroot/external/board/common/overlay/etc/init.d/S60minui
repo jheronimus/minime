@@ -33,8 +33,10 @@ case "$1" in
         export RGXX_MODEL
         
         # 1. Set graphics library paths
-        export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
-        export USERDATA_PATH=/mnt/sdcard/.system/
+        export LD_LIBRARY_PATH="/mnt/sdcard/.ui/bin"
+        export USERDATA_PATH=/mnt/sdcard/.minime/
+        export SYSTEM_PATH=/mnt/sdcard/.ui
+        export CORES_PATH=/mnt/sdcard/.cores
         export HOME=/mnt/sdcard
         
         # Ensure backlight is visible; minui may later override via msettings.bin
@@ -43,7 +45,7 @@ case "$1" in
         done
         
         # 2. Clear GPU Failure boot-loop sentinel on successful GUI launch
-        rm -f /mnt/sdcard/.system/gpu_fail
+        rm -f /mnt/sdcard/.minime/gpu_fail
 
         # Clear any stale next commands
         rm -f /tmp/next
@@ -63,7 +65,7 @@ case "$1" in
                     exit 0
                 fi
                 
-                /mnt/sdcard/.system/bin/minui < /dev/console > /tmp/minui.log 2>&1
+                /mnt/sdcard/.ui/bin/minui < /dev/console > /tmp/minui.log 2>&1
 
                 # Check for next command
                 if [ -f /tmp/next ]; then

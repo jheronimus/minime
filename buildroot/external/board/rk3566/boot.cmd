@@ -7,7 +7,7 @@ if test -n "${devtype}" && test -n "${devnum}" && test -n "${distro_bootpart}"; 
 fi
 setenv default_device rk3566-anbernic-rg-arc-d.dtb
 setenv device auto
-if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .system/config/device.cfg; then
+if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .minime/config/device.cfg; then
 	env import -t ${scriptaddr} ${filesize}
 fi
 if test "${device}" = "auto"; then
@@ -17,24 +17,24 @@ if test "${device}" = "auto"; then
 		setenv device "${default_device}"
 	fi
 fi
-if fatload ${bootdevtype} ${bootdevnum} ${kernel_addr_r} tinykernel; then
-	echo "Loaded tinykernel"
+if fatload ${bootdevtype} ${bootdevnum} ${kernel_addr_r} .minime/kernel; then
+	echo "Loaded .minime/kernel"
 else
-	echo "Failed to load tinykernel"
+	echo "Failed to load .minime/kernel"
 	sleep 5
 	reset
 fi
-if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .system/devices/${device}; then
-	echo "Loaded .system/devices/${device}"
+if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/devices/${device}; then
+	echo "Loaded .minime/devices/${device}"
 else
-	echo "Failed to load .system/devices/${device}"
+	echo "Failed to load .minime/devices/${device}"
 	sleep 5
 	reset
 fi
-if fatload ${bootdevtype} ${bootdevnum} ${ramdisk_addr_r} .system/initrd.img; then
+if fatload ${bootdevtype} ${bootdevnum} ${ramdisk_addr_r} .minime/initramfs; then
 	setenv initrd_size ${filesize}
 else
-	echo "Failed to load .system/initrd.img"
+	echo "Failed to load .minime/initramfs"
 	sleep 5
 	reset
 fi

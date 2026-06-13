@@ -22,7 +22,7 @@ MINUI_DBUS_CFLAGS = -I$(STAGING_DIR)/usr/include/dbus-1.0 -I$(STAGING_DIR)/usr/l
 # if we overrode CFLAGS/LDFLAGS on the command line.
 define MINUI_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/workspace \
-		CC="$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) $(MINUI_DBUS_CFLAGS) -ldbus-1" \
+		CC="$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) $(MINUI_DBUS_CFLAGS) -DMINIME_LAYOUT -ldbus-1" \
 		CXX="$(TARGET_CXX) $(TARGET_CXXFLAGS) $(TARGET_LDFLAGS)" \
 		PLATFORM=minime \
 		UNION_PLATFORM=minime \
@@ -33,27 +33,27 @@ define MINUI_BUILD_CMDS
 endef
 
 define MINUI_INSTALL_IMAGES_CMDS
-	mkdir -p $(BINARIES_DIR)/ui/.system/bin
-	mkdir -p $(BINARIES_DIR)/ui/.system/cores
+	mkdir -p $(BINARIES_DIR)/ui/.ui/bin
+	mkdir -p $(BINARIES_DIR)/ui/.cores
 
 	# Install main launcher binary
-	cp -f $(@D)/workspace/all/minui/build/minime/minui.elf $(BINARIES_DIR)/ui/.system/bin/minui
-	cp -f $(@D)/workspace/all/minarch/build/minime/minarch.elf $(BINARIES_DIR)/ui/.system/bin/minarch
-	cp -f $(@D)/workspace/minime/libmsettings/libmsettings.so $(BINARIES_DIR)/ui/.system/bin/
-	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.system/bin/minui
-	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.system/bin/minarch
+	cp -f $(@D)/workspace/all/minui/build/minime/minui.elf $(BINARIES_DIR)/ui/.ui/bin/minui
+	cp -f $(@D)/workspace/all/minarch/build/minime/minarch.elf $(BINARIES_DIR)/ui/.ui/bin/minarch
+	cp -f $(@D)/workspace/minime/libmsettings/libmsettings.so $(BINARIES_DIR)/ui/.ui/bin/
+	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.ui/bin/minui
+	$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN' $(BINARIES_DIR)/ui/.ui/bin/minarch
 
 	# Install shared MinUI assets
-	mkdir -p $(BINARIES_DIR)/ui/.system/res
-	cp -rp $(@D)/skeleton/SYSTEM/res/. $(BINARIES_DIR)/ui/.system/res/
+	mkdir -p $(BINARIES_DIR)/ui/.ui/res
+	cp -rp $(@D)/skeleton/SYSTEM/res/. $(BINARIES_DIR)/ui/.ui/res/
 
 	# Install stock (base) RetroArch cores
-	cp -f $(@D)/workspace/minime/cores/output/fceumm_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	cp -f $(@D)/workspace/minime/cores/output/gambatte_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	cp -f $(@D)/workspace/minime/cores/output/gpsp_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	cp -f $(@D)/workspace/minime/cores/output/picodrive_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	cp -f $(@D)/workspace/minime/cores/output/snes9x2005_plus_libretro.so $(BINARIES_DIR)/ui/.system/cores/
-	cp -f $(@D)/workspace/minime/cores/output/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.system/cores/
+	cp -f $(@D)/workspace/minime/cores/output/fceumm_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/workspace/minime/cores/output/gambatte_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/workspace/minime/cores/output/gpsp_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/workspace/minime/cores/output/picodrive_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/workspace/minime/cores/output/snes9x2005_plus_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/workspace/minime/cores/output/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.cores/
 
 	# Install Clock tool
 	mkdir -p $(BINARIES_DIR)/ui/Tools/Clock.pak
@@ -69,13 +69,13 @@ define MINUI_INSTALL_IMAGES_CMDS
 
 	# Install extras if enabled
 	$(if $(filter y,$(BR2_PACKAGE_MINUI_EXTRAS)),\
-		cp -f $(@D)/workspace/minime/cores/output/fake08_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/mgba_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/mednafen_pce_fast_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/pokemini_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/race_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/mednafen_supafaust_libretro.so $(BINARIES_DIR)/ui/.system/cores/ ; \
-		cp -f $(@D)/workspace/minime/cores/output/mednafen_vb_libretro.so $(BINARIES_DIR)/ui/.system/cores/ \
+		cp -f $(@D)/workspace/minime/cores/output/fake08_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/mgba_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/mednafen_pce_fast_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/pokemini_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/race_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/mednafen_supafaust_libretro.so $(BINARIES_DIR)/ui/.cores/ ; \
+		cp -f $(@D)/workspace/minime/cores/output/mednafen_vb_libretro.so $(BINARIES_DIR)/ui/.cores/ \
 	)
 endef
 

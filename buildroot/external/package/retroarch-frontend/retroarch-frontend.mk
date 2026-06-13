@@ -37,8 +37,8 @@ endef
 RETROARCH_FRONTEND_INSTALL_IMAGES = YES
 
 define RETROARCH_FRONTEND_INSTALL_IMAGES_CMDS
-	mkdir -p $(BINARIES_DIR)/ui/.retroarch
-	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-frontend/retroarch.cfg $(BINARIES_DIR)/ui/.retroarch/retroarch.cfg
+	mkdir -p $(BINARIES_DIR)/ui/.ui/retroarch
+	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-frontend/retroarch.cfg $(BINARIES_DIR)/ui/.ui/retroarch/retroarch.cfg
 endef
 
 $(eval $(generic-package))

@@ -73,8 +73,9 @@ mkfs.erofs -T 0 -zlz4 "${BINARIES_DIR}/system.erofs" "${SYSTEM_STAGE}"
 # Stage the FAT32 boot partition files
 echo "Preparing single FAT32 partition filesystem staging..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
-mkdir -p "${USERDATA_STAGE}/.system/config"
-mkdir -p "${USERDATA_STAGE}/.system/devices"
+mkdir -p "${USERDATA_STAGE}/.minime/config"
+mkdir -p "${USERDATA_STAGE}/.minime/devices"
+mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.cores"
 
 # Create standard roms, bios, and saves folder structure on SD card root
 mkdir -p "${USERDATA_STAGE}/roms"
@@ -94,11 +95,11 @@ done
 
 # Prepopulate simplified wifi.cfg from template
 if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
-	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.system/config/wifi.cfg"
+	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.minime/config/wifi.cfg"
 fi
 
 # Prepopulate self-documenting device.cfg
-DEVICE_CFG="${USERDATA_STAGE}/.system/config/device.cfg"
+DEVICE_CFG="${USERDATA_STAGE}/.minime/config/device.cfg"
 cat << 'EOF' > "${DEVICE_CFG}"
 # minime Device Configuration
 #
@@ -143,34 +144,27 @@ fi
 
 # Create the first boot trigger files
 if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
-	touch "${USERDATA_STAGE}/.system/config/first_boot_probe"
+	touch "${USERDATA_STAGE}/.minime/config/first_boot_probe"
 fi
-touch "${USERDATA_STAGE}/.system/config/first_boot_expand"
+touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
 
 # Copy main erofs system image
-cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.system/system.erofs"
+cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.minime/system"
 
-# Copy kernel and U-Boot script directly to partition root
+# Copy kernel and U-Boot script
 if [ "${MINIME_USE_ROCKNIX_KERNEL:-n}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" ]; then
 	echo "Using ROCKNIX RK3566 kernel for test image..."
-	cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" "${USERDATA_STAGE}/tinykernel"
+	cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" "${USERDATA_STAGE}/.minime/kernel"
 else
-	cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/tinykernel"
+	cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
 fi
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
-# Copy all platform DTB files to .system/devices (both flat and nested under vendor subdirectories)
-
+# Copy each platform DTB once.
 for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
 		dtb_basename="$(basename "${dtb_file}")"
-		# 1. Flat layout
-		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
-		# 2. Nested layout
-		if [ -n "${VENDOR_DIR}" ]; then
-			mkdir -p "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}"
-			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
-		fi
+		cp -f "${dtb_file}" "${USERDATA_STAGE}/.minime/devices/${dtb_basename}"
 	fi
 done
 
@@ -186,8 +180,8 @@ fi
 echo "Assembling custom boot-stage loop-mount initrd..."
 INITRD_STAGE="${ROOTPATH_TMP}/initrd"
 mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
-        "${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
-        "${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
+	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
 
 # Copy BusyBox binary from target rootfs and create links
 cp -f "${SYSTEM_STAGE}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
@@ -204,14 +198,39 @@ ln -sf busybox "${INITRD_STAGE}/bin/rm"
 ln -sf busybox "${INITRD_STAGE}/bin/cat"
 ln -sf busybox "${INITRD_STAGE}/bin/echo"
 ln -sf busybox "${INITRD_STAGE}/bin/sync"
-# Disk tools (in sbin)
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
-ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/fdisk"
-ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkfs.vfat"
-ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/mkdosfs"
-ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/partprobe"
 
-# BusyBox is statically linked — no shared libraries needed in the initrd.
+copy_runtime_lib() {
+	lib_name="$1"
+	lib_source="$(find "${SYSTEM_STAGE}/lib" "${SYSTEM_STAGE}/usr/lib" \
+		-name "${lib_name}" -print -quit)"
+	[ -n "${lib_source}" ] || {
+		echo "ERROR: initramfs dependency ${lib_name} is missing" >&2
+		exit 1
+	}
+	lib_target="${INITRD_STAGE}${lib_source#"${SYSTEM_STAGE}"}"
+	[ -e "${lib_target}" ] && return
+	mkdir -p "$(dirname "${lib_target}")"
+	cp -Lf "${lib_source}" "${lib_target}"
+	for dependency in $("${HOST_DIR}/bin/patchelf" --print-needed "${lib_source}"); do
+		copy_runtime_lib "${dependency}"
+	done
+}
+
+copy_runtime_binary() {
+	binary_name="$1"
+	binary_source="${SYSTEM_STAGE}/usr/sbin/${binary_name}"
+	cp -f "${binary_source}" "${INITRD_STAGE}/sbin/${binary_name}"
+	for dependency in $("${HOST_DIR}/bin/patchelf" --print-needed "${binary_source}"); do
+		copy_runtime_lib "${dependency}"
+	done
+	interpreter="$("${HOST_DIR}/bin/patchelf" --print-interpreter "${binary_source}")"
+	mkdir -p "${INITRD_STAGE}$(dirname "${interpreter}")"
+	cp -Lf "${SYSTEM_STAGE}${interpreter}" "${INITRD_STAGE}${interpreter}"
+}
+
+copy_runtime_binary parted
+copy_runtime_binary fatresize
 
 
 # Write the Custom init script
@@ -232,8 +251,6 @@ log_card() {
 	echo "$*"
 }
 
-log_console "Minime Boot Stage 1: Initializing SD Card..."
-
 # Wait for Linux to enumerate SD/eMMC devices.
 for i in 1 2 3 4 5 6 7 8 9 10; do
 	for dev in /dev/mmcblk*p1; do
@@ -248,16 +265,12 @@ if [ -z "$CARD_DEV" ]; then
 	exec sh
 fi
 
-log_console "Minime Boot Stage 1: Searching for MINIME FAT partition..."
 mkdir -p /mnt/card
 for dev in /dev/mmcblk*p1; do
 	[ -b "$dev" ] || continue
-	log_console "Trying $dev..."
 	if mount -t vfat "$dev" /mnt/card; then
-		if [ -f /mnt/card/.system/system.erofs ]; then
+		if [ -f /mnt/card/.minime/system ]; then
 			CARD_DEV="$dev"
-			log_card "Minime Boot Stage 1: mounted $CARD_DEV"
-			log_card "Minime Boot Stage 1: found .system/system.erofs"
 			break
 		fi
 		umount /mnt/card
@@ -269,87 +282,42 @@ if ! mountpoint -q /mnt/card; then
 	exec sh
 fi
 
-# FIRST BOOT PROBING CHECK (STAGE 1 - HEADLESS, ~1 SECOND)
-if [ -f /mnt/card/.system/config/first_boot_probe ]; then
-	log_card "Minime Boot Stage 1: running first boot probe"
+# First-boot hardware probe.
+if [ -f /mnt/card/.minime/config/first_boot_probe ]; then
 	mount -o remount,rw /mnt/card
 
 	if [ -f /sbin/first-boot-probe.sh ]; then
 		sh /sbin/first-boot-probe.sh
 	fi
 
-	rm -f /mnt/card/.system/config/first_boot_probe
-	log_card "Minime Boot Stage 1: first boot probe complete, rebooting"
+	rm -f /mnt/card/.minime/config/first_boot_probe
 	umount /mnt/card
 	reboot -f
 fi
 
-# FIRST BOOT EXPANSION CHECK (STAGE 2 - GRAPHICAL CONSOLE PROGRESS)
-if [ -f /mnt/card/.system/config/first_boot_expand ]; then
-	log_card "--------------------------------------------------------"
-	log_card "      MINIME: PERFORMING FIRST BOOT SD CARD EXPANSION"
-	log_card "--------------------------------------------------------"
-	# Mount card read-write
-	mount -o remount,rw /mnt/card
-	
-	log_card "Backing up boot assets to RAM..."
-	mkdir -p /tmp/backup
-	cp -a /mnt/card/.system /tmp/backup/
-	cp -f /mnt/card/tinykernel /tmp/backup/
-	cp -f /mnt/card/boot.scr /tmp/backup/
-	for item in /mnt/card/*; do
-		[ -e "$item" ] || continue
-		item_name="${item##*/}"
-		[ "$item_name" = "tinykernel" ] && continue
-		[ "$item_name" = "boot.scr" ] && continue
-		cp -a "$item" /tmp/backup/
-	done
-	
-	log_card "Unmounting card..."
+# Grow partition 1 and FAT32 without reformatting.
+if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
+	log_console "Expanding SD card..."
 	umount /mnt/card
-	
 	DISK_DEV="${CARD_DEV%p1}"
-	PART_SIZE=$(cat "/sys/class/block/${CARD_DEV#/dev/}/size")
-	if [ "$PART_SIZE" -lt 1000000 ]; then
-		log_console "Re-writing partition table to full disk size on $DISK_DEV..."
-		# Re-create partition 1 to span the full size
-		printf "d\nn\np\n1\n8192\n\nt\nc\na\n1\nw\n" | fdisk "$DISK_DEV"
-		sleep 1
-		log_console "Re-reading partition table..."
-		partprobe "$DISK_DEV"
-		sleep 1
+	if ! parted -s -f "$DISK_DEV" resizepart 1 100%; then
+		log_console "ERROR: failed to expand partition 1 on $DISK_DEV"
+		exec sh
 	fi
-	
-	log_console "Formatting expanded FAT32 partition on $CARD_DEV..."
-	mkdosfs -F 32 -n minime "$CARD_DEV"
-	
-	log_console "Restoring boot assets from RAM..."
+	sleep 1
+	if ! fatresize -q -f -s max "$CARD_DEV"; then
+		log_console "ERROR: failed to expand $CARD_DEV"
+		exec sh
+	fi
 	mount -t vfat "$CARD_DEV" /mnt/card
-	log_card "Minime Boot Stage 1: expansion formatted $CARD_DEV"
-	cp -a /tmp/backup/.system /mnt/card/
-	cp -f /tmp/backup/tinykernel /mnt/card/
-	cp -f /tmp/backup/boot.scr /mnt/card/
-	for item in /tmp/backup/*; do
-		[ -e "$item" ] || continue
-		item_name="${item##*/}"
-		[ "$item_name" = "tinykernel" ] && continue
-		[ "$item_name" = "boot.scr" ] && continue
-		cp -a "$item" /mnt/card/
-	done
-	
-	# Delete first_boot_expand in restored filesystem to prevent loop expansion
-	rm -f /mnt/card/.system/config/first_boot_expand
-	
-	log_card "SD Card expansion complete!"
+	rm -f /mnt/card/.minime/config/first_boot_expand
 fi
 
-log_card "Minime Boot Stage 1: Loop-mounting rootfs..."
 mkdir -p /mnt/system
-if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
-	log_card "ERROR: Failed to loop-mount /mnt/card/.system/system.erofs!"
+if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system; then
+	log_card "ERROR: failed to mount /mnt/card/.minime/system"
 	exec sh
 fi
-log_card "Minime Boot Stage 1: rootfs loop-mounted"
 
 # Also ensure backlight is at a visible level.  minui later reads
 # msettings.bin, but having backlight off at boot makes the display
@@ -369,10 +337,8 @@ fi
 mount -o move /sys /mnt/system/sys
 mount -o move /proc /mnt/system/proc
 mount -o move /dev /mnt/system/dev
-log_card "Minime Boot Stage 1: moving SD card mount into rootfs"
 mount -o move /mnt/card /mnt/system/mnt/sdcard
 
-log_card "Minime Boot Stage 1: Transitioning to Stage 2..."
 exec switch_root /mnt/system /sbin/init
 EOF
 chmod +x "${INITRD_STAGE}/init"
@@ -384,28 +350,30 @@ if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 fi
 
 
-# Compile initrd.img
-(cd "${INITRD_STAGE}" && find . | cpio -H newc -o | gzip -9 > "${BINARIES_DIR}/initrd.img")
+# Compile the uncompressed initramfs CPIO archive.
+(cd "${INITRD_STAGE}" && find . | cpio -H newc -o > "${BINARIES_DIR}/initramfs")
 
-# Copy initrd.img to USERDATA_STAGE
-cp -f "${BINARIES_DIR}/initrd.img" "${USERDATA_STAGE}/.system/initrd.img"
+# Copy initramfs to USERDATA_STAGE
+cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
 
-echo "Generating userdata.vfat (Ultra-minimal 256MB partition)..."
+echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=256
-mkdosfs -F 32 -n minime "${BINARIES_DIR}/userdata.vfat"
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=520
+mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 
-# Populate userdata.vfat recursively using mtools
-MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/tinykernel" ::tinykernel
+# Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
-MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
+for item in .minime .ui .cores; do
+	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
+		-s "${USERDATA_STAGE}/${item}" ::
+	MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}"
+done
 
-# Copy any extra root files/directories (like Tools) staged for the user
+# Copy visible user files and directories.
 for item in "${USERDATA_STAGE}"/*; do
 	[ -e "${item}" ] || continue
 	basename_item="$(basename "${item}")"
-	[ "${basename_item}" = "tinykernel" ] && continue
 	[ "${basename_item}" = "boot.scr" ] && continue
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${item}" ::
 done

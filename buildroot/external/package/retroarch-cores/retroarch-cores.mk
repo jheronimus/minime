@@ -98,23 +98,23 @@ define RETROARCH_CORES_BUILD_CMDS
 endef
 
 define RETROARCH_CORES_INSTALL_IMAGES_CMDS
-	mkdir -p $(BINARIES_DIR)/ui/.retroarch/cores
-	mkdir -p $(BINARIES_DIR)/ui/.retroarch/info
+	mkdir -p $(BINARIES_DIR)/ui/.cores
+	mkdir -p $(BINARIES_DIR)/ui/.ui/retroarch/info
 	mkdir -p $(BINARIES_DIR)/ui/bios
 
 	# Install cores
-	cp -f $(@D)/src/nestopia/libretro/nestopia_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/gambatte/libretro/gambatte_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/mgba/libretro/mgba_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/genesis_plus_gx/genesis_plus_gx_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/beetle_pce_fast/mednafen_pce_fast_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/snes9x/libretro/snes9x_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/pcsx_rearmed/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/yabasanshiro/yabause/src/libretro/yabasanshiro_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
-	cp -f $(@D)/src/fbneo/src/burner/libretro/fbneo_libretro.so $(BINARIES_DIR)/ui/.retroarch/cores/
+	cp -f $(@D)/src/nestopia/libretro/nestopia_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/gambatte/libretro/gambatte_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/mgba/libretro/mgba_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/genesis_plus_gx/genesis_plus_gx_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/beetle_pce_fast/mednafen_pce_fast_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/snes9x/libretro/snes9x_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/pcsx_rearmed/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/yabasanshiro/yabause/src/libretro/yabasanshiro_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/fbneo/src/burner/libretro/fbneo_libretro.so $(BINARIES_DIR)/ui/.cores/
 
 	# Install info files
-	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores/info/*.info $(BINARIES_DIR)/ui/.retroarch/info/
+	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores/info/*.info $(BINARIES_DIR)/ui/.ui/retroarch/info/
 endef
 
 $(eval $(generic-package))
