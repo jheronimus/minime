@@ -6,7 +6,7 @@ PIDFILE="/var/run/$DAEMON.pid"
 BLUETOOTHD_ARGS="-n"
 
 # On-demand check
-if [ "$1" = "start" ] && [ ! -f "/mnt/sdcard/.system/config/bluetooth/enabled" ]; then
+if [ "$1" = "start" ] && [ ! -f "/mnt/sdcard/.minime/config/bluetooth/enabled" ]; then
 	exit 0
 fi
 
