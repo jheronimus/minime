@@ -1,5 +1,6 @@
 source "$BR2_EXTERNAL_MINIME_PATH/package/libmali/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/libretro-common/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/minui/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse_miyoo_bezels/Config.in"
