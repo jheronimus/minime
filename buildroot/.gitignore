@@ -5,7 +5,6 @@ logs/
 reference/
 scripts/deploy.sh
 scripts/run_telnet.py
-scripts/run_telnet_robust.py
 scripts/get-images.sh
 TODO.md
 .antigravitycli/
