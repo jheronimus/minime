@@ -369,14 +369,6 @@ if ! mount -t erofs -o loop,ro /mnt/card/.system/system.erofs /mnt/system; then
 fi
 log_card "Minime Boot Stage 1: rootfs loop-mounted"
 
-# Clear framebuffer console before unbinding to erase stale initrd text.
-printf '\033[2J\033[H' > /dev/console 2>/dev/null || true
-
-# Unbind framebuffer console before transitioning to the real rootfs.
-# This prevents fbcon from competing with KMSDRM clients (e.g. MinUI SDL2)
-# for the display plane after boot.
-echo 0 > /sys/class/vtconsole/vtcon1/bind 2>/dev/null || true
-
 # Also ensure backlight is at a visible level.  minui later reads
 # msettings.bin, but having backlight off at boot makes the display
 # invisible until userspace takes over.
