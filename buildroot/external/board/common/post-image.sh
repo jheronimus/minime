@@ -165,20 +165,11 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
 		dtb_basename="$(basename "${dtb_file}")"
 		# 1. Flat layout
-		if [ "${MINIME_USE_ROCKNIX_DTB:-y}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ "${dtb_basename}" = "rk3566-anbernic-rg-arc-d.dtb" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" ]; then
-			echo "Using ROCKNIX RG Arc D DTB for test image..."
-			cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
-		else
-			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
-		fi
+		cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${dtb_basename}"
 		# 2. Nested layout
 		if [ -n "${VENDOR_DIR}" ]; then
 			mkdir -p "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}"
-			if [ "${MINIME_USE_ROCKNIX_DTB:-y}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ "${dtb_basename}" = "rk3566-anbernic-rg-arc-d.dtb" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" ]; then
-				cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rk3566-anbernic-rg-arc-d.dtb" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
-			else
-				cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
-			fi
+			cp -f "${dtb_file}" "${USERDATA_STAGE}/.system/devices/${VENDOR_DIR}/${dtb_basename}"
 		fi
 	fi
 done
