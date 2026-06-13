@@ -2,6 +2,7 @@
 # No getty on tty1 (framebuffer) to prevent login prompt from overlaying MinUI.
 # Serial console on ttyS0 is available for debugging.
 
+::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
 ::sysinit:/etc/init.d/rcS
 

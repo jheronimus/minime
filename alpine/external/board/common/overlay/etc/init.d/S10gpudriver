@@ -6,20 +6,11 @@
 case "$1" in
     start)
         echo "Initializing GPU Subsystem..."
-        # Prefer proprietary mali_kbase when available (libmali userspace path).
-        # Fall back to open-source panfrost (mesa3d-from-source path).
-        if modinfo mali_kbase >/dev/null 2>&1; then
-            echo "Activating libmali driver..."
-            modprobe mali_kbase
-        else
-            echo "Activating Panfrost driver..."
-            modprobe panfrost
-        fi
+        echo "Activating libmali driver..."
+        modprobe mali_kbase
         ;;
     stop)
         echo "Unloading GPU drivers..."
-        rmmod panfrost 2>/dev/null
-        rmmod gpu_sched 2>/dev/null
         rmmod mali_kbase 2>/dev/null
         ;;
     restart|reload)
