@@ -33,17 +33,7 @@ case "$1" in
         export RGXX_MODEL
         
         # 1. Set graphics library paths
-        # Detect Panfrost (mesa3d-from-source) vs libmali by checking which
-        # kernel driver is actually loaded.
-        if lsmod 2>/dev/null | grep -q "^panfrost "; then
-            export LD_LIBRARY_PATH="/usr/lib:/mnt/sdcard/.system/bin"
-            export LIBGL_DRIVERS_PATH="/usr/lib/dri"
-            export GBM_BACKENDS_PATH="/usr/lib/gbm"
-            export MESA_LOADER_DRIVER_OVERRIDE=panfrost
-            export SDL_VIDEODRIVER=kmsdrm
-        else
-            export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
-        fi
+        export LD_LIBRARY_PATH="/mnt/sdcard/.system/bin"
         export USERDATA_PATH=/mnt/sdcard/.system/
         export HOME=/mnt/sdcard
         
