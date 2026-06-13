@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+## TODO Turn into a proper patch
 import os
 import sys
 
