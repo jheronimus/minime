@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MINUI_VERSION = 16722a164e8c4203d153b6b7f562cade1ef109fe
+MINUI_VERSION = main
 MINUI_SITE = https://github.com/minime-os/minui.git
 MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
@@ -32,12 +32,20 @@ MINUI_CPPFLAGS = \
 	-DCORES_PATH=\"$(MINUI_CORES_PATH)\" \
 	-DROMS_PATH=\"$(MINUI_SDCARD_PATH)/roms\" \
 	-DBIOS_PATH=\"$(MINUI_SDCARD_PATH)/bios\" \
-	-DSAVES_PATH=\"$(MINUI_SDCARD_PATH)/saves\"
+	-DSAVES_PATH=\"$(MINUI_SDCARD_PATH)/saves\" \
+	-DPLATFORM=\"$(MINUI_PLATFORM_NAME)\" \
+	-DBUILD_DATE=\"$(MINUI_BUILD_DATE)\" \
+	-DBUILD_HASH=\"$(MINUI_BUILD_HASH)\"
 
 MINUI_SRC_DIR = $(@D)/src
 MINUI_ASSETS_DIR = $(@D)/assets
 MINUI_BUILD_DIR = $(@D)/build-minime
 MINUI_PLATFORM_DIR = $(MINUI_SRC_DIR)/platform/rg35xxplus
+MINUI_PLATFORM_NAME = rg35xxplus
+MINUI_TIMEZONE_SRC = $(MINUI_ASSETS_DIR)/timezones/minui.tzs
+MINUI_ZIC = $(shell command -v zic 2>/dev/null || echo /usr/sbin/zic)
+MINUI_BUILD_DATE = $(shell date +%Y.%m.%d)
+MINUI_BUILD_HASH = $(shell git -C $(@D) rev-parse --short HEAD 2>/dev/null || echo clean-start)
 MINUI_RUNTIME_RPATH = -Wl,-rpath,'$$ORIGIN'
 
 MINUI_DBUS_CFLAGS = -I$(STAGING_DIR)/usr/include/dbus-1.0 \
