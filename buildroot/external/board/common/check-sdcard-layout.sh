@@ -28,11 +28,12 @@ for config in "${ROOT}"/external/configs/minime_*_defconfig; do
 done
 
 require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.minime/config"'
-require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.cores"'
+require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.ui/config"'
+require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.cores" "${USERDATA_STAGE}/.cores/config"'
 require "$POST_IMAGE" 'cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"'
 require "$POST_IMAGE" '"${USERDATA_STAGE}/.minime/system"'
 require "$POST_IMAGE" '"${USERDATA_STAGE}/.minime/initramfs"'
-require "$POST_IMAGE" 'bs=1M count=520'
+require "$POST_IMAGE" 'bs=1M count=1040'
 require "$POST_IMAGE" 'mkdosfs -F 32 -s 32 -n minime'
 require "$POST_IMAGE" 'mattrib -i "${BINARIES_DIR}/userdata.vfat" +h'
 require "$POST_IMAGE" 'parted -s -f "$DISK_DEV" resizepart 1 100%'
