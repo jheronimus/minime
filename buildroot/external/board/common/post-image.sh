@@ -232,7 +232,6 @@ mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 
 CARD_DEV=""
-BOOT_LOG="/mnt/card/minime-boot.log"
 
 log_console() {
 	echo "$*"
@@ -240,12 +239,6 @@ log_console() {
 
 log_card() {
 	echo "$*"
-	if mountpoint -q /mnt/card; then
-		{
-			echo "$*"
-			sync
-		} >> "$BOOT_LOG"
-	fi
 }
 
 log_console "Minime Boot Stage 1: Initializing SD Card..."
@@ -272,7 +265,6 @@ for dev in /dev/mmcblk*p1; do
 	if mount -t vfat "$dev" /mnt/card; then
 		if [ -f /mnt/card/.system/system.erofs ]; then
 			CARD_DEV="$dev"
-			: > "$BOOT_LOG"
 			log_card "Minime Boot Stage 1: mounted $CARD_DEV"
 			log_card "Minime Boot Stage 1: found .system/system.erofs"
 			break
@@ -292,7 +284,7 @@ if [ -f /mnt/card/.system/config/first_boot_probe ]; then
 	mount -o remount,rw /mnt/card
 
 	if [ -f /sbin/first-boot-probe.sh ]; then
-		sh /sbin/first-boot-probe.sh >> "$BOOT_LOG" 2>&1
+		sh /sbin/first-boot-probe.sh
 	fi
 
 	rm -f /mnt/card/.system/config/first_boot_probe
@@ -342,7 +334,6 @@ if [ -f /mnt/card/.system/config/first_boot_expand ]; then
 	
 	log_console "Restoring boot assets from RAM..."
 	mount -t vfat "$CARD_DEV" /mnt/card
-	: > "$BOOT_LOG"
 	log_card "Minime Boot Stage 1: expansion formatted $CARD_DEV"
 	cp -a /tmp/backup/.system /mnt/card/
 	cp -f /tmp/backup/tinykernel /mnt/card/
@@ -379,7 +370,7 @@ done
 # Hard check that target init exists and is executable before switch_root
 if [ ! -x /mnt/system/sbin/init ]; then
 	log_card "ERROR: /mnt/system/sbin/init is missing or not executable"
-	ls -la /mnt/system/sbin/init >> "$BOOT_LOG" 2>&1 || true
+	ls -la /mnt/system/sbin/init 2>&1 || true
 	exec sh
 fi
 
@@ -418,10 +409,6 @@ mkdosfs -F 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/tinykernel" ::tinykernel
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${USERDATA_STAGE}/.system" ::
-
-# Create raw pstore backing image for kernel console/oops logs.
-rm -f "${BINARIES_DIR}/pstore.bin"
-dd if=/dev/zero of="${BINARIES_DIR}/pstore.bin" bs=1M count=4
 
 # Copy any extra root files/directories (like Tools) staged for the user
 for item in "${USERDATA_STAGE}"/*; do
