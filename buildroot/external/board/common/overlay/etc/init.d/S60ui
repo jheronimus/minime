@@ -47,12 +47,6 @@ case "$1" in
         # Clear any stale next commands.
         rm -f /tmp/next
 
-        # DEBUG: UI auto-start disabled for troubleshooting.
-        # Remove these two lines to re-enable automatic UI launch on boot.
-        echo "UI auto-start disabled for debugging."
-        echo "Run '/etc/init.d/S60ui start' manually to launch GUI."
-        exit 0
-
         # UI lifecycle loop runs in the background so boot can finish.
         (
             while true; do
