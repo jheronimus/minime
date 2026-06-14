@@ -38,7 +38,7 @@ define RETROARCH_CORES_BUILD_CMDS
 		git clone --depth 1 https://github.com/libretro/mgba.git $(@D)/src/mgba ; \
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
-	$(MAKE) -C $(@D)/src/mgba/libretro \
+	$(MAKE) -C $(@D)/src/mgba \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
@@ -95,7 +95,7 @@ define RETROARCH_CORES_INSTALL_IMAGES_CMDS
 	# Install cores
 	cp -f $(@D)/src/fceumm/fceumm_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/gambatte/gambatte_libretro.so $(BINARIES_DIR)/ui/.cores/
-	cp -f $(@D)/src/mgba/libretro/mgba_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/mgba/mgba_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/genesis_plus_gx/genesis_plus_gx_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/beetle_pce_fast/mednafen_pce_fast_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/snes9x/libretro/snes9x_libretro.so $(BINARIES_DIR)/ui/.cores/
