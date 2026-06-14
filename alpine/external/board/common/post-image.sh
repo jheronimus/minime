@@ -213,7 +213,7 @@ copy_runtime_lib() {
 		echo "ERROR: initramfs dependency ${lib_name} is missing" >&2
 		exit 1
 	}
-	lib_target="${INITRD_STAGE}${lib_source#"${SYSTEM_STAGE}"}"
+	lib_target="${INITRD_STAGE}/lib/${lib_name}"
 	[ -e "${lib_target}" ] && return
 	mkdir -p "$(dirname "${lib_target}")"
 	cp -Lf "${lib_source}" "${lib_target}"
