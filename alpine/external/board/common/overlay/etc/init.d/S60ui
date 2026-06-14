@@ -49,12 +49,25 @@ case "$1" in
         export RGXX_MODEL
 
         # Minime SD-card layout contract.
+        export HOME=/mnt/sdcard
         export SDCARD_PATH=/mnt/sdcard
         export ROMS_PATH="$SDCARD_PATH/roms"
         export SAVES_PATH="$SDCARD_PATH/saves"
         export BIOS_PATH="$SDCARD_PATH/bios"
         export CORES_PATH="$SDCARD_PATH/.cores"
         export UI_PATH="$SDCARD_PATH/.ui"
+
+        # Set up dynamic .asoundrc based on traits sound_card
+        TRAITS_FILE="/mnt/sdcard/.minime/traits"
+        ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
+        if [ -f "$TRAITS_FILE" ]; then
+            sound_card=$(grep "^sound_card=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r')
+            if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
+                printf "pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n" "$sound_card" "$sound_card" > "$ASOUNDRC_FILE"
+            else
+                rm -f "$ASOUNDRC_FILE"
+            fi
+        fi
 
         # Ensure backlight is visible until userspace takes over.
         for bl in /sys/class/backlight/*/brightness; do
@@ -95,6 +108,7 @@ case "$1" in
                 fi
             done
         ) &
+        echo $! > /tmp/ui_loop.pid
         ;;
     stop)
         echo "Stopping UI..."
@@ -102,7 +116,13 @@ case "$1" in
             kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
             rm -f /tmp/watch_jack.pid
         fi
+        if [ -f /tmp/ui_loop.pid ]; then
+            kill "$(cat /tmp/ui_loop.pid)" 2>/dev/null || true
+            rm -f /tmp/ui_loop.pid
+        fi
         killall minui minarch settings keymon 2>/dev/null || true
+        sleep 0.5
+        killall -9 minui minarch settings keymon 2>/dev/null || true
         ;;
     restart|reload)
         "$0" stop
