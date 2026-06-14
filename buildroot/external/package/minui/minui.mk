@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MINUI_VERSION = 759ea4418ebecb5eddca1efcca7595a0b6744375
+MINUI_VERSION = 853c35f048e39043d9e224fb85d035249f1baba9
 MINUI_SITE = https://github.com/minime-os/minui.git
 MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
@@ -180,6 +180,8 @@ define MINUI_INSTALL_IMAGES_CMDS
 		'export CORES_PATH="$$SDCARD_PATH/.cores"' \
 		'export LD_LIBRARY_PATH="$$SYSTEM_PATH/bin"' \
 		'export HOME="$$SDCARD_PATH"' \
+		'killall keymon 2>/dev/null || true' \
+		'[ ! -x "$$SYSTEM_PATH/bin/keymon" ] || "$$SYSTEM_PATH/bin/keymon" > /tmp/keymon.log 2>&1 &' \
 		'exec "$$SYSTEM_PATH/bin/minui"' \
 		> $(BINARIES_DIR)/ui/.ui/launch.sh
 	chmod +x $(BINARIES_DIR)/ui/.ui/launch.sh
