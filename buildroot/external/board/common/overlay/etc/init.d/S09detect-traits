@@ -70,7 +70,7 @@ detect_traits() {
     K_VOL_DOWN=114
 
     case "$MODEL_DT" in
-        *Arc*D*)
+        *Arc*D*|*ARC*D*)
             BUTTON_LAYOUT="sega"
             SCREEN_ROTATION="270"
             HAS_WIFI="yes"
@@ -84,7 +84,7 @@ detect_traits() {
             INPUT_POWER="adc-keys"
             INPUT_VOLUME="gpio-keys-vol"
             ;;
-        *Arc*S*)
+        *Arc*S*|*ARC*S*)
             BUTTON_LAYOUT="sega"
             SCREEN_ROTATION="270"
             HAS_WIFI="yes"
