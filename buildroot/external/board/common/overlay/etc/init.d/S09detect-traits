@@ -1,0 +1,291 @@
+#!/bin/sh
+
+detect_traits() {
+    TRAITS_FILE="/mnt/sdcard/.minime/traits"
+    MODEL_DT=$(cat /proc/device-tree/model 2>/dev/null || echo "Unknown")
+
+    # Check if traits file already matches active model to save write cycles & boot time
+    if [ -f "$TRAITS_FILE" ]; then
+        TRAIT_MODEL=$(grep "^device_model=" "$TRAITS_FILE" | cut -d'=' -f2)
+        if [ "$TRAIT_MODEL" = "$MODEL_DT" ]; then
+            return 0
+        fi
+    fi
+
+    mkdir -p /mnt/sdcard/.minime
+
+    echo "Minime: Detecting device traits for '$MODEL_DT'..."
+
+    # Default traits (Nintendo layout, H700 defaults)
+    DEVICE_MODEL="$MODEL_DT"
+    BUTTON_LAYOUT="nintendo"
+    VIDEO_BACKEND="framebuffer"
+    VIDEO_DEVICE="/dev/fb0"
+    VIDEO_PIXEL_FORMAT="BGRA8888"
+    SCREEN_WIDTH="640"
+    SCREEN_HEIGHT="480"
+    SCREEN_ASPECT="4:3"
+    SCREEN_REFRESH="60"
+    SCREEN_ROTATION="0"
+    HAS_WIFI="no"
+    HAS_BLUETOOTH="no"
+    HAS_HDMI="no"
+    HAS_LID="no"
+    HAS_STICKS="no"
+    HAS_TOUCH="no"
+    BATTERY_CAPACITY_PATH=""
+    CHARGER_ONLINE_PATH=""
+    BACKLIGHT_PATH="/sys/class/backlight/backlight/brightness"
+    LID_SWITCH_PATH=""
+    RUMBLE_PATH=""
+    POWER_LED_PATH=""
+    SOUND_CARD="default"
+    SOUND_MIXER="lineout volume"
+    INPUT_GAMEPAD="gpio-keys-gamepad"
+    INPUT_POWER="axp20x-pek"
+    INPUT_VOLUME="gpio-keys-volume"
+
+    # Keycodes (Nintendo layout)
+    K_UP=544
+    K_DOWN=545
+    K_LEFT=546
+    K_RIGHT=547
+    K_A=305
+    K_B=304
+    K_X=308
+    K_Y=307
+    K_C=306
+    K_Z=309
+    K_L1=310
+    K_R1=311
+    K_L2=312
+    K_R2=313
+    K_L3=317
+    K_R3=318
+    K_START=315
+    K_SELECT=314
+    K_MENU=316
+    K_POWER=116
+    K_VOL_UP=115
+    K_VOL_DOWN=114
+
+    case "$MODEL_DT" in
+        *Arc*D*)
+            BUTTON_LAYOUT="sega"
+            SCREEN_ROTATION="270"
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_TOUCH="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
+            SOUND_CARD="rk817ext"
+            SOUND_MIXER="Master"
+            INPUT_GAMEPAD="gpio-keys-control"
+            INPUT_POWER="adc-keys"
+            INPUT_VOLUME="gpio-keys-vol"
+            ;;
+        *Arc*S*)
+            BUTTON_LAYOUT="sega"
+            SCREEN_ROTATION="270"
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
+            SOUND_CARD="rk817ext"
+            SOUND_MIXER="Master"
+            INPUT_GAMEPAD="gpio-keys-control"
+            INPUT_POWER="adc-keys"
+            INPUT_VOLUME="gpio-keys-vol"
+            ;;
+        *353V*|*353P*|*353M*)
+            SCREEN_ROTATION="270"
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            HAS_STICKS="yes"
+            case "$MODEL_DT" in
+                *VS*) HAS_TOUCH="no" ;;
+                *) HAS_TOUCH="yes" ;;
+            esac
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
+            SOUND_CARD="rk817ext"
+            SOUND_MIXER="Master"
+            INPUT_GAMEPAD="gpio-keys-control"
+            INPUT_POWER="adc-keys"
+            INPUT_VOLUME="gpio-keys-vol"
+            ;;
+        *503*)
+            SCREEN_WIDTH="960"
+            SCREEN_HEIGHT="544"
+            SCREEN_ASPECT="16:9"
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            HAS_STICKS="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
+            SOUND_CARD="rk817ext"
+            SOUND_MIXER="Master"
+            INPUT_GAMEPAD="gpio-keys-control"
+            INPUT_POWER="adc-keys"
+            INPUT_VOLUME="gpio-keys-vol"
+            ;;
+        *351MP*)
+            HAS_STICKS="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            INPUT_GAMEPAD="rk3326-keys"
+            ;;
+        *351P*|*351M*)
+            SCREEN_WIDTH="480"
+            SCREEN_HEIGHT="320"
+            SCREEN_ASPECT="3:2"
+            HAS_STICKS="yes"
+            case "$MODEL_DT" in
+                *351M*) HAS_WIFI="yes" ;;
+            esac
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            INPUT_GAMEPAD="rk3326-keys"
+            ;;
+        *351V*)
+            HAS_WIFI="yes"
+            HAS_STICKS="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            INPUT_GAMEPAD="rk3326-keys"
+            ;;
+        *SP*)
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            HAS_LID="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            LID_SWITCH_PATH="/sys/class/power_supply/axp2202-battery/hallkey"
+            RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *Plus*)
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *H*)
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            HAS_STICKS="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *28xx*)
+            HAS_HDMI="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *40xx*)
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            case "$MODEL_DT" in
+                *H*|*h*) HAS_STICKS="yes" ;;
+            esac
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *Cube*)
+            SCREEN_WIDTH="720"
+            SCREEN_HEIGHT="720"
+            SCREEN_ASPECT="1:1"
+            HAS_WIFI="yes"
+            HAS_BLUETOOTH="yes"
+            HAS_HDMI="yes"
+            HAS_STICKS="yes"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
+            POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
+            ;;
+        *)
+            # Fallback default
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
+            ;;
+    esac
+
+    # Output to the traits file
+    cat << EOF > "$TRAITS_FILE"
+# Minime Device Traits
+device_model=$DEVICE_MODEL
+button_layout=$BUTTON_LAYOUT
+video_backend=$VIDEO_BACKEND
+video_device=$VIDEO_DEVICE
+video_pixel_format=$VIDEO_PIXEL_FORMAT
+screen_width=$SCREEN_WIDTH
+screen_height=$SCREEN_HEIGHT
+screen_aspect=$SCREEN_ASPECT
+screen_refresh=$SCREEN_REFRESH
+screen_rotation=$SCREEN_ROTATION
+has_wifi=$HAS_WIFI
+has_bluetooth=$HAS_BLUETOOTH
+has_hdmi=$HAS_HDMI
+has_lid=$HAS_LID
+has_sticks=$HAS_STICKS
+has_touch=$HAS_TOUCH
+battery_capacity_path=$BATTERY_CAPACITY_PATH
+charger_online_path=$CHARGER_ONLINE_PATH
+backlight_path=$BACKLIGHT_PATH
+lid_switch_path=$LID_SWITCH_PATH
+rumble_path=$RUMBLE_PATH
+power_led_path=$POWER_LED_PATH
+sound_card=$SOUND_CARD
+sound_mixer=$SOUND_MIXER
+input_gamepad_device_name=$INPUT_GAMEPAD
+input_power_device_name=$INPUT_POWER
+input_volume_device_name=$INPUT_VOLUME
+key_up=$K_UP
+key_down=$K_DOWN
+key_left=$K_LEFT
+key_right=$K_RIGHT
+key_a=$K_A
+key_b=$K_B
+key_x=$K_X
+key_y=$K_Y
+key_c=$K_C
+key_z=$K_Z
+key_l1=$K_L1
+key_r1=$K_R1
+key_l2=$K_L2
+key_r2=$K_R2
+key_l3=$K_L3
+key_r3=$K_R3
+key_start=$K_START
+key_select=$K_SELECT
+key_menu=$K_MENU
+key_power=$K_POWER
+key_vol_up=$K_VOL_UP
+key_vol_down=$K_VOL_DOWN
+EOF
+
+    echo "Minime: traits file generated at $TRAITS_FILE."
+}
+
+case "$1" in
+    start)
+        detect_traits
+        ;;
+    stop)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac

@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MINUI_VERSION = 9fb085062d52c365c9d7aa7a9b2f973ac49123cd
+MINUI_VERSION = 7cf0db0a91dbc7a4f624f7529fb668cb96d95db7
 MINUI_SITE = https://github.com/minime-os/minui.git
 MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
@@ -40,8 +40,8 @@ MINUI_CPPFLAGS = \
 MINUI_SRC_DIR = $(@D)/src
 MINUI_ASSETS_DIR = $(@D)/assets
 MINUI_BUILD_DIR = $(@D)/build-minime
-MINUI_PLATFORM_DIR = $(MINUI_SRC_DIR)/platform/rg35xxplus
-MINUI_PLATFORM_NAME = rg35xxplus
+MINUI_PLATFORM_DIR = $(MINUI_SRC_DIR)/platform/minime
+MINUI_PLATFORM_NAME = minime
 MINUI_TIMEZONE_SRC = $(MINUI_ASSETS_DIR)/timezones/minui.tzs
 MINUI_ZIC = $(shell command -v zic 2>/dev/null || echo /usr/sbin/zic)
 MINUI_BUILD_DATE = $(shell date +%Y.%m.%d)
