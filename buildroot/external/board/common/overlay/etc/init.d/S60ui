@@ -10,6 +10,26 @@ case "$1" in
     start)
         echo "Starting UI..."
 
+        # Headphone jack routing daemon for rk817ext sound card
+        if amixer -c rk817ext controls >/dev/null 2>&1; then
+            (
+                last_state=""
+                while true; do
+                    if amixer -c rk817ext cget numid=1 2>/dev/null | grep -q "values=on"; then
+                        current_state="HP"
+                    else
+                        current_state="SPK"
+                    fi
+                    if [ "$current_state" != "$last_state" ]; then
+                        amixer -c rk817ext sset 'Playback Mux' "$current_state" >/dev/null 2>&1
+                        last_state="$current_state"
+                    fi
+                    sleep 2
+                done
+            ) &
+            echo $! > /tmp/watch_jack.pid
+        fi
+
         # Dynamic model detection for Anbernic H700 family
         model_dt=$(cat /proc/device-tree/model 2>/dev/null || echo "")
         case "$model_dt" in
@@ -78,6 +98,10 @@ case "$1" in
         ;;
     stop)
         echo "Stopping UI..."
+        if [ -f /tmp/watch_jack.pid ]; then
+            kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
+            rm -f /tmp/watch_jack.pid
+        fi
         killall minui minarch settings keymon 2>/dev/null || true
         ;;
     restart|reload)
