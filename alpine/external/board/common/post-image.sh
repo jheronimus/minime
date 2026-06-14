@@ -187,6 +187,11 @@ INITRD_STAGE="${ROOTPATH_TMP}/initrd"
 mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
 	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
 	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+for lib_dir in lib32 lib64 usr/lib32 usr/lib64; do
+	[ -L "${SYSTEM_STAGE}/${lib_dir}" ] || continue
+	mkdir -p "${INITRD_STAGE}/$(dirname "${lib_dir}")"
+	cp -P "${SYSTEM_STAGE}/${lib_dir}" "${INITRD_STAGE}/${lib_dir}"
+done
 
 # Copy BusyBox binary from target rootfs and create links
 cp -f "${SYSTEM_STAGE}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
@@ -213,7 +218,7 @@ copy_runtime_lib() {
 		echo "ERROR: initramfs dependency ${lib_name} is missing" >&2
 		exit 1
 	}
-	lib_target="${INITRD_STAGE}/lib/${lib_name}"
+	lib_target="${INITRD_STAGE}${lib_source#"${SYSTEM_STAGE}"}"
 	[ -e "${lib_target}" ] && return
 	mkdir -p "$(dirname "${lib_target}")"
 	cp -Lf "${lib_source}" "${lib_target}"
