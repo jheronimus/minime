@@ -76,7 +76,7 @@ detect_traits() {
             HAS_WIFI="yes"
             HAS_BLUETOOTH="yes"
             HAS_TOUCH="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
             SOUND_CARD="rk817ext"
             SOUND_MIXER="Master"
@@ -89,7 +89,7 @@ detect_traits() {
             SCREEN_ROTATION="90"
             HAS_WIFI="yes"
             HAS_BLUETOOTH="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
             SOUND_CARD="rk817ext"
             SOUND_MIXER="Master"
@@ -107,7 +107,7 @@ detect_traits() {
                 *VS*) HAS_TOUCH="no" ;;
                 *) HAS_TOUCH="yes" ;;
             esac
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
             SOUND_CARD="rk817ext"
             SOUND_MIXER="Master"
@@ -123,7 +123,7 @@ detect_traits() {
             HAS_BLUETOOTH="yes"
             HAS_HDMI="yes"
             HAS_STICKS="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/rk817-charger/online"
             SOUND_CARD="rk817ext"
             SOUND_MIXER="Master"
@@ -133,7 +133,7 @@ detect_traits() {
             ;;
         *351MP*)
             HAS_STICKS="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             INPUT_GAMEPAD="rk3326-keys"
             ;;
         *351P*|*351M*)
@@ -144,13 +144,13 @@ detect_traits() {
             case "$MODEL_DT" in
                 *351M*) HAS_WIFI="yes" ;;
             esac
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             INPUT_GAMEPAD="rk3326-keys"
             ;;
         *351V*)
             HAS_WIFI="yes"
             HAS_STICKS="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/battery"
             INPUT_GAMEPAD="rk3326-keys"
             ;;
         *SP*)
@@ -158,7 +158,7 @@ detect_traits() {
             HAS_BLUETOOTH="yes"
             HAS_HDMI="yes"
             HAS_LID="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             LID_SWITCH_PATH="/sys/class/power_supply/axp2202-battery/hallkey"
             RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
@@ -168,7 +168,7 @@ detect_traits() {
             HAS_WIFI="yes"
             HAS_BLUETOOTH="yes"
             HAS_HDMI="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
             POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
@@ -178,14 +178,14 @@ detect_traits() {
             HAS_BLUETOOTH="yes"
             HAS_HDMI="yes"
             HAS_STICKS="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
             POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
             ;;
         *28xx*)
             HAS_HDMI="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
             ;;
@@ -196,7 +196,7 @@ detect_traits() {
             case "$MODEL_DT" in
                 *H*|*h*) HAS_STICKS="yes" ;;
             esac
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
             POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
@@ -209,14 +209,14 @@ detect_traits() {
             HAS_BLUETOOTH="yes"
             HAS_HDMI="yes"
             HAS_STICKS="yes"
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             RUMBLE_PATH="/sys/class/power_supply/axp2202-battery/moto"
             POWER_LED_PATH="/sys/class/power_supply/axp2202-battery/work_led"
             ;;
         *)
             # Fallback default
-            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery/capacity"
+            BATTERY_CAPACITY_PATH="/sys/class/power_supply/axp2202-battery"
             CHARGER_ONLINE_PATH="/sys/class/power_supply/axp20x-usb/online"
             ;;
     esac
