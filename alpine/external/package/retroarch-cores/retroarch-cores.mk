@@ -19,72 +19,72 @@ define RETROARCH_CORES_BUILD_CMDS
 	if [ ! -d $(@D)/src/fceumm ]; then \
 		git clone --depth 1 https://github.com/libretro/libretro-fceumm.git $(@D)/src/fceumm ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/fceumm \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/fceumm \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 2. Gambatte (GB/GBC)
 	if [ ! -d $(@D)/src/gambatte ]; then \
 		git clone --depth 1 https://github.com/libretro/gambatte-libretro.git $(@D)/src/gambatte ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/gambatte/libretro \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/gambatte/libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 3. mGBA (GBA)
 	if [ ! -d $(@D)/src/mgba ]; then \
 		git clone --depth 1 https://github.com/libretro/mgba.git $(@D)/src/mgba ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/mgba/libretro \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/mgba/libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 4. Genesis Plus GX (Genesis / Game Gear / Master System)
 	if [ ! -d $(@D)/src/genesis_plus_gx ]; then \
 		git clone --depth 1 https://github.com/libretro/Genesis-Plus-GX.git $(@D)/src/genesis_plus_gx ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/genesis_plus_gx -f Makefile.libretro \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/genesis_plus_gx -f Makefile.libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 5. Beetle PCE Fast (PC Engine)
 	if [ ! -d $(@D)/src/beetle_pce_fast ]; then \
 		git clone --depth 1 https://github.com/libretro/beetle-pce-fast-libretro.git $(@D)/src/beetle_pce_fast ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/beetle_pce_fast \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/beetle_pce_fast \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 6. Snes9x (SNES)
 	if [ ! -d $(@D)/src/snes9x ]; then \
 		git clone --depth 1 https://github.com/libretro/snes9x.git $(@D)/src/snes9x ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/snes9x/libretro \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/snes9x/libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 
 	# 7. PCSX-ReARMed (PlayStation)
 	if [ ! -d $(@D)/src/pcsx_rearmed ]; then \
 		git clone --depth 1 https://github.com/libretro/pcsx_rearmed.git $(@D)/src/pcsx_rearmed ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/pcsx_rearmed -f Makefile.libretro \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/pcsx_rearmed -f Makefile.libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix ARCH=arm64
 
 	# 8. Beetle Saturn (Sega Saturn)
 	if [ ! -d $(@D)/src/beetle_saturn ]; then \
 		git clone --depth 1 https://github.com/libretro/beetle-saturn-libretro.git $(@D)/src/beetle_saturn ; \
 	fi
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/src/beetle_saturn \
+	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
+	$(MAKE) -C $(@D)/src/beetle_saturn \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
-		CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 		platform=unix
 endef
 
