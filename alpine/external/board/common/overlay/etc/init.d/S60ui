@@ -78,7 +78,7 @@ case "$1" in
         ;;
     stop)
         echo "Stopping UI..."
-        killall minui minarch settings 2>/dev/null || true
+        killall minui minarch settings keymon 2>/dev/null || true
         ;;
     restart|reload)
         "$0" stop
