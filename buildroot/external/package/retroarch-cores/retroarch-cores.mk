@@ -21,7 +21,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/fceumm \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 2. Gambatte (GB/GBC)
@@ -30,7 +30,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/gambatte/libretro \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 3. mGBA (GBA)
@@ -39,7 +39,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/mgba/libretro \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 4. Genesis Plus GX (Genesis / Game Gear / Master System)
@@ -48,7 +48,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/genesis_plus_gx -f Makefile.libretro \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 5. Beetle PCE Fast (PC Engine)
@@ -57,7 +57,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/beetle_pce_fast \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 6. Snes9x (SNES)
@@ -66,7 +66,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/snes9x/libretro \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 
 	# 7. PCSX-ReARMed (PlayStation)
@@ -75,7 +75,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/pcsx_rearmed -f Makefile.libretro \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix ARCH=arm64
 
 	# 8. Beetle Saturn (Sega Saturn)
@@ -84,7 +84,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/beetle_saturn \
-		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" LD="$(TARGET_LD)" \
+		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 endef
 
