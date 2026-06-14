@@ -27,6 +27,8 @@ for config in "${ROOT}"/external/configs/minime_*_defconfig; do
 	require "$config" "BR2_PACKAGE_FATRESIZE=y"
 done
 
+require "$POST_IMAGE" 'lib_target="${INITRD_STAGE}/lib/${lib_name}"'
+require "${ROOT}/external/board/rk3566/tiny-rk3566.config" "CONFIG_PL330_DMA=y"
 require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.minime/config"'
 require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.ui/config"'
 require "$POST_IMAGE" 'mkdir -p "${USERDATA_STAGE}/.cores" "${USERDATA_STAGE}/.cores/config"'
