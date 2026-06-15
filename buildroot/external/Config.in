@@ -14,7 +14,7 @@ endchoice
 source "$BR2_EXTERNAL_MINIME_PATH/package/allium-themes/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/dufs/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/syncthing/Config.in"
-source "$BR2_EXTERNAL_MINIME_PATH/package/host-llvm-system/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/llvm-system/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/libclang-system/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse_miyoo_bezels/Config.in"
