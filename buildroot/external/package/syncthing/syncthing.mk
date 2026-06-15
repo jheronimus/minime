@@ -12,4 +12,10 @@ SYNCTHING_GOMOD = github.com/syncthing/syncthing
 SYNCTHING_BUILD_TARGETS = cmd/syncthing
 SYNCTHING_GO_ENV = GOPROXY=https://proxy.golang.org,direct
 
+define SYNCTHING_GENERATE_ASSETS
+	cd $(@D) && $(HOST_GO_HOST_ENV) $(SYNCTHING_GO_ENV) $(GO_BIN) run build.go assets
+endef
+SYNCTHING_PRE_BUILD_HOOKS += SYNCTHING_GENERATE_ASSETS
+
 $(eval $(golang-package))
+

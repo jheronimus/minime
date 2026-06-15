@@ -1,8 +1,5 @@
 config BR2_PACKAGE_HOST_LLVM_SYSTEM
 	bool "host llvm (system)"
-	select BR2_PACKAGE_HOST_LLVM
-	select BR2_PACKAGE_HOST_CLANG
-	select BR2_PACKAGE_HOST_LIBCLC
 	help
 	  Use the Debian build container's preinstalled
 	  LLVM/Clang/libclc toolchain (LLVM 22 from
@@ -15,14 +12,7 @@ config BR2_PACKAGE_HOST_LLVM_SYSTEM
 	  libclang-22-dev and libclc-22-dev to be
 	  installed in the container image.
 
-config BR2_PACKAGE_PROVIDES_HOST_LLVM
-	string
-	default "host-llvm-system" if BR2_PACKAGE_HOST_LLVM_SYSTEM
-
-config BR2_PACKAGE_PROVIDES_HOST_CLANG
-	string
-	default "host-llvm-system" if BR2_PACKAGE_HOST_LLVM_SYSTEM
-
 config BR2_PACKAGE_PROVIDES_HOST_LIBCLC
 	string
-	default "host-llvm-system" if BR2_PACKAGE_HOST_LLVM_SYSTEM
+	default "host-llvm" if BR2_PACKAGE_HOST_LLVM_SYSTEM
+

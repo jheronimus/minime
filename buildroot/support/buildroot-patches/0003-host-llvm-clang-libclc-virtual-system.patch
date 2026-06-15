@@ -10,13 +10,11 @@
  
  # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
  # and AddressSanitizer tools on the target for stack traces.
-@@ -322,4 +324,8 @@
+@@ -322,4 +324,6 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
  $(eval $(cmake-package))
-+ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
-+$(eval $(host-virtual-package))
-+else
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
  $(eval $(host-cmake-package))
 +endif
 --- a/package/llvm-project/clang/clang.mk
@@ -41,7 +39,7 @@
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CLANG_CONFIG_FILE="\"--config=$(HOST_DIR)/lib/clang/$(CLANG_VERSION_MAJOR)/$(GNU_TARGET_NAME).cfg\""
  endif
  
-@@ -153,9 +157,15 @@
+@@ -153,9 +157,13 @@
  endef
  
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CROSS_PATH_SUFFIX='".br_real"'
@@ -52,9 +50,7 @@
 +endif
  
  $(eval $(cmake-package))
-+ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
-+$(eval $(host-virtual-package))
-+else
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
  $(eval $(host-cmake-package))
 +endif
 --- a/package/llvm-project/libclc/libclc.mk
