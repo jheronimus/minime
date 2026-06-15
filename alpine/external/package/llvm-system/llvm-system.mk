@@ -39,6 +39,9 @@ define HOST_LLVM_SYSTEM_INSTALL_CMDS
 
 	$(INSTALL) -d $(HOST_DIR)/share/libclc
 	cp -a $(HOST_LLVM_SYSTEM_LIBCLC_DIR)/. $(HOST_DIR)/share/libclc/
+
+	$(INSTALL) -d $(STAGING_DIR)/usr/bin
+	ln -sf $(HOST_DIR)/bin/llvm-config $(STAGING_DIR)/usr/bin/llvm-config
 endef
 
 $(eval $(host-generic-package))

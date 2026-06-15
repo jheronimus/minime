@@ -1,6 +1,15 @@
 --- a/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
 +++ b/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
-@@ -322,4 +322,8 @@
+@@ -298,7 +298,9 @@
+ 	$(INSTALL) -D -m 0755 $(HOST_DIR)/bin/llvm-config \
+ 		$(STAGING_DIR)/usr/bin/llvm-config
+ endef
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
+ HOST_LLVM_POST_INSTALL_HOOKS = LLVM_COPY_LLVM_CONFIG_TO_STAGING_DIR
++endif
+ 
+ # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
+@@ -322,4 +324,8 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
  $(eval $(cmake-package))
@@ -11,8 +20,33 @@
 +endif
 --- a/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
 +++ b/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
-@@ -158,4 +158,8 @@
+@@ -101,7 +101,9 @@
+ 	$(INSTALL) -D -m 0755 $(HOST_CLANG_BUILDDIR)/bin/clang-tblgen \
+ 		$(HOST_DIR)/bin/clang-tblgen
+ endef
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
+ HOST_CLANG_POST_INSTALL_HOOKS = HOST_CLANG_INSTALL_CLANG_TBLGEN
++endif
+ 
+ # This option must be enabled to link libclang dynamically against libLLVM.so
+@@ -125,7 +127,9 @@
+ 	echo "--target=$(GNU_TARGET_NAME)" >> $(HOST_DIR)/lib/clang/$(CLANG_VERSION_MAJOR)/$(GNU_TARGET_NAME).cfg
+ endef
+ 
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
+ HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_INSTALL_CONFIG_FILE
++endif
+ HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CLANG_CONFIG_FILE="\"--config=$(HOST_DIR)/lib/clang/$(CLANG_VERSION_MAJOR)/$(GNU_TARGET_NAME).cfg\""
+ endif
+@@ -153,9 +157,11 @@
+ endef
+ 
+ HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CROSS_PATH_SUFFIX='".br_real"'
++ifneq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
+ HOST_CLANG_POST_BUILD_HOOKS += HOST_CLANG_TOOLCHAIN_WRAPPER_BUILD
+ HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_TOOLCHAIN_WRAPPER_INSTALL
  HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
++endif
  
  $(eval $(cmake-package))
 +ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
