@@ -1,5 +1,5 @@
---- a/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
-+++ b/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
+--- a/package/llvm-project/llvm/llvm.mk
++++ b/package/llvm-project/llvm/llvm.mk
 @@ -298,7 +298,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_DIR)/bin/llvm-config \
  		$(STAGING_DIR)/usr/bin/llvm-config
@@ -9,6 +9,7 @@
 +endif
  
  # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
+ # and AddressSanitizer tools on the target for stack traces.
 @@ -322,4 +324,8 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
@@ -18,8 +19,8 @@
 +else
  $(eval $(host-cmake-package))
 +endif
---- a/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
-+++ b/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
+--- a/package/llvm-project/clang/clang.mk
++++ b/package/llvm-project/clang/clang.mk
 @@ -101,7 +101,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_CLANG_BUILDDIR)/bin/clang-tblgen \
  		$(HOST_DIR)/bin/clang-tblgen
@@ -29,6 +30,7 @@
 +endif
  
  # This option must be enabled to link libclang dynamically against libLLVM.so
+ HOST_CLANG_CONF_OPTS += -DLLVM_LINK_LLVM_DYLIB=ON
 @@ -125,7 +127,9 @@
  	echo "--target=$(GNU_TARGET_NAME)" >> $(HOST_DIR)/lib/clang/$(CLANG_VERSION_MAJOR)/$(GNU_TARGET_NAME).cfg
  endef
@@ -38,7 +40,8 @@
 +endif
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CLANG_CONFIG_FILE="\"--config=$(HOST_DIR)/lib/clang/$(CLANG_VERSION_MAJOR)/$(GNU_TARGET_NAME).cfg\""
  endif
-@@ -153,9 +157,11 @@
+ 
+@@ -153,9 +157,15 @@
  endef
  
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CROSS_PATH_SUFFIX='".br_real"'
@@ -54,8 +57,8 @@
 +else
  $(eval $(host-cmake-package))
 +endif
---- a/package/llvm-project/libclc/libclc.mk	2026-06-15 21:00:00.000000000 +0300
-+++ b/package/llvm-project/libclc/libclc.mk	2026-06-15 21:00:00.000000000 +0300
+--- a/package/llvm-project/libclc/libclc.mk
++++ b/package/llvm-project/libclc/libclc.mk
 @@ -45,4 +45,8 @@
  	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
  
