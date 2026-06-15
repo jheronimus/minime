@@ -9,6 +9,7 @@ BR2_TARGET_LDFLAGS="-fuse-ld=mold"
 
 # Download / cache
 BR2_DL_DIR="~/.buildroot-dl"
+BR2_DOWNLOAD_FORCE_CHECK_HASHES=y
 BR2_CCACHE=y
 BR2_CCACHE_DIR="~/.buildroot-ccache"
 BR2_CCACHE_INITIAL_SETUP="--max-size=30G"

@@ -1,7 +1,19 @@
 source "$BR2_EXTERNAL_MINIME_PATH/package/libmali/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/libretro-common/Config.in"
+
+choice
+	prompt "Minime user interface"
+	default BR2_PACKAGE_MINUI
+
+source "$BR2_EXTERNAL_MINIME_PATH/package/allium/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/minui/Config.in"
+
+endchoice
+
+source "$BR2_EXTERNAL_MINIME_PATH/package/allium-themes/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/dufs/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/syncthing/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse_miyoo_bezels/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/preloaded-roms/Config.in"
