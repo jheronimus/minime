@@ -5,7 +5,7 @@
 ################################################################################
 
 HOST_CLANG_VERSION = 22
-HOST_CLANG_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/host-clang
+HOST_CLANG_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/clang
 HOST_CLANG_SITE_METHOD = local
 HOST_CLANG_SOURCE =
 HOST_CLANG_LICENSE = Apache-2.0 with LLVM-exception
@@ -34,6 +34,7 @@ define HOST_CLANG_INSTALL_CMDS
 	cp -a $(HOST_CLANG_LLVM_PREFIX)/lib/cmake/clang/. $(HOST_DIR)/lib/cmake/clang/
 endef
 
-$(eval $(call inner-generic-package,host-clang,HOST_CLANG,CLANG,host))
+$(eval $(host-generic-package))
+
 
 

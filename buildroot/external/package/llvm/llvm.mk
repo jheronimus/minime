@@ -5,7 +5,7 @@
 ################################################################################
 
 HOST_LLVM_VERSION = 22
-HOST_LLVM_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/host-llvm
+HOST_LLVM_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/llvm
 HOST_LLVM_SITE_METHOD = local
 HOST_LLVM_SOURCE =
 HOST_LLVM_LICENSE = Apache-2.0 with LLVM-exception
@@ -37,6 +37,7 @@ define HOST_LLVM_INSTALL_CMDS
 	ln -sf $(HOST_DIR)/bin/llvm-config $(STAGING_DIR)/usr/bin/llvm-config
 endef
 
-$(eval $(call inner-generic-package,host-llvm,HOST_LLVM,LLVM,host))
+$(eval $(host-generic-package))
+
 
 
