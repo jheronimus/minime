@@ -1,5 +1,8 @@
 config BR2_PACKAGE_HOST_LLVM_SYSTEM
 	bool "host llvm (system)"
+	select BR2_PACKAGE_HOST_LLVM
+	select BR2_PACKAGE_HOST_CLANG
+	select BR2_PACKAGE_HOST_LIBCLC
 	help
 	  Use the Debian build container's preinstalled LLVM/Clang/libclc
 	  toolchain (LLVM 22 from apt.llvm.org) instead of building
