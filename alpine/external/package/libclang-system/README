@@ -1,0 +1,7 @@
+host-libclang-system
+
+Symlinks the Debian container's preinstalled libclang/LLVM libraries
+into Buildroot's host directory so that Rust bindgen can find them
+without building host-clang/host-llvm from source.
+
+Required container packages: libclang1-19, libclang-cpp19, libllvm19.
