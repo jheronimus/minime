@@ -1,0 +1,8 @@
+config BR2_PACKAGE_HOST_LIBCLANG_SYSTEM
+	bool "host libclang (system)"
+	help
+	  Use the Debian build container's preinstalled libclang/LLVM
+	  libraries instead of building host-clang/host-llvm from source.
+
+	  Requires libclang1-19, libclang-cpp19 and libllvm19 to be
+	  installed in the container image.

@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libelf-dev \
     libssl-dev \
     libedit-dev \
+    libclang1-19 \
+    libclang-cpp19 \
+    libllvm19 \
     bc \
     python3 \
     python3-dev \
