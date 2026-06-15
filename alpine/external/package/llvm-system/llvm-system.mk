@@ -5,7 +5,7 @@
 ################################################################################
 
 HOST_LLVM_SYSTEM_VERSION = 22
-HOST_LLVM_SYSTEM_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/host-llvm-system
+HOST_LLVM_SYSTEM_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/llvm-system
 HOST_LLVM_SYSTEM_SITE_METHOD = local
 HOST_LLVM_SYSTEM_SOURCE =
 HOST_LLVM_SYSTEM_LICENSE = Apache-2.0 with LLVM-exception
