@@ -3,15 +3,22 @@ FROM debian:trixie
 # Avoid interactive prompts during apt installations
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install complete Buildroot dependencies and tools
+# Add the LLVM apt repository for LLVM 22 and install all Buildroot
+# dependencies in a single transaction.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /usr/share/keyrings/llvm.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/trixie/ llvm-toolchain-trixie-22 main" > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     build-essential \
     bison \
     flex \
     unzip \
     rsync \
     git \
-    curl \
     ccache \
     cmake \
     mold \
@@ -19,9 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libelf-dev \
     libssl-dev \
     libedit-dev \
-    libclang1-19 \
-    libclang-cpp19 \
-    libllvm19 \
+    llvm-22 \
+    llvm-22-dev \
+    libllvm22 \
+    clang-22 \
+    clang-tools-22 \
+    libclang1-22 \
+    libclang-cpp22 \
+    libclang-common-22-dev \
+    libclang-22-dev \
+    libclc-22-dev \
     bc \
     python3 \
     python3-dev \
@@ -39,7 +53,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     file \
     wget \
     libncurses-dev \
-    ca-certificates \
     locales \
     && rm -rf /var/lib/apt/lists/*
 

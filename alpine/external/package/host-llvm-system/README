@@ -1,0 +1,17 @@
+host-llvm-system
+================
+
+This is a Buildroot host-only package that symlinks the Debian build
+container's preinstalled LLVM/Clang/libclc toolchain (LLVM 22 from
+apt.llvm.org) into $(HOST_DIR) so that Buildroot consumers can use it
+instead of building host-llvm, host-clang and host-libclc from source.
+
+Container packages required:
+  llvm-22 llvm-22-dev clang-22 clang-tools-22 libllvm22
+  libclang1-22 libclang-cpp22 libclang-common-22-dev
+  libclang-22-dev libclc-22-dev
+
+It provides the virtual Buildroot packages:
+  host-llvm host-clang host-libclc
+
+License: Apache-2.0 with LLVM-exception (matching the LLVM project).
