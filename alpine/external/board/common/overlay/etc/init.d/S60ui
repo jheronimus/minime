@@ -30,24 +30,6 @@ case "$1" in
             echo $! > /tmp/watch_jack.pid
         fi
 
-        # Dynamic model detection for Anbernic H700 family
-        model_dt=$(cat /proc/device-tree/model 2>/dev/null || echo "")
-        case "$model_dt" in
-            *SP*|*sp*) RGXX_MODEL="RG35xxSP" ;;
-            *Plus*|*plus*|*PLUS*) RGXX_MODEL="RG35xxPlus" ;;
-            *H*|*h*)
-                if echo "$model_dt" | grep -qi "rg35xx h"; then
-                    RGXX_MODEL="RG35xxH"
-                else
-                    RGXX_MODEL="RG35xx"
-                fi
-                ;;
-            *28*) RGXX_MODEL="RG28xx" ;;
-            *Cube*|*cube*) RGXX_MODEL="RGcubexx" ;;
-            *) RGXX_MODEL="RG35xx" ;;
-        esac
-        export RGXX_MODEL
-
         # Minime SD-card layout contract.
         export HOME=/mnt/sdcard
         export SDCARD_PATH=/mnt/sdcard
