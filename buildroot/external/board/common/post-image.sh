@@ -400,7 +400,7 @@ rm -rf "${GENIMAGE_TMP}"
 rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
 
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
-sed -i 's/__IMAGE_NAME__/minime-${SOC_NAME}.img/g' "${ROOTPATH_TMP}/genimage.cfg"
+sed -i "s/__IMAGE_NAME__/minime-${SOC_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
 
 genimage \
 	--rootpath "${ROOTPATH_TMP}" \
