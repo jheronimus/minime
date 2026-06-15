@@ -1,6 +1,6 @@
 # Minime — a barebones custom firmware for retro handhelds
 
-Most custom firmwares not based on EmulationStation are tightly coupled to specific devices or rely on stock firmware for basic tasks like Wi-Fi management and running RetroArch cores. Minime solves this by providing a unified, decoupled foundation, allowing frontend UIs to be packaged independently—much like desktop environments in Linux distributions.
+A lot of custom firmwares not based on EmulationStation are tightly coupled to specific devices or rely on stock firmware for basic tasks like Wi-Fi management and running RetroArch cores. Minime solves this by providing a unified, decoupled foundation, allowing frontend UIs to be packaged independently—much like desktop environments in Linux distributions.
 
 # Features & Goals
 -	Fast to build, easy to modify (based on Buildroot), and requires minimal disk space on the build host.
