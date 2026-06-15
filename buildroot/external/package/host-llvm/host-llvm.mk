@@ -37,5 +37,6 @@ define HOST_LLVM_INSTALL_CMDS
 	ln -sf $(HOST_DIR)/bin/llvm-config $(STAGING_DIR)/usr/bin/llvm-config
 endef
 
-$(eval $(host-generic-package))
+$(eval $(call inner-generic-package,host-llvm,HOST_LLVM,LLVM,host))
+
 
