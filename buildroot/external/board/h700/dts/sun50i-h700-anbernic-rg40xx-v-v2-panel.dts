@@ -6,6 +6,8 @@
 #include "sun50i-h700-anbernic-rg40xx-v.dts"
 
 / {
+	compatible = "anbernic,rg40xx-v-v2-panel", "anbernic,rg40xx-v",
+		     "allwinner,sun50i-h700";
 	rocknix-dt-id = "sun50i-h700-anbernic-rg40xx-v-v2-panel";
 };
 

@@ -83,6 +83,16 @@ if [ -d "${common_fw_dir}" ]; then
 	done
 fi
 
+# Install the selected board's immutable Minime trait definitions.
+if [ ! -f "${BOARD_DIR}/traits/platform.ini" ] ||
+	[ ! -d "${BOARD_DIR}/traits/devices" ]; then
+	echo "ERROR: ${BOARD_DIR}/traits is incomplete." >&2
+	exit 1
+fi
+rm -rf "${TARGET_DIR}/usr/share/minime/traits"
+mkdir -p "${TARGET_DIR}/usr/share/minime/traits"
+cp -a "${BOARD_DIR}/traits/." "${TARGET_DIR}/usr/share/minime/traits/"
+
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BOARD_DIR}/post-build.sh" ]; then
 	echo "Running board-specific post-build hook for $(basename "${BOARD_DIR}")..."
