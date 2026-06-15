@@ -34,5 +34,6 @@ define HOST_CLANG_INSTALL_CMDS
 	cp -a $(HOST_CLANG_LLVM_PREFIX)/lib/cmake/clang/. $(HOST_DIR)/lib/cmake/clang/
 endef
 
-$(eval $(host-generic-package))
+$(eval $(call inner-generic-package,host-clang,HOST_CLANG,CLANG,host))
+
 
