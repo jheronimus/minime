@@ -157,12 +157,7 @@ touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
 cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.minime/system"
 
 # Copy kernel and U-Boot script
-if [ "${MINIME_USE_ROCKNIX_KERNEL:-n}" = "y" ] && [ "${SOC_NAME}" = "rk3566" ] && [ -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" ]; then
-	echo "Using ROCKNIX RK3566 kernel for test image..."
-	cp -f "${BOARD_DIR}/prebuilt/rocknix-20260601/rocknix-kernel" "${USERDATA_STAGE}/.minime/kernel"
-else
-	cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
-fi
+cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
 # Copy each platform DTB once.
