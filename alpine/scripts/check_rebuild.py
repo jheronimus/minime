@@ -60,6 +60,27 @@ EXTERNAL = os.path.join(WORKSPACE, "external")
 # Check version consistency between upstream Mesa3D and our custom panfrost package
 has_warnings = check_mesa_panfrost_version(WORKSPACE)
 
+# Check if any patches under support/buildroot-patches are newer than Buildroot extraction stamp
+buildroot_stamp = os.path.join(WORKSPACE, "buildroot", ".minime-buildroot-2026.05.stamp")
+if os.path.exists(buildroot_stamp):
+    patches_dir = os.path.join(WORKSPACE, "support", "buildroot-patches")
+    if os.path.exists(patches_dir):
+        patches = glob.glob(os.path.join(patches_dir, "*.patch"))
+        if patches:
+            newest_patch = max(os.path.getmtime(p) for p in patches)
+            if newest_patch > os.path.getmtime(buildroot_stamp):
+                print("❌ BUILDROOT PATCHES OUT-OF-DATE: support/buildroot-patches has been updated.")
+                if args.auto_clean:
+                    print("🧹 Auto-cleaning: Removing buildroot directory to force re-extraction and patching...")
+                    buildroot_dir = os.path.join(WORKSPACE, "buildroot")
+                    if os.path.exists(buildroot_dir):
+                        subprocess.run(["rm", "-rf", buildroot_dir], check=True)
+                    print("✨ Clean complete. Please restart the build.")
+                    sys.exit(0)
+                else:
+                    print("   👉 ACTION REQUIRED: Run 'make clean' or remove buildroot directory.\n")
+                    has_warnings = True
+
 # Retrieve BR2_EXTERNAL buildroot-output directory, defaulting to Podman/container's output directory or host path
 BUILD_DIR = "/buildroot-output"
 if not os.path.exists(BUILD_DIR):

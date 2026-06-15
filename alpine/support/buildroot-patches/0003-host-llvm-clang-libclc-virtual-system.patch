@@ -1,0 +1,33 @@
+--- a/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
++++ b/package/llvm-project/llvm/llvm.mk	2026-06-15 21:00:00.000000000 +0300
+@@ -322,4 +322,8 @@
+ LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
+ 
+ $(eval $(cmake-package))
++ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
++$(eval $(host-virtual-package))
++else
+ $(eval $(host-cmake-package))
++endif
+--- a/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
++++ b/package/llvm-project/clang/clang.mk	2026-06-15 21:00:00.000000000 +0300
+@@ -158,4 +158,8 @@
+ HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
+ 
+ $(eval $(cmake-package))
++ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
++$(eval $(host-virtual-package))
++else
+ $(eval $(host-cmake-package))
++endif
+--- a/package/llvm-project/libclc/libclc.mk	2026-06-15 21:00:00.000000000 +0300
++++ b/package/llvm-project/libclc/libclc.mk	2026-06-15 21:00:00.000000000 +0300
+@@ -45,4 +45,8 @@
+ 	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
+ 
+ $(eval $(cmake-package))
++ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
++$(eval $(host-virtual-package))
++else
+ $(eval $(host-cmake-package))
++endif
