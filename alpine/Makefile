@@ -133,7 +133,7 @@ prepare_vm:
 ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
 	@if [ "$(IS_PODMAN)" = "1" ]; then mkdir -p $(HOME)/buildroot-output $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl; fi
-	@$(MAKE) prepare
+	@$(PODMAN_CMD) image inspect $(PODMAN_IMAGE) >/dev/null 2>&1 || $(MAKE) prepare
 endif
 
 prepare:
