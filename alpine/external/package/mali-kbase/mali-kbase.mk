@@ -7,7 +7,7 @@
 MALI_KBASE_VERSION = h700
 MALI_KBASE_SITE = $(call github,minime-os,mali-kbase,$(MALI_KBASE_VERSION))
 MALI_KBASE_LICENSE = GPL-2.0
-MALI_KBASE_LICENSE_FILES = COPYING
+MALI_KBASE_LICENSE_FILES = product/kernel/license.txt
 
 MALI_KBASE_MODULE_SUBDIRS = product/kernel/drivers/gpu/arm/midgard
 
@@ -22,4 +22,3 @@ MALI_KBASE_MODULE_MAKE_OPTS = \
 
 $(eval $(kernel-module))
 $(eval $(generic-package))
-

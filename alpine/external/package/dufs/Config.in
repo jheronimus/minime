@@ -1,0 +1,11 @@
+config BR2_PACKAGE_DUFS
+	bool "dufs"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  File server with WebDAV support.
+
+	  https://github.com/sigoden/dufs
+
+comment "dufs needs a Rust-supported target"
+	depends on !BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS

@@ -1,0 +1,16 @@
+config BR2_PACKAGE_ALLIUM
+	bool "allium"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_ALLIUM_THEMES
+	select BR2_PACKAGE_DUFS
+	select BR2_PACKAGE_HOST_RUSTC
+	select BR2_PACKAGE_LIBRETRO_COMMON
+	select BR2_PACKAGE_SYNCTHING
+	help
+	  Allium launcher and Play libretro frontend for Minime.
+
+	  https://github.com/minime-os/allium
+
+comment "allium needs Go- and Rust-supported targets"
+	depends on !BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS || !BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
