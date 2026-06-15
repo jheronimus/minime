@@ -1,20 +1,17 @@
-# Minime — a minimal custom firmware for retro gaming handhelds
+# Minime — a barebones custom firmware for retro handhelds
 
-The goal is to provide a very basic firmware that builds fast and is easy to understand and modify. Minime can be used as base for porting firmware overlays (such as OnionUI or MinUI) that expect a stock Linux environment. It is not intended to become a full-featured standalone custom firmware.
+Most custom firmwares not based on EmulationStation are tightly coupled to specific devices or rely on stock firmware for basic tasks like Wi-Fi management and running RetroArch cores. Minime solves this by providing a unified, decoupled foundation, allowing frontend UIs to be packaged independently—much like desktop environments in Linux distributions.
 
-Currently only Anbernic RG35xxSP v1 is tested
+# Features & Goals
+-	Fast to build, easy to modify (based on Buildroot), and requires minimal disk space on the build host.
+-	Mainline kernel, based on tinyconfig + cascading platform-specific configurations, currently ~10MB uncompressed.
+-	Uses a single FAT32 partition readable on any PC with a read-only erofs rootfs, making updates trivial.
+-	Provides essential dependencies: wpa_supplicant, alsa, bluez, libmali, alongside a core set of RetroArch cores and standalone emulators.
+- Establishes a standard hardware traits contract to be read by UIs (screen, button layout, input map, system paths).
 
-This is a barebones custom firmware base, built on Buildroot:
+# How to use
 
-- it uses a mainline kernel with hardware patches imported from Rocknix, optimized using `tinyconfig`;
-- it configures a single FAT32 partition for the system. Rootfs is a read-only erofs image on that partition;
-- it comes with wpa_supplicant for Wi-Fi, alsa for sound, bluez for Bluetooth, libmali for graphics;
-- it launches a passwordless BusyBox Telnet and FTP server on boot, allowing you to remotely control the console and upload files.
+-	Pre-configure Wi-Fi: Before the first boot, add your network credentials to .minime/config/wifi.cfg for automatic connection. The device will start with a passwordless Telnet and FTP server enabled.
+-	First Boot: The system will automatically expand the partition to fill the entire SD card.
 
-The whole system flashes as a single FAT32 partition with a hidden compressed rootfs image.
-- modify .system/config/wifi.cfg to provide Wi-Fi name and password
-- modify .system/config/device.cfg to specify which DTB file needs to be loaded (currently it boots RG35xxSP v1 by default)
-  
-On first boot the system will autoexpand to the whole SD card.
-
-
+Development is currently focused on a handful of Anbernic devices that I own: Arc D, RG35xxSP, RG351V, RG351MP.
