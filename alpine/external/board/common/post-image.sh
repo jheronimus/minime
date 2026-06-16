@@ -83,7 +83,7 @@ mkdir -p "${USERDATA_STAGE}/roms"
 mkdir -p "${USERDATA_STAGE}/bios"
 mkdir -p "${USERDATA_STAGE}/saves"
 
-for system in gb gbc gba nes snes md gg sms pce psx ss; do
+for system in gb gbc gba nes snes md gg sms pce psx ss arc; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
 done
