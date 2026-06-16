@@ -86,7 +86,7 @@ endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image h700-uboot clean clean-all clean-vm copy_images prepare_vm check-package check-rebuild packages-list FORCE
+.PHONY: help prepare shell buildroot defconfig image h700-uboot clean clean-all clean-vm copy_images prepare_vm check-package packages-list FORCE
 
 help:
 	@printf '%s\n' \
@@ -205,12 +205,6 @@ else
 	@python3 buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
 endif
 
-check-rebuild: prepare_vm
-ifeq ($(USE_PODMAN),1)
-	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) python3 /workspace/scripts/check_rebuild.py
-else
-	@python3 scripts/check_rebuild.py
-endif
 
 packages-list:
 	python3 scripts/generate_packages_doc.py
