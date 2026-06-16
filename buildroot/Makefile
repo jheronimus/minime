@@ -51,7 +51,7 @@ BUILDROOT_URL := https://buildroot.org/downloads/$(BUILDROOT_ARCHIVE)
 BUILDROOT_DIR := buildroot
 BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 SUPPORTED_BOARDS := h700 rk3326 rk3566
-BOARD ?= h700
+BOARD ?= rk3566
 
 ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
@@ -93,7 +93,7 @@ help:
 		"Minime Firmware Build Orchestrator" \
 		"==================================" \
 		"Commands:" \
-		"  make defconfig     - Merge config fragments for BOARD (default: h700)" \
+		"  make defconfig     - Merge config fragments for BOARD (default: rk3566)" \
 		"  make image         - Build complete bootable firmware image for BOARD" \
 		"  make shell         - Open an interactive shell inside the build container" \
 		"  make prepare       - Build builder container image (or install host tools on Linux)" \
@@ -108,7 +108,7 @@ help:
 		"  make <target>      - Pass arbitrary command directly to Buildroot (e.g., make menuconfig)" \
 		"" \
 		"Options (override with VAR=value):" \
-		"  BOARD              - Target hardware (default: h700, supported: $(SUPPORTED_BOARDS))" \
+		"  BOARD              - Target hardware (default: rk3566, supported: $(SUPPORTED_BOARDS))" \
 		"  USE_PODMAN         - Toggle build container isolation (default: 1, set to 0 for host build)" \
 		"  TOPLEVEL_JLEVEL    - Number of parallel build jobs (default: auto-detected CPU cores)"
 
