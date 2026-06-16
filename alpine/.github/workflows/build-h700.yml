@@ -1,20 +1,6 @@
 name: Build Minime (H700)
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - panfrost-source-build
-    paths:
-      - 'external/board/h700/**'
-      - 'external/configs/minime_h700_defconfig'
-      - 'external/board/common/**'
-      - 'external/package/**'
-      - 'support/buildroot-patches/**'
-      - 'Makefile'
-      - 'scripts/**'
-      - '.github/workflows/build-h700.yml'
   workflow_dispatch:
     inputs:
       clean_output:
@@ -25,6 +11,7 @@ on:
 
 jobs:
   build:
+    if: false
     name: Build H700 Firmware
     runs-on: self-hosted
     steps:
