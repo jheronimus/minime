@@ -119,7 +119,7 @@ if os.path.isdir(BUILD_DIR):
         if os.path.isdir(item_path):
             # Only consider board subdirectories that have a matching defconfig
             # Skip non-board outputs like panfrost-h700, dl, ccache, etc.
-            defconfig = os.path.join(EXTERNAL, "configs", f"minime_{item}_defconfig")
+            defconfig = os.path.join(EXTERNAL, "configs", f"minime_{item}.config")
             if not os.path.exists(defconfig):
                 continue
             sb = os.path.join(item_path, "build")
