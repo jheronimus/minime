@@ -1,6 +1,5 @@
-diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-project/clang/clang.mk
---- br_clean/package/llvm-project/clang/clang.mk	2026-06-08 23:39:13
-+++ buildroot/package/llvm-project/clang/clang.mk	2026-06-16 13:47:04
+--- a/package/llvm-project/clang/clang.mk
++++ b/package/llvm-project/clang/clang.mk
 @@ -101,7 +101,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_CLANG_BUILDDIR)/bin/clang-tblgen \
  		$(HOST_DIR)/bin/clang-tblgen
@@ -23,7 +22,7 @@ diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-pr
  
  define HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
  	$(Q)cd $(HOST_DIR)/bin; \
-@@ -153,9 +157,38 @@
+@@ -153,9 +157,48 @@
  endef
  
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CROSS_PATH_SUFFIX='".br_real"'
@@ -34,6 +33,7 @@ diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-pr
 +endif
  
  $(eval $(cmake-package))
++
 +ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
 +HOST_CLANG_SYSTEM_VERSION = 22
 +HOST_CLANG_LIBDIR = /usr/lib/$(HOSTARCH)-linux-gnu
@@ -46,6 +46,9 @@ diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-pr
 +	ln -sf /usr/bin/clang++-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang++
 +	ln -sf /usr/bin/clang-cpp-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang-cpp
 +	ln -sf /usr/bin/clang-tblgen-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang-tblgen
++	ln -sf /usr/bin/clang-format-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang-format
++	ln -sf /usr/bin/clang-offload-bundler-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang-offload-bundler
++	ln -sf /usr/bin/clang-offload-packager-$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/bin/clang-offload-packager
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib
 +	ln -sf $(HOST_CLANG_LIBDIR)/libclang-$(HOST_CLANG_SYSTEM_VERSION).so.1 $(HOST_DIR)/lib/libclang.so
@@ -53,30 +56,35 @@ diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-pr
 +	ln -sf $(HOST_CLANG_LIBDIR)/libclang-$(HOST_CLANG_SYSTEM_VERSION).so.1 $(HOST_DIR)/lib/libclang-$(HOST_CLANG_SYSTEM_VERSION).so.$(HOST_CLANG_SYSTEM_VERSION)
 +	ln -sf $(HOST_CLANG_LIBDIR)/libclang-cpp.so.$(HOST_CLANG_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libclang-cpp.so
 +	ln -sf $(HOST_CLANG_LIBDIR)/libclang-cpp.so.$(HOST_CLANG_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libclang-cpp.so.$(HOST_CLANG_SYSTEM_VERSION).1
++	ln -sf $(HOST_CLANG_LIBDIR)/libclang-cpp.so.$(HOST_CLANG_SYSTEM_VERSION) $(HOST_DIR)/lib/libclang-cpp.so.$(HOST_CLANG_SYSTEM_VERSION)
++	for f in $(HOST_CLANG_LLVM_PREFIX)/lib/libclang*.a $(HOST_CLANG_LIBDIR)/libclang*.so*; do [ -e "$$f" ] || continue; ln -sf "$$f" $(HOST_DIR)/lib/$$(basename "$$f"); done
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/clang
 +	cp -a $(HOST_CLANG_LLVM_PREFIX)/lib/cmake/clang/. $(HOST_DIR)/lib/cmake/clang/
++
++	$(INSTALL) -d $(HOST_DIR)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)
++	ln -sf $(HOST_CLANG_LLVM_PREFIX)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include $(HOST_DIR)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include
++	ln -sf $(HOST_CLANG_LLVM_PREFIX)/share/clang $(HOST_DIR)/share/clang
 +endef
 +
 +$(eval $(host-generic-package))
 +else
  $(eval $(host-cmake-package))
 +endif
-diff -urN br_clean/package/llvm-project/libclc/libclc.mk buildroot/package/llvm-project/libclc/libclc.mk
---- br_clean/package/llvm-project/libclc/libclc.mk	2026-06-08 23:39:13
-+++ buildroot/package/llvm-project/libclc/libclc.mk	2026-06-16 13:47:04
-@@ -45,4 +45,8 @@
+--- a/package/llvm-project/libclc/libclc.mk
++++ b/package/llvm-project/libclc/libclc.mk
+@@ -45,4 +45,9 @@
  	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
  
  $(eval $(cmake-package))
++
 +ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
 +$(eval $(host-virtual-package))
 +else
  $(eval $(host-cmake-package))
 +endif
-diff -urN br_clean/package/llvm-project/llvm/llvm.mk buildroot/package/llvm-project/llvm/llvm.mk
---- br_clean/package/llvm-project/llvm/llvm.mk	2026-06-08 23:39:13
-+++ buildroot/package/llvm-project/llvm/llvm.mk	2026-06-16 13:47:10
+--- a/package/llvm-project/llvm/llvm.mk
++++ b/package/llvm-project/llvm/llvm.mk
 @@ -298,7 +298,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_DIR)/bin/llvm-config \
  		$(STAGING_DIR)/usr/bin/llvm-config
@@ -87,14 +95,15 @@ diff -urN br_clean/package/llvm-project/llvm/llvm.mk buildroot/package/llvm-proj
  
  # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
  # and AddressSanitizer tools on the target for stack traces.
-@@ -322,4 +324,35 @@
+@@ -322,4 +324,46 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
  $(eval $(cmake-package))
++
 +ifeq ($(BR2_PACKAGE_HOST_LLVM_SYSTEM),y)
 +HOST_LLVM_SYSTEM_VERSION = 22
-+HOST_LLVM_LIBDIR = /usr/lib/$(HOSTARCH)-linux-gnu
 +HOST_LLVM_LLVM_PREFIX = /usr/lib/llvm-$(HOST_LLVM_SYSTEM_VERSION)
++HOST_LLVM_LIBDIR = /usr/lib/$(HOSTARCH)-linux-gnu
 +HOST_LLVM_LIBCLC_DIR = $(HOST_LLVM_LLVM_PREFIX)/share/libclc
 +
 +define HOST_LLVM_INSTALL_CMDS
@@ -102,17 +111,23 @@ diff -urN br_clean/package/llvm-project/llvm/llvm.mk buildroot/package/llvm-proj
 +	ln -sf /usr/bin/llvm-config-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-config
 +	ln -sf /usr/bin/llvm-tblgen-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-tblgen
 +	ln -sf /usr/bin/llvm-dis-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-dis
++	ln -sf /usr/bin/llvm-link-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-link
++	ln -sf /usr/bin/llvm-as-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-as
++	ln -sf /usr/bin/llvm-ar-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-ar
++	ln -sf /usr/bin/llvm-nm-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-nm
++	ln -sf /usr/bin/llvm-objcopy-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-objcopy
++	ln -sf /usr/bin/llvm-objdump-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-objdump
++	ln -sf /usr/bin/llvm-profdata-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-profdata
++	ln -sf /usr/bin/llvm-symbolizer-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llvm-symbolizer
++	ln -sf /usr/bin/opt-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/opt
++	ln -sf /usr/bin/llc-$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/bin/llc
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib
++	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM-$(HOST_LLVM_SYSTEM_VERSION).so $(HOST_DIR)/lib/libLLVM-$(HOST_LLVM_SYSTEM_VERSION).so
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLLVM.so
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION)
-+
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1
-+	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION)
++	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/lib/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION)
++	for f in $(HOST_LLVM_LLVM_PREFIX)/lib/*.so* $(HOST_LLVM_LLVM_PREFIX)/lib/*.a; do [ -e "$$f" ] || continue; ln -sf "$$f" $(HOST_DIR)/lib/$$(basename "$$f"); done
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/llvm
 +	cp -a $(HOST_LLVM_LLVM_PREFIX)/lib/cmake/llvm/. $(HOST_DIR)/lib/cmake/llvm/
