@@ -22,7 +22,7 @@
  
  define HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
  	$(Q)cd $(HOST_DIR)/bin; \
-@@ -153,9 +157,48 @@
+@@ -153,9 +157,47 @@
  endef
  
  HOST_CLANG_TOOLCHAIN_WRAPPER_ARGS += -DBR_CROSS_PATH_SUFFIX='".br_real"'
@@ -62,8 +62,7 @@
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/clang
 +	cp -a $(HOST_CLANG_LLVM_PREFIX)/lib/cmake/clang/. $(HOST_DIR)/lib/cmake/clang/
 +
-+	$(INSTALL) -d $(HOST_DIR)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)
-+	ln -sf $(HOST_CLANG_LLVM_PREFIX)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include $(HOST_DIR)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include
++	ln -sfn $(HOST_CLANG_LLVM_PREFIX)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include $(HOST_DIR)/lib/clang/$(HOST_CLANG_SYSTEM_VERSION)/include
 +	ln -sf $(HOST_CLANG_LLVM_PREFIX)/share/clang $(HOST_DIR)/share/clang
 +endef
 +
