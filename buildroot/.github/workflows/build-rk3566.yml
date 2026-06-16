@@ -14,6 +14,12 @@ on:
       - 'scripts/**'
       - '.github/workflows/build-rk3566.yml'
   workflow_dispatch:
+    inputs:
+      clean_output:
+        description: 'Clean the board output directory before building'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -24,6 +30,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: false
+
+      - name: Clean output
+        if: ${{ inputs.clean_output }}
+        run: |
+          echo "Cleaning output for board: rk3566"
+          make clean BOARD=rk3566
 
       - name: Verify/Install Dependencies
         run: |
