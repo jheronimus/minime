@@ -32,10 +32,18 @@ define ALLIUM_INSTALL_IMAGES_CMDS
 
 	cp -a $(@D)/static/.allium/. $(BINARIES_DIR)/ui/.ui/
 	cp -a $(@D)/static/Apps/. $(BINARIES_DIR)/ui/apps/
-	ln -sf /mnt/sdcard/.ui/bin/activity-tracker \
-		"$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
-	ln -sf /mnt/sdcard/.ui/bin/screenshot-viewer \
-		"$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
+
+	printf '%s\n' \
+		'#!/bin/sh' \
+		'exec /mnt/sdcard/.ui/bin/activity-tracker "$$@"' \
+		> "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
+	chmod +x "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
+
+	printf '%s\n' \
+		'#!/bin/sh' \
+		'exec /mnt/sdcard/.ui/bin/screenshot-viewer "$$@"' \
+		> "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
+	chmod +x "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
 	$(ALLIUM_PKGDIR)/generate-configs.sh \
 		$(BR2_EXTERNAL_MINIME_PATH)/board/common/config/cores.cfg \
 		$(BINARIES_DIR)/ui/.ui/config
