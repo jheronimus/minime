@@ -95,7 +95,7 @@
  
  # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
  # and AddressSanitizer tools on the target for stack traces.
-@@ -322,4 +324,46 @@
+@@ -322,4 +324,52 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
  $(eval $(cmake-package))
@@ -128,6 +128,12 @@
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION) $(HOST_DIR)/lib/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION)
 +	for f in $(HOST_LLVM_LLVM_PREFIX)/lib/*.so* $(HOST_LLVM_LLVM_PREFIX)/lib/*.a; do [ -e "$$f" ] || continue; ln -sf "$$f" $(HOST_DIR)/lib/$$(basename "$$f"); done
++
++	$(INSTALL) -d $(HOST_DIR)/include
++	for d in $(HOST_LLVM_LLVM_PREFIX)/include/*/; do \
++		[ -d "$$d" ] || continue; \
++		ln -sfn "$$d" $(HOST_DIR)/include/$$(basename "$$d"); \
++	done
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/llvm
 +	cp -a $(HOST_LLVM_LLVM_PREFIX)/lib/cmake/llvm/. $(HOST_DIR)/lib/cmake/llvm/
