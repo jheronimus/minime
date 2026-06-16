@@ -1,6 +1,6 @@
-diff -urN br_clean/package/llvm-project/clang/clang.mk br_test/package/llvm-project/clang/clang.mk
+diff -urN br_clean/package/llvm-project/clang/clang.mk buildroot/package/llvm-project/clang/clang.mk
 --- br_clean/package/llvm-project/clang/clang.mk	2026-06-08 23:39:13
-+++ br_test/package/llvm-project/clang/clang.mk	2026-06-16 13:32:35
++++ buildroot/package/llvm-project/clang/clang.mk	2026-06-16 13:47:04
 @@ -101,7 +101,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_CLANG_BUILDDIR)/bin/clang-tblgen \
  		$(HOST_DIR)/bin/clang-tblgen
@@ -62,9 +62,9 @@ diff -urN br_clean/package/llvm-project/clang/clang.mk br_test/package/llvm-proj
 +else
  $(eval $(host-cmake-package))
 +endif
-diff -urN br_clean/package/llvm-project/libclc/libclc.mk br_test/package/llvm-project/libclc/libclc.mk
+diff -urN br_clean/package/llvm-project/libclc/libclc.mk buildroot/package/llvm-project/libclc/libclc.mk
 --- br_clean/package/llvm-project/libclc/libclc.mk	2026-06-08 23:39:13
-+++ br_test/package/llvm-project/libclc/libclc.mk	2026-06-16 13:32:41
++++ buildroot/package/llvm-project/libclc/libclc.mk	2026-06-16 13:47:04
 @@ -45,4 +45,8 @@
  	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
  
@@ -74,9 +74,9 @@ diff -urN br_clean/package/llvm-project/libclc/libclc.mk br_test/package/llvm-pr
 +else
  $(eval $(host-cmake-package))
 +endif
-diff -urN br_clean/package/llvm-project/llvm/llvm.mk br_test/package/llvm-project/llvm/llvm.mk
+diff -urN br_clean/package/llvm-project/llvm/llvm.mk buildroot/package/llvm-project/llvm/llvm.mk
 --- br_clean/package/llvm-project/llvm/llvm.mk	2026-06-08 23:39:13
-+++ br_test/package/llvm-project/llvm/llvm.mk	2026-06-16 13:32:30
++++ buildroot/package/llvm-project/llvm/llvm.mk	2026-06-16 13:47:10
 @@ -298,7 +298,9 @@
  	$(INSTALL) -D -m 0755 $(HOST_DIR)/bin/llvm-config \
  		$(STAGING_DIR)/usr/bin/llvm-config
@@ -87,7 +87,7 @@ diff -urN br_clean/package/llvm-project/llvm/llvm.mk br_test/package/llvm-projec
  
  # The llvm-symbolizer binary is used by the Compiler-RT Fuzzer
  # and AddressSanitizer tools on the target for stack traces.
-@@ -322,4 +324,32 @@
+@@ -322,4 +324,35 @@
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
  $(eval $(cmake-package))
@@ -106,6 +106,9 @@ diff -urN br_clean/package/llvm-project/llvm/llvm.mk br_test/package/llvm-projec
 +	$(INSTALL) -d $(HOST_DIR)/lib
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLLVM.so
 +	ln -sf $(HOST_LLVM_LIBDIR)/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLLVM.so.$(HOST_LLVM_SYSTEM_VERSION).1
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION)
 +
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/llvm
 +	cp -a $(HOST_LLVM_LLVM_PREFIX)/lib/cmake/llvm/. $(HOST_DIR)/lib/cmake/llvm/
