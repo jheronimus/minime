@@ -31,6 +31,48 @@ static void state_path_from_config(const char *config, char *out, size_t outsz)
     }
 }
 
+#define TRAITS_PATH "/mnt/sdcard/.minime/traits"
+#define SPLASH_W 640
+#define SPLASH_H 480
+
+/* Read the panel orientation from the Minime traits file written by S09detect-traits.
+ * Falls back to 640x480 / 0deg when the file is absent (e.g. macOS test runs). */
+static void read_traits(int *w, int *h, int *rot)
+{
+    *w = SPLASH_W;
+    *h = SPLASH_H;
+    *rot = 0;
+    FILE *f = fopen(TRAITS_PATH, "r");
+    if (!f)
+        return;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        char *p = line;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p == '#' || *p == '[' || *p == '\0' || *p == '\n')
+            continue;
+        char *eq = strchr(p, '=');
+        if (!eq)
+            continue;
+        *eq = '\0';
+        char *ke = p + strlen(p) - 1;
+        while (ke >= p && (*ke == ' ' || *ke == '\t'))
+            *ke-- = '\0';
+        char *val = eq + 1;
+        char *e = val + strlen(val) - 1;
+        while (e >= val && (*e == '\n' || *e == '\r' || *e == ' ' || *e == '\t'))
+            *e-- = '\0';
+        if (!strcmp(p, "screen_width"))
+            *w = atoi(val);
+        else if (!strcmp(p, "screen_height"))
+            *h = atoi(val);
+        else if (!strcmp(p, "screen_rotation"))
+            *rot = atoi(val);
+    }
+    fclose(f);
+}
+
 static int resolve_mode(const Config *cfg, const char *state_path)
 {
     int enabled[8];
@@ -58,7 +100,7 @@ static int resolve_mode(const Config *cfg, const char *state_path)
 
 static void usage(const char *prog)
 {
-    fprintf(stderr, "Usage: %s [--config PATH] [--mode dmg|gbc|gba] [--fullscreen] [--windowed] [--verbose]\n", prog);
+    fprintf(stderr, "Usage: %s [--config PATH] [--mode dmg|gbc|gba] [--rotation 0|90|180|270] [--fullscreen] [--windowed] [--verbose]\n", prog);
 }
 
 static int parse_mode(const char *name, int *out)
@@ -81,11 +123,12 @@ static int parse_mode(const char *name, int *out)
 }
 
 static int parse_args(int argc, char **argv, int *cli_mode, int *cli_fullscreen,
-                      int *cli_debug)
+                      int *cli_debug, int *cli_rotation)
 {
     *cli_mode = -3;
     *cli_fullscreen = -1;
     *cli_debug = 0;
+    *cli_rotation = -1;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
@@ -95,6 +138,8 @@ static int parse_args(int argc, char **argv, int *cli_mode, int *cli_fullscreen,
             if (parse_mode(argv[i + 1], &m) == 0)
                 *cli_mode = m;
             i++;
+        } else if (strcmp(argv[i], "--rotation") == 0 && i + 1 < argc) {
+            *cli_rotation = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--fullscreen") == 0) {
             *cli_fullscreen = 1;
         } else if (strcmp(argv[i], "--windowed") == 0) {
@@ -109,15 +154,14 @@ static int parse_args(int argc, char **argv, int *cli_mode, int *cli_fullscreen,
     return 0;
 }
 
-static int sdl_init_video(SDL_Window **win, SDL_Renderer **rend, int fullscreen)
+static int sdl_init_video(SDL_Window **win, SDL_Renderer **rend, int fullscreen,
+                          int w, int h)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_EVENTS) != 0) {
         fprintf(stderr, "bootsplash: SDL init failed: %s\n", SDL_GetError());
         return 1;
     }
 
-    int w = 640;
-    int h = 480;
     Uint32 flags = SDL_WINDOW_SHOWN;
     if (fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -138,8 +182,6 @@ static int sdl_init_video(SDL_Window **win, SDL_Renderer **rend, int fullscreen)
         fprintf(stderr, "bootsplash: renderer failed: %s\n", SDL_GetError());
         return 1;
     }
-
-    SDL_RenderSetLogicalSize(*rend, 640, 480);
     return 0;
 }
 
@@ -209,13 +251,14 @@ static Action poll_events(void)
 int main(int argc, char **argv)
 {
     Config cfg;
-    int cli_mode, cli_fullscreen, cli_debug;
+    int cli_mode, cli_fullscreen, cli_debug, cli_rotation;
     int fullscreen = 0;
 
     if (getenv("BOOTSPLASH_FULLSCREEN"))
         fullscreen = 1;
 
-    if (parse_args(argc, argv, &cli_mode, &cli_fullscreen, &cli_debug) != 0)
+    if (parse_args(argc, argv, &cli_mode, &cli_fullscreen, &cli_debug,
+                   &cli_rotation) != 0)
         return 1;
 
     config_load(default_config, &cfg);
@@ -226,6 +269,11 @@ int main(int argc, char **argv)
         fullscreen = cli_fullscreen;
     if (cli_debug)
         cfg.debug = 1;
+
+    int scr_w, scr_h, scr_rot;
+    read_traits(&scr_w, &scr_h, &scr_rot);
+    if (cli_rotation >= 0)
+        scr_rot = cli_rotation;
 
     if (!cfg.enabled) {
         if (cfg.debug)
@@ -241,14 +289,23 @@ int main(int argc, char **argv)
         mode = 0;
 
     if (cfg.debug) {
-        fprintf(stderr, "bootsplash: mode=%s duration=%.2f vol=%d\n",
-                g_modes[mode].name, g_modes[mode].duration, cfg.volume);
+        fprintf(stderr, "bootsplash: mode=%s duration=%.2f vol=%d rot=%d\n",
+                g_modes[mode].name, g_modes[mode].duration, cfg.volume, scr_rot);
     }
 
     SDL_Window *win = NULL;
     SDL_Renderer *rend = NULL;
-    if (sdl_init_video(&win, &rend, fullscreen) != 0)
+    if (sdl_init_video(&win, &rend, fullscreen, scr_w, scr_h) != 0)
         return 1;
+
+    /* Render the animation to an offscreen 640x480 target, then rotate it onto
+     * the panel using the same pivot-(0,0) trick as the Minime UI so the splash
+     * matches the device orientation.  Falls back to direct draw if the target
+     * texture cannot be created. */
+    SDL_Texture *off = SDL_CreateTexture(rend, SDL_PIXELFORMAT_ARGB8888,
+                                         SDL_TEXTUREACCESS_TARGET,
+                                         SPLASH_W, SPLASH_H);
+    int use_off = (off != NULL);
 
     SDL_Joystick *joy = NULL;
     if (SDL_NumJoysticks() > 0)
@@ -272,7 +329,30 @@ int main(int argc, char **argv)
             break;
         }
 
-        g_modes[mode].draw(rend, t);
+        if (use_off) {
+            SDL_SetRenderTarget(rend, off);
+            g_modes[mode].draw(rend, t);
+            SDL_SetRenderTarget(rend, NULL);
+
+            int ow, oh;
+            SDL_GetRendererOutputSize(rend, &ow, &oh);
+            SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
+            SDL_RenderClear(rend);
+            if (scr_rot == 0) {
+                SDL_RenderCopy(rend, off, NULL, &(SDL_Rect){0, 0, ow, oh});
+            } else {
+                int r = scr_rot / 90;
+                int dx = 0, dy = 0;
+                if (r == 1) { dx = oh; dy = 0; }
+                else if (r == 2) { dx = ow; dy = oh; }
+                else if (r == 3) { dx = 0; dy = ow; }
+                SDL_RenderCopyEx(rend, off, NULL,
+                                 &(SDL_Rect){dx, dy, ow, oh}, scr_rot,
+                                 &(SDL_Point){0, 0}, SDL_FLIP_NONE);
+            }
+        } else {
+            g_modes[mode].draw(rend, t);
+        }
         SDL_RenderPresent(rend);
 
         Action act = poll_events();
@@ -317,6 +397,8 @@ int main(int argc, char **argv)
         SDL_CloseAudio();
     if (joy)
         SDL_JoystickClose(joy);
+    if (off)
+        SDL_DestroyTexture(off);
     SDL_DestroyRenderer(rend);
     SDL_DestroyWindow(win);
     SDL_Quit();

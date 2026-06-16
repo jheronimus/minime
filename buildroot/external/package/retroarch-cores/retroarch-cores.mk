@@ -72,6 +72,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	# 7. PCSX-ReARMed (PlayStation)
 	if [ ! -d $(@D)/src/pcsx_rearmed ]; then \
 		git clone --depth 1 https://github.com/libretro/pcsx_rearmed.git $(@D)/src/pcsx_rearmed ; \
+		sed -i 's/vfs_implementation.o/vfs_implementation.o deps\/libretro-common\/lists\/dir_list.o/' $(@D)/src/pcsx_rearmed/Makefile ; \
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/pcsx_rearmed -f Makefile.libretro \
