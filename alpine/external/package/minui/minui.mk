@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MINUI_VERSION = 188392343c2456020bb5e79133bb049117f17067
+MINUI_VERSION = 386539d3915fa0c0eb2e1a2c3277368519a06b89
 MINUI_SITE = https://github.com/minime-os/minui.git
 MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
