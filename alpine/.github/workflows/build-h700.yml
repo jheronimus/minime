@@ -11,6 +11,7 @@ on:
       - 'external/configs/minime_h700_defconfig'
       - 'external/board/common/**'
       - 'external/package/**'
+      - 'support/buildroot-patches/**'
       - 'Makefile'
       - 'scripts/**'
       - '.github/workflows/build-h700.yml'
