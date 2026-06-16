@@ -33,12 +33,18 @@ define ALLIUM_INSTALL_IMAGES_CMDS
 	cp -a $(@D)/static/.allium/. $(BINARIES_DIR)/ui/.ui/
 	cp -a $(@D)/static/Apps/. $(BINARIES_DIR)/ui/apps/
 
+	# Remove stale absolute symlinks if they exist and replace with wrapper
+	# scripts so the files survive mtools copy onto the FAT32 userdata image.
+	rm -f "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
+	mkdir -p "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak"
 	printf '%s\n' \
 		'#!/bin/sh' \
 		'exec /mnt/sdcard/.ui/bin/activity-tracker "$$@"' \
 		> "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
 	chmod +x "$(BINARIES_DIR)/ui/apps/Activity Tracker.pak/activity-tracker"
 
+	rm -f "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
+	mkdir -p "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak"
 	printf '%s\n' \
 		'#!/bin/sh' \
 		'exec /mnt/sdcard/.ui/bin/screenshot-viewer "$$@"' \
