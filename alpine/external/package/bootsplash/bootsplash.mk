@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-BOOTSPLASH_VERSION = 1.0.0
+BOOTSPLASH_VERSION = 1.0.1
 BOOTSPLASH_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/bootsplash/src
 BOOTSPLASH_SITE_METHOD = local
 BOOTSPLASH_LICENSE = MIT
