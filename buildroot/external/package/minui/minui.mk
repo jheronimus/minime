@@ -61,25 +61,37 @@ define MINUI_BUILD_CMDS
 		-I$(MINUI_PLATFORM_DIR) \
 		-c $(MINUI_SRC_DIR)/libmsettings/msettings.c \
 		-o $(MINUI_BUILD_DIR)/msettings.o
-	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) \
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) -I$(MINUI_SRC_DIR)/common \
 		-c $(MINUI_PLATFORM_DIR)/traits.c \
 		-o $(MINUI_BUILD_DIR)/traits.o
-	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) \
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) -I$(MINUI_SRC_DIR)/common \
 		-c $(MINUI_PLATFORM_DIR)/audio.c \
 		-o $(MINUI_BUILD_DIR)/audio.o
-	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) \
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) -I$(MINUI_SRC_DIR)/common \
 		-c $(MINUI_PLATFORM_DIR)/video.c \
 		-o $(MINUI_BUILD_DIR)/platform-video.o
-	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) \
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -I$(MINUI_PLATFORM_DIR) -I$(MINUI_SRC_DIR)/common \
 		-c $(MINUI_PLATFORM_DIR)/power.c \
 		-o $(MINUI_BUILD_DIR)/power.o
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC $(MINUI_CPPFLAGS) -DUSE_SDL2 \
+		-I$(MINUI_SRC_DIR)/common -I$(MINUI_PLATFORM_DIR) \
+		-I$(STAGING_DIR)/usr/include \
+		-c $(MINUI_SRC_DIR)/common/utils.c \
+		-o $(MINUI_BUILD_DIR)/utils.o
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC $(MINUI_CPPFLAGS) -DUSE_SDL2 \
+		-I$(MINUI_SRC_DIR)/common -I$(MINUI_PLATFORM_DIR) \
+		-I$(STAGING_DIR)/usr/include \
+		-c $(MINUI_SRC_DIR)/common/core_registry.c \
+		-o $(MINUI_BUILD_DIR)/core_registry.o
 	$(TARGET_CC) $(TARGET_LDFLAGS) -shared -Wl,-soname,libmsettings.so \
 		-o $(MINUI_BUILD_DIR)/libmsettings.so \
 		$(MINUI_BUILD_DIR)/msettings.o \
 		$(MINUI_BUILD_DIR)/traits.o \
 		$(MINUI_BUILD_DIR)/audio.o \
 		$(MINUI_BUILD_DIR)/platform-video.o \
-		$(MINUI_BUILD_DIR)/power.o -ldl -lrt
+		$(MINUI_BUILD_DIR)/power.o \
+		$(MINUI_BUILD_DIR)/utils.o \
+		$(MINUI_BUILD_DIR)/core_registry.o -ldl -lrt
 
 	# keymon
 	$(TARGET_CC) $(TARGET_CFLAGS) \
