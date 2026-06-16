@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-RETROARCH_CORES_VERSION = 1.1
+RETROARCH_CORES_VERSION = 1.2
 RETROARCH_CORES_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores
 RETROARCH_CORES_SITE_METHOD = local
 RETROARCH_CORES_SOURCE =
@@ -93,7 +93,7 @@ define RETROARCH_CORES_BUILD_CMDS
 		git clone --depth 1 https://github.com/libretro/FBNeo.git $(@D)/src/fbneo ; \
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
-	$(MAKE) -C $(@D)/src/fbneo \
+	$(MAKE) -C $(@D)/src/fbneo/src/burner/libretro \
 		CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
 		platform=unix
 endef
@@ -111,7 +111,7 @@ define RETROARCH_CORES_INSTALL_IMAGES_CMDS
 	cp -f $(@D)/src/snes9x/libretro/snes9x_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/pcsx_rearmed/pcsx_rearmed_libretro.so $(BINARIES_DIR)/ui/.cores/
 	cp -f $(@D)/src/beetle_saturn/mednafen_saturn_libretro.so $(BINARIES_DIR)/ui/.cores/beetle_saturn_libretro.so
-	cp -f $(@D)/src/fbneo/fbneo_libretro.so $(BINARIES_DIR)/ui/.cores/
+	cp -f $(@D)/src/fbneo/src/burner/libretro/fbneo_libretro.so $(BINARIES_DIR)/ui/.cores/
 
 	# Install info files
 	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores/info/*.info $(BINARIES_DIR)/ui/.cores/config/info/
