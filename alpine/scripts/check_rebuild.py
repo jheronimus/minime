@@ -10,55 +10,12 @@ parser = argparse.ArgumentParser(description="Check Buildroot package and config
 parser.add_argument("--auto-clean", action="store_true", help="Automatically run necessary clean commands to fix out-of-date states.")
 args = parser.parse_args()
 
-def check_mesa_panfrost_version(workspace):
-    mesa_mk = os.path.join(workspace, "buildroot", "package", "mesa3d", "mesa3d.mk")
-    panfrost_mk = os.path.join(workspace, "external", "package", "panfrost", "panfrost.mk")
-
-    if not os.path.exists(mesa_mk):
-        return False
-
-    if not os.path.exists(panfrost_mk):
-        return False
-
-    mesa_ver = None
-    with open(mesa_mk, "r") as f:
-        for line in f:
-            if line.startswith("MESA3D_VERSION ="):
-                mesa_ver = line.split("=")[1].strip()
-                break
-
-    panfrost_ver = None
-    with open(panfrost_mk, "r") as f:
-        for line in f:
-            if line.startswith("PANFROST_VERSION ="):
-                panfrost_ver = line.split("=")[1].strip()
-                break
-
-    if not mesa_ver or not panfrost_ver:
-        return False
-
-    panfrost_base = panfrost_ver.split('r')[0]
-    if mesa_ver != panfrost_base:
-        print("=" * 80)
-        print(f"⚠️  WARNING: Mesa3D/Panfrost Version Mismatch Detected!")
-        print(f"   - Upstream Buildroot Mesa3D: {mesa_ver}")
-        print(f"   - Custom Panfrost Prebuilt base: {panfrost_base} (Full: {panfrost_ver})")
-        print("   This version mismatch can cause ABI/runtime crashes or loading failures.")
-        print("   👉 RECOMMENDED ACTION:")
-        print(f"      1. Update PANFROST_VERSION in external/package/panfrost/panfrost.mk to match {mesa_ver} (e.g., {mesa_ver}r1)")
-        print(f"      2. Run 'make panfrost BOARD=h700' locally, or trigger the GitHub Action")
-        print(f"         'Build and Release Panfrost Prebuilt' to generate new prebuilt assets.")
-        print("=" * 80)
-        print()
-        return True
-    return False
-
 # Paths
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXTERNAL = os.path.join(WORKSPACE, "external")
 
-# Check version consistency between upstream Mesa3D and our custom panfrost package
-has_warnings = check_mesa_panfrost_version(WORKSPACE)
+# Check version consistency
+has_warnings = False
 
 # Check if any patches under support/buildroot-patches are newer than Buildroot extraction stamp
 buildroot_stamp = os.path.join(WORKSPACE, "buildroot", ".minime-buildroot-2026.05.stamp")

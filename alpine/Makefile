@@ -90,21 +90,27 @@ export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_M
 
 help:
 	@printf '%s\n' \
-		"minime firmware build orchestrator:" \
-		"  make prepare       - Build builder Podman/Docker image (macOS) or provision host (Linux)" \
-		"  make shell         - Open an interactive terminal shell inside the environment" \
-		"  make defconfig     - Apply $(MINIME_DEFCONFIG) (override with BOARD=...)" \
-		"  make image         - Build complete bootable firmware image for active board" \
-		"  make h700-uboot    - Build and copy the H700 U-Boot prebuilt file" \
-		"  make check-package CHECK_PACKAGE_FILES='path ...' - Run Buildroot check-package in build env" \
-		"  make check-rebuild - Scan custom packages for out-of-date build stamps" \
-		"  make packages-list - Generate and update target/host package documentation" \
-		"  make clean         - Remove active board outputs and buildroot state" \
-		"  make clean-all     - Remove ALL board outputs and buildroot state" \
-		"  make clean-vm      - Delete container images and resources" \
-		"  make <target>      - Pass target directly to Buildroot" \
+		"Minime Firmware Build Orchestrator" \
+		"==================================" \
+		"Commands:" \
+		"  make defconfig     - Merge config fragments for BOARD (default: h700)" \
+		"  make image         - Build complete bootable firmware image for BOARD" \
+		"  make shell         - Open an interactive shell inside the build container" \
+		"  make prepare       - Build builder container image (or install host tools on Linux)" \
+		"  make h700-uboot    - Compile and update prebuilt H700 bootloader" \
+		"  make check-rebuild - Scan packages for out-of-date build stamps" \
+		"  make check-package CHECK_PACKAGE_FILES='path ...'" \
+		"                       Run Buildroot's package linter on specified files" \
+		"  make packages-list - Regenerate package inventory documentation (docs/PACKAGES.md)" \
+		"  make clean         - Remove compilation output for active BOARD" \
+		"  make clean-all     - Remove ALL compilation outputs and delete Buildroot source tree" \
+		"  make clean-vm      - Delete container images and clean up volumes" \
+		"  make <target>      - Pass arbitrary command directly to Buildroot (e.g., make menuconfig)" \
 		"" \
-		"Supported boards: $(SUPPORTED_BOARDS) (selected via BOARD=..., default: h700)"
+		"Options (override with VAR=value):" \
+		"  BOARD              - Target hardware (default: h700, supported: $(SUPPORTED_BOARDS))" \
+		"  USE_PODMAN         - Toggle build container isolation (default: 1, set to 0 for host build)" \
+		"  TOPLEVEL_JLEVEL    - Number of parallel build jobs (default: auto-detected CPU cores)"
 
 $(BUILDROOT_STAMP):
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/buildroot-fetch-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; set -o pipefail; { \
@@ -153,7 +159,25 @@ endif
 
 defconfig: $(BUILDROOT_STAMP) prepare_vm
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	set -o pipefail; $(call RUN_CMD,$(MINIME_DEFCONFIG)) 2>&1 | tee "$$LOG_FILE"
+	set -o pipefail; \
+	if [ "$(USE_PODMAN)" = "1" ]; then \
+		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
+			mkdir -p $(BUILDROOT_OUTPUT_DIR) && \
+			/workspace/$(BUILDROOT_DIR)/support/kconfig/merge_config.sh \
+				-O $(BUILDROOT_OUTPUT_DIR) \
+				-m \
+				/workspace/external/configs/minime_common.config \
+				/workspace/external/configs/minime_$(BOARD).config && \
+			make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig" 2>&1 | tee "$$LOG_FILE"; \
+	else \
+		mkdir -p $(BUILDROOT_OUTPUT_DIR) && \
+		$(BUILDROOT_DIR)/support/kconfig/merge_config.sh \
+			-O $(BUILDROOT_OUTPUT_DIR) \
+			-m \
+			external/configs/minime_common.config \
+			external/configs/minime_$(BOARD).config 2>&1 | tee "$$LOG_FILE" && \
+		$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"; \
+	fi
 
 image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
@@ -192,15 +216,15 @@ packages-list:
 	python3 scripts/generate_packages_doc.py
 
 clean:
-	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) out/$(BOARD)/
+	@rm -rf $(LOG_DIR) out/$(BOARD)/
 ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(BUILDROOT_OUTPUT_DIR) 2>/dev/null || true
 else
 	@rm -rf $(BUILDROOT_OUTPUT_DIR)
 endif
 
-clean-all: clean
-	@rm -rf $(CURDIR)/out/
+clean-all:
+	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) $(CURDIR)/out/
 ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) rm -rf $(BASE_OUTPUT_DIR) 2>/dev/null || true
 else
