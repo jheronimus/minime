@@ -277,7 +277,8 @@ int config_cycle_next(int count, const char *state_path)
     int idx = 0;
     FILE *f = fopen(state_path, "r");
     if (f) {
-        fscanf(f, "%d", &idx);
+        if (fscanf(f, "%d", &idx) != 1)
+            idx = 0;
         fclose(f);
     }
     idx = (idx + 1) % count;
