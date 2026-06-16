@@ -29,10 +29,6 @@ jobs:
         run: |
           ./scripts/prepare-linux.sh
 
-      - name: Self-Healing Rebuild Check
-        run: |
-          python3 scripts/check_rebuild.py --auto-clean
-
       - name: Build Image
         run: |
           echo "Building image for board: rk3326"
