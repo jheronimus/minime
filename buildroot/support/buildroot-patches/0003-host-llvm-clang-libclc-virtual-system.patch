@@ -110,6 +110,10 @@ diff -urN br_clean/package/llvm-project/llvm/llvm.mk buildroot/package/llvm-proj
 +	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1
 +	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libLTO.so.$(HOST_LLVM_SYSTEM_VERSION)
 +
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1
++	ln -sf $(HOST_LLVM_LLVM_PREFIX)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION).1 $(HOST_DIR)/lib/libRemarks.so.$(HOST_LLVM_SYSTEM_VERSION)
++
 +	$(INSTALL) -d $(HOST_DIR)/lib/cmake/llvm
 +	cp -a $(HOST_LLVM_LLVM_PREFIX)/lib/cmake/llvm/. $(HOST_DIR)/lib/cmake/llvm/
 +
