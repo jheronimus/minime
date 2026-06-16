@@ -12,7 +12,8 @@ ALLIUM_DEPENDENCIES = allium-themes dufs host-clang libretro-common retroarch-co
 
 ALLIUM_CARGO_ENV = \
 	LIBCLANG_PATH=$(HOST_DIR)/lib \
-	LIBRETRO_HEADER=$(STAGING_DIR)/usr/include/libretro.h
+	LIBRETRO_HEADER=$(STAGING_DIR)/usr/include/libretro.h \
+	BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$(STAGING_DIR) -I$(STAGING_DIR)/usr/include"
 ALLIUM_CARGO_BUILD_OPTS = --workspace --features minime
 ALLIUM_INSTALL_TARGET = NO
 ALLIUM_INSTALL_IMAGES = YES
