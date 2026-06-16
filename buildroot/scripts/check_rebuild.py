@@ -92,26 +92,7 @@ EXTERNAL = os.path.join(WORKSPACE, "external")
 # Check version consistency
 has_warnings = False
 
-# Check if any patches under support/buildroot-patches are newer than Buildroot extraction stamp
-buildroot_stamp = os.path.join(WORKSPACE, "buildroot", ".minime-buildroot-2026.05.stamp")
-if os.path.exists(buildroot_stamp):
-    patches_dir = os.path.join(WORKSPACE, "support", "buildroot-patches")
-    if os.path.exists(patches_dir):
-        patches = glob.glob(os.path.join(patches_dir, "*.patch"))
-        if patches:
-            newest_patch = max(get_file_mtime(p) for p in patches)
-            if newest_patch > os.path.getmtime(buildroot_stamp):
-                print("❌ BUILDROOT PATCHES OUT-OF-DATE: support/buildroot-patches has been updated.")
-                if args.auto_clean:
-                    print("🧹 Auto-cleaning: Removing buildroot directory to force re-extraction and patching...")
-                    buildroot_dir = os.path.join(WORKSPACE, "buildroot")
-                    if os.path.exists(buildroot_dir):
-                        subprocess.run(["rm", "-rf", buildroot_dir], check=True)
-                    print("✨ Clean complete. Please restart the build.")
-                    sys.exit(0)
-                else:
-                    print("   👉 ACTION REQUIRED: Run 'make clean' or remove buildroot directory.\n")
-                    has_warnings = True
+# Buildroot patch stamp check is moved below build_targets scanning
 
 # Retrieve BR2_EXTERNAL buildroot-output directory, defaulting to Podman/container's output directory or host path
 BUILD_DIR = "/buildroot-output"
@@ -148,6 +129,71 @@ if os.path.isdir(BUILD_DIR):
 if not build_targets:
     print("No active build configurations or stamps found inside the output directory.")
     sys.exit(0)
+
+def extract_packages_from_patch(patch_path):
+    packages = set()
+    if not os.path.exists(patch_path):
+        return []
+    try:
+        with open(patch_path, "r", errors="ignore") as f:
+            for line in f:
+                if line.startswith("+++ ") or line.startswith("--- "):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        path = parts[1]
+                        # Strip common prefixes
+                        for prefix in ["a/", "b/", "buildroot/", "br_clean/", "br_test/"]:
+                            if path.startswith(prefix):
+                                path = path[len(prefix):]
+                                break
+                        
+                        if path.startswith("package/"):
+                            subparts = path.split("/")
+                            if len(subparts) >= 3:
+                                if subparts[1] == "llvm-project":
+                                    packages.add(subparts[2])
+                                else:
+                                    packages.add(subparts[1])
+    except Exception:
+        pass
+    return list(packages)
+
+# Check if any patches under support/buildroot-patches are newer than Buildroot extraction stamp
+buildroot_stamp = os.path.join(WORKSPACE, "buildroot", ".minime-buildroot-2026.05.stamp")
+if os.path.exists(buildroot_stamp):
+    patches_dir = os.path.join(WORKSPACE, "support", "buildroot-patches")
+    if os.path.exists(patches_dir):
+        patches = glob.glob(os.path.join(patches_dir, "*.patch"))
+        if patches:
+            newest_patch = max(get_file_mtime(p) for p in patches)
+            if newest_patch > os.path.getmtime(buildroot_stamp):
+                print("❌ BUILDROOT PATCHES OUT-OF-DATE: support/buildroot-patches has been updated.")
+                if args.auto_clean:
+                    # Find which packages are affected by the updated patches
+                    affected_pkgs = []
+                    for p in patches:
+                        if get_file_mtime(p) > os.path.getmtime(buildroot_stamp):
+                            affected_pkgs.extend(extract_packages_from_patch(p))
+                    
+                    print("🧹 Auto-cleaning: Removing buildroot directory to force re-extraction and patching...")
+                    buildroot_dir = os.path.join(WORKSPACE, "buildroot")
+                    if os.path.exists(buildroot_dir):
+                        subprocess.run(["rm", "-rf", buildroot_dir], check=True)
+                    
+                    # Clean the affected packages for each active build target
+                    for target_dir, stamp_dir in build_targets:
+                        board_name = os.path.basename(target_dir) if target_dir != BUILD_DIR else "default"
+                        for pkg in affected_pkgs:
+                            print(f"🧹 Auto-cleaning affected package: {pkg} for board {board_name}...")
+                            # Avoid errors if dirclean target fails by doing || true or using subprocess option
+                            subprocess.run(["make", f"{pkg}-dirclean", f"BOARD={board_name}"], cwd=WORKSPACE)
+                            subprocess.run(["make", f"host-{pkg}-dirclean", f"BOARD={board_name}"], cwd=WORKSPACE)
+                    
+                    print("✨ Clean complete. Please restart the build.")
+                    sys.exit(0)
+                else:
+                    print("   👉 ACTION REQUIRED: Run 'make clean' or remove buildroot directory.\n")
+                    has_warnings = True
 
 packages_dir = os.path.join(EXTERNAL, "package")
 if not os.path.exists(packages_dir):
