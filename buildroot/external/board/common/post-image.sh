@@ -100,11 +100,6 @@ done
 # 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
 # done
 
-# Prepopulate simplified wifi.cfg from template
-if [ -f "${SYSTEM_STAGE}/etc/wifi.config.template" ]; then
-	cp -f "${SYSTEM_STAGE}/etc/wifi.config.template" "${USERDATA_STAGE}/.minime/config/wifi.cfg"
-fi
-
 # Prepopulate core mapping contract
 cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/common/config/cores.cfg" \
 	"${USERDATA_STAGE}/.minime/config/cores.cfg"

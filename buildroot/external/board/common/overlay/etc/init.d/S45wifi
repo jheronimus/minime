@@ -17,7 +17,7 @@ wifi_config_file="/mnt/sdcard/.minime/config/wifi.cfg"
 init_wpa_supplicant_conf() {
   mkdir -p "${wpa_supplicant_state_dir}"
   chmod 755 "${wpa_supplicant_state_dir}" 2>/dev/null || true
-  
+
   {
     printf '%s\n' 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=wheel'
     printf '%s\n' 'update_config=1'
@@ -36,21 +36,28 @@ seed_wpa_profiles() {
   done
 }
 
+write_wpa_network_block() {
+  ssid="$1"
+  psk="$2"
+
+  {
+    printf '%s\n' 'network={'
+    printf '\t%s\n' "ssid=\"${ssid}\""
+    if [ -n "${psk}" ]; then
+      printf '\t%s\n' "psk=\"${psk}\""
+    else
+      printf '\t%s\n' 'key_mgmt=NONE'
+    fi
+    printf '%s\n' '}'
+    printf '%s\n' ''
+  } >> "${wpa_supplicant_config_file}"
+}
+
 generate_wpa_profiles_from_config() {
   [ -f "${wifi_config_file}" ] || return 0
 
   config_ssid=""
   config_pass=""
-
-  write_wpa_block() {
-    {
-      printf '%s\n' 'network={'
-      printf '\t%s\n' "ssid=\"$1\""
-      printf '\t%s\n' "psk=\"$2\""
-      printf '%s\n' '}'
-      printf '%s\n' ''
-    } >> "${wpa_supplicant_config_file}"
-  }
 
   while IFS='=' read -r key val || [ -n "$key" ]; do
     [ -n "$key" ] || continue
@@ -60,8 +67,8 @@ generate_wpa_profiles_from_config() {
     case "$key" in
       \#*) continue ;;
       SSID)
-        if [ -n "$config_ssid" ] && [ -n "$config_pass" ]; then
-          write_wpa_block "$config_ssid" "$config_pass"
+        if [ -n "$config_ssid" ]; then
+          write_wpa_network_block "$config_ssid" "$config_pass"
           config_pass=""
         fi
         config_ssid="$val"
@@ -72,8 +79,8 @@ generate_wpa_profiles_from_config() {
     esac
   done < "${wifi_config_file}"
 
-  if [ -n "$config_ssid" ] && [ -n "$config_pass" ]; then
-    write_wpa_block "$config_ssid" "$config_pass"
+  if [ -n "$config_ssid" ]; then
+    write_wpa_network_block "$config_ssid" "$config_pass"
   fi
 }
 
@@ -184,6 +191,8 @@ start_dhcp_client() {
 }
 
 start_background() {
+  has_profiles="$1"
+
   # Redirect stdout/stderr to keep boot console clean
   exec >/dev/null 2>&1
 
@@ -192,7 +201,7 @@ start_background() {
     return 1
   fi
 
-  # Start wpa_supplicant now that the interface is ready and configured!
+  # Start wpa_supplicant now that the interface is ready and configured.
   mkdir -p /var/run/wpa_supplicant
   start-stop-daemon -S -q -b -m -p "/var/run/wpa_supplicant.pid" -x /usr/sbin/wpa_supplicant -- -i"${wifi_interface}" -c"${wpa_supplicant_config_file}"
 
@@ -202,6 +211,13 @@ start_background() {
   fi
 
   wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
+
+  # Without profiles, leave wpa_supplicant up so the UI can scan and
+  # connect on demand.  Only wait for a station association when we have
+  # saved networks to connect to.
+  if [ "$has_profiles" -eq 0 ]; then
+    return 0
+  fi
 
   if ! wait_for_station_connected; then
     log_failure_diagnostics "station-connect-timeout"
@@ -229,13 +245,14 @@ start() {
   generate_wpa_profiles_from_config
   seed_wpa_profiles
 
-  if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
-    echo "No Wi-Fi profiles configured; skipping connection"
-    return 0
+  has_profiles=0
+  if grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+    has_profiles=1
   fi
 
-  # Trigger background connection
-  start_background &
+  # Always bring up the interface and start wpa_supplicant so the UI can
+  # scan and connect on demand, even before any networks are configured.
+  start_background "${has_profiles}" &
 
   echo "OK (background)"
   return 0
