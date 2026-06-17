@@ -25,6 +25,8 @@ jobs:
   build:
     name: Build RK3566 Firmware
     runs-on: self-hosted
+    env:
+      USE_PODMAN: '0'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

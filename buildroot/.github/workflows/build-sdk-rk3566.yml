@@ -13,6 +13,8 @@ jobs:
   build_sdk:
     name: Build & Publish RK3566 SDK
     runs-on: self-hosted
+    env:
+      USE_PODMAN: '0'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
