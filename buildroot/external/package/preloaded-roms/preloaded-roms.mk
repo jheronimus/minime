@@ -52,6 +52,26 @@ define PRELOADED_ROMS_INSTALL_TARGET_CMDS
 		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/snes"; \
 		cp -a "$(@D)/snes/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/snes/"; \
 	fi
+	if [ -d "$(@D)/ss" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/ss"; \
+		cp -a "$(@D)/ss/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/ss/"; \
+	fi
+	if [ -d "$(@D)/arc" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/arc"; \
+		cp -a "$(@D)/arc/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/arc/"; \
+	fi
+	if [ -d "$(@D)/lynx" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/lynx"; \
+		cp -a "$(@D)/lynx/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/lynx/"; \
+	fi
+	if [ -d "$(@D)/ngp" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/ngp"; \
+		cp -a "$(@D)/ngp/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/ngp/"; \
+	fi
+	if [ -d "$(@D)/wswan" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/wswan"; \
+		cp -a "$(@D)/wswan/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/wswan/"; \
+	fi
 endef
 
 $(eval $(generic-package))
