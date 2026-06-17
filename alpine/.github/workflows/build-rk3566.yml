@@ -27,6 +27,7 @@ jobs:
     runs-on: self-hosted
     env:
       USE_PODMAN: '0'
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
