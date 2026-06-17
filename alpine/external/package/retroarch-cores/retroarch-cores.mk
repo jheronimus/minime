@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-RETROARCH_CORES_VERSION = 1.4
+RETROARCH_CORES_VERSION = 1.5
 RETROARCH_CORES_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores
 RETROARCH_CORES_SITE_METHOD = local
 RETROARCH_CORES_SOURCE =
@@ -73,7 +73,7 @@ define RETROARCH_CORES_BUILD_CMDS
 	if [ ! -d $(@D)/src/pcsx_rearmed ]; then \
 		git clone --depth 1 https://github.com/libretro/pcsx_rearmed.git $(@D)/src/pcsx_rearmed ; \
 		sed -i 's/ifeq "$(PLATFORM)" "libretro"/ifneq "$(platform)" ""/' $(@D)/src/pcsx_rearmed/Makefile.libretro ; \
-		sed -i 's/vfs_implementation.o/vfs_implementation.o deps\/libretro-common\/lists\/dir_list.o deps\/libretro-common\/file\/retro_dirent.o/' $(@D)/src/pcsx_rearmed/Makefile.libretro ; \
+		sed -i 's/vfs_implementation.o/vfs_implementation.o deps\/libretro-common\/lists\/dir_list.o deps\/libretro-common\/file\/retro_dirent.o/' $(@D)/src/pcsx_rearmed/Makefile ; \
 	fi
 	$(TARGET_MAKE_ENV) CFLAGS="$(TARGET_CFLAGS) -ffast-math" CXXFLAGS="$(TARGET_CXXFLAGS) -ffast-math" LDFLAGS="$(TARGET_LDFLAGS)" \
 	$(MAKE) -C $(@D)/src/pcsx_rearmed -f Makefile.libretro \
