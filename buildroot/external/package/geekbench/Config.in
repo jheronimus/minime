@@ -1,0 +1,8 @@
+config BR2_PACKAGE_GEEKBENCH
+	bool "geekbench"
+	depends on BR2_aarch64
+	help
+	  Geekbench 6 is a cross-platform benchmark that measures
+	  your system's performance.
+
+	  https://www.geekbench.com/
