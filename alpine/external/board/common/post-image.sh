@@ -111,6 +111,18 @@ cat << 'EOF' > "${DEVICE_CFG}"
 #
 EOF
 
+if [ "${SOC_NAME}" = "rk3566" ]; then
+	cat << 'EOF' >> "${DEVICE_CFG}"
+# CPU undervolt (RK3566 only). Lowers CPU core voltage per OPP to reduce
+# power and thermals. Opt-in: silicon lottery varies and an unstable
+# setting can corrupt data, not just crash.
+# Allowed values: off, l1, l2, l3 (l3 is most aggressive).
+# Recovery: mount this FAT partition on a PC and set undervolt=off.
+# Default l1 is conservative; raise only if stable under sustained load.
+undervolt=l1
+EOF
+fi
+
 if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
 	cat << 'EOF' >> "${DEVICE_CFG}"
 # By default, this is set to 'auto' to automatically detect your device.
@@ -147,6 +159,19 @@ device=${DEFAULT_DTB}
 EOF
 fi
 
+
+# Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
+OVERLAY_SRC_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${SOC_NAME}/overlays"
+if [ -d "${OVERLAY_SRC_DIR}" ]; then
+	echo "Compiling DT overlays for ${SOC_NAME}..."
+	mkdir -p "${USERDATA_STAGE}/.minime/overlays"
+	for dts_file in "${OVERLAY_SRC_DIR}"/*.dts; do
+		[ -f "${dts_file}" ] || continue
+		dtbo_name="$(basename "${dts_file}" .dts).dtbo"
+		"${HOST_DIR}/bin/dtc" -@ -I dts -O dtb -o \
+			"${USERDATA_STAGE}/.minime/overlays/${dtbo_name}" "${dts_file}"
+	done
+fi
 
 # Create the first boot trigger files
 if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
@@ -375,6 +400,10 @@ for item in .minime .ui .cores; do
 		-s "${USERDATA_STAGE}/${item}" ::
 	MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}"
 done
+# Hide staged DT overlays directory if present.
+if [ -d "${USERDATA_STAGE}/.minime/overlays" ]; then
+	MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::.minime/overlays"
+fi
 
 # Copy visible user files and directories.
 for item in "${USERDATA_STAGE}"/*; do
