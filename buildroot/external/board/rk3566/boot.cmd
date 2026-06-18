@@ -40,6 +40,16 @@ else
 fi
 fdt addr ${fdt_addr_r}
 fdt resize
+if test "${undervolt}" = "l1" -o "${undervolt}" = "l2" -o "${undervolt}" = "l3"; then
+	if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .minime/overlays/rk3566-undervolt-cpu-${undervolt}.dtbo; then
+		fdt apply ${scriptaddr}
+		echo "Applied CPU undervolt ${undervolt} overlay"
+	else
+		echo "WARNING: undervolt=${undervolt} but overlay not found, continuing at stock voltage"
+	fi
+else
+	echo "CPU undervolt off (undervolt=${undervolt})"
+fi
 fdt set /chosen bootargs "${bootargs}"
 fdt chosen ${ramdisk_addr_r} ${initrd_size}
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
