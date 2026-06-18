@@ -13,8 +13,22 @@ fi
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
 
+prepare_storage() {
+	mkdir -p /var/lib/bluetooth
+	if ! touch /var/lib/bluetooth/.writable >/dev/null 2>&1; then
+		grep -q ' /var/lib/bluetooth ' /proc/mounts || \
+			mount -t tmpfs -o mode=700 tmpfs /var/lib/bluetooth
+	fi
+	rm -f /var/lib/bluetooth/.writable
+	chmod 700 /var/lib/bluetooth 2>/dev/null || true
+}
+
 start() {
 	printf 'Starting %s: ' "$DAEMON"
+	prepare_storage || {
+		echo "FAIL"
+		return 1
+	}
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon --start --background --make-pidfile \
 		--pidfile "$PIDFILE" --exec "/usr/libexec/bluetooth/$DAEMON" \

@@ -180,6 +180,9 @@ wait_for_ipv4_address() {
 }
 
 start_dhcp_client() {
+  if [ -f "${udhcpc_pidfile}" ]; then
+    kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
+  fi
   rm -f "${udhcpc_pidfile}"
   : > "${udhcpc_logfile}"
 
@@ -272,6 +275,27 @@ stop() {
   echo "OK"
 }
 
+reload() {
+  printf "Reloading wifi: "
+  init_wpa_supplicant_conf
+  generate_wpa_profiles_from_config
+  seed_wpa_profiles
+
+  if ! wpa_cli -i "${wifi_interface}" ping >/dev/null 2>&1; then
+    echo "starting"
+    start
+    return $?
+  fi
+
+  if ! wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1; then
+    echo "FAIL"
+    return 1
+  fi
+  wpa_cli -i "${wifi_interface}" reassociate >/dev/null 2>&1 || true
+  start_dhcp_client
+  echo "OK"
+}
+
 case "$1" in
   start)
     start
@@ -279,12 +303,15 @@ case "$1" in
   stop)
     stop
     ;;
-  restart|reload)
+  restart)
     stop
     sleep 1
     start
     ;;
+  reload)
+    reload
+    ;;
   *)
-    echo "Usage: $0 {start|stop|restart}"
+    echo "Usage: $0 {start|stop|restart|reload}"
     exit 1
 esac
