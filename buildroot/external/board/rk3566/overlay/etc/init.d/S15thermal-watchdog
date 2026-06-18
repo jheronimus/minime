@@ -1,0 +1,82 @@
+#!/bin/sh
+# Userspace thermal watchdog for RK3566.
+#
+# Throttles the CPU/GPU devfreq cooling devices when the SoC crosses the DT
+# passive trip points, so the device slows down under load instead of hitting
+# the 95C critical poweroff (already handled by the kernel thermal core via
+# CONFIG_THERMAL). Interim until the Panfrost migration unblocks the
+# in-kernel governor (CONFIG_THERMAL_OF/ENERGY_MODEL hang in mali_kbase).
+
+PIDFILE=/var/run/thermal-watchdog.pid
+ZONE_CPU=/sys/class/thermal/thermal_zone0/temp
+ZONE_GPU=/sys/class/thermal/thermal_zone1/temp
+CD_CPU=/sys/class/thermal/cooling_device0/cur_state
+CD_GPU=/sys/class/thermal/cooling_device1/cur_state
+MAX_CPU=7
+MAX_GPU=5
+POLL=2
+
+# Highest sensor reading in millidegrees (0 if sensors missing).
+max_temp() {
+	a=$(cat "$ZONE_CPU" 2>/dev/null || echo 0)
+	b=$(cat "$ZONE_GPU" 2>/dev/null || echo 0)
+	[ "$a" -ge "$b" ] && echo "$a" || echo "$b"
+}
+
+# Map millidegrees + cooling-device max_state to a throttle state (0..max).
+# Steps at 70/76/82/88C; hysteresis keeps current state in the 67-70C band.
+state_for() {
+	t=$1 max=$2 cur=$3
+	if [ "$t" -lt 67000 ]; then echo 0; return; fi
+	if [ "$t" -lt 70000 ]; then echo "$cur"; return; fi
+	if [ "$t" -ge 88000 ]; then echo "$max"; return; fi
+	if [ "$t" -ge 82000 ]; then echo $((max * 3 / 4)); return; fi
+	if [ "$t" -ge 76000 ]; then echo $((max / 2)); return; fi
+	echo $((max / 4))
+}
+
+# Read sensors and apply throttle state to both cooling devices.
+apply() {
+	t=$(max_temp)
+	c=$(cat "$CD_CPU" 2>/dev/null || echo 0)
+	g=$(cat "$CD_GPU" 2>/dev/null || echo 0)
+	ns=$(state_for "$t" "$MAX_CPU" "$c")
+	ng=$(state_for "$t" "$MAX_GPU" "$g")
+	[ "$ns" != "$c" ] && echo "$ns" > "$CD_CPU" 2>/dev/null
+	[ "$ng" != "$g" ] && echo "$ng" > "$CD_GPU" 2>/dev/null
+}
+
+run_loop() {
+	while true; do apply; sleep "$POLL"; done
+}
+
+check() { [ "$2" = "$3" ] || { echo "FAIL: state_for($1)=$2 want=$3"; fail=1; }; }
+
+selftest() {
+	fail=0
+	check 45000 "$(state_for 45000 7 0)" 0
+	check 68000 "$(state_for 68000 7 0)" 0
+	check 68000 "$(state_for 68000 7 3)" 3
+	check 71000 "$(state_for 71000 7 0)" 1
+	check 77000 "$(state_for 77000 7 0)" 3
+	check 83000 "$(state_for 83000 7 0)" 5
+	check 89000 "$(state_for 89000 7 0)" 7
+	check 71000 "$(state_for 71000 5 0)" 1
+	check 83000 "$(state_for 83000 5 0)" 3
+	[ "$fail" = 0 ] && echo "OK" || return 1
+}
+
+case "$1" in
+	start)
+		printf "Starting thermal watchdog: "
+		start-stop-daemon -S -q -b -m -p "$PIDFILE" -x "$0" -- run
+		;;
+	run) run_loop ;;
+	stop)
+		printf "Stopping thermal watchdog: "
+		start-stop-daemon -K -q -p "$PIDFILE"
+		;;
+	restart|reload) "$0" stop; sleep 1; "$0" start ;;
+	test) selftest ;;
+	*) echo "Usage: $0 {start|stop|restart|test}" >&2; exit 1 ;;
+esac
