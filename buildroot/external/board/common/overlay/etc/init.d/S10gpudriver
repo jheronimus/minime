@@ -7,7 +7,10 @@ case "$1" in
     start)
         echo "Initializing GPU Subsystem..."
         echo "Activating libmali driver..."
-        modprobe mali_kbase
+        # Force-disable page migration: with CONFIG_COMPACTION=y the module
+        # enables it by default (when large pages are on) and hangs at load.
+        # =0 keeps it off; harmless on boards without CONFIG_COMPACTION.
+        modprobe mali_kbase kbase_page_migration_enabled=0
         ;;
     stop)
         echo "Unloading GPU drivers..."
