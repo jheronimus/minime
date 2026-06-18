@@ -118,8 +118,9 @@ if [ "${SOC_NAME}" = "rk3566" ]; then
 # setting can corrupt data, not just crash.
 # Allowed values: off, l1, l2, l3 (l3 is most aggressive).
 # Recovery: mount this FAT partition on a PC and set undervolt=off.
-# Default l1 is conservative; raise only if stable under sustained load.
-undervolt=l1
+# Default off: silicon lottery varies; opt in via the Power settings
+# menu or by setting undervolt=l1|l2|l3 below.
+undervolt=off
 EOF
 fi
 
