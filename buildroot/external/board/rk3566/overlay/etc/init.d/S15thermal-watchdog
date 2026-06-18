@@ -15,6 +15,10 @@ CD_GPU=/sys/class/thermal/cooling_device1/cur_state
 MAX_CPU=7
 MAX_GPU=5
 POLL=2
+# Persistent log on the FAT partition (survives reboot) so a crash leaves a
+# temp trajectory. sync after each line: a forced thermal poweroff skips
+# clean unmount, so buffered writes would otherwise be lost.
+LOG=/mnt/sdcard/.minime/thermal.log
 
 # Highest sensor reading in millidegrees (0 if sensors missing).
 max_temp() {
@@ -35,7 +39,20 @@ state_for() {
 	echo $((max / 4))
 }
 
+# Log a line: uptime_s cpu_mdeg gpu_mdeg cd0 cd1. Appended + synced.
+log_state() {
+	up=$(cut -d' ' -f1 /proc/uptime 2>/dev/null || echo 0)
+	tc=$(cat "$ZONE_CPU" 2>/dev/null || echo 0)
+	tg=$(cat "$ZONE_GPU" 2>/dev/null || echo 0)
+	c0=$(cat "$CD_CPU" 2>/dev/null || echo 0)
+	c1=$(cat "$CD_GPU" 2>/dev/null || echo 0)
+	printf '%s %s %s %s %s\n' "$up" "$tc" "$tg" "$c0" "$c1" >> "$LOG"
+	sync
+}
+
 # Read sensors and apply throttle state to both cooling devices.
+# Logs on every throttle transition and whenever either sensor >= 60C
+# (the climb that matters for a crash); otherwise every ~30s.
 apply() {
 	t=$(max_temp)
 	c=$(cat "$CD_CPU" 2>/dev/null || echo 0)
@@ -44,9 +61,15 @@ apply() {
 	ng=$(state_for "$t" "$MAX_GPU" "$g")
 	[ "$ns" != "$c" ] && echo "$ns" > "$CD_CPU" 2>/dev/null
 	[ "$ng" != "$g" ] && echo "$ng" > "$CD_GPU" 2>/dev/null
+	cnt=$((cnt + 1))
+	if [ "$ns" != "$c" ] || [ "$ng" != "$g" ] || [ "$t" -ge 60000 ] || [ "$cnt" -ge 15 ]; then
+		cnt=0
+		log_state
+	fi
 }
 
 run_loop() {
+	cnt=0
 	while true; do apply; sleep "$POLL"; done
 }
 
