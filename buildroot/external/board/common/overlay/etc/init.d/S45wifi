@@ -179,11 +179,19 @@ wait_for_ipv4_address() {
   return 1
 }
 
-start_dhcp_client() {
+stop_dhcp_client() {
   if [ -f "${udhcpc_pidfile}" ]; then
     kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
   fi
+  for pid in $(pidof udhcpc 2>/dev/null); do
+    tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null |
+      grep -q -- "-i ${wifi_interface}" && kill "${pid}" 2>/dev/null || true
+  done
   rm -f "${udhcpc_pidfile}"
+}
+
+start_dhcp_client() {
+  stop_dhcp_client
   : > "${udhcpc_logfile}"
 
   udhcpc -b -R -x hostname:"$(hostname)" -F "$(hostname)" -O search -O staticroutes \
@@ -263,10 +271,7 @@ start() {
 
 stop() {
   printf "Stopping wifi: "
-  if [ -f "${udhcpc_pidfile}" ]; then
-    kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
-    rm -f "${udhcpc_pidfile}"
-  fi
+  stop_dhcp_client
   if [ -f "/var/run/wpa_supplicant.pid" ]; then
     kill "$(cat "/var/run/wpa_supplicant.pid")" >/dev/null 2>&1 || true
     rm -f "/var/run/wpa_supplicant.pid"
