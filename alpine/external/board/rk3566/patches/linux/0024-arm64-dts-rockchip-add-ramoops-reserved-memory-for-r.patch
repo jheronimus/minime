@@ -17,7 +17,7 @@ dmesg dump records in the remaining space.
 diff --git a/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi b/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
 --- a/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
 +++ b/arch/arm64/boot/dts/rockchip/rk356x-base.dtsi
-@@ -192,5 +192,13 @@
+@@ -192,5 +192,12 @@
  			linux,cma-default;
  		};
 +		ramoops@60000000 {
