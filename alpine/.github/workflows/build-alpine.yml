@@ -95,7 +95,7 @@ jobs:
           if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
             echo "ERROR: minime-builder-alpine image is missing." >&2
             echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
-            echo "ERROR:   cd ~/actions-runner/_work/minime/minime/minime && \\" >&2
+            echo "ERROR:   cd ~/actions-runner/_work/minime/minime && \\" >&2
             echo "ERROR:     make alpine-prepare BOARD=${{ inputs.board }}" >&2
             echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
             exit 1
