@@ -72,7 +72,11 @@ endif
 
 ALPINE_IMAGE_NAME := minime-builder-alpine
 ALPINE_DIR := $(ROOT_DIR)/alpine
-ALPINE_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/alpine-$(BOARD)
+# All Alpine paths use $(HOME)/... so they are the host paths regardless
+# of USE_PODMAN.  The bind mount's source side must be a real host path;
+# using BASE_OUTPUT_DIR (which is /buildroot-output under USE_PODMAN=1)
+# would try to mkdir a non-existent path on the host.
+ALPINE_OUTPUT_DIR := $(HOME)/buildroot-output/alpine-$(BOARD)
 ALPINE_PACKAGES_DIR := $(ALPINE_OUTPUT_DIR)/packages
 ALPINE_STAGE_DIR := $(ALPINE_OUTPUT_DIR)/stage
 ALPINE_REPOS_DIR := $(HOME)/alpine-repos
@@ -81,10 +85,6 @@ ALPINE_DL_DIR := $(HOME)/alpine-dl
 ALPINE_VERSION := v3.24
 ALPINE_ARCH := aarch64
 ALPINE_JOBS ?= $(TOPLEVEL_JLEVEL)
-
-# Note: ALPINE_RUN_ARGS is defined later, after BASE_OUTPUT_DIR /
-# BUILDROOT_OUTPUT_DIR are set, because those vars are referenced
-# by the run-args list.  See the ALPINE_RUN_ARGS block below.
 
 ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
