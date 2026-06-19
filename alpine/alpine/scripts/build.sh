@@ -62,7 +62,7 @@ resolve_minirootfs() {
 		|| die "no sha256 found in latest-releases.yaml"
 
 	case "${mm_version}" in
-		${ALPINE_BRANCH}.*) ;;
+		${ALPINE_BRANCH#v}.*) ;;
 		*) die "minime is locked to ${ALPINE_BRANCH}; got ${mm_version}" ;;
 	esac
 

@@ -120,7 +120,7 @@ BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR
 # read access to $(HOME)/buildroot-output/<board>/images/ (idbloader.img,
 # u-boot.itb, etc.) without coupling to a specific board name.
 ifeq ($(IS_PODMAN),1)
-    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) --platform linux/arm64 \
         -e HOME=/alpine-output \
         -v $(ROOT_DIR):/workspace \
         -v $(ALPINE_OUTPUT_DIR):/alpine-output \
@@ -129,7 +129,7 @@ ifeq ($(IS_PODMAN),1)
         -v $(ALPINE_DL_DIR):/alpine-dl \
         -v $(HOME)/buildroot-output:/buildroot-output
 else
-    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) --platform linux/arm64 \
         -e HOME=/alpine-output \
         -v $(ROOT_DIR):/workspace \
         -v $(ALPINE_OUTPUT_DIR):/alpine-output \
@@ -255,7 +255,7 @@ ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
 	@mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPOS_DIR) $(ALPINE_CCACHE_DIR) $(ALPINE_DL_DIR)
 	@$(PODMAN_CMD) image inspect $(ALPINE_IMAGE_NAME) >/dev/null 2>&1 || \
-		$(PODMAN_CMD) build $(PLATFORM_ARG) -t $(ALPINE_IMAGE_NAME) -f alpine/container/Dockerfile .
+		$(PODMAN_CMD) build --platform linux/arm64 -t $(ALPINE_IMAGE_NAME) -f alpine/container/Dockerfile .
 else
 	@./scripts/prepare-linux.sh
 endif
