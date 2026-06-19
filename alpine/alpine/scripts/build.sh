@@ -140,9 +140,11 @@ build_local_apks() {
 		cd "${ALPINE_DIR}/aports/${ALPINE_PKG}"
 		log "abuild: ${ALPINE_PKG}"
 		# abuild does not have its own -j flag; pass MAKEFLAGS so the
-		# inner make runs in parallel.
+		# inner make runs in parallel.  Use -f to force a full rebuild
+		# even if the per-package stamp looks up to date (defends
+		# against stale unpack/ pkgdir state from interrupted runs).
 		MAKEFLAGS="-j${ALPINE_JOBS}" \
-		abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
+		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
 	done
 }
 
@@ -159,7 +161,7 @@ build_tinykernel() {
 
 	log "abuild: tinykernel"
 	MAKEFLAGS="-j${ALPINE_JOBS}" \
-	abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c rootpkg
+	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c rootpkg
 
 	# Stage the kernel artifacts for post-image.sh to consume.
 	TK_IMG="${ALPINE_BUILD_DIR}/tinykernel/staging/Image"
