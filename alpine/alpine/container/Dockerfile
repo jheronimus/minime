@@ -8,10 +8,16 @@
 #   - Buildroot's U-Boot, idbloader, ATF binaries are *not* unpacked here; the
 #     build pipeline mounts the host's Buildroot output as a volume.
 #
-# Cross-compiler: Alpine ships aarch64 cross packages in its main/community
-# repos under the `aarch64/` sub-architecture. We enable those repos and
-# install `gcc-aarch64` / `binutils-aarch64` to get an aarch64-linux-musl
-# targeted C/C++ toolchain alongside the x86_64 host abuild machinery.
+# Cross-compiler: Alpine ships `gcc-aarch64` and `binutils-aarch64` as
+# first-class packages in the main x86_64 repository.  They install into
+# /usr/bin/ and provide `aarch64-alpine-linux-musl-{gcc,ld,as,...}`, which
+# abuild picks up automatically when CHOST=aarch64-alpine-linux-musl.
+#
+# We do NOT add the aarch64 sub-architecture repos: those repos serve
+# aarch64 native packages via x86_64 (e.g. aarch64/x86_64/APKINDEX.tar.gz),
+# which 404 against dl-cdn.alpinelinux.org because the aarch64 native
+# toolchain is only meant to run inside an aarch64 chroot.  The
+# cross-compiler packages are sufficient for the abuild-driven musl build.
 #
 # The FROM line uses a fully-qualified registry path.  htpc.local has
 # unqualified-search registries disabled in /etc/containers/registries.conf;
@@ -21,21 +27,22 @@
 
 FROM docker.io/library/alpine:3.24
 
-# aports "main" + "community" for the host architecture, then aarch64 sub-architecture
-# for the cross-toolchain and the aarch64 versions of the system libraries.
+# x86_64-only repos.  The aarch64 sub-architecture repos are intentionally
+# omitted; the cross-compiler packages below live in main/x86_64.
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/main"        >  /etc/apk/repositories && \
-	echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community"   >> /etc/apk/repositories && \
-	echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/main/aarch64"     >> /etc/apk/repositories && \
-	echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community/aarch64" >> /etc/apk/repositories
+	echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community"   >> /etc/apk/repositories
 
-# Base + abuild + kernel + image assembly tooling
+# Toolchain + kernel + image assembly.  Each package is on a separate line
+# so apk reports a precise name on a missing-package failure.  bsdtar
+# is provided by libarchive-tools; rc-services is part of the openrc
+# package and is not needed in the build container (only the rootfs).
 RUN apk add --no-cache --no-progress \
 		abuild \
 		alpine-sdk \
 		bash \
 		bc \
+		binutils-aarch64 \
 		bison \
-		bsdtar \
 		ccache \
 		cmake \
 		cpio \
@@ -43,7 +50,11 @@ RUN apk add --no-cache --no-progress \
 		dtc \
 		file \
 		flex \
+		gcc-aarch64 \
 		git \
+		gmp-dev \
+		libarchive-tools \
+		linux-headers \
 		llvm \
 		llvm-dev \
 		m4 \
@@ -51,6 +62,7 @@ RUN apk add --no-cache --no-progress \
 		mpc1-dev \
 		mpfr-dev \
 		mtools \
+		musl-dev \
 		ncurses-dev \
 		openssl-dev \
 		pahole \
@@ -62,7 +74,6 @@ RUN apk add --no-cache --no-progress \
 		py3-yaml \
 		python3 \
 		python3-dev \
-		rc-services \
 		rsync \
 		squashfs-tools \
 		util-linux-dev \
@@ -73,16 +84,10 @@ RUN apk add --no-cache --no-progress \
 		u-boot-tools \
 		patchelf \
 		wget \
-	&& apk add --no-cache --no-progress \
-		binutils-aarch64 \
-		gcc-aarch64 \
-		gmp-dev \
-		linux-headers \
-		musl-dev \
 	&& true
 
-# aports requires a non-root "packager" account. Match the host UID/GID passed
-# by --user so abuild-built files are owned by the host user and not root.
+# aports requires a non-root "packager" account.  Match the host UID/GID
+# passed by --user so abuild-built files are owned by the host user.
 ARG BUILDER_UID=1000
 ARG BUILDER_GID=1000
 RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
@@ -102,13 +107,13 @@ RUN mkdir -p /home/builder/.abuild \
 		> /home/builder/.abuild/abuild.conf \
 	&& chown -R builder:builder /home/builder/.abuild
 
-# Cache + output directories the Makefile mounts from the host. The
-# `--user $(id -u):$(id -g)` flag combined with --userns=keep-id makes these
-# owned by the host user on the host filesystem.
+# Cache + output directories the Makefile mounts from the host.  The
+# `--user $(id -u):$(id -g)` flag combined with --userns=keep-id makes
+# these owned by the host user on the host filesystem.
 RUN mkdir -p /alpine-output /alpine-repos /alpine-ccache /alpine-dl/src \
 	&& chown -R builder:builder /alpine-output /alpine-repos /alpine-ccache /alpine-dl
 
-# Cross-toolchain from the aarch64 sub-architecture is rooted at
+# Cross-toolchain from the aarch64 cross packages is rooted at
 # /usr/aarch64-linux-musl; expose it so abuild can resolve CBUILD/CHOST.
 ENV PATH="/usr/aarch64-linux-musl/bin:${PATH}"
 ENV CCACHE_DIR=/alpine-ccache
