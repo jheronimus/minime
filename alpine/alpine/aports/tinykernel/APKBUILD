@@ -30,6 +30,7 @@ makedepends="
 source="
 	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-${pkgver}.tar.xz
 "
+sha512sums="6f04fa9ced78f2e7a41dfae7f707f540e7cc6dcd4d3847f0d28df58b2d18a8edb75f98c674ba935538897e89864a06681f4cd56b91f3ea3e1b7f04096cb796e7  linux-7.0.10.tar.xz"
 
 # The Minime kernel patch stack lives in minime/external/board/<board>/patches.
 # Those patches are applied by the Alpine build script before merge_config.sh.
@@ -148,4 +149,3 @@ package() {
 # Staging hook: build_tinykernel() in scripts/build.sh runs after abuild
 # to pick up /alpine-output/boot/Image + DTBs.  abuild's "rootpkg" target
 # produces the .apk listed above.
-sha512sums=""

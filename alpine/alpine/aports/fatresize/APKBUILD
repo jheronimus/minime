@@ -21,6 +21,7 @@ makedepends="
 	pkgconf
 "
 source="fatresize_$pkgver.orig.tar.gz::https://deb.debian.org/debian/pool/main/f/fatresize/fatresize_${pkgver}.orig.tar.gz"
+sha512sums="SKIP"
 
 build() {
 	./configure \

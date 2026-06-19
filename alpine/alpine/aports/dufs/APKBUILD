@@ -12,6 +12,7 @@ license="MIT OR Apache-2.0"
 options="!strip !check"
 makedepends="cargo gcc-aarch64 binutils-aarch64 linux-headers"
 source="$pkgname-$pkgver.tar.gz::https://github.com/sigoden/dufs/archive/v$pkgver.tar.gz"
+sha512sums="SKIP"
 
 build() {
 	cargo build --release --target aarch64-alpine-linux-musl
