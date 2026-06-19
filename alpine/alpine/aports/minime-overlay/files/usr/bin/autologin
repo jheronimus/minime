@@ -1,0 +1,4 @@
+#!/bin/sh
+# Passwordless login shell for telnet.  Mirrors the Buildroot overlay
+# behaviour: drop the user straight into an interactive shell.
+exec /bin/sh -l

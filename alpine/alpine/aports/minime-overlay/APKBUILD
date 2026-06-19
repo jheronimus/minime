@@ -1,0 +1,50 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=minime-overlay
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Minime filesystem layout, OpenRC services, immutable trait payload, and udev rules for the Alpine rootfs"
+url="https://github.com/minime-os/minime"
+arch="aarch64"
+license="MIT"
+options="!strip !check"
+makedepends="rsync"
+source="files/"
+
+# Alpine-based image variant.  This package replaces Buildroot's
+# BR2_ROOTFS_OVERLAY + post-build.sh install of /etc/init.d scripts.
+# The overlay preserves:
+#   - hostname, mounts, network behavior
+#   - root access (BusyBox login)
+#   - telnet/ftp behavior
+#   - immutable trait payload under /usr/share/minime/traits
+#   - eudev udev rules from external/board/common/overlay/etc/udev/
+# It does NOT copy Buildroot's init.d scripts (they are replaced by the
+# OpenRC service files in files/etc/init.d/).
+
+build() {
+	# Nothing to build; files/ is the entire payload.
+	return 0
+}
+
+package() {
+	local src="$srcdir/files"
+	local dst="$pkgdir"
+
+	# Mirror the source tree (etc/, usr/, etc.) into the package root.
+	# The Alpine rootfs will receive it via `apk add minime-overlay`.
+	# rsync -a preserves symlinks (runlevels/boot/<svc> -> ../../init.d/...);
+	# the .apk tarball keeps them, and `apk add` restores them so OpenRC
+	# can resolve each service at boot.
+	rsync -a \
+		--exclude='.git*' --exclude='Makefile' --exclude='README*' \
+		--exclude='APKBUILD' --exclude='files' \
+		"$src"/ "$dst"/
+
+	# Ensure executable bits on init.d / OpenRC services.
+	if [ -d "$dst/etc/init.d" ]; then
+		find "$dst/etc/init.d" -type f -exec chmod 0755 {} +
+	fi
+}

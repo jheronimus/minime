@@ -3,16 +3,27 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE" >&2
+	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE [-d buildroot|alpine] [-o OUTPUT_DIR]" >&2
 }
 
 GENIMAGE_CFG=""
-opts="$(getopt -n "${0##*/}" -o c: -- "$@")" || exit $?
+DISTRO="buildroot"
+OUTPUT_DIR=""
+
+opts="$(getopt -n "${0##*/}" -o c:d:o: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
 		-c)
 			GENIMAGE_CFG="$2"
+			shift 2
+			;;
+		-d)
+			DISTRO="$2"
+			shift 2
+			;;
+		-o)
+			OUTPUT_DIR="$2"
 			shift 2
 			;;
 		--)
@@ -29,6 +40,15 @@ done
 if [ -z "$GENIMAGE_CFG" ]; then
 	usage
 	exit 1
+fi
+
+case "${DISTRO}" in
+	buildroot|alpine) ;;
+	*) echo "ERROR: -d must be 'buildroot' or 'alpine'" >&2; exit 1 ;;
+esac
+
+if [ -n "${OUTPUT_DIR}" ]; then
+	BINARIES_DIR="${OUTPUT_DIR}"
 fi
 
 BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
@@ -48,7 +68,11 @@ fi
 
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
-FINAL_IMG="${BINARIES_DIR}/minime-${SOC_NAME}.img"
+case "${DISTRO}" in
+	alpine)	IMG_TAG="minime-alpine-${SOC_NAME}" ;;
+	*)		IMG_TAG="minime-${SOC_NAME}" ;;
+esac
+FINAL_IMG="${BINARIES_DIR}/${IMG_TAG}.img"
 FINAL_IMG_GZ="${FINAL_IMG}.gz"
 
 cleanup() {
@@ -431,7 +455,7 @@ rm -rf "${GENIMAGE_TMP}"
 rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
 
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
-sed -i "s/__IMAGE_NAME__/minime-${SOC_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
+sed -i "s/__IMAGE_NAME__/${IMG_TAG}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
 
 genimage \
 	--rootpath "${ROOTPATH_TMP}" \

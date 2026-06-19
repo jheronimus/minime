@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-ui: launch the UI (MinUI/Allium) and the headphone-jack watcher
+# for the rk817ext sound card.  Runs in the background; the boot stage
+# does not block on the UI lifecycle.
+
+description="Minime UI (MinUI/Allium)"
+
+command=":"
+command_background="yes"
+pidfile="/run/minime-ui.pid"
+
+depend() {
+	after minime-modules minime-fb-unblank minime-traits minime-panfrost \
+		minime-bootsplash localmount
+}
+
+start() {
+	ebegin "Starting UI"
+	/usr/share/minime/scripts/minime-ui start
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping UI"
+	/usr/share/minime/scripts/minime-ui stop
+	eend $?
+}

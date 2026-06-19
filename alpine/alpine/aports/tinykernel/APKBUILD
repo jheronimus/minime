@@ -1,0 +1,151 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=tinykernel
+pkgver=7.0.10
+pkgrel=0
+pkgdesc="Minime minimal Linux kernel + DTBs (Alpine build of the same source used by Buildroot)"
+url="https://github.com/gregkh/linux"
+arch="aarch64"
+license="GPL-2.0-only"
+options="!strip !check"
+makedepends="
+	bash
+	bc
+	bison
+	flex
+	gcc-aarch64
+	binutils-aarch64
+	linux-headers
+	ncurses-dev
+	openssl-dev
+	perl
+	python3
+"
+
+# Source = the same tarball the Buildroot recipe downloads.  We keep a
+# direct upstream tarball URL so the build is reproducible without aports
+# sync.  If you need the in-progress stable branch, switch to git://.
+source="
+	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-${pkgver}.tar.xz
+"
+
+# The Minime kernel patch stack lives in minime/external/board/<board>/patches.
+# Those patches are applied by the Alpine build script before merge_config.sh.
+# This APKBUILD only owns the source + version pin; the patch series is
+# applied by alpine/scripts/build.sh:build_tinykernel() so the same patches
+# can be shared between Buildroot and Alpine without re-pinning here.
+
+# DTB set mirrors the BR2_LINUX_KERNEL_INTREE_DTS_NAME list from
+# minime/external/configs/minime_<board>.config.
+: "${DTB_BOARD:=rk3566}"
+case "${DTB_BOARD}" in
+	h700)
+		_dtbs="
+			allwinner/sun50i-h700-anbernic-rg28xx
+			allwinner/sun50i-h700-anbernic-rg34xx
+			allwinner/sun50i-h700-anbernic-rg34xx-sp
+			allwinner/sun50i-h700-anbernic-rg35xx-2024
+			allwinner/sun50i-h700-anbernic-rg35xx-2024-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-h
+			allwinner/sun50i-h700-anbernic-rg35xx-h-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-plus
+			allwinner/sun50i-h700-anbernic-rg35xx-plus-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-pro
+			allwinner/sun50i-h700-anbernic-rg35xx-sp
+			allwinner/sun50i-h700-anbernic-rg35xx-sp-v2-panel
+			allwinner/sun50i-h700-anbernic-rg40xx-h
+			allwinner/sun50i-h700-anbernic-rg40xx-h-v2-panel
+			allwinner/sun50i-h700-anbernic-rg40xx-v
+			allwinner/sun50i-h700-anbernic-rg40xx-v-v2-panel
+			allwinner/sun50i-h700-anbernic-rgcubexx
+		" ;;
+	rk3326)
+		_dtbs="
+			rockchip/rk3326-anbernic-rg351p
+			rockchip/rk3326-anbernic-rg351m
+			rockchip/rk3326-anbernic-rg351v
+			rockchip/rk3326-anbernic-rg351mp
+		" ;;
+	rk3566)
+		_dtbs="
+			rockchip/rk3566-anbernic-rg-arc-d
+			rockchip/rk3566-anbernic-rg-arc-s
+			rockchip/rk3566-anbernic-rg353p
+			rockchip/rk3566-anbernic-rg353ps
+			rockchip/rk3566-anbernic-rg353v
+			rockchip/rk3566-anbernic-rg353vs
+			rockchip/rk3566-anbernic-rg503
+			rockchip/rk3568-anbernic-rg-ds
+		" ;;
+	*) _dtbs="" ;;
+esac
+
+build() {
+	local src="$srcdir/linux-$pkgver"
+	cd "$src" || return 1
+
+	# 1. Apply Minime's existing patch series.
+	local patch_dir="/workspace/external/board/${DTB_BOARD}/patches/linux"
+	if [ -d "$patch_dir" ]; then
+		for p in "$patch_dir"/*.patch; do
+			[ -f "$p" ] || continue
+			msg "Applying $p"
+			patch -p1 -N < "$p" || return 1
+		done
+	fi
+
+	# 2. Merge kernel config:
+	#    tiny-base.config -> tiny-<board>.config -> tiny-alpine.config -> olddefconfig
+	local cfg_src="/workspace/alpine"
+	cat > .config <<-EOF
+		# merged by APKBUILD build()
+		# tiny-base.config first
+	EOF
+	cat "$cfg_src/../external/board/common/tiny-base.config" >> .config
+	cat "/workspace/external/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
+	cat "$cfg_src/kernel/tiny-alpine.config" >> .config
+
+	# 3. Resolve new options and surface any unresolved ones.
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- olddefconfig
+
+	# 4. Hard guard: CONFIG_DRM_PANFROST must be present, CONFIG_MALI_KBASE
+	#    must not.  A future patch series that re-enables the proprietary
+	#    Mali driver pair needs explicit opt-in, not a silent regression.
+	grep -q "^CONFIG_DRM_PANFROST=y" .config \
+		|| { echo "FATAL: CONFIG_DRM_PANFROST=y missing after olddefconfig"; return 1; }
+	if grep -q "^CONFIG_MALI_KBASE=y\|^CONFIG_MALI_MIDGARD=y\|^CONFIG_MALI_BIFROST=y" .config; then
+		echo "FATAL: proprietary Mali driver re-enabled by olddefconfig"; return 1
+	fi
+
+	# 5. Build kernel + DTBs + modules.
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- -j"$JOBS" Image modules dtbs
+}
+
+package() {
+	local src="$srcdir/linux-$pkgver"
+	cd "$src" || return 1
+
+	# We do not install tinykernel into the rootfs; the Alpine build
+	# script copies Image + dtbs + modules to /alpine-output/boot/ for
+	# post-image.sh to consume.  abuild still needs a "package" function
+	# to succeed, so emit a tiny stamp APK with the .config + patches.
+	install -Dm644 .config "$pkgdir/var/lib/minime/tinykernel.config"
+	install -Dm644 arch/arm64/boot/Image "$pkgdir/var/lib/minime/tinykernel.Image"
+	for dtb in $_dtbs; do
+		local out="$pkgdir/var/lib/minime/dtbs/${dtb##*/}.dtb"
+		install -Dm644 "arch/arm64/boot/dts/${dtb}.dtb" "$out"
+	done
+
+	# Modules go to /alpine-output/boot/modules, not into the rootfs.
+	mkdir -p /alpine-output/boot/modules
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- \
+		INSTALL_MOD_PATH=/alpine-output/boot/modules modules_install
+	rm -f /alpine-output/boot/modules/lib/modules/*/build /alpine-output/boot/modules/lib/modules/*/source
+}
+
+# Staging hook: build_tinykernel() in scripts/build.sh runs after abuild
+# to pick up /alpine-output/boot/Image + DTBs.  abuild's "rootpkg" target
+# produces the .apk listed above.
+sha512sums=""

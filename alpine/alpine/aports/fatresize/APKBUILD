@@ -1,0 +1,37 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=fatresize
+pkgver=1.1.0
+pkgrel=0
+pkgdesc="FAT32 filesystem resizer used by the Minime first-boot expansion step"
+url="https://github.com/ya-mouse/fatresize"
+arch="aarch64"
+license="GPL-3.0-or-later"
+options="!strip !check"
+makedepends="
+	autoconf
+	automake
+	binutils-aarch64
+	gcc-aarch64
+	libtool
+	linux-headers
+	partx-dev
+	pkgconf
+"
+source="fatresize_$pkgver.orig.tar.gz::https://deb.debian.org/debian/pool/main/f/fatresize/fatresize_${pkgver}.orig.tar.gz"
+
+build() {
+	./configure \
+		--build="$CBUILD" \
+		--host="$CHOST" \
+		--prefix=/usr \
+		--sbindir=/usr/sbin \
+		--libdir=/usr/lib
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}

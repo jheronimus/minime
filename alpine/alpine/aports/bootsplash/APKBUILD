@@ -1,0 +1,34 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=bootsplash
+pkgver=1.0.1
+pkgrel=0
+pkgdesc="Minime animated boot splash helper"
+url="https://github.com/minime-os/minime"
+arch="aarch64"
+license="MIT"
+options="!strip"
+makedepends="
+	gcc-aarch64
+	binutils-aarch64
+	sdl2-dev
+	linux-headers
+"
+source="bootsplash-$pkgver.tar.gz::https://github.com/minime-os/bootsplash/archive/v$pkgver.tar.gz"
+
+build() {
+	cd "$srcdir/bootsplash-$pkgver" || return 1
+	# The Alpine SDL2 package ships pkg-config; use it to pick the right
+	# cross sysroot.  The Buildroot package's Makefile uses $(TARGET_CC)
+	# directly; here we let pkg-config resolve SDL2's CFLAGS/LIBS.
+	PKG_CONFIG="aarch64-alpine-linux-musl-pkg-config" \
+		CC="aarch64-alpine-linux-musl-gcc" \
+		make
+}
+
+package() {
+	cd "$srcdir/bootsplash-$pkgver" || return 1
+	install -Dm755 bootsplash "$pkgdir/usr/bin/bootsplash"
+}

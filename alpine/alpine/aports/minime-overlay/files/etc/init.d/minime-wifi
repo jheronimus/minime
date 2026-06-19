@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-wifi: wpa_supplicant + udhcpc.  Functionally identical to the
+# Buildroot S45wifi script; see that file for the rationale of every
+# profile-generator helper.
+
+description="Minime Wi-Fi (wpa_supplicant + udhcpc)"
+
+command=":"
+command_background="yes"
+pidfile="/run/minime-wifi.pid"
+
+depend() {
+	need minime-modules
+	after minime-fb-unblank
+}
+
+start() {
+	ebegin "Starting Wi-Fi"
+	/usr/share/minime/scripts/minime-wifi start &
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping Wi-Fi"
+	/usr/share/minime/scripts/minime-wifi stop
+	eend $?
+}

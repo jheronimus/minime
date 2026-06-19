@@ -53,6 +53,38 @@ BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 SUPPORTED_BOARDS := h700 rk3326 rk3566
 BOARD ?= rk3566
 
+# Alpine image variant
+ALPINE_IMAGE_NAME := minime-builder-alpine
+ALPINE_DIR := $(ROOT_DIR)/alpine
+ALPINE_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/alpine-$(BOARD)
+ALPINE_PACKAGES_DIR := $(ALPINE_OUTPUT_DIR)/packages
+ALPINE_STAGE_DIR := $(ALPINE_OUTPUT_DIR)/stage
+ALPINE_BUILD_LOG := $(LOG_DIR)/alpine-image-$(BOARD).log
+ALPINE_REPOS_DIR := $(HOME)/alpine-repos
+ALPINE_CCACHE_DIR := $(HOME)/alpine-ccache
+ALPINE_DL_DIR := $(HOME)/alpine-dl
+ALPINE_VERSION := v3.24
+ALPINE_ARCH := aarch64
+ALPINE_JOBS ?= $(TOPLEVEL_JLEVEL)
+
+ifeq ($(IS_PODMAN),1)
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/alpine-output \
+        -v $(ROOT_DIR):/workspace \
+        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
+        -v $(ALPINE_REPOS_DIR):/alpine-repos \
+        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
+        -v $(ALPINE_DL_DIR):/alpine-dl
+else
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/alpine-output \
+        -v $(ROOT_DIR):/workspace \
+        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
+        -v $(ALPINE_REPOS_DIR):/alpine-repos \
+        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
+        -v $(ALPINE_DL_DIR):/alpine-dl
+endif
+
 ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
 endif
@@ -95,6 +127,9 @@ help:
 		"Commands:" \
 		"  make defconfig     - Merge config fragments for BOARD (default: rk3566)" \
 		"  make image         - Build complete bootable firmware image for BOARD" \
+		"  make alpine-image  - Build Alpine-based immutable rootfs image for BOARD" \
+		"  make alpine-shell  - Open an interactive shell inside the Alpine build container" \
+		"  make alpine-prepare - Build the Alpine builder container image" \
 		"  make shell         - Open an interactive shell inside the build container" \
 		"  make prepare       - Build builder container image (or install host tools on Linux)" \
 		"  make h700-uboot    - Compile and update prebuilt H700 bootloader" \
@@ -183,6 +218,38 @@ image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
+
+.PHONY: alpine-image alpine-prepare alpine-shell
+
+alpine-prepare:
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
+	@mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPOS_DIR) $(ALPINE_CCACHE_DIR) $(ALPINE_DL_DIR)
+	@$(PODMAN_CMD) image inspect $(ALPINE_IMAGE_NAME) >/dev/null 2>&1 || \
+		$(PODMAN_CMD) build $(PLATFORM_ARG) -t $(ALPINE_IMAGE_NAME) -f alpine/container/Dockerfile .
+else
+	@./scripts/prepare-linux.sh
+endif
+
+alpine-shell: alpine-prepare
+ifeq ($(USE_PODMAN),1)
+	@$(PODMAN_CMD) run -it $(ALPINE_RUN_ARGS) $(ALPINE_IMAGE_NAME) /bin/sh
+else
+	@cd $(ALPINE_DIR) && ./scripts/build.sh shell
+endif
+
+alpine-image: alpine-prepare
+	@if [ ! -d "$(BUILDROOT_OUTPUT_DIR)/images" ] || [ -z "$$(ls $(BUILDROOT_OUTPUT_DIR)/images/u-boot*.itb 2>/dev/null; ls $(BUILDROOT_OUTPUT_DIR)/images/idbloader.img 2>/dev/null; ls $(BUILDROOT_OUTPUT_DIR)/images/u-boot-sunxi-with-spl.bin 2>/dev/null)" ]; then \
+		echo "ERROR: Alpine build reuses Buildroot bootloader artifacts." >&2; \
+		echo "ERROR: Run 'make image BOARD=$(BOARD)' first or 'make h700-uboot BOARD=$(BOARD)' for h700." >&2; \
+		exit 1; \
+	fi
+	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
+	$(PODMAN_CMD) run $(ALPINE_RUN_ARGS) $(ALPINE_IMAGE_NAME) \
+		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) ALPINE_DIR=/workspace/alpine LINUX_ROOT=/workspace BUILDROOT_OUTPUT_DIR=/buildroot-output/$(BOARD) /workspace/alpine/scripts/build.sh all" \
+		2>&1 | tee "$$LOG_FILE"
+	@mkdir -p $(CURDIR)/out/alpine/$(BOARD)
+	@if [ -d $(ALPINE_OUTPUT_DIR)/images ]; then cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.gz $(CURDIR)/out/alpine/$(BOARD)/ 2>/dev/null || true; fi
 
 copy_images:
 	@mkdir -p $(CURDIR)/out/$(BOARD)

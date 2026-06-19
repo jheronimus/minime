@@ -1,0 +1,56 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=allium
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Allium frontend (Rust) for Minime — Alpine aarch64 musl build"
+url="https://github.com/minime-os/allium"
+arch="aarch64"
+license="MIT"
+options="!strip !check"
+makedepends="
+	cargo
+	gcc-aarch64
+	binutils-aarch64
+	linux-headers
+	ncurses-dev
+	openssl-dev
+	rust
+"
+source=""
+export ALLIUM_VERSION=3e2d6095817519437a4f7cf691806cc58a02af7c
+
+build() {
+	# Allium needs LIBCLANG_PATH for bindgen, BINDGEN_EXTRA_CLANG_ARGS for
+	# the cross-sysroot, and LIBRETRO_HEADER pointing at libretro-common's
+	# installed libretro.h.  Alpine's `libretro-common` package provides
+	# that header.
+	export LIBCLANG_PATH=/usr/lib
+	export LIBRETRO_HEADER=/usr/include/libretro.h
+	export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/aarch64-linux-musl -I/usr/aarch64-linux-musl/usr/include"
+
+	local workdir="$srcdir/build"
+	mkdir -p "$workdir"
+	cd "$workdir" || return 1
+
+	if [ ! -d allium ]; then
+		git clone --no-checkout \
+			https://github.com/minime-os/allium.git allium
+		(cd allium && git checkout "${ALLIUM_VERSION}")
+	fi
+
+	cd allium || return 1
+	cargo build --release --target aarch64-alpine-linux-musl --features minime
+}
+
+package() {
+	local workdir="$srcdir/build"
+	local bindir="$pkgdir/var/lib/minime/bin"
+	mkdir -p "$bindir"
+
+	# Allium's runtime payload goes to /alpine-output/boot/ui (same as
+	# Buildroot's BINARIES_DIR/ui).  This APK only stamps the slot.
+	install -Dm644 /dev/null "$pkgdir/var/lib/minime/allium.stamp"
+}

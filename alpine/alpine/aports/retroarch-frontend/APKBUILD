@@ -1,0 +1,56 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=retroarch-frontend
+pkgver=1.19.1
+pkgrel=0
+pkgdesc="RetroArch frontend (Alpine aarch64 musl build)"
+url="https://github.com/libretro/RetroArch"
+arch="aarch64"
+license="GPL-3.0-or-later"
+options="!strip !check"
+makedepends="
+	alsa-lib-dev
+	bash
+	binutils-aarch64
+	gcc-aarch64
+	libdrm-dev
+	libegl-dev
+	libgles-dev
+	linux-headers
+	make
+	ncurses-dev
+	pkgconf
+	sdl2-dev
+	zlib-dev
+"
+source="$pkgname-$pkgver.tar.gz::https://github.com/libretro/RetroArch/archive/v$pkgver.tar.gz"
+
+build() {
+	cd "$srcdir/RetroArch-$pkgver" || return 1
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--disable-gl \
+		--enable-egl \
+		--enable-gles \
+		--enable-kms \
+		--disable-x11 \
+		--disable-wayland \
+		--enable-alsa \
+		--disable-ffmpeg \
+		--enable-zlib \
+		--enable-floathard \
+		--enable-neon
+	make
+}
+
+package() {
+	cd "$srcdir/RetroArch-$pkgver" || return 1
+	make DESTDIR="$pkgdir" install
+
+	# Drop the canonical config where the Alpine build pipeline expects it.
+	install -Dm644 /dev/null \
+		"$pkgdir/etc/retroarch.cfg"
+}

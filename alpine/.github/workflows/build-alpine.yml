@@ -1,0 +1,102 @@
+name: Build Minime Alpine Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Target board'
+        required: true
+        default: 'rk3566'
+        type: choice
+        options:
+          - rk3566
+          - h700
+          - rk3326
+      clean_output:
+        description: 'Clean the board output directory before building'
+        required: false
+        default: false
+        type: boolean
+      clean_apk_cache:
+        description: 'Wipe /alpine-repos + /alpine-dl before building'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build Alpine Firmware (${{ inputs.board || 'rk3566' }})
+    runs-on: self-hosted
+    env:
+      USE_PODMAN: '0'
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Clean Buildroot output
+        if: ${{ inputs.clean_output }}
+        run: |
+          echo "Cleaning Buildroot output for board: ${{ inputs.board }}"
+          make clean BOARD=${{ inputs.board }}
+
+      - name: Clean APK cache
+        if: ${{ inputs.clean_apk_cache }}
+        run: |
+          rm -rf ~/alpine-repos ~/alpine-dl
+          rm -rf ~/alpine-output/alpine-${{ inputs.board }}
+
+      - name: Verify/Install Host Dependencies
+        run: |
+          ./scripts/prepare-linux.sh
+
+      - name: Ensure Buildroot bootloader artifacts exist
+        run: |
+          set -eu
+          BOARD=${{ inputs.board }}
+          if [ ! -d ~/buildroot-output/${BOARD}/images ]; then
+            echo "ERROR: Buildroot output missing for ${BOARD}; run 'make image BOARD=${BOARD}' first." >&2
+            exit 1
+          fi
+          case "${BOARD}" in
+            h700)
+              [ -f ~/buildroot-output/${BOARD}/images/u-boot-sunxi-with-spl.bin ] || {
+                echo "ERROR: h700 SPL not found, run 'make h700-uboot BOARD=h700' first." >&2
+                exit 1
+              }
+              ;;
+            rk3326|rk3566)
+              [ -f ~/buildroot-output/${BOARD}/images/idbloader.img ] || {
+                echo "ERROR: idbloader.img missing, run 'make image BOARD=${BOARD}' first." >&2
+                exit 1
+              }
+              [ -f ~/buildroot-output/${BOARD}/images/u-boot.itb ] || {
+                echo "ERROR: u-boot.itb missing, run 'make image BOARD=${BOARD}' first." >&2
+                exit 1
+              }
+              ;;
+          esac
+
+      - name: Build Alpine image
+        run: |
+          echo "Building Alpine image for board: ${{ inputs.board }}"
+          make alpine-image BOARD=${{ inputs.board }}
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-alpine-${{ inputs.board }}-${{ github.run_id }}
+          path: out/alpine/${{ inputs.board }}/minime-alpine-${{ inputs.board }}.img.gz
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-alpine-${{ inputs.board }}-log-${{ github.run_id }}
+          path: logs/alpine-image-${{ inputs.board }}.log
+          if-no-files-found: warn
+          retention-days: 14

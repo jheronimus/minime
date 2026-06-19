@@ -1,0 +1,34 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-bluetooth: on-demand bluetoothd.  Mirrors Buildroot's S40bluetoothd
+# (which short-circuits on /mnt/sdcard/.minime/config/bluetooth/enabled).
+
+description="Bluetooth daemon (on demand)"
+
+command="/usr/lib/bluetooth/bluetoothd"
+command_args="-n"
+pidfile="/run/bluetoothd.pid"
+
+depend() {
+	need minime-dbus
+	after minime-modules
+}
+
+start_pre() {
+	[ -f /mnt/sdcard/.minime/config/bluetooth/enabled ] || return 1
+	mkdir -p /var/lib/bluetooth
+	chmod 700 /var/lib/bluetooth 2>/dev/null || true
+}
+
+start() {
+	ebegin "Starting bluetoothd"
+	start-stop-daemon --start --background --make-pidfile \
+		--pidfile "$pidfile" --exec "$command" -- $command_args
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping bluetoothd"
+	start-stop-daemon --stop --pidfile "$pidfile" --exec "$command"
+	eend $?
+}
