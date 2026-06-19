@@ -68,6 +68,7 @@ RUN apk add --no-cache --no-progress \
 		python3-dev \
 		rsync \
 		squashfs-tools \
+		sudo \
 		util-linux-dev \
 		xz \
 		zip \
@@ -84,6 +85,7 @@ ARG BUILDER_UID=1000
 ARG BUILDER_GID=1000
 RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
 	&& adduser -u ${BUILDER_UID} -G builder -D -h /home/builder -s /bin/sh builder \
+	&& mkdir -p /etc/sudoers.d \
 	&& echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder \
 	&& chmod 0440 /etc/sudoers.d/builder
 
