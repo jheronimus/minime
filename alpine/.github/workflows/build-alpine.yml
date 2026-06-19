@@ -79,6 +79,28 @@ jobs:
               ;;
           esac
 
+      - name: Ensure minime-builder-alpine image is pre-built
+        run: |
+          # The Alpine build MUST run inside an Alpine-based container
+          # (abuild, the aarch64 cross-toolchain, and the aports build
+          # flow are all Alpine-specific).  The container image is
+          # large and podman build on htpc.local requires an active
+          # user session; the CI runner has no session, so this step
+          # fails with 'sd-bus call: Interactive authentication
+          # required'.  The image must therefore be pre-built on
+          # htpc.local once (from an interactive shell) and reused by
+          # the CI thereafter.  See AGENTS.md 'Container Image
+          # Rebuild' for the same rule that applies to the existing
+          # minime-builder image.
+          if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
+            echo "ERROR: minime-builder-alpine image is missing." >&2
+            echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
+            echo "ERROR:   cd ~/actions-runner/_work/minime/minime/minime && \\" >&2
+            echo "ERROR:     make alpine-prepare BOARD=${{ inputs.board }}" >&2
+            echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
+            exit 1
+          fi
+
       - name: Build Alpine image
         run: |
           echo "Building Alpine image for board: ${{ inputs.board }}"
