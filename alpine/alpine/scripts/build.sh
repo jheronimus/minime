@@ -55,11 +55,28 @@ resolve_minirootfs() {
 	curl -fsSL --retry 3 "${ALPINE_MINIROOTFS_BASE_URL}/latest-releases.yaml" \
 		-o "${mm_index}" || die "could not fetch latest-releases.yaml"
 
-	# Pull the highest 3.24.x version + sha256 directly from the YAML.
-	mm_version=$(awk -F': ' '/^[[:space:]]*version:/ {print $2; exit}' "${mm_index}") \
-		|| die "no version found in latest-releases.yaml"
-	mm_sha=$(awk -F': ' '/^[[:space:]]*sha256:/ {print $2; exit}' "${mm_index}") \
-		|| die "no sha256 found in latest-releases.yaml"
+	# latest-releases.yaml is a list of release entries; the minirootfs
+	# entry has flavor: alpine-minirootfs.  Each entry begins with a
+	# `-` on its own line, so track that as a record separator and
+	# pull the version/sha256 from the entry whose flavor matches.
+	mm_version=$(awk '
+		/^-[[:space:]]*$/ { in_mini = 0 }
+		/flavor:[[:space:]]*alpine-minirootfs/ { in_mini = 1 }
+		in_mini && /version:/ {
+			sub(/^[[:space:]]*version:[[:space:]]*/, "")
+			print
+			exit
+		}
+	' "${mm_index}") || die "no minirootfs version in latest-releases.yaml"
+	mm_sha=$(awk '
+		/^-[[:space:]]*$/ { in_mini = 0 }
+		/flavor:[[:space:]]*alpine-minirootfs/ { in_mini = 1 }
+		in_mini && /sha256:/ {
+			sub(/^[[:space:]]*sha256:[[:space:]]*/, "")
+			print
+			exit
+		}
+	' "${mm_index}") || die "no minirootfs sha256 in latest-releases.yaml"
 
 	case "${mm_version}" in
 		${ALPINE_BRANCH#v}.*) ;;
