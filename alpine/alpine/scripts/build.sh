@@ -57,15 +57,20 @@ resolve_minirootfs() {
 
 	# latest-releases.yaml is a list of release entries; the minirootfs
 	# entry has flavor: alpine-minirootfs.  Each entry begins with a
-	# `-` on its own line, so track that as a record separator and
-	# pull the version/sha256 from the entry whose flavor matches.
+	# `-` on its own line.  Inside each entry, `version:` is listed
+	# before `flavor:` (so we cannot "look forward" from the flavor to
+	# find the version), and `sha256:` is listed after `flavor:`.  Use
+	# the `-` separator to clear per-entry state, capture the version
+	# as it appears, then print the captured version when the matching
+	# flavor is encountered.
 	mm_version=$(awk '
-		/^-[[:space:]]*$/ { in_mini = 0 }
-		/flavor:[[:space:]]*alpine-minirootfs/ { in_mini = 1 }
-		in_mini && /version:/ {
+		/^-[[:space:]]*$/ { in_mini = 0; mm_version = "" }
+		!in_mini && /version:/ {
 			sub(/^[[:space:]]*version:[[:space:]]*/, "")
-			print
-			exit
+			mm_version = $0
+		}
+		/flavor:[[:space:]]*alpine-minirootfs/ {
+			if (mm_version != "") { print mm_version; exit }
 		}
 	' "${mm_index}") || die "no minirootfs version in latest-releases.yaml"
 	mm_sha=$(awk '
