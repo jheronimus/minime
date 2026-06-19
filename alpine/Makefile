@@ -53,13 +53,28 @@ BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 SUPPORTED_BOARDS := h700 rk3326 rk3566
 BOARD ?= rk3566
 
-# Alpine image variant
+# Alpine image variant.  The Alpine build MUST run in a container
+# (abuild is Alpine-specific, the cross-toolchain is built from
+# Alpine's aarch64 sub-architecture repos).  Force USE_PODMAN=1 for
+# the alpine-* targets regardless of the host-level setting so a
+# caller that builds Buildroot natively (USE_PODMAN=0) does not
+# silently run the Alpine build outside a container.
+ifeq ($(MAKECMDGOALS),)
+ALPINE_FORCE_PODMAN := 0
+else ifneq ($(filter alpine-%,$(MAKECMDGOALS)),)
+ALPINE_FORCE_PODMAN := 1
+else
+ALPINE_FORCE_PODMAN := 0
+endif
+ifeq ($(ALPINE_FORCE_PODMAN),1)
+override USE_PODMAN := 1
+endif
+
 ALPINE_IMAGE_NAME := minime-builder-alpine
 ALPINE_DIR := $(ROOT_DIR)/alpine
 ALPINE_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/alpine-$(BOARD)
 ALPINE_PACKAGES_DIR := $(ALPINE_OUTPUT_DIR)/packages
 ALPINE_STAGE_DIR := $(ALPINE_OUTPUT_DIR)/stage
-ALPINE_BUILD_LOG := $(LOG_DIR)/alpine-image-$(BOARD).log
 ALPINE_REPOS_DIR := $(HOME)/alpine-repos
 ALPINE_CCACHE_DIR := $(HOME)/alpine-ccache
 ALPINE_DL_DIR := $(HOME)/alpine-dl
@@ -67,23 +82,9 @@ ALPINE_VERSION := v3.24
 ALPINE_ARCH := aarch64
 ALPINE_JOBS ?= $(TOPLEVEL_JLEVEL)
 
-ifeq ($(IS_PODMAN),1)
-    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
-        -e HOME=/alpine-output \
-        -v $(ROOT_DIR):/workspace \
-        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
-        -v $(ALPINE_REPOS_DIR):/alpine-repos \
-        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
-        -v $(ALPINE_DL_DIR):/alpine-dl
-else
-    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
-        -e HOME=/alpine-output \
-        -v $(ROOT_DIR):/workspace \
-        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
-        -v $(ALPINE_REPOS_DIR):/alpine-repos \
-        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
-        -v $(ALPINE_DL_DIR):/alpine-dl
-endif
+# Note: ALPINE_RUN_ARGS is defined later, after BASE_OUTPUT_DIR /
+# BUILDROOT_OUTPUT_DIR are set, because those vars are referenced
+# by the run-args list.  See the ALPINE_RUN_ARGS block below.
 
 ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
@@ -107,8 +108,36 @@ MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
 
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 LOG_DIR := $(CURDIR)/logs
+# ALPINE_BUILD_LOG must be assigned AFTER LOG_DIR is defined; the
+# Alpine config block at the top of the Makefile references it.
+ALPINE_BUILD_LOG := $(LOG_DIR)/alpine-image-$(BOARD).log
 
 BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR)
+
+# ALPINE_RUN_ARGS: defined here (after BUILDROOT_OUTPUT_DIR) so the
+# bind mounts resolve correctly.  The Alpine build reuses Buildroot's
+# bootloader artifacts; the /buildroot-output mount gives the container
+# read access to $(HOME)/buildroot-output/<board>/images/ (idbloader.img,
+# u-boot.itb, etc.) without coupling to a specific board name.
+ifeq ($(IS_PODMAN),1)
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/alpine-output \
+        -v $(ROOT_DIR):/workspace \
+        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
+        -v $(ALPINE_REPOS_DIR):/alpine-repos \
+        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
+        -v $(ALPINE_DL_DIR):/alpine-dl \
+        -v $(HOME)/buildroot-output:/buildroot-output
+else
+    ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) $(PLATFORM_ARG) \
+        -e HOME=/alpine-output \
+        -v $(ROOT_DIR):/workspace \
+        -v $(ALPINE_OUTPUT_DIR):/alpine-output \
+        -v $(ALPINE_REPOS_DIR):/alpine-repos \
+        -v $(ALPINE_CCACHE_DIR):/alpine-ccache \
+        -v $(ALPINE_DL_DIR):/alpine-dl \
+        -v $(HOME)/buildroot-output:/buildroot-output
+endif
 
 ifeq ($(USE_PODMAN),1)
     RUN_CMD = $(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
@@ -239,7 +268,7 @@ else
 endif
 
 alpine-image: alpine-prepare
-	@if [ ! -d "$(BUILDROOT_OUTPUT_DIR)/images" ] || [ -z "$$(ls $(BUILDROOT_OUTPUT_DIR)/images/u-boot*.itb 2>/dev/null; ls $(BUILDROOT_OUTPUT_DIR)/images/idbloader.img 2>/dev/null; ls $(BUILDROOT_OUTPUT_DIR)/images/u-boot-sunxi-with-spl.bin 2>/dev/null)" ]; then \
+	@if [ ! -d "$(HOME)/buildroot-output/$(BOARD)/images" ] || [ -z "$$(ls $(HOME)/buildroot-output/$(BOARD)/images/u-boot*.itb 2>/dev/null; ls $(HOME)/buildroot-output/$(BOARD)/images/idbloader.img 2>/dev/null; ls $(HOME)/buildroot-output/$(BOARD)/images/u-boot-sunxi-with-spl.bin 2>/dev/null)" ]; then \
 		echo "ERROR: Alpine build reuses Buildroot bootloader artifacts." >&2; \
 		echo "ERROR: Run 'make image BOARD=$(BOARD)' first or 'make h700-uboot BOARD=$(BOARD)' for h700." >&2; \
 		exit 1; \
@@ -249,7 +278,9 @@ alpine-image: alpine-prepare
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) ALPINE_DIR=/workspace/alpine LINUX_ROOT=/workspace BUILDROOT_OUTPUT_DIR=/buildroot-output/$(BOARD) /workspace/alpine/scripts/build.sh all" \
 		2>&1 | tee "$$LOG_FILE"
 	@mkdir -p $(CURDIR)/out/alpine/$(BOARD)
-	@if [ -d $(ALPINE_OUTPUT_DIR)/images ]; then cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.gz $(CURDIR)/out/alpine/$(BOARD)/ 2>/dev/null || true; fi
+	@if [ -d $(HOME)/buildroot-output/alpine-$(BOARD)/images ]; then \
+		cp -f $(HOME)/buildroot-output/alpine-$(BOARD)/images/minime-alpine-$(BOARD).img.gz $(CURDIR)/out/alpine/$(BOARD)/ 2>/dev/null || true; \
+	fi
 
 copy_images:
 	@mkdir -p $(CURDIR)/out/$(BOARD)

@@ -12,8 +12,14 @@
 # repos under the `aarch64/` sub-architecture. We enable those repos and
 # install `gcc-aarch64` / `binutils-aarch64` to get an aarch64-linux-musl
 # targeted C/C++ toolchain alongside the x86_64 host abuild machinery.
+#
+# The FROM line uses a fully-qualified registry path.  htpc.local has
+# unqualified-search registries disabled in /etc/containers/registries.conf;
+# a short name like `alpine:3.24` would fail the build with "did not resolve
+# to an alias".  `docker.io/library/alpine:3.24` is the canonical pull spec
+# for the same image and bypasses the short-name check.
 
-FROM alpine:3.24
+FROM docker.io/library/alpine:3.24
 
 # aports "main" + "community" for the host architecture, then aarch64 sub-architecture
 # for the cross-toolchain and the aarch64 versions of the system libraries.
