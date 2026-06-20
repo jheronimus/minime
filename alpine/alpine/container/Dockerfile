@@ -81,10 +81,14 @@ RUN apk add --no-cache --no-progress \
 
 # aports requires a non-root "packager" account.  Match the host UID/GID
 # passed by --user so abuild-built files are owned by the host user.
+# Add builder to the abuild group too: abuild-apk refuses to run as
+# a non-member ('User builder is not a member of group abuild') and the
+# install is required to satisfy build/host/depends.
 ARG BUILDER_UID=1000
 ARG BUILDER_GID=1000
 RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
 	&& adduser -u ${BUILDER_UID} -G builder -D -h /home/builder -s /bin/sh builder \
+	&& addgroup builder abuild 2>/dev/null || true \
 	&& mkdir -p /etc/sudoers.d \
 	&& echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder \
 	&& chmod 0440 /etc/sudoers.d/builder
