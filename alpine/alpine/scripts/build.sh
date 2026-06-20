@@ -164,6 +164,7 @@ build_tinykernel() {
 	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
 	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
 	cd "${ALPINE_BUILD_DIR}/tinykernel"
+	log "cwd: $(pwd), HOME: ${HOME}"
 
 	# abuild without an explicit subcommand runs the full default chain
 	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
