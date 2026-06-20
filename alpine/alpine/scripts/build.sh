@@ -155,13 +155,24 @@ build_tinykernel() {
 	# tinykernel uses the host kernel toolchain (the aarch64 target needs
 	# the cross gcc but aports' linux-stable recipe drives it via
 	# kernel.org sources; we run the same source + patch stack).
+	# Wipe the build dir first: an interrupted `rootpkg` run leaves
+	# fakeroot-owned files in src/ and pkg/ that the agent user cannot
+	# delete; abuild's up-to-date cache will then skip the unpack step
+	# and the package stage fails with "can't cd to src/<name>".
+	rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null || \
+		die "could not clear ${ALPINE_BUILD_DIR}/tinykernel; rm as root first"
 	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
 	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
 	cd "${ALPINE_BUILD_DIR}/tinykernel"
 
+	# abuild without an explicit subcommand runs the full default chain
+	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
+	# `rootpkg` subcommand on its own skips fetch/unpack/build and goes
+	# straight to the package stage in fakeroot, which then fails
+	# because the source was never unpacked.
 	log "abuild: tinykernel"
 	MAKEFLAGS="-j${ALPINE_JOBS}" \
-	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c rootpkg
+	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
 
 	# Stage the kernel artifacts for post-image.sh to consume.
 	TK_IMG="${ALPINE_BUILD_DIR}/tinykernel/staging/Image"
