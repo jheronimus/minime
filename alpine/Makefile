@@ -120,12 +120,15 @@ BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR
 # read access to $(HOME)/buildroot-output/<board>/images/ (idbloader.img,
 # u-boot.itb, etc.) without coupling to a specific board name.
 ifeq ($(IS_PODMAN),1)
-    # HOME is intentionally NOT overridden: the Dockerfile's
-    # ENV HOME=/home/builder must win so that abuild finds the
-    # signing key at /home/builder/.abuild/.  Overriding HOME to
-    # /alpine-output makes abuild look at /alpine-output/.abuild/,
-    # which does not exist.
+    # The podman run uses --user $(HOST_UID):$(HOST_GID) to map the
+    # host's agent user into the container.  That user has no
+    # /etc/passwd entry in the image, so HOME defaults to the cwd
+    # (which is the WORKDIR /workspace).  abuild then looks at
+    # /workspace/.abuild/ for the signing key, finds nothing, and
+    # aborts.  Set HOME=/home/builder explicitly so abuild finds
+    # the abuild.conf + key that the Dockerfile seeded there.
     ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) --platform linux/arm64 \
+        -e HOME=/home/builder \
         -v $(ROOT_DIR):/workspace \
         -v $(ALPINE_OUTPUT_DIR):/alpine-output \
         -v $(ALPINE_REPOS_DIR):/alpine-repos \
@@ -134,6 +137,7 @@ ifeq ($(IS_PODMAN),1)
         -v $(HOME)/buildroot-output:/buildroot-output
 else
     ALPINE_RUN_ARGS := $(PODMAN_TTY) --rm --user $(HOST_UID):$(HOST_GID) --platform linux/arm64 \
+        -e HOME=/home/builder \
         -v $(ROOT_DIR):/workspace \
         -v $(ALPINE_OUTPUT_DIR):/alpine-output \
         -v $(ALPINE_REPOS_DIR):/alpine-repos \
