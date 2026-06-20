@@ -94,13 +94,6 @@ RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
 # abuild-keygen -a writes a fresh key pair non-interactively and
 # registers it with abuild.conf in the same -a pass.
 RUN mkdir -p /home/builder/.abuild \
-	&& printf '%s\n' \
-		'PACKAGER_PRIVKEY="/home/builder/.abuild/minime.rsa"' \
-		'PACKAGER_PUBKEY="/home/builder/.abuild/minime.rsa.pub"' \
-		'REPODEST="/alpine-output/packages/main"' \
-		'SRCDEST="/alpine-dl/src"' \
-		'BUILDDIR="/alpine-output/build"' \
-		> /home/builder/.abuild/abuild.conf \
 	&& chown -R builder:builder /home/builder/.abuild
 
 # Generate a self-hosted abuild signing key.  This key is only used
@@ -108,9 +101,15 @@ RUN mkdir -p /home/builder/.abuild \
 # immutable rootfs; the assembled rootfs ships its public key so
 # apk-add inside the running system can verify the packages.  The
 # key is per-image and intentionally not shared between runs.
-RUN mkdir -p /tmp/keygen-init && chown builder:builder /tmp/keygen-init \
+# abuild-keygen -a rewrites the abuild.conf with the new key paths,
+# so we seed it with the non-key settings first.
+RUN printf '%s\n' \
+		'REPODEST="/alpine-output/packages/main"' \
+		'SRCDEST="/alpine-dl/src"' \
+		'BUILDDIR="/alpine-output/build"' \
+		> /home/builder/.abuild/abuild.conf \
 	&& su builder -s /bin/sh -c 'abuild-keygen -a -n' \
-	&& chown -R builder:builder /home/builder/.abuild
+	&& cat /home/builder/.abuild/abuild.conf
 
 # Cache + output directories the Makefile mounts from the host.  The
 # `--user $(id -u):$(id -g)` flag combined with --userns=keep-id makes
