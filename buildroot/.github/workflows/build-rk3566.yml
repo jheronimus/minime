@@ -3,8 +3,7 @@ name: Build Minime (RK3566)
 on:
   push:
     branches:
-      - main
-      - master
+      - buildroot
     paths:
       - 'external/board/rk3566/**'
       - 'external/configs/minime_rk3566_defconfig'
