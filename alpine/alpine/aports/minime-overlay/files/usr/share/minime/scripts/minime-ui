@@ -1,5 +1,5 @@
 #!/bin/sh
-# minime-ui: Alpine equivalent of the Buildroot S60ui script.
+# minime-ui: launch the configured frontend.
 # Same lifecycle contract, same SD-card path exports, same UI launcher.
 
 set -eu

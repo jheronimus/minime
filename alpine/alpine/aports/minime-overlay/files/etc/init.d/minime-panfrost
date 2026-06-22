@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
 # minime-panfrost: load the Panfrost kernel module for the GLES path used
-# by the Alpine userspace (Mesa).  Replaces Buildroot's S10gpudriver.
+# by the Alpine userspace (Mesa).
 
 description="Load Panfrost GPU driver (Alpine GLES provider)"
 

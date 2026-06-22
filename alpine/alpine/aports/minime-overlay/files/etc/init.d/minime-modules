@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
 # minime-modules: load modules from /etc/modules-load.d/*.conf
-# Replaces Buildroot's S05modules.  Uses busybox modprobe.
+# Load boot-time kernel modules. Uses busybox modprobe.
 
 description="Load Minime modules from /etc/modules-load.d/"
 

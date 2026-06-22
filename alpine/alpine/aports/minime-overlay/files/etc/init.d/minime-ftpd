@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
 # minime-ftpd: anonymous-feel FTP to the SD card.  Mirrors the
-# Buildroot S50ftpd script.
+# Passwordless local FTP service.
 
 description="Minime FTP daemon"
 

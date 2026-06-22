@@ -1,6 +1,0 @@
-config BR2_PACKAGE_ALLIUM_THEMES
-	bool "allium themes"
-	help
-	  Official Allium theme collection.
-
-	  https://github.com/goweiwen/Allium-Themes

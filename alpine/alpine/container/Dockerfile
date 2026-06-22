@@ -3,10 +3,8 @@
 # Builds on Alpine v3.24 (matches aports/3.24-stable) and provides:
 #   - abuild/APKBUILD helpers for building minime APKs natively for aarch64 musl
 #   - kernel build deps for tinykernel (bison, flex, bc, pahole, perl, python3)
-#   - existing image assembly tools (erofs-utils, dosfstools, mtools, parted,
+#   - image assembly tools (erofs-utils, dosfstools, mtools, parted,
 #     cpio, genimage, dtc, u-boot-tools, patchelf)
-#   - Buildroot's U-Boot, idbloader, ATF binaries are *not* unpacked here; the
-#     build pipeline mounts the host's Buildroot output as a volume.
 #
 # Cross-arch build: the host (CI runner on htpc.local) is x86_64, but the
 # builder runs as aarch64.  qemu-user-static + qemu-user-binfmt on the

@@ -27,6 +27,6 @@ build() {
 
 package() {
 	# The ROMs are copied to /alpine-output/boot/ui/roms by the build
-	# pipeline (mirroring Buildroot's BINARIES_DIR/ui/roms layout).
+	# pipeline.
 	install -Dm644 /dev/null "$pkgdir/var/lib/minime/preloaded-roms.stamp"
 }

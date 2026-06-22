@@ -8,16 +8,12 @@
 #      tinykernel against the same musl libc.
 #   3. Build a local aports repo, install the official Alpine base plus the
 #      Minime package set, copy in the Minime SD-card UI payload.
-#   4. Run the shared post-image.sh with `-d alpine` so the same EROFS +
-#      initrd + genimage flow used by Buildroot produces the final image,
-#      only with the distro-qualified output name `minime-alpine-<board>.img`.
+#   4. Run Alpine's post-image.sh to produce `minime-alpine-<board>.img`.
 #
 # Environment overrides:
-#   BOARD               Target board (h700, rk3326, rk3566). Required.
+#   BOARD               Target board (rk3566). Required.
 #   ALPINE_JOBS         Parallel build jobs (default: $(nproc)).
 #   ALPINE_DIR          Path inside the container to the alpine/ source tree.
-#   LINUX_ROOT          Path inside the container to the minime repo root.
-#   BUILDROOT_OUTPUT_DIR Path to the host's Buildroot output (reused bootloader).
 
 set -eu
 
@@ -36,14 +32,15 @@ ALPINE_CCACHE_DIR="${ALPINE_CCACHE_DIR:-/alpine-ccache}"
 
 # Source tree roots inside the container.
 ALPINE_DIR="${ALPINE_DIR:-/workspace/alpine}"
-LINUX_ROOT="${LINUX_ROOT:-/workspace}"
-BUILDROOT_OUTPUT_DIR="${BUILDROOT_OUTPUT_DIR:-/buildroot-output}"
+ALPINE_BOARD_DIR="${ALPINE_DIR}/board"
 
 BOARD="${BOARD:-rk3566}"
 ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 
 log() { printf '[alpine] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
+
+[ "${BOARD}" = "rk3566" ] || die "unsupported BOARD=${BOARD} (supported: rk3566)"
 
 #──────────────────────────────────────────────────────────────────────────────
 # 1. Resolve + verify minirootfs
@@ -229,9 +226,8 @@ assemble_rootfs() {
 		--repository "/local-repo" \
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
-	# Install the board's immutable trait payload.  This is identical to
-	# what Buildroot's post-build.sh copies to /usr/share/minime/traits.
-	TRAITS_SRC="${LINUX_ROOT}/external/board/${BOARD}/traits"
+	# Install the board's immutable trait payload.
+	TRAITS_SRC="${ALPINE_BOARD_DIR}/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
@@ -258,28 +254,17 @@ assemble_rootfs() {
 #──────────────────────────────────────────────────────────────────────────────
 
 assemble_image() {
-	POST_IMAGE="${LINUX_ROOT}/external/board/common/post-image.sh"
+	POST_IMAGE="${ALPINE_BOARD_DIR}/common/post-image.sh"
 	[ -x "${POST_IMAGE}" ] || die "post-image.sh is not executable"
 
-	# Buildroot output is the source of the bootloader artifacts.  Copy
-	# them into a known place the post-image.sh picks up.
+	# Copy Alpine-owned bootloader artifacts into the image staging dir.
 	mkdir -p "${ALPINE_OUTPUT_DIR}/bootloader"
-	case "${BOARD}" in
-		h700)
-			BL_SRC="${BUILDROOT_OUTPUT_DIR}/images/u-boot-sunxi-with-spl.bin"
-			[ -f "${BL_SRC}" ] || die "missing ${BL_SRC} (run make h700-uboot first)"
-			cp -f "${BL_SRC}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot-sunxi-with-spl.bin"
-			;;
-		rk3326|rk3566)
-			BL_IDB="${BUILDROOT_OUTPUT_DIR}/images/idbloader.img"
-			BL_ITB="${BUILDROOT_OUTPUT_DIR}/images/u-boot.itb"
-			[ -f "${BL_IDB}" ] || die "missing ${BL_IDB} (run make image first)"
-			[ -f "${BL_ITB}" ] || die "missing ${BL_ITB} (run make image first)"
-			cp -f "${BL_IDB}" "${ALPINE_OUTPUT_DIR}/bootloader/idbloader.img"
-			cp -f "${BL_ITB}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot.itb"
-			;;
-		*) die "unsupported BOARD=${BOARD}" ;;
-	esac
+	BL_IDB="${ALPINE_DIR}/bootloader/${BOARD}/idbloader.img"
+	BL_ITB="${ALPINE_DIR}/bootloader/${BOARD}/u-boot.itb"
+	[ -f "${BL_IDB}" ] || die "missing ${BL_IDB}"
+	[ -f "${BL_ITB}" ] || die "missing ${BL_ITB}"
+	cp -f "${BL_IDB}" "${ALPINE_OUTPUT_DIR}/bootloader/idbloader.img"
+	cp -f "${BL_ITB}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot.itb"
 
 	# Stage the kernel + boot.scr + DTBs + UI payload into BINARIES_DIR.
 	IMG_BIN="${ALPINE_OUTPUT_DIR}/images"
@@ -292,9 +277,8 @@ assemble_image() {
 	fi
 	[ -f "${IMG_BIN}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
-	# Compile boot.cmd -> boot.scr using mkimage, matching Buildroot's
-	# post-build.sh recipe.
-	BOOT_CMD="${LINUX_ROOT}/external/board/${BOARD}/boot.cmd"
+	# Compile boot.cmd -> boot.scr using mkimage.
+	BOOT_CMD="${ALPINE_BOARD_DIR}/${BOARD}/boot.cmd"
 	[ -f "${BOOT_CMD}" ] || die "missing ${BOOT_CMD}"
 	mkimage -C none -A arm -T script -d "${BOOT_CMD}" "${IMG_BIN}/boot.scr"
 	log "boot.scr: ${IMG_BIN}/boot.scr"
@@ -320,10 +304,12 @@ assemble_image() {
 	# Build a rootfs.tar that post-image.sh expects.
 	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${ALPINE_OUTPUT_DIR}/rootfs.tar" .)
 
-	# Hand off to the shared script.  -d alpine switches to the distro-
-	# qualified output name; -o redirects BINARIES_DIR to the Alpine
-	# staging dir so we do not have to reuse the Buildroot path layout.
-	"${POST_IMAGE}" -c "${LINUX_ROOT}/external/board/${BOARD}/genimage.cfg" \
+	# Hand off to the image assembly script.  -d alpine switches to the
+	# distro-qualified output name.
+	BUILD_DIR="${ALPINE_BUILD_DIR}" \
+	HOST_DIR="/usr" \
+	MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
+	"${POST_IMAGE}" -c "${ALPINE_BOARD_DIR}/${BOARD}/genimage.cfg" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"

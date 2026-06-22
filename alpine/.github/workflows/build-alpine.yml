@@ -3,17 +3,8 @@ name: Build Minime Alpine Image
 on:
   workflow_dispatch:
     inputs:
-      board:
-        description: 'Target board'
-        required: true
-        default: 'rk3566'
-        type: choice
-        options:
-          - rk3566
-          - h700
-          - rk3326
       clean_output:
-        description: 'Clean the board output directory before building'
+        description: 'Clean the Alpine output directory before building'
         required: false
         default: false
         type: boolean
@@ -25,10 +16,9 @@ on:
 
 jobs:
   build:
-    name: Build Alpine Firmware (${{ inputs.board || 'rk3566' }})
+    name: Build Alpine Firmware (rk3566)
     runs-on: self-hosted
     env:
-      USE_PODMAN: '0'
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
@@ -36,81 +26,35 @@ jobs:
         with:
           clean: false
 
-      - name: Clean Buildroot output
+      - name: Clean Alpine output
         if: ${{ inputs.clean_output }}
         run: |
-          echo "Cleaning Buildroot output for board: ${{ inputs.board }}"
-          make clean BOARD=${{ inputs.board }}
+          make clean BOARD=rk3566
 
       - name: Clean APK cache
         if: ${{ inputs.clean_apk_cache }}
         run: |
           rm -rf ~/alpine-repos ~/alpine-dl
-          rm -rf ~/alpine-output/alpine-${{ inputs.board }}
-
-      - name: Verify/Install Host Dependencies
-        run: |
-          ./scripts/prepare-linux.sh
-
-      - name: Ensure Buildroot bootloader artifacts exist
-        run: |
-          set -eu
-          BOARD=${{ inputs.board }}
-          if [ ! -d ~/buildroot-output/${BOARD}/images ]; then
-            echo "ERROR: Buildroot output missing for ${BOARD}; run 'make image BOARD=${BOARD}' first." >&2
-            exit 1
-          fi
-          case "${BOARD}" in
-            h700)
-              [ -f ~/buildroot-output/${BOARD}/images/u-boot-sunxi-with-spl.bin ] || {
-                echo "ERROR: h700 SPL not found, run 'make h700-uboot BOARD=h700' first." >&2
-                exit 1
-              }
-              ;;
-            rk3326|rk3566)
-              [ -f ~/buildroot-output/${BOARD}/images/idbloader.img ] || {
-                echo "ERROR: idbloader.img missing, run 'make image BOARD=${BOARD}' first." >&2
-                exit 1
-              }
-              [ -f ~/buildroot-output/${BOARD}/images/u-boot.itb ] || {
-                echo "ERROR: u-boot.itb missing, run 'make image BOARD=${BOARD}' first." >&2
-                exit 1
-              }
-              ;;
-          esac
 
       - name: Ensure minime-builder-alpine image is pre-built
         run: |
-          # The Alpine build MUST run inside an Alpine-based container
-          # (abuild, the aarch64 cross-toolchain, and the aports build
-          # flow are all Alpine-specific).  The container image is
-          # large and podman build on htpc.local requires an active
-          # user session; the CI runner has no session, so this step
-          # fails with 'sd-bus call: Interactive authentication
-          # required'.  The image must therefore be pre-built on
-          # htpc.local once (from an interactive shell) and reused by
-          # the CI thereafter.  See AGENTS.md 'Container Image
-          # Rebuild' for the same rule that applies to the existing
-          # minime-builder image.
           if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
             echo "ERROR: minime-builder-alpine image is missing." >&2
             echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
-            echo "ERROR:   cd ~/actions-runner/_work/minime/minime && \\" >&2
-            echo "ERROR:     make alpine-prepare BOARD=${{ inputs.board }}" >&2
+            echo "ERROR:   cd ~/actions-runner/_work/minime/minime && make prepare" >&2
             echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
             exit 1
           fi
 
       - name: Build Alpine image
         run: |
-          echo "Building Alpine image for board: ${{ inputs.board }}"
-          make alpine-image BOARD=${{ inputs.board }}
+          make image BOARD=rk3566
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-${{ inputs.board }}-${{ github.run_id }}
-          path: out/alpine/${{ inputs.board }}/minime-alpine-${{ inputs.board }}.img.gz
+          name: minime-alpine-rk3566-${{ github.run_id }}
+          path: out/rk3566/minime-alpine-rk3566.img.gz
           if-no-files-found: error
           retention-days: 14
 
@@ -118,7 +62,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-${{ inputs.board }}-log-${{ github.run_id }}
-          path: logs/alpine-image-${{ inputs.board }}.log
+          name: minime-alpine-rk3566-log-${{ github.run_id }}
+          path: logs/alpine-image-rk3566.log
           if-no-files-found: warn
           retention-days: 14

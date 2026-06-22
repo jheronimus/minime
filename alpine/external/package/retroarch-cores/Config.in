@@ -1,6 +1,0 @@
-config BR2_PACKAGE_RETROARCH_CORES
-	bool "retroarch-cores"
-	select BR2_PACKAGE_ZLIB
-	help
-	  Centralized RetroArch/libretro cores package for minime.
-	  Builds a set of popular cores from source.

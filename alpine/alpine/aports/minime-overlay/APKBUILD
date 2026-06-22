@@ -13,16 +13,9 @@ options="!strip !check"
 makedepends="rsync"
 source="files/"
 
-# Alpine-based image variant.  This package replaces Buildroot's
-# BR2_ROOTFS_OVERLAY + post-build.sh install of /etc/init.d scripts.
-# The overlay preserves:
-#   - hostname, mounts, network behavior
-#   - root access (BusyBox login)
-#   - telnet/ftp behavior
-#   - immutable trait payload under /usr/share/minime/traits
-#   - eudev udev rules from external/board/common/overlay/etc/udev/
-# It does NOT copy Buildroot's init.d scripts (they are replaced by the
-# OpenRC service files in files/etc/init.d/).
+# Alpine overlay package for base config, udev rules, and OpenRC services.
+# The overlay preserves hostname, mounts, root access, telnet/ftp behavior,
+# and the immutable trait payload under /usr/share/minime/traits.
 
 build() {
 	# Nothing to build; files/ is the entire payload.

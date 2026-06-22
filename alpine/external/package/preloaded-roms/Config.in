@@ -1,6 +1,0 @@
-config BR2_PACKAGE_PRELOADED_ROMS
-	bool "preloaded-roms"
-	help
-	  Preloaded free and homebrew ROMs for MinUI/RetroArch.
-
-	  https://github.com/minime-os/roms

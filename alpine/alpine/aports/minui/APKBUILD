@@ -29,14 +29,12 @@ makedepends="
 "
 source=""
 
-# The Alpine build reuses the same build commands that Buildroot's
-# package/minui/minui.mk applies.  In the Buildroot build the toolchain
+# The Alpine build uses MinUI's upstream Makefile. The toolchain
 # is a preconfigured external AArch64 glibc toolchain; in Alpine the
 # cross gcc is `aarch64-alpine-linux-musl-gcc` plus musl's headers.
 #
-# Source is fetched fresh from the same upstream commit pinned in
-# external/package/minui/minui.mk.  We do not duplicate the source tree
-# in aports to keep APKBUILD diffs small.
+# Source is fetched fresh from the upstream commit pinned below.  We do
+# not duplicate the source tree in aports to keep APKBUILD diffs small.
 export MINUI_VERSION=ac7ee447b6f417239923f5a1511790dec6d21d1c
 MINUI_BUILD_DATE=$(date +%Y.%m.%d)
 export MINUI_BUILD_DATE
@@ -54,9 +52,9 @@ build() {
 		(cd minui && git checkout "${MINUI_VERSION}")
 	fi
 
-	# Stage the SD-card UI payload.  The Alpine build mirrors Buildroot's
+	# Stage the SD-card UI payload.
 	# `make image` outputs so the immutable EROFS rootfs + SD-card
-	# userdata contract stays identical between distros.
+	# userdata contract stays stable.
 	mkdir -p "$workdir/staging/ui/.ui/bin"
 	mkdir -p "$workdir/staging/ui/.ui/res"
 	mkdir -p "$workdir/staging/ui/.ui/config"

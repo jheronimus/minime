@@ -1,8 +1,0 @@
-config BR2_PACKAGE_MALI_KBASE
-	bool "mali-kbase"
-	depends on BR2_LINUX_KERNEL
-	help
-	  Kernel-space driver module for ARM Mali Bifrost GPU.
-
-comment "mali-kbase needs a Linux kernel to be built"
-	depends on !BR2_LINUX_KERNEL

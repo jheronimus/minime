@@ -51,6 +51,6 @@ package() {
 	mkdir -p "$bindir"
 
 	# Allium's runtime payload goes to /alpine-output/boot/ui (same as
-	# Buildroot's BINARIES_DIR/ui).  This APK only stamps the slot.
+	# Image assembly copies the staged UI payload. This APK only stamps the slot.
 	install -Dm644 /dev/null "$pkgdir/var/lib/minime/allium.stamp"
 }

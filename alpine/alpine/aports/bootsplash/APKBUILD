@@ -22,7 +22,7 @@ sha512sums="SKIP"
 build() {
 	cd "$srcdir/bootsplash-$pkgver" || return 1
 	# The Alpine SDL2 package ships pkg-config; use it to pick the right
-	# cross sysroot.  The Buildroot package's Makefile uses $(TARGET_CC)
+	# cross sysroot.
 	# directly; here we let pkg-config resolve SDL2's CFLAGS/LIBS.
 	PKG_CONFIG="aarch64-alpine-linux-musl-pkg-config" \
 		CC="aarch64-alpine-linux-musl-gcc" \

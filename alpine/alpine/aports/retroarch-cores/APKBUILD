@@ -26,7 +26,7 @@ source=""
 
 # Core list mirrors specs/retroarch_cores_manifest.md.  The Alpine
 # build fetches each core's source at the pinned version, then drives
-# the same Makefile-based build flow as Buildroot's retroarch-cores
+# the same Makefile-based build flow as upstream libretro cores
 # package.  The actual build is run by the build pipeline (not here) so
 # the cross toolchain is fully resolved by abuild's environment.
 export CORES="

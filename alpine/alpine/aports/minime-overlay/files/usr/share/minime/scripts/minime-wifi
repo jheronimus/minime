@@ -1,5 +1,5 @@
 #!/bin/sh
-# minime-wifi: Alpine equivalent of the Buildroot S45wifi script.
+# minime-wifi: connect configured Wi-Fi networks.
 # Identical state machine, copied verbatim so the existing UI wifi menu
 # and wpa_supplicant profile files keep working without a per-distro
 # port of the diagnostics logic.
