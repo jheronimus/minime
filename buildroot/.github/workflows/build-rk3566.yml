@@ -24,6 +24,9 @@ jobs:
   build:
     name: Build RK3566 Firmware
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: minime-buildroot
     env:
       USE_PODMAN: '0'
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -32,6 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: false
+          path: minime-buildroot
 
       - name: Clean output
         if: ${{ inputs.clean_output }}
