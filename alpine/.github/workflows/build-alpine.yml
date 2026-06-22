@@ -18,6 +18,9 @@ jobs:
   build:
     name: Build Alpine Firmware (rk3566)
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: minime-alpine
     env:
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
@@ -25,6 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: false
+          path: minime-alpine
 
       - name: Clean Alpine output
         if: ${{ inputs.clean_output }}
@@ -41,7 +45,7 @@ jobs:
           if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
             echo "ERROR: minime-builder-alpine image is missing." >&2
             echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
-            echo "ERROR:   cd ~/actions-runner/_work/minime/minime && make prepare" >&2
+            echo "ERROR:   cd ~/actions-runner/_work/minime/minime-alpine && make prepare" >&2
             echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
             exit 1
           fi
@@ -54,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: minime-alpine-rk3566-${{ github.run_id }}
-          path: out/rk3566/minime-alpine-rk3566.img.gz
+          path: minime-alpine/out/rk3566/minime-alpine-rk3566.img.gz
           if-no-files-found: error
           retention-days: 14
 
@@ -63,6 +67,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: minime-alpine-rk3566-log-${{ github.run_id }}
-          path: logs/alpine-image-rk3566.log
+          path: minime-alpine/logs/alpine-image-rk3566.log
           if-no-files-found: warn
           retention-days: 14
