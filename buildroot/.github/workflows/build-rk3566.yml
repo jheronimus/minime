@@ -6,7 +6,8 @@ on:
       - buildroot
     paths:
       - 'external/board/rk3566/**'
-      - 'external/configs/minime_rk3566_defconfig'
+      - 'external/configs/*.config'
+      - 'external/configs/*_defconfig'
       - 'external/board/common/**'
       - 'external/package/**'
       - 'Makefile'
