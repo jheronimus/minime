@@ -4,8 +4,8 @@
 # Throttles the CPU/GPU devfreq cooling devices when the SoC crosses the DT
 # passive trip points, so the device slows down under load instead of hitting
 # the 95C critical poweroff (already handled by the kernel thermal core via
-# CONFIG_THERMAL). Interim until the Panfrost migration unblocks the
-# in-kernel governor (CONFIG_THERMAL_OF/ENERGY_MODEL hang in mali_kbase).
+# CONFIG_THERMAL). Kept as a userspace failsafe alongside Panfrost while
+# thermal/devfreq tuning is validated on real devices.
 
 PIDFILE=/var/run/thermal-watchdog.pid
 ZONE_CPU=/sys/class/thermal/thermal_zone0/temp

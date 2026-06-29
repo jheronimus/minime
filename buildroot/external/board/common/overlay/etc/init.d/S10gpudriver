@@ -1,20 +1,19 @@
 #!/bin/sh
 #
-# S10gpudriver: Load GPU kernel drivers
+# S10gpudriver: initialize open-source Panfrost GPU support.
 #
+# Panfrost is normally built into the kernel on Minime boards. If it is built
+# as a module in a future config, load it opportunistically. Do not load the
+# proprietary mali_kbase module: the Buildroot branch uses a musl toolchain and
+# Mesa/Panfrost instead of the old glibc-only Mali blobs.
 
 case "$1" in
     start)
-        echo "Initializing GPU Subsystem..."
-        echo "Activating libmali driver..."
-        # Force-disable page migration: with CONFIG_COMPACTION=y the module
-        # enables it by default (when large pages are on) and hangs at load.
-        # =0 keeps it off; harmless on boards without CONFIG_COMPACTION.
-        modprobe mali_kbase kbase_page_migration_enabled=0
+        echo "Initializing Panfrost GPU support..."
+        modprobe panfrost 2>/dev/null || true
         ;;
     stop)
-        echo "Unloading GPU drivers..."
-        rmmod mali_kbase 2>/dev/null
+        rmmod panfrost 2>/dev/null || true
         ;;
     restart|reload)
         "$0" stop

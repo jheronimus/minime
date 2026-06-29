@@ -43,14 +43,14 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           echo "Creating release if not exists..."
-          gh release create sdk-buildroot-2026.05 \
+          gh release create sdk-buildroot-2026.02.3 \
             --repo minime-os/all \
-            --title "SDK Buildroot 2026.05 (RK3566)" \
-            --notes "Precompiled Buildroot 2026.05 SDK for RK3566 (Minime OS)." \
+            --title "SDK Buildroot 2026.02.3 (RK3566)" \
+            --notes "Precompiled Buildroot 2026.02.3 SDK for RK3566 (Minime OS)." \
             || true
           
           echo "Uploading SDK tarball to release..."
-          gh release upload sdk-buildroot-2026.05 \
+          gh release upload sdk-buildroot-2026.02.3 \
             --repo minime-os/all \
             --clobber \
             out/rk3566/*_sdk-buildroot.tar.gz

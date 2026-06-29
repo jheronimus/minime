@@ -22,22 +22,7 @@ define MINIME_PATCH_LINUX_CONFIG
 endef
 LINUX_POST_CONFIGURE_HOOKS += MINIME_PATCH_LINUX_CONFIG
 
-SDL2_MALI_PATCHES = $(strip $(foreach dir,$(call qstrip,$(BR2_GLOBAL_PATCH_DIR)),$(wildcard $(dir)/sdl2/*add-mali-fbdev*)))
-
-ifeq ($(SDL2_MALI_PATCHES),)
+# Minime uses Mesa/Panfrost on the Buildroot branch. Keep SDL's legacy
+# proprietary Mali/fbdev backend disabled even if old build output contains
+# stale symbols from previous configurations.
 SDL2_CONF_OPTS += --disable-video-mali
-else
-ifeq ($(BR2_PACKAGE_LIBMALI),y)
-SDL2_CONF_OPTS += --enable-video-mali
-else
-SDL2_CONF_OPTS += --disable-video-mali
-endif
-endif
-
-define SDL2_ADD_MALI_SOURCES
-	if [ -d $(@D)/src/video/mali-fbdev ]; then \
-		$(SED) '/AC_DEFINE(SDL_VIDEO_DRIVER_MALI/a \            SOURCES="$$SOURCES $$srcdir/src/video/mali-fbdev/*.c"' $(@D)/configure.ac; \
-		python3 $(BR2_EXTERNAL_MINIME_PATH)/board/h700/patch_mali_dma_heap.py $(@D); \
-	fi
-endef
-SDL2_POST_PATCH_HOOKS += SDL2_ADD_MALI_SOURCES
