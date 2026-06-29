@@ -45,7 +45,7 @@ else
         -v minime-buildroot-dl:/buildroot-output/dl
 endif
 
-BUILDROOT_VERSION := 2026.05
+BUILDROOT_VERSION := 2026.02.3
 BUILDROOT_ARCHIVE := buildroot-$(BUILDROOT_VERSION).tar.gz
 BUILDROOT_URL := https://buildroot.org/downloads/$(BUILDROOT_ARCHIVE)
 BUILDROOT_DIR := buildroot
