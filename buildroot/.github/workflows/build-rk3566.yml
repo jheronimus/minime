@@ -10,6 +10,8 @@ on:
       - 'external/configs/*_defconfig'
       - 'external/board/common/**'
       - 'external/package/**'
+      - 'external/Config.in'
+      - 'support/buildroot-patches/**'
       - 'Makefile'
       - 'scripts/**'
       - '.github/workflows/build-rk3566.yml'
