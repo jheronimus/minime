@@ -1,6 +1,6 @@
-diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/clang.mk
+diff -urN a/package/llvm-project/clang/clang.mk
 --- a/package/llvm-project/clang/clang.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/llvm-project/clang/clang.mk	2026-07-01 16:48:46.959739378 +0300
++++ b/package/llvm-project/clang/clang.mk	2026-07-01 18:28:48.501555742 +0300
 @@ -155,5 +155,53 @@
  HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_TOOLCHAIN_WRAPPER_INSTALL
  HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
@@ -35,7 +35,7 @@ diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/cla
 +
 +define HOST_CLANG_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host); \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +endef
@@ -55,9 +55,9 @@ diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/cla
 +
  $(eval $(cmake-package))
  $(eval $(host-cmake-package))
-diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/libclc.mk
+diff -urN a/package/llvm-project/libclc/libclc.mk
 --- a/package/llvm-project/libclc/libclc.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/llvm-project/libclc/libclc.mk	2026-07-01 16:48:46.959857541 +0300
++++ b/package/llvm-project/libclc/libclc.mk	2026-07-01 18:28:48.501714410 +0300
 @@ -42,5 +42,39 @@
  HOST_LIBCLC_CONF_OPTS = \
  	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
@@ -78,7 +78,7 @@ diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/
 +
 +define HOST_LIBCLC_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host); \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +endef
@@ -98,10 +98,10 @@ diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/
 +
  $(eval $(cmake-package))
  $(eval $(host-cmake-package))
-diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.mk
+diff -urN a/package/llvm-project/llvm/llvm.mk
 --- a/package/llvm-project/llvm/llvm.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/llvm-project/llvm/llvm.mk	2026-07-01 16:48:46.959582466 +0300
-@@ -332,5 +332,71 @@
++++ b/package/llvm-project/llvm/llvm.mk	2026-07-01 18:28:48.501829702 +0300
+@@ -332,5 +332,84 @@
  endef
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
@@ -120,6 +120,19 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +HOST_LLVM_CONFIGURE_CMDS = true
 +LLVM_BUILD_CMDS = true
 +HOST_LLVM_BUILD_CMDS = true
++
++define MINIME_RSYNC_HOST_PREBUILT
++	rsync -a \
++		--exclude='/bin/python*' \
++		--exclude='/include/python*/' \
++		--exclude='/include/expat*.h' \
++		--exclude='/lib/libexpat*' \
++		--exclude='/lib/libpython*' \
++		--exclude='/lib/pkgconfig/expat.pc' \
++		--exclude='/lib/pkgconfig/python*.pc' \
++		--exclude='/lib/python*/' \
++		$(1)/ $(HOST_DIR)/
++endef
 +
 +define MINIME_FIX_HOST_RPATH
 +	find $(HOST_DIR)/bin $(HOST_DIR)/sbin -type f 2>/dev/null | while read f; do \
@@ -144,7 +157,7 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +
 +define HOST_LLVM_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host); \
 +	fi
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
@@ -173,9 +186,9 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +
  $(eval $(cmake-package))
  $(eval $(host-cmake-package))
-diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv-headers.mk
+diff -urN a/package/spirv-headers/spirv-headers.mk
 --- a/package/spirv-headers/spirv-headers.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/spirv-headers/spirv-headers.mk	2026-07-01 16:48:46.959958497 +0300
++++ b/package/spirv-headers/spirv-headers.mk	2026-07-01 18:28:48.501938077 +0300
 @@ -13,5 +13,39 @@
  SPIRV_HEADERS_INSTALL_STAGING = YES
  SPIRV_HEADERS_INSTALL_TARGET = NO
@@ -196,7 +209,7 @@ diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv
 +
 +define HOST_SPIRV_HEADERS_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host); \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +endef
@@ -216,9 +229,9 @@ diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv
 +
  $(eval $(cmake-package))
  $(eval $(host-cmake-package))
-diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spirv-llvm-translator/spirv-llvm-translator.mk
+diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk
 --- a/package/spirv-llvm-translator/spirv-llvm-translator.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/spirv-llvm-translator/spirv-llvm-translator.mk	2026-07-01 16:48:46.960126200 +0300
++++ b/package/spirv-llvm-translator/spirv-llvm-translator.mk	2026-07-01 18:28:48.502027786 +0300
 @@ -26,5 +26,39 @@
  	-DLLVM_SPIRV_BUILD_EXTERNAL=YES \
  	-DLLVM_SPIRV_INCLUDE_TESTS=OFF
@@ -239,7 +252,7 @@ diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spi
 +
 +define HOST_SPIRV_LLVM_TRANSLATOR_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host); \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +endef
@@ -259,9 +272,9 @@ diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spi
 +
  $(eval $(cmake-package))
  $(eval $(host-cmake-package))
-diff -urN a/package/spirv-tools/spirv-tools.mk b/package/spirv-tools/spirv-tools.mk
+diff -urN a/package/spirv-tools/spirv-tools.mk
 --- a/package/spirv-tools/spirv-tools.mk	2026-06-17 00:00:17.000000000 +0300
-+++ b/package/spirv-tools/spirv-tools.mk	2026-07-01 16:48:46.960042078 +0300
++++ b/package/spirv-tools/spirv-tools.mk	2026-07-01 18:28:48.502115328 +0300
 @@ -25,5 +25,39 @@
  	-DSPIRV_SKIP_TESTS=ON \
  	-DSPIRV_WERROR=OFF
@@ -282,7 +295,7 @@ diff -urN a/package/spirv-tools/spirv-tools.mk b/package/spirv-tools/spirv-tools
 +
 +define HOST_SPIRV_TOOLS_INSTALL_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host/ $(HOST_DIR)/; \
++		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host); \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +endef
