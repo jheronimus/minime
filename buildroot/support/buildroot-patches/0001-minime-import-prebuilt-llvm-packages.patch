@@ -123,8 +123,8 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +
 +define MINIME_FIX_HOST_RPATH
 +	find $(HOST_DIR)/bin $(HOST_DIR)/sbin -type f 2>/dev/null | while read f; do \
-+		readelf -l "$$$$f" >/dev/null 2>&1 || continue; \
-+		$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN/../lib' "$$$$f" 2>/dev/null || true; \
++		readelf -l "$$f" >/dev/null 2>&1 || continue; \
++		$(HOST_DIR)/bin/patchelf --set-rpath '$$ORIGIN/../lib' "$$f" 2>/dev/null || true; \
 +	done
 +endef
 +
