@@ -12,15 +12,30 @@ on:
 jobs:
   build_sdk:
     name: Build & Publish RK3566 SDK
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
     env:
       USE_PODMAN: '0'
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Restore Buildroot caches
+        uses: actions/cache@v4
         with:
-          clean: false
+          path: |
+            ~/.buildroot-ccache
+            ~/.buildroot-dl
+          key: minime-sdk-rk3566-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            minime-sdk-rk3566-${{ runner.os }}-${{ github.ref_name }}-
+            minime-rk3566-${{ runner.os }}-${{ github.ref_name }}-
+            minime-rk3566-${{ runner.os }}-
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl ~/buildroot-output
 
       - name: Clean output
         if: ${{ inputs.clean_output }}
@@ -31,12 +46,21 @@ jobs:
       - name: Verify/Install Dependencies
         run: |
           ./scripts/prepare-linux.sh
+          ccache --max-size=8G || true
 
       - name: Build SDK
         run: |
           echo "Building SDK for board: rk3566"
           make sdk BOARD=rk3566
           make copy_images BOARD=rk3566
+
+      - name: Upload SDK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-sdk-rk3566-${{ github.sha }}
+          path: out/rk3566/**
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Publish Release to minime-os/all
         env:

@@ -24,7 +24,8 @@ on:
 jobs:
   build:
     name: Build RK3566 Firmware
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
     defaults:
       run:
         working-directory: minime-buildroot
@@ -35,8 +36,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          clean: false
           path: minime-buildroot
+
+      - name: Restore Buildroot caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildroot-ccache
+            ~/.buildroot-dl
+          key: minime-rk3566-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            minime-rk3566-${{ runner.os }}-${{ github.ref_name }}-
+            minime-rk3566-${{ runner.os }}-
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl ~/buildroot-output
 
       - name: Clean output
         if: ${{ inputs.clean_output }}
@@ -47,8 +62,17 @@ jobs:
       - name: Verify/Install Dependencies
         run: |
           ./scripts/prepare-linux.sh
+          ccache --max-size=8G || true
 
       - name: Build Image
         run: |
           echo "Building image for board: rk3566"
           make image BOARD=rk3566
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-rk3566-${{ github.sha }}
+          path: minime-buildroot/out/rk3566/**
+          if-no-files-found: error
+          retention-days: 14
