@@ -11,7 +11,7 @@ diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/cla
 +CLANG_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/clang
 +HOST_CLANG_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang
 +CLANG_DEPENDENCIES = host-minime-prebuilt-llvm llvm host-clang
-+HOST_CLANG_DEPENDENCIES = host-minime-prebuilt-llvm host-llvm
++HOST_CLANG_DEPENDENCIES = host-minime-prebuilt-llvm host-llvm host-patchelf
 +CLANG_EXTRACT_CMDS = true
 +HOST_CLANG_EXTRACT_CMDS = true
 +CLANG_CONFIGURE_CMDS = true
@@ -37,6 +37,7 @@ diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/cla
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host/ $(HOST_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +endef
 +
 +define CLANG_INSTALL_STAGING_CMDS
@@ -67,7 +68,7 @@ diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/
 +LIBCLC_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/libclc
 +HOST_LIBCLC_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc
 +LIBCLC_DEPENDENCIES = host-minime-prebuilt-llvm host-libclc
-+HOST_LIBCLC_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-llvm-translator
++HOST_LIBCLC_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-llvm-translator host-patchelf
 +LIBCLC_EXTRACT_CMDS = true
 +HOST_LIBCLC_EXTRACT_CMDS = true
 +LIBCLC_CONFIGURE_CMDS = true
@@ -79,6 +80,7 @@ diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host/ $(HOST_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +endef
 +
 +define LIBCLC_INSTALL_STAGING_CMDS
@@ -111,13 +113,20 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +LLVM_EXTRA_DOWNLOADS =
 +HOST_LLVM_EXTRA_DOWNLOADS =
 +LLVM_DEPENDENCIES = host-minime-prebuilt-llvm host-llvm
-+HOST_LLVM_DEPENDENCIES = host-minime-prebuilt-llvm
++HOST_LLVM_DEPENDENCIES = host-minime-prebuilt-llvm host-patchelf
 +LLVM_EXTRACT_CMDS = true
 +HOST_LLVM_EXTRACT_CMDS = true
 +LLVM_CONFIGURE_CMDS = true
 +HOST_LLVM_CONFIGURE_CMDS = true
 +LLVM_BUILD_CMDS = true
 +HOST_LLVM_BUILD_CMDS = true
++
++define MINIME_FIX_HOST_RPATH
++	find $(HOST_DIR)/bin $(HOST_DIR)/sbin -type f 2>/dev/null | while read f; do \
++		readelf -l "$$$$f" >/dev/null 2>&1 || continue; \
++		$(HOST_DIR)/bin/patchelf --set-rpath '$$$$ORIGIN/../lib' "$$$$f" 2>/dev/null || true; \
++	done
++endef
 +
 +define MINIME_WRAP_LLVM_CONFIG
 +	if [ -x $(1) ]; then \
@@ -140,6 +149,7 @@ diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.m
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +	$(call MINIME_WRAP_LLVM_CONFIG,$(HOST_DIR)/bin/llvm-config,$(HOST_DIR))
 +	$(call MINIME_WRAP_LLVM_CONFIG,$(STAGING_DIR)/usr/bin/llvm-config,$(STAGING_DIR)/usr)
 +endef
@@ -176,7 +186,7 @@ diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv
 +SPIRV_HEADERS_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-headers
 +HOST_SPIRV_HEADERS_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers
 +SPIRV_HEADERS_DEPENDENCIES = host-minime-prebuilt-llvm
-+HOST_SPIRV_HEADERS_DEPENDENCIES = host-minime-prebuilt-llvm
++HOST_SPIRV_HEADERS_DEPENDENCIES = host-minime-prebuilt-llvm host-patchelf
 +SPIRV_HEADERS_EXTRACT_CMDS = true
 +HOST_SPIRV_HEADERS_EXTRACT_CMDS = true
 +SPIRV_HEADERS_CONFIGURE_CMDS = true
@@ -188,6 +198,7 @@ diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host/ $(HOST_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +endef
 +
 +define SPIRV_HEADERS_INSTALL_STAGING_CMDS
@@ -218,7 +229,7 @@ diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spi
 +SPIRV_LLVM_TRANSLATOR_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-llvm-translator
 +HOST_SPIRV_LLVM_TRANSLATOR_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator
 +SPIRV_LLVM_TRANSLATOR_DEPENDENCIES = host-minime-prebuilt-llvm llvm spirv-headers
-+HOST_SPIRV_LLVM_TRANSLATOR_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-headers
++HOST_SPIRV_LLVM_TRANSLATOR_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-headers host-patchelf
 +SPIRV_LLVM_TRANSLATOR_EXTRACT_CMDS = true
 +HOST_SPIRV_LLVM_TRANSLATOR_EXTRACT_CMDS = true
 +SPIRV_LLVM_TRANSLATOR_CONFIGURE_CMDS = true
@@ -230,6 +241,7 @@ diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spi
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host/ $(HOST_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +endef
 +
 +define SPIRV_LLVM_TRANSLATOR_INSTALL_STAGING_CMDS
@@ -260,7 +272,7 @@ diff -urN a/package/spirv-tools/spirv-tools.mk b/package/spirv-tools/spirv-tools
 +SPIRV_TOOLS_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-tools
 +HOST_SPIRV_TOOLS_OVERRIDE_SRCDIR = $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools
 +SPIRV_TOOLS_DEPENDENCIES = host-minime-prebuilt-llvm spirv-headers
-+HOST_SPIRV_TOOLS_DEPENDENCIES = host-minime-prebuilt-llvm host-spirv-headers
++HOST_SPIRV_TOOLS_DEPENDENCIES = host-minime-prebuilt-llvm host-spirv-headers host-patchelf
 +SPIRV_TOOLS_EXTRACT_CMDS = true
 +HOST_SPIRV_TOOLS_EXTRACT_CMDS = true
 +SPIRV_TOOLS_CONFIGURE_CMDS = true
@@ -272,6 +284,7 @@ diff -urN a/package/spirv-tools/spirv-tools.mk b/package/spirv-tools/spirv-tools
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host ]; then \
 +		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host/ $(HOST_DIR)/; \
 +	fi
++	$(call MINIME_FIX_HOST_RPATH)
 +endef
 +
 +define SPIRV_TOOLS_INSTALL_STAGING_CMDS
