@@ -1,0 +1,279 @@
+diff -urN a/package/llvm-project/clang/clang.mk b/package/llvm-project/clang/clang.mk
+--- a/package/llvm-project/clang/clang.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/llvm-project/clang/clang.mk	2026-07-01 08:41:35.498918807 +0300
+@@ -155,5 +155,50 @@
+ HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_TOOLCHAIN_WRAPPER_INSTALL
+ HOST_CLANG_POST_INSTALL_HOOKS += HOST_CLANG_INSTALL_WRAPPER_AND_SIMPLE_SYMLINKS
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++CLANG_SOURCE =
++CLANG_DEPENDENCIES = host-minime-prebuilt-llvm llvm host-clang
++HOST_CLANG_DEPENDENCIES = host-minime-prebuilt-llvm host-llvm
++CLANG_EXTRACT_CMDS = true
++HOST_CLANG_EXTRACT_CMDS = true
++CLANG_CONFIGURE_CMDS = true
++HOST_CLANG_CONFIGURE_CMDS = true
++CLANG_BUILD_CMDS = true
++HOST_CLANG_BUILD_CMDS = true
++HOST_CLANG_POST_BUILD_HOOKS = HOST_CLANG_TOOLCHAIN_WRAPPER_BUILD
++HOST_CLANG_POST_INSTALL_HOOKS = HOST_CLANG_TOOLCHAIN_WRAPPER_INSTALL HOST_CLANG_INSTALL_CONFIG_FILE MINIME_HOST_CLANG_REWRAP
++
++define MINIME_HOST_CLANG_REWRAP
++	cd $(HOST_DIR)/bin; \
++	if [ -e clang-$(CLANG_VERSION_MAJOR).br_real ]; then \
++		for i in clang-$(CLANG_VERSION_MAJOR) clang clang++ clang-cl clang-cpp; do \
++			ln -snf toolchain-wrapper-clang $$i; \
++		done; \
++		for i in clang clang++ clang-cl clang-cpp; do \
++			ln -snf clang-$(CLANG_VERSION_MAJOR).br_real $$i.br_real; \
++		done; \
++	fi
++endef
++
++define HOST_CLANG_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-clang/host/ $(HOST_DIR)/; \
++	fi
++endef
++
++define CLANG_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/clang/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/clang/staging/ $(STAGING_DIR)/; \
++	fi
++endef
++
++define CLANG_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/clang/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/clang/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
+diff -urN a/package/llvm-project/libclc/libclc.mk b/package/llvm-project/libclc/libclc.mk
+--- a/package/llvm-project/libclc/libclc.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/llvm-project/libclc/libclc.mk	2026-07-01 08:41:35.499036721 +0300
+@@ -42,5 +42,36 @@
+ HOST_LIBCLC_CONF_OPTS = \
+ 	-DLIBCLC_TARGETS_TO_BUILD=spirv64-mesa3d-
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++LIBCLC_SOURCE =
++LIBCLC_DEPENDENCIES = host-minime-prebuilt-llvm host-libclc
++HOST_LIBCLC_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-llvm-translator
++LIBCLC_EXTRACT_CMDS = true
++HOST_LIBCLC_EXTRACT_CMDS = true
++LIBCLC_CONFIGURE_CMDS = true
++HOST_LIBCLC_CONFIGURE_CMDS = true
++LIBCLC_BUILD_CMDS = true
++HOST_LIBCLC_BUILD_CMDS = true
++
++define HOST_LIBCLC_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-libclc/host/ $(HOST_DIR)/; \
++	fi
++endef
++
++define LIBCLC_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/libclc/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/libclc/staging/ $(STAGING_DIR)/; \
++	fi
++endef
++
++define LIBCLC_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/libclc/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/libclc/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
+diff -urN a/package/llvm-project/llvm/llvm.mk b/package/llvm-project/llvm/llvm.mk
+--- a/package/llvm-project/llvm/llvm.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/llvm-project/llvm/llvm.mk	2026-07-01 08:41:35.498806559 +0300
+@@ -332,5 +332,61 @@
+ endef
+ LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++LLVM_SOURCE =
++LLVM_EXTRA_DOWNLOADS =
++HOST_LLVM_EXTRA_DOWNLOADS =
++LLVM_DEPENDENCIES = host-minime-prebuilt-llvm host-llvm
++HOST_LLVM_DEPENDENCIES = host-minime-prebuilt-llvm
++LLVM_EXTRACT_CMDS = true
++HOST_LLVM_EXTRACT_CMDS = true
++LLVM_CONFIGURE_CMDS = true
++HOST_LLVM_CONFIGURE_CMDS = true
++LLVM_BUILD_CMDS = true
++HOST_LLVM_BUILD_CMDS = true
++
++define MINIME_WRAP_LLVM_CONFIG
++	if [ -x $(1) ]; then \
++		if [ ! -e $(1).br_real ]; then mv $(1) $(1).br_real; fi; \
++		printf '%s\n' '#!/bin/sh' \
++			'real="$${0}.br_real"' \
++			'old="$$($$real --prefix 2>/dev/null || true)"' \
++			'out="$$($$real "$$@")"' \
++			'status=$$?' \
++			'if [ -n "$$old" ]; then printf "%s\\n" "$$out" | sed "s#$$old#$(2)#g"; else printf "%s\\n" "$$out"; fi' \
++			'exit $$status' > $(1); \
++		chmod 0755 $(1); \
++	fi
++endef
++
++define HOST_LLVM_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host/ $(HOST_DIR)/; \
++	fi
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
++	fi
++	$(call MINIME_WRAP_LLVM_CONFIG,$(HOST_DIR)/bin/llvm-config,$(HOST_DIR))
++	$(call MINIME_WRAP_LLVM_CONFIG,$(STAGING_DIR)/usr/bin/llvm-config,$(STAGING_DIR)/usr)
++endef
++
++define LLVM_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/staging/ $(STAGING_DIR)/; \
++	fi
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
++	fi
++	$(call MINIME_WRAP_LLVM_CONFIG,$(STAGING_DIR)/usr/bin/llvm-config,$(STAGING_DIR)/usr)
++endef
++
++define LLVM_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
+diff -urN a/package/spirv-headers/spirv-headers.mk b/package/spirv-headers/spirv-headers.mk
+--- a/package/spirv-headers/spirv-headers.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/spirv-headers/spirv-headers.mk	2026-07-01 08:41:35.499135511 +0300
+@@ -13,5 +13,36 @@
+ SPIRV_HEADERS_INSTALL_STAGING = YES
+ SPIRV_HEADERS_INSTALL_TARGET = NO
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++SPIRV_HEADERS_SOURCE =
++SPIRV_HEADERS_DEPENDENCIES = host-minime-prebuilt-llvm
++HOST_SPIRV_HEADERS_DEPENDENCIES = host-minime-prebuilt-llvm
++SPIRV_HEADERS_EXTRACT_CMDS = true
++HOST_SPIRV_HEADERS_EXTRACT_CMDS = true
++SPIRV_HEADERS_CONFIGURE_CMDS = true
++HOST_SPIRV_HEADERS_CONFIGURE_CMDS = true
++SPIRV_HEADERS_BUILD_CMDS = true
++HOST_SPIRV_HEADERS_BUILD_CMDS = true
++
++define HOST_SPIRV_HEADERS_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-headers/host/ $(HOST_DIR)/; \
++	fi
++endef
++
++define SPIRV_HEADERS_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-headers/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-headers/staging/ $(STAGING_DIR)/; \
++	fi
++endef
++
++define SPIRV_HEADERS_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-headers/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-headers/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
+diff -urN a/package/spirv-llvm-translator/spirv-llvm-translator.mk b/package/spirv-llvm-translator/spirv-llvm-translator.mk
+--- a/package/spirv-llvm-translator/spirv-llvm-translator.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/spirv-llvm-translator/spirv-llvm-translator.mk	2026-07-01 08:41:35.499298716 +0300
+@@ -26,5 +26,36 @@
+ 	-DLLVM_SPIRV_BUILD_EXTERNAL=YES \
+ 	-DLLVM_SPIRV_INCLUDE_TESTS=OFF
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++SPIRV_LLVM_TRANSLATOR_SOURCE =
++SPIRV_LLVM_TRANSLATOR_DEPENDENCIES = host-minime-prebuilt-llvm llvm spirv-headers
++HOST_SPIRV_LLVM_TRANSLATOR_DEPENDENCIES = host-minime-prebuilt-llvm host-clang host-llvm host-spirv-headers
++SPIRV_LLVM_TRANSLATOR_EXTRACT_CMDS = true
++HOST_SPIRV_LLVM_TRANSLATOR_EXTRACT_CMDS = true
++SPIRV_LLVM_TRANSLATOR_CONFIGURE_CMDS = true
++HOST_SPIRV_LLVM_TRANSLATOR_CONFIGURE_CMDS = true
++SPIRV_LLVM_TRANSLATOR_BUILD_CMDS = true
++HOST_SPIRV_LLVM_TRANSLATOR_BUILD_CMDS = true
++
++define HOST_SPIRV_LLVM_TRANSLATOR_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-llvm-translator/host/ $(HOST_DIR)/; \
++	fi
++endef
++
++define SPIRV_LLVM_TRANSLATOR_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-llvm-translator/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-llvm-translator/staging/ $(STAGING_DIR)/; \
++	fi
++endef
++
++define SPIRV_LLVM_TRANSLATOR_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-llvm-translator/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-llvm-translator/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
+diff -urN a/package/spirv-tools/spirv-tools.mk b/package/spirv-tools/spirv-tools.mk
+--- a/package/spirv-tools/spirv-tools.mk	2026-06-17 00:00:17.000000000 +0300
++++ b/package/spirv-tools/spirv-tools.mk	2026-07-01 08:41:35.499219634 +0300
+@@ -25,5 +25,36 @@
+ 	-DSPIRV_SKIP_TESTS=ON \
+ 	-DSPIRV_WERROR=OFF
+ 
++
++ifeq ($(BR2_PACKAGE_MINIME_PREBUILT_LLVM),y)
++SPIRV_TOOLS_SOURCE =
++SPIRV_TOOLS_DEPENDENCIES = host-minime-prebuilt-llvm spirv-headers
++HOST_SPIRV_TOOLS_DEPENDENCIES = host-minime-prebuilt-llvm host-spirv-headers
++SPIRV_TOOLS_EXTRACT_CMDS = true
++HOST_SPIRV_TOOLS_EXTRACT_CMDS = true
++SPIRV_TOOLS_CONFIGURE_CMDS = true
++HOST_SPIRV_TOOLS_CONFIGURE_CMDS = true
++SPIRV_TOOLS_BUILD_CMDS = true
++HOST_SPIRV_TOOLS_BUILD_CMDS = true
++
++define HOST_SPIRV_TOOLS_INSTALL_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-spirv-tools/host/ $(HOST_DIR)/; \
++	fi
++endef
++
++define SPIRV_TOOLS_INSTALL_STAGING_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-tools/staging ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-tools/staging/ $(STAGING_DIR)/; \
++	fi
++endef
++
++define SPIRV_TOOLS_INSTALL_TARGET_CMDS
++	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-tools/target ]; then \
++		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/spirv-tools/target/ $(TARGET_DIR)/; \
++	fi
++endef
++endif
++
+ $(eval $(cmake-package))
+ $(eval $(host-cmake-package))
