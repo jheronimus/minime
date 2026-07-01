@@ -1,0 +1,78 @@
+name: Build Minime (RK3326)
+
+on:
+  push:
+    branches:
+      - buildroot
+    paths:
+      - 'external/board/rk3326/**'
+      - 'external/configs/*.config'
+      - 'external/configs/*_defconfig'
+      - 'external/board/common/**'
+      - 'external/package/**'
+      - 'Makefile'
+      - 'scripts/**'
+      - '.github/workflows/build-rk3326.yml'
+  workflow_dispatch:
+    inputs:
+      clean_output:
+        description: 'Clean the board output directory before building'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build RK3326 Firmware
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    defaults:
+      run:
+        working-directory: minime-buildroot
+    env:
+      USE_PODMAN: '0'
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          path: minime-buildroot
+
+      - name: Restore Buildroot caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildroot-ccache
+            ~/.buildroot-dl
+          key: minime-rk3326-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            minime-rk3326-${{ runner.os }}-${{ github.ref_name }}-
+            minime-rk3326-${{ runner.os }}-
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl ~/buildroot-output
+
+      - name: Clean output
+        if: ${{ inputs.clean_output }}
+        run: |
+          echo "Cleaning output for board: rk3326"
+          make clean BOARD=rk3326
+
+      - name: Verify/Install Dependencies
+        run: |
+          ./scripts/prepare-linux.sh
+          ccache --max-size=8G || true
+
+      - name: Build Image
+        run: |
+          echo "Building image for board: rk3326"
+          make image BOARD=rk3326
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-rk3326-${{ github.sha }}
+          path: minime-buildroot/out/rk3326/**
+          if-no-files-found: error
+          retention-days: 14
