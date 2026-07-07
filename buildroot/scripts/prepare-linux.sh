@@ -29,7 +29,8 @@ if [ -f /etc/os-release ]; then
     if [ "$IS_DEBIAN" -eq 1 ]; then
         echo "Host is a Debian-based Linux distribution (${NAME:-Linux})."
         echo "Installing packages on host (requires sudo)..."
-        sudo apt-get update
+        sudo rm -f /etc/apt/sources.list.d/azure-cli.list /etc/apt/sources.list.d/microsoft-prod.list || true
+        sudo apt-get update || true
         # shellcheck disable=SC2086
         sudo apt-get install -y $BOOTSTRAP_PACKAGES
         echo "Host is ready."
