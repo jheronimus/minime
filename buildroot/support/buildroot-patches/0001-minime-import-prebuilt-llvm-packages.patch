@@ -98,7 +98,7 @@
  $(eval $(host-cmake-package))
 --- a/package/llvm-project/llvm/llvm.mk	2026-06-17 00:00:17.000000000 +0300
 +++ b/package/llvm-project/llvm/llvm.mk	2026-07-01 20:35:29.653622061 +0300
-@@ -332,5 +332,105 @@
+@@ -332,5 +332,106 @@
  endef
  LLVM_POST_INSTALL_TARGET_HOOKS = LLVM_DELETE_LLVM_TBLGEN_TARGET
  
