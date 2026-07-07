@@ -167,7 +167,7 @@ build_tinykernel() {
 	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
 	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
 	cd "${ALPINE_BUILD_DIR}/tinykernel"
-	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g' APKBUILD
+	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g; s/CROSS_COMPILE=aarch64-alpine-linux-musl-/CROSS_COMPILE=/g' APKBUILD
 
 	# abuild without an explicit subcommand runs the full default chain
 	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
