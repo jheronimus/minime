@@ -17,6 +17,11 @@
 
 set -eu
 
+# Wrapper to allow abuild to run as root within container
+abuild() {
+	/usr/bin/abuild -F "$@"
+}
+
 ALPINE_BRANCH="v3.24"
 ALPINE_ARCH="aarch64"
 ALPINE_MINIROOTFS_BASE_URL="https://dl-cdn.alpinelinux.org/alpine/${ALPINE_BRANCH}/releases/${ALPINE_ARCH}"
