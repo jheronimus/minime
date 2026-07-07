@@ -1,6 +1,6 @@
 # Minime Alpine builder.
 #
-# Builds on Alpine v3.24 (matches aports/3.24-stable) and provides:
+# Builds on Alpine v3.24.1 (matches aports/3.24-stable) and provides:
 #   - abuild/APKBUILD helpers for building minime APKs natively for aarch64 musl
 #   - kernel build deps for tinykernel (bison, flex, bc, pahole, perl, python3)
 #   - image assembly tools (erofs-utils, dosfstools, mtools, parted,
@@ -15,12 +15,12 @@
 #
 # htpc.local's /etc/containers/registries.conf has no unqualified-search
 # registries, so the FROM line uses the fully-qualified
-# docker.io/library/alpine:3.24 to bypass the short-name check.
+# docker.io/library/alpine:3.24.1 to bypass the short-name check.
 
-FROM --platform=linux/arm64 docker.io/library/alpine:3.24
+FROM --platform=linux/arm64 docker.io/library/alpine:3.24.1
 
 # aarch64-native main + community repos only.  bsdtar is provided by
-# libarchive-tools on Alpine 3.24 (no top-level bsdtar package).  No
+# libarchive-tools on Alpine 3.24.1 (no top-level bsdtar package).  No
 # cross-compiler packages are needed; gcc/binutils default to the
 # aarch64 toolchain in this image.
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/main"        >  /etc/apk/repositories && \
