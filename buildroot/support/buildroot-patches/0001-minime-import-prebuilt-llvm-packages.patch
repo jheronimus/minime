@@ -172,26 +172,34 @@
 +		$(call MINIME_RSYNC_HOST_PREBUILT,$(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/host); \
 +	fi
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
++		rsync -a --exclude='*.a' $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
 +	fi
 +	$(call MINIME_FIX_HOST_RPATH)
 +	$(call MINIME_WRAP_LLVM_CONFIG,$(HOST_DIR)/bin/llvm-config,$(HOST_DIR))
 +	$(call MINIME_INSTALL_STAGING_LLVM_CONFIG)
++	mkdir -p $(STAGING_DIR)/usr/lib; \
++	$(HOST_DIR)/bin/llvm-config.br_real --libnames | tr ' ' '\n' | while read lib; do \
++		touch $(STAGING_DIR)/usr/lib/$$lib; \
++	done
 +endef
 +
 +define LLVM_INSTALL_STAGING_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/staging ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/staging/ $(STAGING_DIR)/; \
++		rsync -a --exclude='*.a' $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/staging/ $(STAGING_DIR)/; \
 +	fi
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
++		rsync -a --exclude='*.a' $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/host-llvm/staging/ $(STAGING_DIR)/; \
 +	fi
 +	$(call MINIME_INSTALL_STAGING_LLVM_CONFIG)
++	mkdir -p $(STAGING_DIR)/usr/lib; \
++	$(HOST_DIR)/bin/llvm-config.br_real --libnames | tr ' ' '\n' | while read lib; do \
++		touch $(STAGING_DIR)/usr/lib/$$lib; \
++	done
 +endef
 +
 +define LLVM_INSTALL_TARGET_CMDS
 +	if [ -d $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/target ]; then \
-+		rsync -a $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/target/ $(TARGET_DIR)/; \
++		rsync -a --exclude='*.a' $(HOST_MINIME_PREBUILT_LLVM_BUILDDIR)/packages/llvm/target/ $(TARGET_DIR)/; \
 +	fi
 +endef
 +endif
