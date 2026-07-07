@@ -21,7 +21,7 @@ ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
 endif
 
-RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) --platform linux/arm64 \
+RUN_ARGS := $(PODMAN_TTY) --rm --userns=keep-id --user $(HOST_UID):$(HOST_GID) --group-add 300 --platform linux/arm64 \
 	-e HOME=/home/builder \
 	-v $(ROOT_DIR):/workspace \
 	-v $(ALPINE_OUTPUT_DIR):/alpine-output \
