@@ -141,6 +141,7 @@ build_local_apks() {
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
 		cd "${ALPINE_DIR}/aports/${ALPINE_PKG}"
 		log "abuild: ${ALPINE_PKG}"
+		sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g' APKBUILD
 		# abuild does not have its own -j flag; pass MAKEFLAGS so the
 		# inner make runs in parallel.  Use -f to force a full rebuild
 		# even if the per-package stamp looks up to date (defends
@@ -166,6 +167,7 @@ build_tinykernel() {
 	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
 	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
 	cd "${ALPINE_BUILD_DIR}/tinykernel"
+	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g' APKBUILD
 
 	# abuild without an explicit subcommand runs the full default chain
 	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
