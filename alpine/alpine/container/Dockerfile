@@ -111,6 +111,7 @@ RUN printf '%s\n' \
 		'BUILDDIR="/alpine-output/build"' \
 		> /home/builder/.abuild/abuild.conf \
 	&& su builder -s /bin/sh -c 'abuild-keygen -a -n' \
+	&& cp /home/builder/.abuild/*.pub /etc/apk/keys/ \
 	&& cat /home/builder/.abuild/abuild.conf
 
 # Cache + output directories the Makefile mounts from the host.  The
