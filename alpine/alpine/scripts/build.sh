@@ -155,6 +155,21 @@ build_tinykernel() {
 	TK_APKB="${ALPINE_DIR}/aports/tinykernel/APKBUILD"
 	[ -f "${TK_APKB}" ] || die "missing aports/tinykernel/APKBUILD"
 
+	# If the package is already built, extract the artifacts directly from the .apk
+	# to avoid rebuilding the kernel (which takes ~3 hours).
+	local apk_file="${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk"
+	if [ -f "${apk_file}" ]; then
+		log "tinykernel already built; extracting artifacts from APK"
+		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
+		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot" var/lib/minime
+		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/tinykernel.Image" "${ALPINE_OUTPUT_DIR}/boot/Image"
+		rm -rf "${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/dtbs" "${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		rm -rf "${ALPINE_OUTPUT_DIR}/boot/var"
+		log "tinykernel staged from APK: ${ALPINE_OUTPUT_DIR}/boot/Image and DTBs"
+		return 0
+	fi
+
 	# tinykernel uses the host kernel toolchain (the aarch64 target needs
 	# the cross gcc but aports' linux-stable recipe drives it via
 	# kernel.org sources; we run the same source + patch stack).
