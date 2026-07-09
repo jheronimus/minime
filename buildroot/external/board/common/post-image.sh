@@ -390,7 +390,7 @@ cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
 
 echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
-dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=1040
+dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=2048
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 
