@@ -176,14 +176,15 @@ build_tinykernel() {
 	# because the source was never unpacked.
 	log "abuild: tinykernel"
 	MAKEFLAGS="-j${ALPINE_JOBS}" \
-	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
+	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 
 	# Stage the kernel artifacts for post-image.sh to consume.
-	TK_IMG="${ALPINE_BUILD_DIR}/tinykernel/staging/Image"
-	[ -f "${TK_IMG}" ] || die "tinykernel did not produce staging/Image"
-	mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
+	TK_IMG="${ALPINE_BUILD_DIR}/tinykernel/pkg/tinykernel/var/lib/minime/tinykernel.Image"
+	[ -f "${TK_IMG}" ] || die "tinykernel did not produce pkg/tinykernel/var/lib/minime/tinykernel.Image"
+	mkdir -p "${ALPINE_OUTPUT_DIR}/boot/dtbs"
 	cp -f "${TK_IMG}" "${ALPINE_OUTPUT_DIR}/boot/Image"
-	log "tinykernel staged: ${ALPINE_OUTPUT_DIR}/boot/Image"
+	cp -rp "${ALPINE_BUILD_DIR}/tinykernel/pkg/tinykernel/var/lib/minime/dtbs/." "${ALPINE_OUTPUT_DIR}/boot/dtbs/"
+	log "tinykernel staged: ${ALPINE_OUTPUT_DIR}/boot/Image and DTBs"
 }
 
 #──────────────────────────────────────────────────────────────────────────────
