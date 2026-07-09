@@ -26,7 +26,7 @@ makedepends="
 	zlib-dev
 "
 source="$pkgname-$pkgver.tar.gz::https://github.com/libretro/RetroArch/archive/v$pkgver.tar.gz"
-sha512sums="SKIP"
+sha512sums="35e44ffc776cbc7f58fa76c686d3c3693d125fccf482c8f3b66378058b8400ada37ebf2549e9bd362e46c3bfb586971a217cc3142dcf7a7468c95ec78638ee23  retroarch-frontend-1.19.1.tar.gz"
 
 build() {
 	cd "$srcdir/RetroArch-$pkgver" || return 1

@@ -17,7 +17,7 @@ makedepends="
 	linux-headers
 "
 source="$pkgname-$pkgver.tar.gz::https://github.com/syncthing/syncthing/archive/v$pkgver.tar.gz"
-sha512sums="SKIP"
+sha512sums="0ee89a89f12cdfefaa083fa9fe5f28cb9bc1cc7dc71ab41d70c79c403e4b0ebe710070d1f20902aaf23f1141f675ec303c165e426084ba3a8472349ff0317481  syncthing-2.1.1.tar.gz"
 
 build() {
 	cd "$srcdir/syncthing-$pkgver" || return 1
