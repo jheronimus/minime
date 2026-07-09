@@ -12,6 +12,7 @@ license="MIT"
 options="!strip !check"
 makedepends="
 	cargo
+	clang-dev
 	gcc-aarch64
 	binutils-aarch64
 	linux-headers
