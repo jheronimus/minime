@@ -157,8 +157,14 @@ build_tinykernel() {
 
 	# If the package is already built, extract the artifacts directly from the .apk
 	# to avoid rebuilding the kernel (which takes ~3 hours).
-	local apk_file="${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk"
-	if [ -f "${apk_file}" ]; then
+	local apk_file=""
+	if [ -f "${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk" ]; then
+		apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
+	elif [ -f "${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk" ]; then
+		apk_file="${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk"
+	fi
+
+	if [ -n "${apk_file}" ]; then
 		log "tinykernel already built; extracting artifacts from APK"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
 		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot" var/lib/minime
