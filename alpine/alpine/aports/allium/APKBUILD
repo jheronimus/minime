@@ -15,6 +15,7 @@ makedepends="
 	clang-dev
 	gcc-aarch64
 	binutils-aarch64
+	libretro-common
 	linux-headers
 	ncurses-dev
 	openssl-dev
