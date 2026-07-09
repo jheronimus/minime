@@ -16,11 +16,31 @@ makedepends="
 	sdl2-dev
 	linux-headers
 "
-source="bootsplash-$pkgver.tar.gz::https://github.com/minime-os/bootsplash/archive/v$pkgver.tar.gz"
-sha512sums="935b3d516e996f6d25948ba8a54c1b7f70f7f0e3f517e36481fdf0196c2c5cfc2841f86e891f3df9517746b7fb605db47cdded1b8ff78d9482ddaa621db43a34  bootsplash-1.0.1.tar.gz"
+source="
+	LICENSE
+	Makefile
+	bootsplash.c
+	bootsplash.h
+	common.c
+	dmg.c
+	font.c
+	gba.c
+	gbc.c
+"
+sha512sums="
+924a66e29b436922dc9ccfe7e1beb734f5b4d5190bafdaf77e20dd0b1ab83c5a386f96f9308f1e1f40c33e77e962c8c0b2d6cf07395ba3b6764589e73ef03b89  LICENSE
+44ca3b4844d8fb051719bd093e497820e339c0e4f2be72f80d080c8940d92df0a0fe3ba141f23e4fa841d3d3b57fb72a3677c301934284d6a2be6bab2e9ed8ac  Makefile
+943f7ed7788c3cd8f73544ec77b26a850edf0a16e8d31c0f8c214185cb8ce459888bc97e21ac984e28397e61a71f229605563189ef6bf19b2c5c5a51edcd0397  bootsplash.c
+0165d93ea979aa3ca57d820f35dd94b8a6302b00301d22faf09d8c97817613ea11ded032dace671adf26ffd2c1c08b81e714702963c333afde9ef3e1d1b16144  bootsplash.h
+a8646bfe0840e941c58e5e4b158452855b952553d60b18833df65eeef5065ceb39e2a299faa39bf68b879fc99f7f4e3d22831538aad017697f62480099fd550e  common.c
+6e60037fe857f1bc869de48bed8493403a02439b652e84b078f5ddfe3ad48cd59032e41ef0d66a336d850452fb6d4fdc4849188e35de7e9a50ab55ea5a23d8b9  dmg.c
+72d57b283a0e276cd8437b5dc8368112a8f341795e49633e33b38c80e0d5a469503803d3b834b64a330c01de6d758dfadbe73773fd29f13dd2c02381304c629c  font.c
+8323260e79ac032902ce7393d981715adb3b1b380e94355bb9a8f6e28c842155b0c85051a378a1e4a72863706db23f0a61ed75f0b14902e3a9f7edcadeaf6b0f  gba.c
+4a848d5f74397d6b67a9ba61a4ea3d80d8ed7d1aec797756ae8dbb3947827293437d868aeeca4c81fd2355c12bf75760b52b214d3f9384737ba9c18fa71685ac  gbc.c
+"
 
 build() {
-	cd "$srcdir/bootsplash-$pkgver" || return 1
+	cd "$srcdir" || return 1
 	# The Alpine SDL2 package ships pkg-config; use it to pick the right
 	# cross sysroot.
 	# directly; here we let pkg-config resolve SDL2's CFLAGS/LIBS.
@@ -30,6 +50,6 @@ build() {
 }
 
 package() {
-	cd "$srcdir/bootsplash-$pkgver" || return 1
+	cd "$srcdir" || return 1
 	install -Dm755 bootsplash "$pkgdir/usr/bin/bootsplash"
 }
