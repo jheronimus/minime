@@ -125,6 +125,10 @@ build_local_apks() {
 
 	mkdir -p "${ALPINE_PACKAGES_DIR}" "${ALPINE_BUILD_DIR}"
 
+	# Update apk repositories index so we can resolve build dependencies at runtime
+	log "updating apk repositories index..."
+	sudo apk update
+
 	# tinykernel is built separately because it drives the host kernel
 	# toolchain (not the cross-compiler) and is staged into the SD image
 	# directly, not installed as a rootfs package.
