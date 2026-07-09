@@ -151,7 +151,7 @@ build_local_apks() {
 		# even if the per-package stamp looks up to date (defends
 		# against stale unpack/ pkgdir state from interrupted runs).
 		MAKEFLAGS="-j${ALPINE_JOBS}" \
-		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
+		abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
 	done
 }
 
