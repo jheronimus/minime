@@ -6,18 +6,33 @@ import os
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
+import time
+import urllib.error
 import urllib.request
+
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+_RETRY_DELAYS = [1, 2, 4, 8, 16]
+
+
+def _urlopen_with_retry(url: str, timeout: int = 60):
+    for attempt, delay in enumerate(_RETRY_DELAYS + [None]):
+        try:
+            return urllib.request.urlopen(url, timeout=timeout)
+        except urllib.error.HTTPError as e:
+            if e.code not in _RETRY_STATUSES or delay is None:
+                raise
+            print(f"HTTP {e.code} fetching {url}, retrying in {delay}s (attempt {attempt + 1})", flush=True)
+            time.sleep(delay)
 
 
 def fetch_json(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=60) as response:
+    with _urlopen_with_retry(url) as response:
         return json.load(response)
 
 
 def download(url: str, path: str) -> None:
-    with urllib.request.urlopen(url, timeout=60) as response, open(path, "wb") as out:
+    with _urlopen_with_retry(url) as response, open(path, "wb") as out:
         shutil.copyfileobj(response, out, length=1024 * 1024)
 
 
