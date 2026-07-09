@@ -19,8 +19,8 @@ makedepends="
 	openssl-dev
 	rust
 "
-source=""
 export ALLIUM_VERSION=3e2d6095817519437a4f7cf691806cc58a02af7c
+source="allium-$ALLIUM_VERSION.tar.gz::https://github.com/minime-os/allium/archive/$ALLIUM_VERSION.tar.gz"
 
 build() {
 	# Allium needs LIBCLANG_PATH for bindgen, BINDGEN_EXTRA_CLANG_ARGS for
@@ -31,22 +31,11 @@ build() {
 	export LIBRETRO_HEADER=/usr/include/libretro.h
 	export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/aarch64-linux-musl -I/usr/aarch64-linux-musl/usr/include"
 
-	local workdir="$srcdir/build"
-	mkdir -p "$workdir"
-	cd "$workdir" || return 1
-
-	if [ ! -d allium ]; then
-		git clone --no-checkout \
-			https://github.com/minime-os/allium.git allium
-		(cd allium && git checkout "${ALLIUM_VERSION}")
-	fi
-
-	cd allium || return 1
+	cd "$srcdir/allium-$ALLIUM_VERSION" || return 1
 	cargo build --release --target aarch64-alpine-linux-musl --features minime
 }
 
 package() {
-	local workdir="$srcdir/build"
 	local bindir="$pkgdir/var/lib/minime/bin"
 	mkdir -p "$bindir"
 
@@ -54,3 +43,5 @@ package() {
 	# Image assembly copies the staged UI payload. This APK only stamps the slot.
 	install -Dm644 /dev/null "$pkgdir/var/lib/minime/allium.stamp"
 }
+
+sha512sums="d6d1395861fda05ae2629c5b30aa243027cc816a458050260c1d606b2b3a24685229f7f49c191a089bf6eba589aa5d081e9c71f3ca59e05b7b2afcfc1f99e49f  allium-3e2d6095817519437a4f7cf691806cc58a02af7c.tar.gz"
