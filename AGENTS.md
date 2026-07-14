@@ -112,3 +112,13 @@ shellcheck --shell=sh --severity=warning <script_path>
 - **Git**: `git diff --check`
 - **Permissions**: `ls -l <script_path>` (must be executable)
 - **Stamps**: `python3 buildroot/scripts/check_rebuild.py`
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `jheronimus/minime`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.
