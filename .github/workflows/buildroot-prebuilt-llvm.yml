@@ -29,20 +29,22 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: prebuilt-llvm-${{ inputs.flavor || 'bootlin-musl' }}-${{ inputs.buildroot_version || '2026.05' }}-${{ inputs.revision || 'r1' }}
-  cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        flavor: ${{ github.event.inputs.flavor && fromJSON(format('["{0}"]', github.event.inputs.flavor)) || fromJSON('["bootlin-musl", "arm-glibc"]') }}
+    concurrency:
+      group: prebuilt-llvm-${{ matrix.flavor }}-${{ inputs.buildroot_version || '2026.05' }}-${{ inputs.revision || 'r1' }}
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: buildroot/prebuilt-llvm
     env:
       BUILDROOT_VERSION: ${{ inputs.buildroot_version || '2026.05' }}
       REVISION: ${{ inputs.revision || 'r1' }}
-      FLAVOR: ${{ inputs.flavor || 'bootlin-musl' }}
+      FLAVOR: ${{ matrix.flavor }}
       OUTPUT_DIR: ${{ github.workspace }}/output
       BUILDROOT_DIR: ${{ github.workspace }}/buildroot-src
       ASSET_DIR: ${{ github.workspace }}/dist
