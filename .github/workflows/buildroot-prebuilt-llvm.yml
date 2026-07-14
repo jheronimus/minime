@@ -23,6 +23,7 @@ on:
     branches: [main]
     paths:
       - 'buildroot/prebuilt-llvm/**'
+      - '!buildroot/prebuilt-llvm/channels/**'
       - 'buildroot/Makefile'
 
 permissions:
@@ -178,5 +179,6 @@ jobs:
             echo "Stable channel already points at ${REVISION}."
           else
             git commit -m "Promote ${FLAVOR} ${BUILDROOT_VERSION} ${REVISION}"
+            git pull --rebase origin main
             git push origin main
           fi
