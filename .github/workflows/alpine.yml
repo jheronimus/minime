@@ -1,6 +1,13 @@
 name: Build Minime Alpine Image
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'alpine/**'
+      - 'roms/**'
+      - 'drivers/**'
+      - '.github/workflows/alpine.yml'
   workflow_dispatch:
     inputs:
       clean_output:
@@ -9,7 +16,7 @@ on:
         default: false
         type: boolean
       clean_apk_cache:
-        description: 'Wipe /alpine-repos + /alpine-dl before building'
+        description: 'Wipe alpine-repos + alpine-dl before building'
         required: false
         default: false
         type: boolean
@@ -17,18 +24,31 @@ on:
 jobs:
   build:
     name: Build Alpine Firmware (rk3566)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: minime-alpine
+        working-directory: alpine
     env:
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
         with:
-          clean: false
-          path: minime-alpine
+          platforms: arm64
+
+      - name: Restore Alpine caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/alpine-repos
+            ~/alpine-dl
+            ~/alpine-ccache
+          key: minime-alpine-rk3566-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            minime-alpine-rk3566-${{ runner.os }}-
 
       - name: Clean Alpine output
         if: ${{ inputs.clean_output }}
@@ -38,27 +58,17 @@ jobs:
       - name: Clean APK cache
         if: ${{ inputs.clean_apk_cache }}
         run: |
-          rm -rf ~/alpine-repos ~/alpine-dl
+          rm -rf ~/alpine-repos ~/alpine-dl ~/alpine-ccache
 
-      - name: Ensure minime-builder-alpine image is pre-built
-        run: |
-          if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
-            echo "ERROR: minime-builder-alpine image is missing." >&2
-            echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
-            echo "ERROR:   cd ~/actions-runner/_work/minime/minime-alpine && make prepare" >&2
-            echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
-            exit 1
-          fi
-
-      - name: Build Alpine image
+      - name: Build Alpine builder container & image
         run: |
           make image BOARD=rk3566
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-rk3566-${{ github.run_id }}
-          path: minime-alpine/out/rk3566/minime-alpine-rk3566.img.gz
+          name: minime-alpine-rk3566-${{ github.sha }}
+          path: alpine/out/rk3566/minime-alpine-rk3566.img.gz
           if-no-files-found: error
           retention-days: 14
 
@@ -66,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-rk3566-log-${{ github.run_id }}
-          path: minime-alpine/logs/alpine-image-rk3566.log
+          name: minime-alpine-rk3566-log-${{ github.sha }}
+          path: alpine/logs/alpine-image-rk3566.log
           if-no-files-found: warn
           retention-days: 14
