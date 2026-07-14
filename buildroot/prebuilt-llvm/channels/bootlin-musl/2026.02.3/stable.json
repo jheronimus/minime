@@ -5,5 +5,5 @@
   "release_tag": "bootlin-musl-2026.02.3",
   "asset": "llvm-r1.tar.xz",
   "url": "https://github.com/jheronimus/prebuilt-llvm/releases/download/bootlin-musl-2026.02.3/llvm-r1.tar.xz",
-  "sha256": "09676559b22311b706aa9d22afba4c38740a0154fc95abe99bf4f7fc6530e020"
+  "sha256": "f251c71033e8df0ed0734eb531a80f554de2842bf254b36e3eacf237ec12bbe4"
 }
