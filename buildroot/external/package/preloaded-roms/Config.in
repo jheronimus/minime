@@ -3,4 +3,4 @@ config BR2_PACKAGE_PRELOADED_ROMS
 	help
 	  Preloaded free and homebrew ROMs for MinUI/RetroArch.
 
-	  https://github.com/minime-os/roms
+	  https://github.com/jheronimus/minime

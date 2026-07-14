@@ -11,7 +11,7 @@ config BR2_PACKAGE_ALLIUM
 	help
 	  Allium launcher and Play libretro frontend for Minime.
 
-	  https://github.com/minime-os/allium
+	  https://github.com/jheronimus/Allium
 
 comment "allium needs Go- and Rust-supported targets"
 	depends on !BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS || !BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
