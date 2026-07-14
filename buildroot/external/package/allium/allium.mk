@@ -5,7 +5,7 @@
 ################################################################################
 
 ALLIUM_VERSION = 3e2d6095817519437a4f7cf691806cc58a02af7c
-ALLIUM_SITE = $(call github,minime-os,allium,$(ALLIUM_VERSION))
+ALLIUM_SITE = $(call github,jheronimus,Allium,$(ALLIUM_VERSION))
 ALLIUM_LICENSE = MIT
 ALLIUM_LICENSE_FILES = LICENSE
 ALLIUM_DEPENDENCIES = allium-themes dufs host-clang libretro-common retroarch-cores syncthing
