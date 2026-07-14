@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-PRELOADED_ROMS_VERSION = cc85d1accc3b3fb2d65786edc62d6604ea19f0b9
-PRELOADED_ROMS_SITE = https://github.com/minime-os/roms.git
-PRELOADED_ROMS_SITE_METHOD = git
+PRELOADED_ROMS_VERSION = local
+PRELOADED_ROMS_SITE = $(BR2_EXTERNAL)/../../roms
+PRELOADED_ROMS_SITE_METHOD = local
 PRELOADED_ROMS_LICENSE = Free / Shareware
 
 # Option A: Stage ROMs directly to the binaries UI directory so they are picked up by post-image.sh

@@ -1,0 +1,9 @@
+{
+  "flavor": "bootlin-musl",
+  "buildroot_version": "2026.05",
+  "revision": "r1",
+  "release_tag": "bootlin-musl-2026.05",
+  "asset": "llvm-r1.tar.xz",
+  "url": "https://github.com/minime-os/prebuilt-llvm/releases/download/bootlin-musl-2026.05/llvm-r1.tar.xz",
+  "sha256": "810e0a753003030a58fca819727e4a55d43efe3575e50990ef15394ab76634d3"
+}

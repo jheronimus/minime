@@ -19,9 +19,7 @@ build() {
 	cd "$workdir" || return 1
 
 	if [ ! -d roms ]; then
-		git clone --no-checkout \
-			https://github.com/minime-os/roms.git
-		(cd roms && git checkout "${PRELOADED_ROMS_VERSION}")
+		cp -a /workspace/roms ./roms
 	fi
 }
 

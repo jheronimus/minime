@@ -4,8 +4,9 @@
 #
 ################################################################################
 
-MALI_KBASE_VERSION = h700
-MALI_KBASE_SITE = $(call github,minime-os,mali-kbase,$(MALI_KBASE_VERSION))
+MALI_KBASE_VERSION = local
+MALI_KBASE_SITE = $(BR2_EXTERNAL)/../../drivers/mali-kbase
+MALI_KBASE_SITE_METHOD = local
 MALI_KBASE_LICENSE = GPL-2.0
 MALI_KBASE_LICENSE_FILES = product/kernel/license.txt
 
