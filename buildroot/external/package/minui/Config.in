@@ -16,4 +16,4 @@ config BR2_PACKAGE_MINUI
 	help
 	  Minimal launcher frontend and UI shell for minime.
 
-	  https://github.com/minime-os/minui
+	  https://github.com/jheronimus/MinUI

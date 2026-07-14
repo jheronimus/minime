@@ -2,12 +2,12 @@ config BR2_PACKAGE_MINIME_PREBUILT_LLVM
 	bool "Minime prebuilt LLVM package set"
 	help
 	  Import Buildroot-built LLVM/Clang/libclc/SPIR-V package outputs
-	  from minime-os/prebuilt-llvm instead of rebuilding them locally.
+	  from jheronimus/minime instead of rebuilding them locally.
 
 config BR2_PACKAGE_MINIME_PREBUILT_LLVM_CHANNEL_URL
 	string "Prebuilt LLVM channel manifest URL"
 	depends on BR2_PACKAGE_MINIME_PREBUILT_LLVM
-	default "https://raw.githubusercontent.com/minime-os/prebuilt-llvm/main/channels/bootlin-musl/2026.05/stable.json"
+	default "https://raw.githubusercontent.com/jheronimus/minime/main/buildroot/prebuilt-llvm/channels/bootlin-musl/2026.05/stable.json"
 	help
 	  URL of a stable.json manifest. The manifest points to an immutable
 	  llvm-rN.tar.xz artifact and includes its sha256.

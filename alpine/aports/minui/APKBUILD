@@ -6,7 +6,7 @@ pkgname=minui
 pkgver=1.0.0
 pkgrel=0
 pkgdesc="Minimal launcher frontend for Minime (Alpine aarch64 musl build)"
-url="https://github.com/minime-os/minui"
+url="https://github.com/jheronimus/MinUI"
 arch="aarch64"
 license="MIT"
 options="!strip !check"
@@ -48,7 +48,7 @@ build() {
 
 	if [ ! -d minui ]; then
 		git clone --no-checkout \
-			https://github.com/minime-os/minui.git minui
+			https://github.com/jheronimus/MinUI.git minui
 		(cd minui && git checkout "${MINUI_VERSION}")
 	fi
 
