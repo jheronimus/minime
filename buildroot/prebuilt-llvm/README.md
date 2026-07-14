@@ -5,8 +5,8 @@ This repository builds reusable Buildroot LLVM package artifacts for Minime.
 Artifacts are produced per toolchain flavor and Buildroot release:
 
 ```text
-https://github.com/minime-os/prebuilt-llvm/releases/download/bootlin-musl-2026.02.3/llvm-r1.tar.xz
-https://github.com/minime-os/prebuilt-llvm/releases/download/arm-glibc-2026.02.3/llvm-r1.tar.xz
+https://github.com/jheronimus/prebuilt-llvm/releases/download/bootlin-musl-2026.02.3/llvm-r1.tar.xz
+https://github.com/jheronimus/prebuilt-llvm/releases/download/arm-glibc-2026.02.3/llvm-r1.tar.xz
 ```
 
 The release tag is `<flavor>-<buildroot-version>`. Rebuilds for the same

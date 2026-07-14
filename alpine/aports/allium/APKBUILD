@@ -6,7 +6,7 @@ pkgname=allium
 pkgver=1.0.0
 pkgrel=0
 pkgdesc="Allium frontend (Rust) for Minime — Alpine aarch64 musl build"
-url="https://github.com/minime-os/allium"
+url="https://github.com/jheronimus/Allium"
 arch="aarch64"
 license="MIT"
 options="!strip !check"
@@ -22,7 +22,7 @@ makedepends="
 	rust
 "
 export ALLIUM_VERSION=3e2d6095817519437a4f7cf691806cc58a02af7c
-source="allium-$ALLIUM_VERSION.tar.gz::https://github.com/minime-os/allium/archive/$ALLIUM_VERSION.tar.gz"
+source="allium-$ALLIUM_VERSION.tar.gz::https://github.com/jheronimus/Allium/archive/$ALLIUM_VERSION.tar.gz"
 
 build() {
 	# Allium needs LIBCLANG_PATH for bindgen, BINDGEN_EXTRA_CLANG_ARGS for
