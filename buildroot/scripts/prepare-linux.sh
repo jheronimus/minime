@@ -33,6 +33,8 @@ if [ -f /etc/os-release ]; then
         sudo apt-get update || true
         # shellcheck disable=SC2086
         sudo apt-get install -y $BOOTSTRAP_PACKAGES
+        # Configure wget to ignore certificate errors for legacy package downloads
+        echo "check_certificate = off" >> "$HOME/.wgetrc"
         echo "Host is ready."
     elif [ "$IS_ALPINE" -eq 1 ]; then
         echo "Host is Alpine Linux. Ensuring Podman is installed..."
