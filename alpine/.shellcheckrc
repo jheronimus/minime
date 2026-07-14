@@ -1,0 +1,9 @@
+# shellcheck configuration for the Minime repository.
+#
+# SC2034: shellcheck flags pkgname/pkgver/... in APKBUILDs and
+# description/pidfile/command in OpenRC service files as "unused".
+# Those are framework globals, not script-locals; abuild and OpenRC
+# read them from the surrounding scope.  Disabling SC2034 globally is
+# the standard pattern in projects that use abuild or OpenRC.
+
+disable=SC2034

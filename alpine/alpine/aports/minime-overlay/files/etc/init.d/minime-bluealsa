@@ -1,0 +1,31 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-bluealsa: A2DP sink/source for Bluetooth audio routing.
+
+description="BlueALSA (Bluetooth audio ALSA bridge)"
+
+command="/usr/bin/bluealsa"
+command_args="-p a2dp-sink -p a2dp-source"
+pidfile="/run/bluealsa.pid"
+
+depend() {
+	need minime-bluetooth minime-dbus
+	after minime-modules
+}
+
+start_pre() {
+	[ -f /mnt/sdcard/.minime/config/bluetooth/enabled ] || return 1
+}
+
+start() {
+	ebegin "Starting bluealsa"
+	start-stop-daemon --start --background --make-pidfile \
+		--pidfile "$pidfile" --exec "$command" -- $command_args
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping bluealsa"
+	start-stop-daemon --stop --pidfile "$pidfile" --exec "$command"
+	eend $?
+}

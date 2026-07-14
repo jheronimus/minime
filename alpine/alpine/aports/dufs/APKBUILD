@@ -1,0 +1,24 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=dufs
+pkgver=0.46.0
+pkgrel=0
+pkgdesc="Static file server (Alpine aarch64 musl build)"
+url="https://github.com/sigoden/dufs"
+arch="aarch64"
+license="MIT OR Apache-2.0"
+options="!strip !check"
+makedepends="cargo gcc-aarch64 binutils-aarch64 linux-headers"
+source="$pkgname-$pkgver.tar.gz::https://github.com/sigoden/dufs/archive/v$pkgver.tar.gz"
+sha512sums="53d455205e227abeb99ec76ee6ac8e4606562f65cef967e1254189d18ad410faf066656ae1da461c769a44987f1c36906cd26be81b0aced593199b5dacdf82e4  dufs-0.46.0.tar.gz"
+
+build() {
+	cargo build --release --target aarch64-alpine-linux-musl
+}
+
+package() {
+	install -Dm755 target/aarch64-alpine-linux-musl/release/dufs \
+		"$pkgdir/usr/bin/dufs"
+}

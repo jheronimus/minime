@@ -1,0 +1,100 @@
+# Minime Alpine world (common) — package list shared by every board.
+#
+# Format: one package per line; lines starting with '#' are ignored.  The
+# list is installed in the Alpine rootfs by `alpine/scripts/build.sh`
+# after the local Minime package repo is staged at /local-repo.
+#
+# Local packages (built from minime/alpine/aports/*):
+#   - minime-overlay      filesystem layout, OpenRC services, trait payload
+#   - minui               UI binaries + assets
+#   - allium / allium-themes, drkhrse-miyoo-bezels, preloaded-roms
+#   - bootsplash          boot splash binary
+#   - dufs, syncthing, fatresize, libretro-common, retroarch-{cores,frontend}
+#
+# Notes:
+#   - musl replaces glibc; the gcompat compatibility layer is intentionally
+#     omitted.  Packages that hard-depend on glibc are not in this list.
+#   - libmali / mali-kbase / vulkan-loader are intentionally absent: Alpine
+#     uses Mesa Panfrost for GLES via DRM/GBM/KMS, and Vulkan is out of V1.
+#   - geekbench is intentionally absent: the proprietary GLIBC prebuilt does
+#     not run on musl and we are not building it from source.
+#
+# Kernel-related virtual packages let `apk` pull in the matching firmware
+# fragments we already ship via CONFIG_EXTRA_FIRMWARE.
+
+# ── Init + userspace base ────────────────────────────────────────────────
+openrc
+eudev
+busybox
+busybox-suid
+bash
+mksh
+shadow
+sudo
+tzdata
+ca-certificates
+musl-locales
+ncurses-terminfo
+# ── Console + login ──────────────────────────────────────────────────────
+gettext
+# busybox provides login, getty (via openrc service), and autologin
+# ── Filesystems / partitions ─────────────────────────────────────────────
+parted
+e2fsprogs
+dosfstools
+f2fs-tools
+util-linux
+# ── Compression / archives ───────────────────────────────────────────────
+zstd
+xz
+lz4
+# ── Networking (link/addr) ───────────────────────────────────────────────
+iproute2
+iputils
+iproute2-minimal
+# ── DNS / mDNS ───────────────────────────────────────────────────────────
+mdnsd
+# ── Wi-Fi + regulatory ───────────────────────────────────────────────────
+wpa_supplicant
+wpa_terminfo
+# busybox udhcpc is sufficient for DHCP; the Alpine package set above
+# already pulls in busybox.  wireless-regdb lives in /usr/share/wireless.
+# Realtek firmware fragments are installed by minime-overlay's post-install.
+# ── Bluetooth (with audio sink) ──────────────────────────────────────────
+dbus
+bluez
+bluez-deprecated
+bluez-alsa
+# ── Audio (ALSA) ─────────────────────────────────────────────────────────
+alsa-lib
+alsa-utils
+alsa-plugins
+# ── OpenGL ES / DRM/GBM / KMS (Mesa Panfrost) ────────────────────────────
+mesa
+mesa-panfrost
+mesa-glapi
+mesa-egl
+mesa-gbm
+mesa-gles
+libdrm
+# ── SDL2 (Alpine's sdl2 has KMSDRM/EGL/OpenGLES by default) ─────────────
+sdl2
+sdl2_image
+sdl2_ttf
+# ── Minime firmware pieces (libpng/zlib are SDL_image deps) ─────────────
+libpng
+zlib
+# ── Local Minime packages (built by alpine/aports/*) ─────────────────────
+# minime-overlay   filesystem layout + OpenRC services + trait payload
+# minui            UI binaries
+# allium           activity tracker + apps
+# allium-themes    Allium UI themes
+# drkhrse-miyoo-bezels  overlay bezels
+# preloaded-roms   free / shareware ROMs
+# bootsplash       boot splash helper
+# dufs             static file server
+# syncthing        P2P file sync
+# fatresize        FAT32 expansion
+# libretro-common  libretro.h
+# retroarch-cores  libretro cores
+# retroarch-frontend  retroarch binary

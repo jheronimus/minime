@@ -1,0 +1,76 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-traits: write /mnt/sdcard/.minime/traits from the immutable
+# /usr/share/minime/traits payload.
+
+description="Generate Minime device traits"
+
+depend() {
+	need minime-modules
+	before minime-ui
+	after minime-fb-unblank
+}
+
+start() {
+	ebegin "Generating Minime traits"
+	tr_tdir="/usr/share/minime/traits"
+	tr_tfile="/mnt/sdcard/.minime/traits"
+
+	tr_read_match() {
+		sed -n "s/^$1=//p" "$2" | head -n 1
+	}
+
+	tr_compat_matches() {
+		tr_expected="$1"
+		[ -z "$tr_expected" ] && return 0
+		tr_actual=$(tr '\000' '\n' < /proc/device-tree/compatible | head -n 1)
+		[ "$tr_actual" = "$tr_expected" ]
+	}
+
+	tr_find_device() {
+		tr_model="$1"
+		tr_match=""
+		for tr_file in "$tr_tdir"/devices/*.ini; do
+			[ -f "$tr_file" ] || continue
+			tr_em=$(tr_read_match model "$tr_file")
+			tr_ec=$(tr_read_match compatible "$tr_file")
+			if [ "$tr_em" = "$tr_model" ] && tr_compat_matches "$tr_ec"; then
+				[ -z "$tr_match" ] || {
+					echo "Multiple Minime trait files match '$tr_model'" >&2
+					return 1
+				}
+				tr_match="$tr_file"
+			fi
+		done
+		[ -n "$tr_match" ] || {
+			echo "Unsupported Minime device: '$tr_model'" >&2
+			return 1
+		}
+		printf '%s\n' "$tr_match"
+	}
+
+	tr_write_section() {
+		tr_section="$1"
+		tr_file="$2"
+		printf '[%s]\n' "$tr_section"
+		awk '
+			/^\[match\]$/ { skip = 1; next }
+			/^\[/ { skip = 0; next }
+			!skip && /^[A-Za-z0-9_]+=/ { print }
+		' "$tr_file"
+	}
+
+	tr_model=$(tr -d '\000\r\n' < /proc/device-tree/model)
+	tr_devfile=$(tr_find_device "$tr_model")
+	tr_tmp="${tr_tfile}.tmp"
+
+	mkdir -p "${tr_tfile%/*}"
+	{
+		echo "# Minime device traits"
+		tr_write_section platform "$tr_tdir/platform.ini"
+		echo
+		tr_write_section device "$tr_devfile"
+	} > "$tr_tmp"
+	mv "$tr_tmp" "$tr_tfile"
+	eend 0 " (${tr_devfile##*/})"
+}

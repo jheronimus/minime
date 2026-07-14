@@ -1,0 +1,29 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-bootsplash: optional animated boot splash, before the UI.
+
+description="Minime boot splash"
+
+command="/usr/bin/bootsplash"
+command_args="--fullscreen --config /mnt/sdcard/.minime/config/bootsplash.cfg"
+pidfile="/run/bootsplash.pid"
+
+depend() {
+	after minime-fb-unblank minime-traits
+	before minime-ui
+}
+
+start_pre() {
+	if [ -f /mnt/sdcard/.minime/config/bootsplash.cfg ]; then
+		bspl_enabled=$(sed -n 's/^[[:space:]]*enabled[[:space:]]*=[[:space:]]*//p' \
+			/mnt/sdcard/.minime/config/bootsplash.cfg | tail -1 | tr -d '[:space:]')
+		[ "$bspl_enabled" = "0" ] && return 1
+	fi
+	return 0
+}
+
+start() {
+	ebegin "Running bootsplash"
+	"$command" $command_args || true
+	eend 0
+}

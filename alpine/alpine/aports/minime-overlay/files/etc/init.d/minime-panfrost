@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime-panfrost: load the Panfrost kernel module for the GLES path used
+# by the Alpine userspace (Mesa).
+
+description="Load Panfrost GPU driver (Alpine GLES provider)"
+
+depend() {
+	need minime-modules
+	before minime-ui dbus
+}
+
+start() {
+	ebegin "Loading Panfrost"
+	modprobe panfrost 2>/dev/null || true
+	eend 0
+}
+
+stop() {
+	rmmod panfrost 2>/dev/null || true
+	return 0
+}

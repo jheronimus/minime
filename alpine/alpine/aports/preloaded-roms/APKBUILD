@@ -1,0 +1,32 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=preloaded-roms
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Free / shareware ROM bundle for the Minime SD-card userdata image"
+url="https://github.com/minime-os/roms"
+arch="noarch"
+license="Free/Shareware"
+options="!strip !check"
+source=""
+export PRELOADED_ROMS_VERSION=cc85d1accc3b3fb2d65786edc62d6604ea19f0b9
+
+build() {
+	local workdir="$srcdir/build"
+	mkdir -p "$workdir"
+	cd "$workdir" || return 1
+
+	if [ ! -d roms ]; then
+		git clone --no-checkout \
+			https://github.com/minime-os/roms.git
+		(cd roms && git checkout "${PRELOADED_ROMS_VERSION}")
+	fi
+}
+
+package() {
+	# The ROMs are copied to /alpine-output/boot/ui/roms by the build
+	# pipeline.
+	install -Dm644 /dev/null "$pkgdir/var/lib/minime/preloaded-roms.stamp"
+}

@@ -1,0 +1,33 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=drkhrse-miyoo-bezels
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Bezels for Minime UI emulators (Alpine asset pack)"
+url="https://github.com/drkhrse/drkhrse_miyoo_bezels"
+arch="noarch"
+license="GPL-3.0-or-later"
+options="!strip !check"
+source=""
+
+export DRKHRSE_MIYOO_BEZELS_VERSION=main
+
+build() {
+	local workdir="$srcdir/build"
+	mkdir -p "$workdir"
+	cd "$workdir" || return 1
+
+	if [ ! -d drkhrse_miyoo_bezels ]; then
+		git clone --depth 1 \
+			--branch "${DRKHRSE_MIYOO_BEZELS_VERSION}" \
+			https://github.com/drkhrse/drkhrse_miyoo_bezels.git
+	fi
+}
+
+package() {
+	# Bezels are pure assets; nothing to install into the rootfs.  The
+	# Alpine build pipeline copies them to /alpine-output/boot/ui/.ui/bezels.
+	install -Dm644 /dev/null "$pkgdir/var/lib/minime/drkhrse-bezels.stamp"
+}
