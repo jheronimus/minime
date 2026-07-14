@@ -23,7 +23,7 @@ on:
 
 jobs:
   build:
-    name: Build Alpine Firmware (rk3566)
+    name: Build Alpine RK3566
     runs-on: ubuntu-latest
     defaults:
       run:

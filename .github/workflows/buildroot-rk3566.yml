@@ -51,7 +51,7 @@ jobs:
           make source BOARD=${{ env.BOARD }}
 
   build:
-    name: Build RK3566 Firmware
+    name: Build Buildroot RK3566
     needs: shared-sources
     runs-on: ubuntu-latest
     timeout-minutes: 360
