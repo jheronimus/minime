@@ -6,10 +6,13 @@ on:
     paths:
       - 'buildroot/**'
       - '!buildroot/prebuilt-llvm/**'
-      - 'buildroot/prebuilt-llvm/channels/**/stable.json'
       - 'roms/**'
       - 'drivers/**'
       - '.github/workflows/buildroot.yml'
+  workflow_run:
+    workflows: ["Build Prebuilt LLVM Packages"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       clean_output:
@@ -22,6 +25,7 @@ jobs:
   shared-sources:
     name: Download Shared Sources
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     defaults:
       run:
         working-directory: buildroot
