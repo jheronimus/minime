@@ -1,0 +1,10 @@
+.DS_Store
+out/
+buildroot/
+logs/
+TODO.md
+.antigravitycli/
+local.mk
+scripts/__pycache__/
+__pycache__/
+*.pyc

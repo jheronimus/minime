@@ -1,0 +1,22 @@
+# Minime Alpine world (RK3566) — board-specific package set.
+#
+# RK3566 ships Mali Bifrost G52 (Rockchip).  The Mali driver pair
+# (libmali / mali_kbase) is intentionally absent in V1: the kernel has
+# CONFIG_MALI_KBASE=n and Mesa Panfrost is the GLES provider.  This is
+# the V1 acceptance target (Anbernic RG ARC-D).  Vulkan stays out of V1
+# per the implementation plan; PanVK would require a separate driver
+# discussion and is intentionally not in this list.
+#
+# Board-specific deltas:
+#   - RK3566 supports DMC devfreq + PSCI CPU idle, both enabled by the
+#     common + rk3566 kernel config fragments.  No extra userspace
+#     packages are needed beyond world-common.
+#   - The thermal watchdog is in-kernel (CONFIG_THERMAL with
+#     DEVFREQ_THERMAL + the Rockchip DFI driver); RK3566's existing
+#     S15thermal-watchdog init script is replaced by the OpenRC thermal
+#     service in minime-overlay.
+
+# Inherit world-common behavior is provided by build.sh, which concatenates
+# world-common and world-<board> at install time.  This file currently
+# contributes no extra packages, but is preserved so the board delta
+# remains explicit and version-controllable.

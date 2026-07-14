@@ -1,0 +1,75 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=minui
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Minimal launcher frontend for Minime (Alpine aarch64 musl build)"
+url="https://github.com/minime-os/minui"
+arch="aarch64"
+license="MIT"
+options="!strip !check"
+makedepends="
+	bash
+	cmake
+	gcc-aarch64
+	binutils-aarch64
+	linux-headers
+	ncurses-dev
+	pkgconf
+	python3
+	sdl2-dev
+	sdl2_image-dev
+	sdl2_ttf-dev
+	dbus-dev
+	libpng-dev
+	zlib-dev
+	lz4-dev
+"
+source=""
+
+# The Alpine build uses MinUI's upstream Makefile. The toolchain
+# is a preconfigured external AArch64 glibc toolchain; in Alpine the
+# cross gcc is `aarch64-alpine-linux-musl-gcc` plus musl's headers.
+#
+# Source is fetched fresh from the upstream commit pinned below.  We do
+# not duplicate the source tree in aports to keep APKBUILD diffs small.
+export MINUI_VERSION=ac7ee447b6f417239923f5a1511790dec6d21d1c
+MINUI_BUILD_DATE=$(date +%Y.%m.%d)
+export MINUI_BUILD_DATE
+MINUI_BUILD_HASH=$(printf '%s' "${MINUI_VERSION}" | cut -c1-7)
+export MINUI_BUILD_HASH
+
+build() {
+	local workdir="$srcdir/build"
+	mkdir -p "$workdir"
+	cd "$workdir" || return 1
+
+	if [ ! -d minui ]; then
+		git clone --no-checkout \
+			https://github.com/minime-os/minui.git minui
+		(cd minui && git checkout "${MINUI_VERSION}")
+	fi
+
+	# Stage the SD-card UI payload.
+	# `make image` outputs so the immutable EROFS rootfs + SD-card
+	# userdata contract stays stable.
+	mkdir -p "$workdir/staging/ui/.ui/bin"
+	mkdir -p "$workdir/staging/ui/.ui/res"
+	mkdir -p "$workdir/staging/ui/.ui/config"
+	mkdir -p "$workdir/staging/ui/.cores/config"
+	mkdir -p "$workdir/staging/ui/.ui/bezels"
+
+	# build() is a stub.  The actual compile is run by the Alpine build
+	# pipeline (alpine/scripts/build.sh) which has the cross toolchain
+	# already on PATH and can resolve aports' SDL2 / libpng / dbus.
+}
+
+package() {
+	# minui's runtime payload is staged to /alpine-output/boot/ui by the
+	# build pipeline; post-image.sh picks it up.  The Alpine rootfs itself
+	# does not contain minui binaries; they live on the SD card.
+	install -dm755 "$pkgdir/var/lib/minime"
+	install -Dm644 /dev/null "$pkgdir/var/lib/minime/minui.stamp"
+}

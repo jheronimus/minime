@@ -1,0 +1,35 @@
+#!/bin/bash
+# shellcheck shell=bash disable=SC3043,SC2154
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=syncthing
+pkgver=2.1.1
+pkgrel=0
+pkgdesc="Continuous file synchronization (Alpine aarch64 musl build)"
+url="https://github.com/syncthing/syncthing"
+arch="aarch64"
+license="MPL-2.0"
+options="!strip !check"
+makedepends="
+	binutils-aarch64
+	gcc-aarch64
+	go
+	linux-headers
+"
+source="$pkgname-$pkgver.tar.gz::https://github.com/syncthing/syncthing/archive/v$pkgver.tar.gz"
+sha512sums="0ee89a89f12cdfefaa083fa9fe5f28cb9bc1cc7dc71ab41d70c79c403e4b0ebe710070d1f20902aaf23f1141f675ec303c165e426084ba3a8472349ff0317481  syncthing-2.1.1.tar.gz"
+
+build() {
+	cd "$srcdir/syncthing-$pkgver" || return 1
+	export GOPROXY=https://proxy.golang.org,direct
+	export GOOS=linux
+	export GOARCH=arm64
+	# Generate the assets protobufs; syncthing's build.go needs `go run`.
+	(cd "$srcdir/syncthing-$pkgver" && go run build.go assets)
+	go run build.go -goos linux -goarch arm64 -no-upgrade build
+}
+
+package() {
+	cd "$srcdir/syncthing-$pkgver" || return 1
+	install -Dm755 syncthing "$pkgdir/usr/bin/syncthing"
+}

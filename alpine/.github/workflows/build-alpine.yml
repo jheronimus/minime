@@ -1,0 +1,72 @@
+name: Build Minime Alpine Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      clean_output:
+        description: 'Clean the Alpine output directory before building'
+        required: false
+        default: false
+        type: boolean
+      clean_apk_cache:
+        description: 'Wipe /alpine-repos + /alpine-dl before building'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build Alpine Firmware (rk3566)
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: minime-alpine
+    env:
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          path: minime-alpine
+
+      - name: Clean Alpine output
+        if: ${{ inputs.clean_output }}
+        run: |
+          make clean BOARD=rk3566
+
+      - name: Clean APK cache
+        if: ${{ inputs.clean_apk_cache }}
+        run: |
+          rm -rf ~/alpine-repos ~/alpine-dl
+
+      - name: Ensure minime-builder-alpine image is pre-built
+        run: |
+          if ! podman image inspect minime-builder-alpine >/dev/null 2>&1; then
+            echo "ERROR: minime-builder-alpine image is missing." >&2
+            echo "ERROR: On htpc.local (in an interactive shell), run:" >&2
+            echo "ERROR:   cd ~/actions-runner/_work/minime/minime-alpine && make prepare" >&2
+            echo "ERROR: That builds minime-builder-alpine locally; re-trigger this workflow after." >&2
+            exit 1
+          fi
+
+      - name: Build Alpine image
+        run: |
+          make image BOARD=rk3566
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-alpine-rk3566-${{ github.run_id }}
+          path: minime-alpine/out/rk3566/minime-alpine-rk3566.img.gz
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minime-alpine-rk3566-log-${{ github.run_id }}
+          path: minime-alpine/logs/alpine-image-rk3566.log
+          if-no-files-found: warn
+          retention-days: 14
