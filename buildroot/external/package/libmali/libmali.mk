@@ -4,29 +4,53 @@
 #
 ################################################################################
 
-ifeq ($(BR2_PACKAGE_LIBMALI_GPU_BIFROST_G52),y)
-LIBMALI_VERSION = rk3566
-LIBMALI_GPU_VERSION = g24p0
-else ifeq ($(BR2_cortex_a35),y)
-LIBMALI_VERSION = rk3326
-LIBMALI_GPU_VERSION = g2p0
-else
-LIBMALI_VERSION = h700
-LIBMALI_GPU_VERSION = g24p0
-endif
-
-LIBMALI_SITE = $(call github,minime-os,libmali,$(LIBMALI_VERSION))
+LIBMALI_VERSION = local
+LIBMALI_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/libmali
+LIBMALI_SITE_METHOD = local
 LIBMALI_LICENSE = proprietary
 LIBMALI_LICENSE_FILES = END_USER_LICENCE_AGREEMENT.txt
 LIBMALI_INSTALL_STAGING = YES
 LIBMALI_PROVIDES = libegl libgles libgbm
 LIBMALI_DEPENDENCIES = libdrm host-patchelf
 
+# Map GPU variants to their folder path and original filename
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G31_G24P0),y)
+LIBMALI_BOARD = h700
+LIBMALI_BLOB = libmali-bifrost-g31-g24p0-gbm.so
+endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G31_G13P0),y)
+LIBMALI_BOARD = rk3326
+LIBMALI_BLOB = libmali-bifrost-g31-g13p0-gbm.so
+endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G31_G2P0),y)
+LIBMALI_BOARD = rk3326
+LIBMALI_BLOB = libmali-bifrost-g31-g2p0-gbm.so
+endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G52_G13P0),y)
+LIBMALI_BOARD = rk3566
+LIBMALI_BLOB = libmali-bifrost-g52-g13p0-gbm.so
+endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G52_G24P0),y)
+LIBMALI_BOARD = rk3566
+LIBMALI_BLOB = libmali-bifrost-g52-g24p0-gbm.so
+endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G52_G2P0),y)
+LIBMALI_BOARD = rk3566
+LIBMALI_BLOB = libmali-bifrost-g52-g2p0-gbm.so
+endif
+
+# Copy the selected blob to the build directory before building
+define LIBMALI_COPY_BLOB
+	mkdir -p $(@D)/lib/aarch64-linux-gnu
+	cp $(BR2_EXTERNAL_MINIME_PATH)/board/$(LIBMALI_BOARD)/overlay/usr/lib/$(LIBMALI_BLOB) \
+		$(@D)/lib/aarch64-linux-gnu/libmali-bifrost-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
+endef
+LIBMALI_POST_EXTRACT_HOOKS += LIBMALI_COPY_BLOB
 
 LIBMALI_CONF_OPTS = \
 	-Darch=aarch64 \
 	-Dgpu=$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU)) \
-	-Dversion=$(LIBMALI_GPU_VERSION) \
+	-Dversion=$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION)) \
 	-Dplatform=gbm \
 	-Dopencl-icd=false \
 	-Dkhr-header=false \
@@ -64,7 +88,7 @@ define LIBMALI_PATCH_LIBRARIES
 	if [ -f $(TARGET_DIR)/usr/lib/libmali-hook.so.1 ]; then \
 		$(HOST_DIR)/bin/patchelf --add-needed libmali.so.1 $(TARGET_DIR)/usr/lib/libmali-hook.so.1; \
 	fi
-	
+
 	# Inject clock_shim dependency into libmali
 	for lib in $(TARGET_DIR)/usr/lib/libmali*.so*; do \
 		[ -f "$$lib" ] || continue; \
@@ -75,11 +99,11 @@ define LIBMALI_PATCH_LIBRARIES
 		$(HOST_DIR)/bin/patchelf --print-needed "$$lib" >/dev/null 2>&1 || continue; \
 		$(HOST_DIR)/bin/patchelf --add-needed libminime_clock_shim.so "$$lib"; \
 	done
-	
+
 	# Drop headers from target_dir to prevent conflicts with standard headers
 	rm -rf $(TARGET_DIR)/usr/include
 	rm -rf $(TARGET_DIR)/etc/ld.so.conf.d
-	
+
 	# Unversioned symlinks
 	cd $(TARGET_DIR)/usr/lib && { \
 		[ -f libEGL.so.1 ] && ln -sf libEGL.so.1 libEGL.so || true; \
