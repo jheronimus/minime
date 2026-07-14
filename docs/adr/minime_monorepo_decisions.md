@@ -158,52 +158,41 @@ UI repos have their own release cadence and versioning. Minime package recipes p
 
 ---
 
-## Decision 9 — CI: 3-stage Buildroot pipeline + 6 Alpine workflows, all on `ubuntu-latest`
+## Decision 9 — CI: Consolidated workflows, all on `ubuntu-latest`
 
-**From:** Buildroot on GitHub-hosted `ubuntu-latest`; Alpine on self-hosted `htpc.local` runner, `workflow_dispatch` only, currently failing (QEMU binfmt_misc drift on host).
+**From:** Buildroot and Alpine workflows split across separate individual files, some targeting self-hosted runners.
 
-**To:** All jobs on `runs-on: ubuntu-latest`. htpc.local is no longer a CI dependency.
+**To:** All workflows on `runs-on: ubuntu-latest`.
 
-### Buildroot: 3-stage pipeline (shared → parallel)
+### Buildroot: Consolidated Workflow (`buildroot.yml`)
+
+Consolidates all board builds (`h700`, `rk3326`, `rk3566`) into a single workflow file.
 
 ```
-Job 1: prebuilt-llvm
-  trigger: path changes in buildroot/prebuilt-llvm/** or BUILDROOT_VERSION bump
-  output:  prebuilt LLVM artifact (uploaded, cached)
-           ↓ needs:
-Job 2: shared-sources
+Job 1: shared-sources
   trigger: any buildroot/** change
-  runs:    make source   (populates dl/ cache for all packages)
-           builds shared toolchain (aarch64, common to all boards)
-  output:  warm dl/ + toolchain cache
+  runs:    make source sequentially for h700/rk3326/rk3566
+  output:  warm dl/ cache
            ↓ needs:
-Job 3a: buildroot-h700   ─┐
-Job 3b: buildroot-rk3326  ├─ parallel, restore shared cache, build board image
-Job 3c: buildroot-rk3566 ─┘
+Job 2a: build-h700   ─┐
+Job 2b: build-rk3326 ├─ parallel, restore shared dl/ cache, build board image
+Job 2c: build-rk3566 ─┘
 ```
 
 **Cache split:**
 - `dl/` — shared cache key across all boards (`buildroot/Makefile` hash); same tarballs for every board
 - `ccache` — board-specific cache key; different compiler flags per board
-- `toolchain` — shared if all boards use same aarch64 toolchain base
 
-### Alpine: 3 workflows with QEMU
+### Alpine: Single Workflow (`alpine.yml`)
 
-```
-.github/workflows/
-  alpine-h700.yml     ← push trigger + workflow_dispatch
-  alpine-rk3326.yml
-  alpine-rk3566.yml
-```
+Alpine currently only supports `rk3566` (no other boards exist in the Alpine tree). It is configured under a single `alpine.yml` workflow.
 
-Each Alpine workflow adds `docker/setup-qemu-action@v3` before launching the `--platform linux/arm64` container. This replaces the fragile htpc.local binfmt_misc dependency (the root cause of the current failure) with a fresh guaranteed QEMU registration per job.
+Registers QEMU using `docker/setup-qemu-action@v3` before launching the `--platform linux/arm64` container to compile on GitHub-hosted runners.
 
 **Cache split (Alpine):**
 - `/alpine-dl` — shared key across boards; same source tarballs
 - `/alpine-ccache` — board-specific
-- `/alpine-repos` — partially shared (arch-independent APKs identical across boards)
-
-**Revisit:** Alpine QEMU builds will be slow. Once all targets produce working builds, evaluate restructuring to x86_64 cross-compilation (abuild with `CHOST=aarch64-linux-musl`) to eliminate the QEMU dependency.
+- `/alpine-repos` — shared APK repository cache
 
 ---
 
