@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'buildroot/**'
-      - '!buildroot/prebuilt-llvm/**'
+      - '!buildroot/external/package/minime-prebuilt-llvm/channels/**'
       - 'roms/**'
       - 'drivers/**'
       - '.github/workflows/buildroot.yml'
