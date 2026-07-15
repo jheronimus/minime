@@ -7,12 +7,14 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
 - `buildroot/`: Core Buildroot build system (formerly `minime/`).
   - `Makefile`: Docker/Colima setups, builds, configs.
   - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
-    - `configs/`: Defconfigs.
+    - `configs/`: Defconfigs and config fragments.
+      - `minime_common.config`: Shared Buildroot options (arch, packages, rootfs).
+      - `toolchain-bootlin-musl.config` / `toolchain-arm-glibc.config`: Flavor-specific toolchain selection and LLVM channel URL.
     - `board/h700/`: H700 overlays, DTS, patches, config fragments (`linux.config`/`uboot.config`), scripts.
     - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
+      - `minime-prebuilt-llvm/`: Prebuilt LLVM package. Channel manifests live in `channels/<flavor>/<version>/stable.json`.
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
-  - `out/` / `logs/`: Bootable images / build logs.
-  - `prebuilt-llvm/`: Prebuilt LLVM packages to speed up compile times.
+  - `out/<board>-<flavor>/` / `logs/`: Bootable images / build logs.
 - `alpine/`: Core Alpine build system.
   - `aports/`: Custom Alpine package ports.
   - `board/`: Alpine board configurations and scripts.
@@ -27,7 +29,7 @@ Shared configurations are in [buildroot/external/board/common/](file:///Users/il
 
 ### Fragment ownership
 
-If a config option is needed on every device, put it in a common fragment (`buildroot/external/board/common/tiny-base.config` for kernel options, `buildroot/external/configs/minime_common.config` for Buildroot options). If it is only needed on one device, put it in that board's fragment (`buildroot/external/board/<board>/tiny-<board>.config` or `buildroot/external/configs/minime_<board>.config`). Never duplicate the same option across multiple board fragments; before adding it to a second board, move it to the common fragment.
+If a config option is needed on every device, put it in a common fragment (`buildroot/external/board/common/tiny-base.config` for kernel options, `buildroot/external/configs/minime_common.config` for Buildroot options). If it is only needed on one device, put it in that board's fragment (`buildroot/external/board/<board>/tiny-<board>.config` or `buildroot/external/configs/minime_<board>.config`). Toolchain selection and the LLVM channel URL belong in `buildroot/external/configs/toolchain-<flavor>.config`. Never duplicate the same option across multiple board fragments; before adding it to a second board, move it to the common fragment.
 
 - **Shared (`buildroot/external/board/common/`)**:
   - [busybox.config](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/busybox.config): Shared BusyBox config.
@@ -61,7 +63,7 @@ Push changes to the respective branch on `jheronimus/minime` to trigger CI build
 
 `buildroot/scripts/` is strictly for:
 
-1. Makefile/pipeline orchestration (`check_rebuild.py`, `prepare-linux.sh`).
+1. Makefile/pipeline orchestration (`check_rebuild.py`, `prepare-linux.sh`, `make-prebuilt-config.sh`, `package-prebuilt-llvm.sh`).
 2. Developer/agent utilities.
 
 - **Git Exclusions**: Custom scripts/helpers (`test_otp.py`, `run_telnet.py`) MUST be in `.gitignore`. Track only Makefile dependencies.
@@ -93,9 +95,12 @@ python3 buildroot/buildroot/utils/check-package <modified_files>
 ### 2. Defconfig Validation
 
 ```bash
-make buildroot-defconfig BOARD=h700
-make buildroot-defconfig BOARD=rk3326
-make buildroot-defconfig BOARD=rk3566
+make buildroot-defconfig BOARD=h700 FLAVOR=bootlin-musl
+make buildroot-defconfig BOARD=rk3326 FLAVOR=bootlin-musl
+make buildroot-defconfig BOARD=rk3566 FLAVOR=bootlin-musl
+make buildroot-defconfig BOARD=h700 FLAVOR=arm-glibc
+make buildroot-defconfig BOARD=rk3326 FLAVOR=arm-glibc
+make buildroot-defconfig BOARD=rk3566 FLAVOR=arm-glibc
 ```
 
 - **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally before committing.
