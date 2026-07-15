@@ -22,8 +22,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'buildroot/prebuilt-llvm/**'
-      - '!buildroot/prebuilt-llvm/channels/**'
+      - 'buildroot/scripts/make-prebuilt-config.sh'
+      - 'buildroot/scripts/package-prebuilt-llvm.sh'
       - 'buildroot/Makefile'
 
 permissions:
@@ -40,7 +40,7 @@ jobs:
       cancel-in-progress: false
     defaults:
       run:
-        working-directory: buildroot/prebuilt-llvm
+        working-directory: buildroot
     env:
       BUILDROOT_VERSION: ${{ inputs.buildroot_version || '2026.05' }}
       REVISION: ${{ inputs.revision || 'r1' }}
@@ -111,6 +111,7 @@ jobs:
           make -C "$BUILDROOT_DIR" O="$OUTPUT_DIR" olddefconfig
           grep -E '^(BR2_TOOLCHAIN_EXTERNAL|BR2_PACKAGE_(LLVM|CLANG|LIBCLC|SPIRV)|BR2_PER_PACKAGE_DIRECTORIES|BR2_TOOLCHAIN_USES_)' "$OUTPUT_DIR/.config" || true
 
+
       - name: Build LLVM package set
         run: |
           set -euo pipefail
@@ -171,7 +172,7 @@ jobs:
       - name: Update stable channel manifest
         run: |
           set -euo pipefail
-          channel_dir="channels/${FLAVOR}/${BUILDROOT_VERSION}"
+          channel_dir="external/package/minime-prebuilt-llvm/channels/${FLAVOR}/${BUILDROOT_VERSION}"
           mkdir -p "$channel_dir"
           cp "$ASSET_DIR/stable.json" "$channel_dir/stable.json"
           git config user.name "github-actions[bot]"
