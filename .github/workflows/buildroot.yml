@@ -52,17 +52,23 @@ jobs:
             make source BOARD=$board
           done
 
-  build-h700:
-    name: Build Buildroot H700
+  build:
+    name: Build Buildroot ${{ matrix.board }} (${{ matrix.flavor }})
     needs: shared-sources
     runs-on: ubuntu-latest
     timeout-minutes: 360
     defaults:
       run:
         working-directory: buildroot
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [h700, rk3326, rk3566]
+        flavor: [bootlin-musl, arm-glibc]
     env:
       USE_PODMAN: '0'
-      BOARD: h700
+      BOARD: ${{ matrix.board }}
+      FLAVOR: ${{ matrix.flavor }}
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
@@ -78,9 +84,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
-          key: minime-${{ env.BOARD }}-ccache-${{ runner.os }}-${{ github.sha }}
+          key: minime-${{ env.BOARD }}-${{ env.FLAVOR }}-ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            minime-${{ env.BOARD }}-ccache-${{ runner.os }}-
+            minime-${{ env.BOARD }}-${{ env.FLAVOR }}-ccache-${{ runner.os }}-
 
       - name: Prepare cache directories
         run: |
@@ -89,8 +95,8 @@ jobs:
       - name: Clean output
         if: ${{ inputs.clean_output }}
         run: |
-          echo "Cleaning output for board: ${{ env.BOARD }}"
-          make clean BOARD=${{ env.BOARD }}
+          echo "Cleaning output for ${{ env.BOARD }} (${{ env.FLAVOR }})"
+          make clean BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
 
       - name: Verify/Install Dependencies
         run: |
@@ -99,129 +105,13 @@ jobs:
 
       - name: Build Image
         run: |
-          echo "Building image for board: ${{ env.BOARD }}"
-          make image BOARD=${{ env.BOARD }}
+          echo "Building image for ${{ env.BOARD }} (${{ env.FLAVOR }})"
+          make image BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: minime-${{ env.BOARD }}-${{ github.sha }}
-          path: buildroot/out/${{ env.BOARD }}/**
-          if-no-files-found: error
-          retention-days: 14
-
-  build-rk3326:
-    name: Build Buildroot RK3326
-    needs: shared-sources
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    defaults:
-      run:
-        working-directory: buildroot
-    env:
-      USE_PODMAN: '0'
-      BOARD: rk3326
-      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Restore dl cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('buildroot/Makefile', 'buildroot/external/configs/minime_common.config') }}
-
-      - name: Restore board ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildroot-ccache
-          key: minime-${{ env.BOARD }}-ccache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            minime-${{ env.BOARD }}-ccache-${{ runner.os }}-
-
-      - name: Prepare cache directories
-        run: |
-          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
-
-      - name: Clean output
-        if: ${{ inputs.clean_output }}
-        run: |
-          echo "Cleaning output for board: ${{ env.BOARD }}"
-          make clean BOARD=${{ env.BOARD }}
-
-      - name: Verify/Install Dependencies
-        run: |
-          ./scripts/prepare-linux.sh
-          ccache --max-size=8G || true
-
-      - name: Build Image
-        run: |
-          echo "Building image for board: ${{ env.BOARD }}"
-          make image BOARD=${{ env.BOARD }}
-
-      - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: minime-${{ env.BOARD }}-${{ github.sha }}
-          path: buildroot/out/${{ env.BOARD }}/**
-          if-no-files-found: error
-          retention-days: 14
-
-  build-rk3566:
-    name: Build Buildroot RK3566
-    needs: shared-sources
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    defaults:
-      run:
-        working-directory: buildroot
-    env:
-      USE_PODMAN: '0'
-      BOARD: rk3566
-      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Restore dl cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('buildroot/Makefile', 'buildroot/external/configs/minime_common.config') }}
-
-      - name: Restore board ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildroot-ccache
-          key: minime-${{ env.BOARD }}-ccache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            minime-${{ env.BOARD }}-ccache-${{ runner.os }}-
-
-      - name: Prepare cache directories
-        run: |
-          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
-
-      - name: Clean output
-        if: ${{ inputs.clean_output }}
-        run: |
-          echo "Cleaning output for board: ${{ env.BOARD }}"
-          make clean BOARD=${{ env.BOARD }}
-
-      - name: Verify/Install Dependencies
-        run: |
-          ./scripts/prepare-linux.sh
-          ccache --max-size=8G || true
-
-      - name: Build Image
-        run: |
-          echo "Building image for board: ${{ env.BOARD }}"
-          make image BOARD=${{ env.BOARD }}
-
-      - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: minime-${{ env.BOARD }}-${{ github.sha }}
-          path: buildroot/out/${{ env.BOARD }}/**
+          name: minime-${{ env.BOARD }}-${{ env.FLAVOR }}-${{ github.sha }}
+          path: buildroot/out/${{ env.BOARD }}-${{ env.FLAVOR }}/**
           if-no-files-found: error
           retention-days: 14
