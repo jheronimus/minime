@@ -1,6 +1,0 @@
-.DS_Store
-**/ .DS_Store
-*.tar.xz
-buildroot/
-llvm-project/
-SPIRV-LLVM-Translator/
