@@ -2,8 +2,8 @@
   "flavor": "bootlin-musl",
   "buildroot_version": "2026.05",
   "revision": "r1",
-  "release_tag": "bootlin-musl-2026.05",
+  "release_tag": "prebuilt-llvm-bootlin-musl-2026.05",
   "asset": "llvm-r1.tar.xz",
-  "url": "https://github.com/jheronimus/prebuilt-llvm/releases/download/bootlin-musl-2026.05/llvm-r1.tar.xz",
+  "url": "https://github.com/jheronimus/minime/releases/download/prebuilt-llvm-bootlin-musl-2026.05/llvm-r1.tar.xz",
   "sha256": "c71ce7fcabbff7e07358c22baac6c75502ffae18b964070dad6ff9d49b3b6bb4"
 }
