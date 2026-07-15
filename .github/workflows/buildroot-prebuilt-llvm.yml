@@ -24,6 +24,7 @@ on:
     paths:
       - 'buildroot/scripts/make-prebuilt-config.sh'
       - 'buildroot/scripts/package-prebuilt-llvm.sh'
+      - 'buildroot/Makefile'
 
 permissions:
   contents: write
