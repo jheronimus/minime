@@ -208,7 +208,9 @@ build_tinykernel() {
 	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 
 	# Stage the kernel artifacts for post-image.sh to consume.
-	apk_file="${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk"
+	# abuild -P appends the parent-dir name of the APKBUILD as a repo
+	# subdirectory: APKBUILD lives in build/tinykernel/, so parent=build.
+	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
 	if [ -f "${apk_file}" ]; then
 		log "Staging tinykernel from newly built APK: ${apk_file}"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
