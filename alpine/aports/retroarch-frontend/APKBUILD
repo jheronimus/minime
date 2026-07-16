@@ -16,8 +16,7 @@ makedepends="
 	binutils-aarch64
 	gcc-aarch64
 	libdrm-dev
-	libegl-dev
-	libgles-dev
+	mesa-dev
 	linux-headers
 	make
 	ncurses-dev
