@@ -115,6 +115,7 @@ build() {
 	cat "$cfg_src/kernel/tiny-alpine.config" >> .config
 
 	# 4. Resolve new options and surface any unresolved ones.
+	sed -i "s|__MINIME_BOARD_FIRMWARE_DIR__|/workspace/buildroot/external/board/${DTB_BOARD}/firmware|g" .config
 	sed -i 's|__MINIME_COMMON_FIRMWARE_DIR__|/workspace/alpine/board/common/firmware|g' .config
 	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- olddefconfig
 
