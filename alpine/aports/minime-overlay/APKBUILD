@@ -26,6 +26,8 @@ package() {
 	local src="$startdir/files"
 	local dst="$pkgdir"
 
+	mkdir -p "$dst"
+
 	# Mirror the source tree (etc/, usr/, etc.) into the package root.
 	# The Alpine rootfs will receive it via `apk add minime-overlay`.
 	# rsync -a preserves symlinks (runlevels/boot/<svc> -> ../../init.d/...);
