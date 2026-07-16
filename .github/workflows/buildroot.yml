@@ -31,6 +31,16 @@ on:
         required: false
         default: true
         type: boolean
+      build_bootlin_musl:
+        description: 'Build bootlin-musl flavor'
+        required: false
+        default: true
+        type: boolean
+      build_arm_glibc:
+        description: 'Build arm-glibc flavor'
+        required: false
+        default: true
+        type: boolean
       clean_output:
         description: 'Clean the board output directories before building'
         required: false
@@ -43,11 +53,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       boards: ${{ steps.set.outputs.boards }}
+      flavors: ${{ steps.set.outputs.flavors }}
     steps:
-      - name: Select boards
+      - name: Select boards and flavors
         id: set
         run: |
           boards='["h700","rk3326","rk3566"]'
+          flavors='["bootlin-musl","arm-glibc"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
@@ -57,8 +69,15 @@ jobs:
                   'if $h700   then . + ["h700"]   else . end |
                    if $rk3326 then . + ["rk3326"] else . end |
                    if $rk3566 then . + ["rk3566"] else . end')
+            flavors=$(echo '[]' \
+              | jq -c \
+                  --argjson musl  '${{ inputs.build_bootlin_musl || true }}' \
+                  --argjson glibc '${{ inputs.build_arm_glibc    || true }}' \
+                  'if $musl  then . + ["bootlin-musl"] else . end |
+                   if $glibc then . + ["arm-glibc"]    else . end')
           fi
-          echo "boards=${boards}" >> "$GITHUB_OUTPUT"
+          echo "boards=${boards}"   >> "$GITHUB_OUTPUT"
+          echo "flavors=${flavors}" >> "$GITHUB_OUTPUT"
 
   shared-sources:
     name: Download Shared Sources
@@ -102,7 +121,7 @@ jobs:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
-        flavor: [bootlin-musl, arm-glibc]
+        flavor: ${{ fromJSON(needs.compute-matrix.outputs.flavors) }}
     env:
       USE_PODMAN: '0'
       BOARD: ${{ matrix.board }}
