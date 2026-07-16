@@ -17,7 +17,7 @@ makedepends="
 	gcc-aarch64
 	libtool
 	linux-headers
-	partx-dev
+	parted-dev
 	pkgconf
 "
 source="fatresize_$pkgver.orig.tar.gz::https://deb.debian.org/debian/pool/main/f/fatresize/fatresize_${pkgver}.orig.tar.gz"
