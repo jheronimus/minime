@@ -20,6 +20,11 @@ on:
           - all
           - bootlin-musl
           - arm-glibc
+      manifest_only:
+        description: 'Skip build — only push stable.json to llvm-channels (use when build succeeded but push failed)'
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -64,7 +69,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check if build can be skipped
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_tag="prebuilt-llvm-${FLAVOR}-${BUILDROOT_VERSION}"
+          asset="llvm-${REVISION}.tar.xz"
+          if [ "${{ inputs.manifest_only }}" = "true" ]; then
+            echo "manifest_only requested — skipping build"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "${release_tag}" --json assets \
+               --jq ".assets[].name" 2>/dev/null | grep -qx "${asset}"; then
+            echo "Release asset ${release_tag}/${asset} already exists — skipping build"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Validate inputs
+        if: steps.check.outputs.skip != 'true'
         run: |
           set -euo pipefail
           case "$FLAVOR" in
@@ -81,6 +106,7 @@ jobs:
           }
 
       - name: Install host dependencies
+        if: steps.check.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -88,6 +114,7 @@ jobs:
             python3 rsync unzip wget xz-utils ccache
 
       - name: Restore ccache
+        if: steps.check.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
@@ -97,6 +124,7 @@ jobs:
             prebuilt-llvm-${{ env.FLAVOR }}-
 
       - name: Fetch Buildroot release
+        if: steps.check.outputs.skip != 'true'
         run: |
           set -euo pipefail
           url="https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.tar.gz"
@@ -105,6 +133,7 @@ jobs:
           tar -xzf /tmp/buildroot.tar.gz --strip-components=1 -C "$BUILDROOT_DIR"
 
       - name: Configure Buildroot package build
+        if: steps.check.outputs.skip != 'true'
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
@@ -114,6 +143,7 @@ jobs:
 
 
       - name: Build LLVM package set
+        if: steps.check.outputs.skip != 'true'
         run: |
           set -euo pipefail
           make -C "$BUILDROOT_DIR" O="$OUTPUT_DIR" \
@@ -124,6 +154,7 @@ jobs:
             llvm clang libclc spirv-headers spirv-tools spirv-llvm-translator
 
       - name: Package prebuilt LLVM artifact
+        if: steps.check.outputs.skip != 'true'
         id: package
         run: |
           set -euo pipefail
@@ -151,6 +182,7 @@ jobs:
           echo "sha256=${sha256}" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub release assets
+        if: steps.check.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.package.outputs.release_tag }}
@@ -171,9 +203,35 @@ jobs:
           overwrite_files: true
 
       - name: Update stable channel manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          cp "$ASSET_DIR/stable.json" /tmp/stable.json
+          # When skipping the build, reconstruct stable.json from the existing release.
+          if [ "${{ steps.check.outputs.skip }}" = "true" ]; then
+            release_tag="prebuilt-llvm-${FLAVOR}-${BUILDROOT_VERSION}"
+            asset_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/llvm-${REVISION}.tar.xz"
+            sha256=$(gh release view "${release_tag}" --json assets \
+              --jq ".assets[] | select(.name==\"llvm-${REVISION}.sha256\") | .url" \
+              | xargs curl -fsSL | cut -d' ' -f1)
+            mkdir -p /tmp/dist
+            cat > /tmp/dist/stable.json <<EOF_JSON
+          {
+            "flavor": "${FLAVOR}",
+            "buildroot_version": "${BUILDROOT_VERSION}",
+            "revision": "${REVISION}",
+            "release_tag": "${release_tag}",
+            "asset": "llvm-${REVISION}.tar.xz",
+            "url": "${asset_url}",
+            "sha256": "${sha256}"
+          }
+          EOF_JSON
+            jq . /tmp/dist/stable.json > /tmp/dist/stable.pretty.json
+            mv /tmp/dist/stable.pretty.json /tmp/dist/stable.json
+            cp /tmp/dist/stable.json /tmp/stable.json
+          else
+            cp "$ASSET_DIR/stable.json" /tmp/stable.json
+          fi
           git fetch origin
           if git show-ref --quiet refs/remotes/origin/llvm-channels; then
             git checkout llvm-channels
