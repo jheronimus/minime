@@ -352,7 +352,10 @@ assemble_image() {
 	fi
 
 	# Build a rootfs.tar that post-image.sh expects.
-	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${ALPINE_OUTPUT_DIR}/rootfs.tar" .)
+	# Exclude proc/sys/dev: lazy umount may not have fully settled yet and
+	# these directories should never be archived anyway.
+	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${ALPINE_OUTPUT_DIR}/rootfs.tar" \
+		--exclude="./proc/*" --exclude="./sys/*" --exclude="./dev/*" .)
 
 	# Hand off to the image assembly script.  -d alpine switches to the
 	# distro-qualified output name.
