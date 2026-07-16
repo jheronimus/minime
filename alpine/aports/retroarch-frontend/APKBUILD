@@ -41,8 +41,7 @@ build() {
 		--enable-alsa \
 		--disable-ffmpeg \
 		--enable-zlib \
-		--enable-floathard \
-		--enable-neon
+		--enable-floathard
 	make
 }
 
