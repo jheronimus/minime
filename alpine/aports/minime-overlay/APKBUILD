@@ -11,7 +11,7 @@ arch="aarch64"
 license="MIT"
 options="!strip !check"
 makedepends="rsync"
-source="files/"
+source=""
 
 # Alpine overlay package for base config, udev rules, and OpenRC services.
 # The overlay preserves hostname, mounts, root access, telnet/ftp behavior,
@@ -23,7 +23,7 @@ build() {
 }
 
 package() {
-	local src="$srcdir/files"
+	local src="$startdir/files"
 	local dst="$pkgdir"
 
 	# Mirror the source tree (etc/, usr/, etc.) into the package root.
