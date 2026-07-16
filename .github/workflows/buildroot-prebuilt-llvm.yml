@@ -173,9 +173,18 @@ jobs:
       - name: Update stable channel manifest
         run: |
           set -euo pipefail
-          channel_dir="external/package/minime-prebuilt-llvm/channels/${FLAVOR}/${BUILDROOT_VERSION}"
+          cp "$ASSET_DIR/stable.json" /tmp/stable.json
+          git fetch origin
+          if git show-ref --quiet refs/remotes/origin/llvm-channels; then
+            git checkout llvm-channels
+            git pull origin llvm-channels
+          else
+            git checkout --orphan llvm-channels
+            git rm -rf .
+          fi
+          channel_dir="channels/${FLAVOR}/${BUILDROOT_VERSION}"
           mkdir -p "$channel_dir"
-          cp "$ASSET_DIR/stable.json" "$channel_dir/stable.json"
+          cp /tmp/stable.json "$channel_dir/stable.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$channel_dir/stable.json"
@@ -183,6 +192,5 @@ jobs:
             echo "Stable channel already points at ${REVISION}."
           else
             git commit -m "Promote ${FLAVOR} ${BUILDROOT_VERSION} ${REVISION}"
-            git pull --rebase origin main
-            git push origin main
+            git push origin llvm-channels
           fi

@@ -119,7 +119,11 @@ build() {
 	fi
 
 	# 5. Build kernel + DTBs + modules.
-	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- -j"$JOBS" Image modules dtbs
+	local dtb_targets=""
+	for dtb in $_dtbs; do
+		dtb_targets="$dtb_targets ${dtb}.dtb"
+	done
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- -j"$JOBS" Image modules $dtb_targets
 }
 
 package() {
