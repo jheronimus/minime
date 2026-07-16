@@ -94,7 +94,16 @@ build() {
 		done
 	fi
 
-	# 2. Merge kernel config:
+	# 2. Copy custom DTS files.
+	if [ "${DTB_BOARD}" = "h700" ]; then
+		cp /workspace/buildroot/external/board/h700/dts/*.dts arch/arm64/boot/dts/allwinner/
+	elif [ "${DTB_BOARD}" = "rk3326" ]; then
+		cp /workspace/buildroot/external/board/rk3326/dts/*.dts arch/arm64/boot/dts/rockchip/
+		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
+		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
+	fi
+
+	# 3. Merge kernel config:
 	#    tiny-base.config -> tiny-<board>.config -> tiny-alpine.config -> olddefconfig
 	local cfg_src="/workspace/alpine"
 	cat > .config <<-EOF
@@ -105,11 +114,11 @@ build() {
 	cat "/workspace/buildroot/external/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
 	cat "$cfg_src/kernel/tiny-alpine.config" >> .config
 
-	# 3. Resolve new options and surface any unresolved ones.
+	# 4. Resolve new options and surface any unresolved ones.
 	sed -i 's|__MINIME_COMMON_FIRMWARE_DIR__|/workspace/alpine/board/common/firmware|g' .config
 	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- olddefconfig
 
-	# 4. Hard guard: CONFIG_DRM_PANFROST must be present, CONFIG_MALI_KBASE
+	# 5. Hard guard: CONFIG_DRM_PANFROST must be present, CONFIG_MALI_KBASE
 	#    must not.  A future patch series that re-enables the proprietary
 	#    Mali driver pair needs explicit opt-in, not a silent regression.
 	grep -q "^CONFIG_DRM_PANFROST=y" .config \
@@ -118,7 +127,7 @@ build() {
 		echo "FATAL: proprietary Mali driver re-enabled by olddefconfig"; return 1
 	fi
 
-	# 5. Build kernel + DTBs + modules.
+	# 6. Build kernel + DTBs + modules.
 	local dtb_targets=""
 	for dtb in $_dtbs; do
 		dtb_targets="$dtb_targets ${dtb}.dtb"
