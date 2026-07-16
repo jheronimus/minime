@@ -119,7 +119,7 @@ if [ -d "${MINIME_SOURCE_ROOT}/board/common/bios" ]; then
 fi
 
 
-for system in gb gbc gba nes snes md gg sms pce psx ss arc; do
+for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
 done
