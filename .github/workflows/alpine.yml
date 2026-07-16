@@ -4,9 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'alpine/**'
-      - 'roms/**'
-      - 'drivers/**'
+      - 'alpine/aports/**'
+      - 'alpine/board/**'
+      - 'alpine/bootloader/**'
+      - 'alpine/configs/**'
+      - 'alpine/container/**'
+      - 'alpine/kernel/**'
+      - 'alpine/Makefile'
       - '.github/workflows/alpine.yml'
   workflow_dispatch:
     inputs:

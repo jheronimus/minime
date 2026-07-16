@@ -4,13 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'buildroot/**'
-      - '!buildroot/external/package/minime-prebuilt-llvm/channels/**'
-      - '!buildroot/Makefile'
-      - '!buildroot/scripts/make-prebuilt-config.sh'
-      - '!buildroot/scripts/package-prebuilt-llvm.sh'
-      - 'roms/**'
-      - 'drivers/**'
+      - 'buildroot/external/configs/**'
+      - 'buildroot/external/package/**'
+      - 'buildroot/external/board/**'
+      - 'buildroot/support/**'
+      - 'buildroot/container/**'
       - '.github/workflows/buildroot.yml'
   workflow_run:
     workflows: ["Prebuild LLVM packages"]
