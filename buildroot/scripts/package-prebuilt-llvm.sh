@@ -125,7 +125,7 @@ cat >"${payload_dir}/manifest.json" <<EOF_MANIFEST
 EOF_MANIFEST
 
 mkdir -p "$(dirname "$asset_path")"
-tar -C "$payload_dir" -cJf "$asset_path" .
+XZ_OPT="-T0 -3" tar -C "$payload_dir" -cJf "$asset_path" .
 sha256sum "$asset_path" >"${asset_path%.tar.xz}.sha256"
 cp "${payload_dir}/manifest.json" "${asset_path%.tar.xz}.manifest.json"
 
