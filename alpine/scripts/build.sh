@@ -141,9 +141,9 @@ build_local_apks() {
 	# All other local packages share one abuild run: each APKBUILD produces
 	# an APK that lands in REPODEST.  Order matters: tinykernel only feeds
 	# the SD payload, so the rootfs list is everything else.
-	ALPINE_PKGS="libretro-common allium allium-themes bootsplash drkhrse-miyoo-bezels dufs \
+	ALPINE_PKGS="libretro-common bootsplash drkhrse-miyoo-bezels \
 		fatresize minime-overlay minui preloaded-roms \
-		retroarch-cores retroarch-frontend syncthing"
+		retroarch-cores retroarch-frontend"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
