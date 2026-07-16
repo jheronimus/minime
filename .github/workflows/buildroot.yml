@@ -6,6 +6,9 @@ on:
     paths:
       - 'buildroot/**'
       - '!buildroot/external/package/minime-prebuilt-llvm/channels/**'
+      - '!buildroot/Makefile'
+      - '!buildroot/scripts/make-prebuilt-config.sh'
+      - '!buildroot/scripts/package-prebuilt-llvm.sh'
       - 'roms/**'
       - 'drivers/**'
       - '.github/workflows/buildroot.yml'
