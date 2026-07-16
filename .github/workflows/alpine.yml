@@ -72,6 +72,14 @@ jobs:
         run: |
           make image BOARD=${{ matrix.board }}
 
+      - name: Run Smoke Test (QEMU Emulation)
+        run: |
+          ./buildroot/scripts/run_smoke_test.sh \
+            "${{ matrix.board }}" \
+            "$HOME/alpine-output/${{ matrix.board }}/images/Image" \
+            "$HOME/alpine-output/${{ matrix.board }}/images/initramfs" \
+            "alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.gz"
+
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
