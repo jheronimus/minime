@@ -53,7 +53,7 @@ prepare:
 		$(PODMAN_CMD) build --platform linux/arm64 \
 			--build-arg BUILDER_UID=$(HOST_UID) \
 			--build-arg BUILDER_GID=$(HOST_GID) \
-			-t $(ALPINE_IMAGE_NAME) -f alpine/container/Dockerfile .
+			-t $(ALPINE_IMAGE_NAME) -f container/Dockerfile .
 
 shell: prepare
 	@$(PODMAN_CMD) run -it $(RUN_ARGS) $(ALPINE_IMAGE_NAME) /bin/sh
