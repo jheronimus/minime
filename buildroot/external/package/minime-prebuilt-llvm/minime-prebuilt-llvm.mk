@@ -8,6 +8,7 @@ MINIME_PREBUILT_LLVM_VERSION = 1
 MINIME_PREBUILT_LLVM_LICENSE = Apache-2.0 with exceptions, NCSA, MIT
 
 HOST_MINIME_PREBUILT_LLVM_CHANNEL_URL = $(call qstrip,$(BR2_PACKAGE_MINIME_PREBUILT_LLVM_CHANNEL_URL))
+HOST_MINIME_PREBUILT_LLVM_FLAVOR = $(call qstrip,$(BR2_PACKAGE_MINIME_PREBUILT_LLVM_FLAVOR))
 
 # This package intentionally has no Buildroot-managed SOURCE. The channel
 # manifest is mutable by design, while the artifact URL it points at is
@@ -23,7 +24,7 @@ define HOST_MINIME_PREBUILT_LLVM_EXTRACT_CMDS
 	$(Q)python3 $(BR2_EXTERNAL_MINIME_PATH)/package/minime-prebuilt-llvm/fetch-prebuilt-llvm.py \
 		--channel-url '$(HOST_MINIME_PREBUILT_LLVM_CHANNEL_URL)' \
 		--buildroot-version '$(BR2_VERSION)' \
-		--flavor 'bootlin-musl' \
+		--flavor '$(HOST_MINIME_PREBUILT_LLVM_FLAVOR)' \
 		--cache-dir '$(DL_DIR)/minime-prebuilt-llvm' \
 		--output-dir '$(@D)'
 endef

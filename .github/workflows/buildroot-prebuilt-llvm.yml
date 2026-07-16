@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       buildroot_version:
-        description: 'Buildroot release tag (e.g. 2026.05)'
+        description: 'Buildroot release tag (e.g. 2026.05.1)'
         required: true
-        default: '2026.05'
+        default: '2026.05.1'
       revision:
         description: 'Artifact revision inside the release (e.g. r1, r2)'
         required: true
@@ -37,13 +37,13 @@ jobs:
       matrix:
         flavor: ${{ (github.event.inputs.flavor && github.event.inputs.flavor != 'all') && fromJSON(format('["{0}"]', github.event.inputs.flavor)) || fromJSON('["bootlin-musl", "arm-glibc"]') }}
     concurrency:
-      group: prebuilt-llvm-${{ matrix.flavor }}-${{ inputs.buildroot_version || '2026.05' }}-${{ inputs.revision || 'r1' }}
+      group: prebuilt-llvm-${{ matrix.flavor }}-${{ inputs.buildroot_version || '2026.05.1' }}-${{ inputs.revision || 'r1' }}
       cancel-in-progress: false
     defaults:
       run:
         working-directory: buildroot
     env:
-      BUILDROOT_VERSION: ${{ inputs.buildroot_version || '2026.05' }}
+      BUILDROOT_VERSION: ${{ inputs.buildroot_version || '2026.05.1' }}
       REVISION: ${{ inputs.revision || 'r1' }}
       FLAVOR: ${{ matrix.flavor }}
       OUTPUT_DIR: ${{ github.workspace }}/output
