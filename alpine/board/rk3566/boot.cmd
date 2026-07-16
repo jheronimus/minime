@@ -1,1 +1,0 @@
-../../../buildroot/external/board/rk3566/boot.cmd

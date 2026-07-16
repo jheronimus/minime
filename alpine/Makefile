@@ -6,7 +6,7 @@ HOST_GID := $(shell id -g)
 PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
 PODMAN_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
-SUPPORTED_BOARDS := rk3566
+SUPPORTED_BOARDS := rk3566 rk3326 h700
 BOARD ?= rk3566
 ALPINE_IMAGE_NAME := minime-builder-alpine
 ALPINE_OUTPUT_DIR := $(HOME)/alpine-output/$(BOARD)
