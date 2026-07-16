@@ -10,6 +10,7 @@ on:
       - 'alpine/configs/**'
       - 'alpine/container/**'
       - 'alpine/kernel/**'
+      - 'alpine/scripts/**'
       - 'alpine/Makefile'
       - '.github/workflows/alpine.yml'
   workflow_dispatch:
