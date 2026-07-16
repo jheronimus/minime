@@ -16,6 +16,21 @@ on:
       - completed
   workflow_dispatch:
     inputs:
+      build_h700:
+        description: 'Build H700'
+        required: false
+        default: true
+        type: boolean
+      build_rk3326:
+        description: 'Build RK3326'
+        required: false
+        default: true
+        type: boolean
+      build_rk3566:
+        description: 'Build RK3566'
+        required: false
+        default: true
+        type: boolean
       clean_output:
         description: 'Clean the board output directories before building'
         required: false
@@ -23,6 +38,28 @@ on:
         type: boolean
 
 jobs:
+  compute-matrix:
+    name: Compute board matrix
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.set.outputs.boards }}
+    steps:
+      - name: Select boards
+        id: set
+        run: |
+          boards='["h700","rk3326","rk3566"]'
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            boards=$(echo '[]' \
+              | jq -c \
+                  --argjson h700   '${{ inputs.build_h700   || true }}' \
+                  --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
+                  --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
+                  'if $h700   then . + ["h700"]   else . end |
+                   if $rk3326 then . + ["rk3326"] else . end |
+                   if $rk3566 then . + ["rk3566"] else . end')
+          fi
+          echo "boards=${boards}" >> "$GITHUB_OUTPUT"
+
   shared-sources:
     name: Download Shared Sources
     runs-on: ubuntu-latest
@@ -55,7 +92,7 @@ jobs:
 
   build:
     name: Build Buildroot ${{ matrix.board }} (${{ matrix.flavor }})
-    needs: shared-sources
+    needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
     timeout-minutes: 360
     defaults:
@@ -64,7 +101,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        board: [h700, rk3326, rk3566]
+        board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
         flavor: [bootlin-musl, arm-glibc]
     env:
       USE_PODMAN: '0'
