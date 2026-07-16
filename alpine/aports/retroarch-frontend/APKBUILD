@@ -32,9 +32,9 @@ build() {
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
-		--disable-gl \
+		--disable-opengl \
 		--enable-egl \
-		--enable-gles \
+		--enable-opengles \
 		--enable-kms \
 		--disable-x11 \
 		--disable-wayland \
