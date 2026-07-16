@@ -7,7 +7,14 @@ config BR2_PACKAGE_MINIME_PREBUILT_LLVM
 config BR2_PACKAGE_MINIME_PREBUILT_LLVM_CHANNEL_URL
 	string "Prebuilt LLVM channel manifest URL"
 	depends on BR2_PACKAGE_MINIME_PREBUILT_LLVM
-	default "https://raw.githubusercontent.com/jheronimus/minime/llvm-channels/channels/bootlin-musl/2026.05/stable.json"
+	default "https://raw.githubusercontent.com/jheronimus/minime/llvm-channels/channels/bootlin-musl/2026.05.1/stable.json"
 	help
 	  URL of a stable.json manifest. The manifest points to an immutable
 	  llvm-rN.tar.xz artifact and includes its sha256.
+
+config BR2_PACKAGE_MINIME_PREBUILT_LLVM_FLAVOR
+	string "Prebuilt LLVM flavor"
+	depends on BR2_PACKAGE_MINIME_PREBUILT_LLVM
+	help
+	  The flavor of the toolchain (e.g. bootlin-musl, arm-glibc)
+
