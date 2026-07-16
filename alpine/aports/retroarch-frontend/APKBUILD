@@ -40,8 +40,7 @@ build() {
 		--disable-wayland \
 		--enable-alsa \
 		--disable-ffmpeg \
-		--enable-zlib \
-		--enable-floathard
+		--enable-zlib
 	make
 }
 
