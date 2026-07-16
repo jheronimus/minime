@@ -60,6 +60,10 @@ define PRELOADED_ROMS_INSTALL_TARGET_CMDS
 		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/arc"; \
 		cp -a "$(@D)/arc/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/arc/"; \
 	fi
+	if [ -d "$(@D)/neocd" ]; then \
+		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/neocd"; \
+		cp -a "$(@D)/neocd/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/neocd/"; \
+	fi
 	if [ -d "$(@D)/lynx" ]; then \
 		mkdir -p "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/lynx"; \
 		cp -a "$(@D)/lynx/." "$(PRELOADED_ROMS_TARGET_ROMS_DIR)/lynx/"; \
