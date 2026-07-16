@@ -285,7 +285,7 @@ log_card() {
 
 # Wait for Linux to enumerate SD/eMMC devices.
 for i in 1 2 3 4 5 6 7 8 9 10; do
-	for dev in /dev/mmcblk*p1; do
+	for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
 		[ -b "$dev" ] && CARD_DEV="$dev" && break
 	done
 	[ -n "$CARD_DEV" ] && break
@@ -293,12 +293,12 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 if [ -z "$CARD_DEV" ]; then
-	log_console "ERROR: no /dev/mmcblk*p1 block devices found"
+	log_console "ERROR: no /dev/mmcblk*p1, /dev/vd*1, or /dev/sd*1 block devices found"
 	exec sh
 fi
 
 mkdir -p /mnt/card
-for dev in /dev/mmcblk*p1; do
+for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
 	[ -b "$dev" ] || continue
 	if mount -t vfat "$dev" /mnt/card; then
 		if [ -f /mnt/card/.minime/system ]; then

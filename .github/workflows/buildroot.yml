@@ -109,6 +109,14 @@ jobs:
           echo "Building image for ${{ env.BOARD }} (${{ env.FLAVOR }})"
           make image BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
 
+      - name: Run Smoke Test (QEMU Emulation)
+        run: |
+          ./scripts/run_smoke_test.sh \
+            "${{ env.BOARD }}" \
+            "$HOME/buildroot-output/${{ env.BOARD }}-${{ env.FLAVOR }}/images/Image" \
+            "$HOME/buildroot-output/${{ env.BOARD }}-${{ env.FLAVOR }}/images/initramfs" \
+            "out/${{ env.BOARD }}-${{ env.FLAVOR }}/minime-${{ env.BOARD }}.img.gz"
+
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
