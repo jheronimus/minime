@@ -260,7 +260,7 @@ assemble_rootfs() {
 	mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
 	mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"
 	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
-	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" "${ALPINE_ROOTFS_DIR}/sys" "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
+	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
 	apk --root "${ALPINE_ROOTFS_DIR}" \
 		--repository "${ALPINE_REPO_BASE}/main" \
@@ -287,7 +287,9 @@ assemble_rootfs() {
 			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 	fi
 
-	umount -lf "${ALPINE_ROOTFS_DIR}/proc" "${ALPINE_ROOTFS_DIR}/sys" "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
 	trap - EXIT
 }
 
