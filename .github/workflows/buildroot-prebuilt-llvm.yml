@@ -1,4 +1,4 @@
-name: Build Prebuilt LLVM Packages
+name: Prebuild LLVM packages
 
 on:
   workflow_dispatch:

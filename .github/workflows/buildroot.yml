@@ -1,4 +1,4 @@
-name: Build Minime Buildroot Images
+name: Build Buildroot images
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
       - 'drivers/**'
       - '.github/workflows/buildroot.yml'
   workflow_run:
-    workflows: ["Build Prebuilt LLVM Packages"]
+    workflows: ["Prebuild LLVM packages"]
     types:
       - completed
   workflow_dispatch:
