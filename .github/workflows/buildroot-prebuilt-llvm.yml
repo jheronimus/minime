@@ -180,7 +180,7 @@ jobs:
             git pull origin llvm-channels
           else
             git checkout --orphan llvm-channels
-            git rm -rf .
+            git rm -rf -- :/
           fi
           channel_dir="channels/${FLAVOR}/${BUILDROOT_VERSION}"
           mkdir -p "$channel_dir"
