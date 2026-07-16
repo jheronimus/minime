@@ -241,17 +241,15 @@ assemble_rootfs() {
 	# the same repo as the official Alpine packages.
 	ALPINE_REPO_BASE="${ALPINE_MINIROOTFS_BASE_URL%/releases/${ALPINE_ARCH}}"
 	cat > "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
-		${ALPINE_REPO_BASE}/main/${ALPINE_ARCH}
-		${ALPINE_REPO_BASE}/community/${ALPINE_ARCH}
+		${ALPINE_REPO_BASE}/main
+		${ALPINE_REPO_BASE}/community
 		/local-repo
 	EOF
 
-	# Stage the local repo (a tarball of REPODEST) inside the rootfs so
-	# `apk add` inside chroot can resolve minime packages.
-	mkdir -p "${ALPINE_ROOTFS_DIR}/local-repo"
-	cp -a "${ALPINE_PACKAGES_DIR}/." "${ALPINE_ROOTFS_DIR}/local-repo/"
-	abuild index -o "${ALPINE_ROOTFS_DIR}/local-repo/" \
-		"${ALPINE_ROOTFS_DIR}/local-repo/"*.apk 2>/dev/null || true
+	# Stage the local repo inside the rootfs so `apk add` inside chroot can resolve minime packages.
+	mkdir -p "${ALPINE_ROOTFS_DIR}/local-repo/aarch64"
+	find "${ALPINE_PACKAGES_DIR}" -name '*.apk' -exec cp -f {} "${ALPINE_ROOTFS_DIR}/local-repo/aarch64/" \;
+	(cd "${ALPINE_ROOTFS_DIR}/local-repo/aarch64" && apk index -o APKINDEX.tar.gz *.apk)
 
 	# Resolve the full package list and install it.  --allow-untrusted lets
 	# minime-overlay install without a signature.
@@ -265,8 +263,8 @@ assemble_rootfs() {
 	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" "${ALPINE_ROOTFS_DIR}/sys" "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
 	apk --root "${ALPINE_ROOTFS_DIR}" \
-		--repository "${ALPINE_REPO_BASE}/main/${ALPINE_ARCH}" \
-		--repository "${ALPINE_REPO_BASE}/community/${ALPINE_ARCH}" \
+		--repository "${ALPINE_REPO_BASE}/main" \
+		--repository "${ALPINE_REPO_BASE}/community" \
 		--repository "/local-repo" \
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
