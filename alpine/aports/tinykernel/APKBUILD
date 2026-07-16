@@ -32,24 +32,60 @@ source="
 sha512sums="6f04fa9ced78f2e7a41dfae7f707f540e7cc6dcd4d3847f0d28df58b2d18a8edb75f98c674ba935538897e89864a06681f4cd56b91f3ea3e1b7f04096cb796e7  linux-7.0.10.tar.xz"
 
 : "${DTB_BOARD:=rk3566}"
-[ "$DTB_BOARD" = "rk3566" ] || { echo "unsupported DTB_BOARD=$DTB_BOARD"; exit 1; }
-_dtbs="
-	rockchip/rk3566-anbernic-rg-arc-d
-	rockchip/rk3566-anbernic-rg-arc-s
-	rockchip/rk3566-anbernic-rg353p
-	rockchip/rk3566-anbernic-rg353ps
-	rockchip/rk3566-anbernic-rg353v
-	rockchip/rk3566-anbernic-rg353vs
-	rockchip/rk3566-anbernic-rg503
-	rockchip/rk3568-anbernic-rg-ds
-"
+case "$DTB_BOARD" in
+	rk3566)
+		_dtbs="
+			rockchip/rk3566-anbernic-rg-arc-d
+			rockchip/rk3566-anbernic-rg-arc-s
+			rockchip/rk3566-anbernic-rg353p
+			rockchip/rk3566-anbernic-rg353ps
+			rockchip/rk3566-anbernic-rg353v
+			rockchip/rk3566-anbernic-rg353vs
+			rockchip/rk3566-anbernic-rg503
+			rockchip/rk3568-anbernic-rg-ds
+		"
+		;;
+	rk3326)
+		_dtbs="
+			rockchip/rk3326-anbernic-rg351p
+			rockchip/rk3326-anbernic-rg351m
+			rockchip/rk3326-anbernic-rg351v
+			rockchip/rk3326-anbernic-rg351mp
+		"
+		;;
+	h700)
+		_dtbs="
+			allwinner/sun50i-h700-anbernic-rg28xx
+			allwinner/sun50i-h700-anbernic-rg34xx
+			allwinner/sun50i-h700-anbernic-rg34xx-sp
+			allwinner/sun50i-h700-anbernic-rg35xx-2024
+			allwinner/sun50i-h700-anbernic-rg35xx-2024-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-h
+			allwinner/sun50i-h700-anbernic-rg35xx-h-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-plus
+			allwinner/sun50i-h700-anbernic-rg35xx-plus-rev6-panel
+			allwinner/sun50i-h700-anbernic-rg35xx-pro
+			allwinner/sun50i-h700-anbernic-rg35xx-sp
+			allwinner/sun50i-h700-anbernic-rg35xx-sp-v2-panel
+			allwinner/sun50i-h700-anbernic-rg40xx-h
+			allwinner/sun50i-h700-anbernic-rg40xx-h-v2-panel
+			allwinner/sun50i-h700-anbernic-rg40xx-v
+			allwinner/sun50i-h700-anbernic-rg40xx-v-v2-panel
+			allwinner/sun50i-h700-anbernic-rgcubexx
+		"
+		;;
+	*)
+		echo "unsupported DTB_BOARD=$DTB_BOARD"
+		exit 1
+		;;
+esac
 
 build() {
 	local src="$srcdir/linux-$pkgver"
 	cd "$src" || return 1
 
 	# 1. Apply Minime's kernel patch series.
-	local patch_dir="/workspace/alpine/board/${DTB_BOARD}/patches/linux"
+	local patch_dir="/workspace/buildroot/external/board/${DTB_BOARD}/patches/linux"
 	if [ -d "$patch_dir" ]; then
 		for p in "$patch_dir"/*.patch; do
 			[ -f "$p" ] || continue
@@ -65,8 +101,8 @@ build() {
 		# merged by APKBUILD build()
 		# tiny-base.config first
 	EOF
-	cat "$cfg_src/board/common/tiny-base.config" >> .config
-	cat "$cfg_src/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
+	cat "/workspace/buildroot/external/board/common/tiny-base.config" >> .config
+	cat "/workspace/buildroot/external/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
 	cat "$cfg_src/kernel/tiny-alpine.config" >> .config
 
 	# 3. Resolve new options and surface any unresolved ones.

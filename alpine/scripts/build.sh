@@ -45,7 +45,11 @@ ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 log() { printf '[alpine] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
-[ "${BOARD}" = "rk3566" ] || die "unsupported BOARD=${BOARD} (supported: rk3566)"
+case "${BOARD}" in
+	rk3566|rk3326|h700) ;;
+	*) die "unsupported BOARD=${BOARD} (supported: rk3566, rk3326, h700)" ;;
+esac
+export DTB_BOARD="${BOARD}"
 
 #──────────────────────────────────────────────────────────────────────────────
 # 1. Resolve + verify minirootfs
@@ -260,7 +264,7 @@ assemble_rootfs() {
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
-	TRAITS_SRC="${ALPINE_BOARD_DIR}/${BOARD}/traits"
+	TRAITS_SRC="/workspace/buildroot/external/board/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
@@ -292,12 +296,18 @@ assemble_image() {
 
 	# Copy Alpine-owned bootloader artifacts into the image staging dir.
 	mkdir -p "${ALPINE_OUTPUT_DIR}/bootloader"
-	BL_IDB="${ALPINE_DIR}/bootloader/${BOARD}/idbloader.img"
-	BL_ITB="${ALPINE_DIR}/bootloader/${BOARD}/u-boot.itb"
-	[ -f "${BL_IDB}" ] || die "missing ${BL_IDB}"
-	[ -f "${BL_ITB}" ] || die "missing ${BL_ITB}"
-	cp -f "${BL_IDB}" "${ALPINE_OUTPUT_DIR}/bootloader/idbloader.img"
-	cp -f "${BL_ITB}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot.itb"
+	if [ "${BOARD}" = "h700" ]; then
+		BL_BIN="${ALPINE_DIR}/bootloader/${BOARD}/u-boot-sunxi-with-spl.bin"
+		[ -f "${BL_BIN}" ] || die "missing ${BL_BIN}"
+		cp -f "${BL_BIN}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot-sunxi-with-spl.bin"
+	else
+		BL_IDB="${ALPINE_DIR}/bootloader/${BOARD}/idbloader.img"
+		BL_ITB="${ALPINE_DIR}/bootloader/${BOARD}/u-boot.itb"
+		[ -f "${BL_IDB}" ] || die "missing ${BL_IDB}"
+		[ -f "${BL_ITB}" ] || die "missing ${BL_ITB}"
+		cp -f "${BL_IDB}" "${ALPINE_OUTPUT_DIR}/bootloader/idbloader.img"
+		cp -f "${BL_ITB}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot.itb"
+	fi
 
 	# Stage the kernel + boot.scr + DTBs + UI payload into BINARIES_DIR.
 	IMG_BIN="${ALPINE_OUTPUT_DIR}/images"
@@ -311,7 +321,7 @@ assemble_image() {
 	[ -f "${IMG_BIN}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
 	# Compile boot.cmd -> boot.scr using mkimage.
-	BOOT_CMD="${ALPINE_BOARD_DIR}/${BOARD}/boot.cmd"
+	BOOT_CMD="/workspace/buildroot/external/board/${BOARD}/boot.cmd"
 	[ -f "${BOOT_CMD}" ] || die "missing ${BOOT_CMD}"
 	mkimage -C none -A arm -T script -d "${BOOT_CMD}" "${IMG_BIN}/boot.scr"
 	log "boot.scr: ${IMG_BIN}/boot.scr"
@@ -342,7 +352,7 @@ assemble_image() {
 	BUILD_DIR="${ALPINE_BUILD_DIR}" \
 	HOST_DIR="/usr" \
 	MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
-	"${POST_IMAGE}" -c "${ALPINE_BOARD_DIR}/${BOARD}/genimage.cfg" \
+	"${POST_IMAGE}" -c "/workspace/buildroot/external/board/${BOARD}/genimage.cfg" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"

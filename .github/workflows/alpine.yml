@@ -23,8 +23,12 @@ on:
 
 jobs:
   build:
-    name: Build Alpine RK3566
+    name: Build Alpine ${{ matrix.board }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [rk3566, rk3326, h700]
     defaults:
       run:
         working-directory: alpine
@@ -46,14 +50,14 @@ jobs:
             ~/alpine-repos
             ~/alpine-dl
             ~/alpine-ccache
-          key: minime-alpine-rk3566-${{ runner.os }}-${{ github.sha }}
+          key: minime-alpine-${{ matrix.board }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            minime-alpine-rk3566-${{ runner.os }}-
+            minime-alpine-${{ matrix.board }}-${{ runner.os }}-
 
       - name: Clean Alpine output
         if: ${{ inputs.clean_output }}
         run: |
-          make clean BOARD=rk3566
+          make clean BOARD=${{ matrix.board }}
 
       - name: Clean APK cache
         if: ${{ inputs.clean_apk_cache }}
@@ -62,13 +66,13 @@ jobs:
 
       - name: Build Alpine builder container & image
         run: |
-          make image BOARD=rk3566
+          make image BOARD=${{ matrix.board }}
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-rk3566-${{ github.sha }}
-          path: alpine/out/rk3566/minime-alpine-rk3566.img.gz
+          name: minime-alpine-${{ matrix.board }}-${{ github.sha }}
+          path: alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.gz
           if-no-files-found: error
           retention-days: 14
 
@@ -76,7 +80,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-rk3566-log-${{ github.sha }}
-          path: alpine/logs/alpine-image-rk3566.log
+          name: minime-alpine-${{ matrix.board }}-log-${{ github.sha }}
+          path: alpine/logs/alpine-image-${{ matrix.board }}.log
           if-no-files-found: warn
           retention-days: 14
