@@ -51,4 +51,6 @@ package() {
 	# Drop the canonical config where the Alpine build pipeline expects it.
 	install -Dm644 /dev/null \
 		"$pkgdir/etc/retroarch.cfg"
+
+	rm -rf "${pkgdir:?}/usr/share"
 }
