@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-ROOT_DIR := $(CURDIR)
+ROOT_DIR := $(abspath $(CURDIR)/..)
 
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
