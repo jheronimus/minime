@@ -168,8 +168,6 @@ build_tinykernel() {
 	local apk_file=""
 	if [ -f "${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk" ]; then
 		apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
-	elif [ -f "${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk" ]; then
-		apk_file="${ALPINE_PACKAGES_DIR}/aarch64/tinykernel-7.0.10-r0.apk"
 	fi
 
 	if [ -n "${apk_file}" ]; then
