@@ -53,10 +53,8 @@ iproute2
 iputils
 iproute2-minimal
 # ── DNS / mDNS ───────────────────────────────────────────────────────────
-mdnsd
 # ── Wi-Fi + regulatory ───────────────────────────────────────────────────
 wpa_supplicant
-wpa_terminfo
 # busybox udhcpc is sufficient for DHCP; the Alpine package set above
 # already pulls in busybox.  wireless-regdb lives in /usr/share/wireless.
 # Realtek firmware fragments are installed by minime-overlay's post-install.
@@ -71,8 +69,7 @@ alsa-utils
 alsa-plugins
 # ── OpenGL ES / DRM/GBM / KMS (Mesa Panfrost) ────────────────────────────
 mesa
-mesa-panfrost
-mesa-glapi
+mesa-dri-gallium
 mesa-egl
 mesa-gbm
 mesa-gles
