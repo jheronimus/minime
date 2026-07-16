@@ -6,23 +6,12 @@
 #   - image assembly tools (erofs-utils, dosfstools, mtools, parted,
 #     cpio, genimage, dtc, u-boot-tools, patchelf)
 #
-# Cross-arch build: the host (CI runner on htpc.local) is x86_64, but the
-# builder runs as aarch64.  qemu-user-static + qemu-user-binfmt on the
-# host (Debian 13 package `qemu-user-static` registers binfmt_misc for
-# aarch64 transparently) lets podman run aarch64 binaries in the
-# container.  All packages below are aarch64 native; abuild runs natively
-# and cross-compilation is unnecessary.
-#
-# htpc.local's /etc/containers/registries.conf has no unqualified-search
-# registries, so the FROM line uses the fully-qualified
-# docker.io/library/alpine:3.24.1 to bypass the short-name check.
+# Cross-arch build: the host is x86_64, and the container runs natively as x86_64.
+# abuild uses cross-compilers (gcc-aarch64, binutils-aarch64) to build aarch64 packages
+# natively at host speed, installing target headers/libraries to /usr/aarch64-alpine-linux-musl.
 
-FROM --platform=linux/arm64 docker.io/library/alpine:3.24.1
+FROM docker.io/library/alpine:3.24.1
 
-# aarch64-native main + community repos only.  bsdtar is provided by
-# libarchive-tools on Alpine 3.24.1 (no top-level bsdtar package).  No
-# cross-compiler packages are needed; gcc/binutils default to the
-# aarch64 toolchain in this image.
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/main"        >  /etc/apk/repositories && \
 	echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community"   >> /etc/apk/repositories
 
@@ -31,6 +20,9 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/main"        >  /etc/apk/re
 RUN apk add --no-cache --no-progress \
 		abuild \
 		alpine-sdk \
+		gcc-aarch64 \
+		binutils-aarch64 \
+		musl-dev-aarch64 \
 		bash \
 		bc \
 		bison \
