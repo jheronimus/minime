@@ -32,7 +32,6 @@ build() {
 	export LIBCLANG_PATH=/usr/lib
 	export LIBRETRO_HEADER=/usr/include/libretro.h
 	export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/aarch64-linux-musl -I/usr/aarch64-linux-musl/usr/include"
-	export CARGO_TARGET_AARCH64_ALPINE_LINUX_MUSL_LINKER="aarch64-alpine-linux-musl-gcc"
 
 	cd "$srcdir/allium-$ALLIUM_VERSION" || return 1
 	cargo build --release --target aarch64-alpine-linux-musl --features minime
