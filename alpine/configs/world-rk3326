@@ -1,0 +1,4 @@
+# Minime Alpine world (RK3326) — board-specific package set.
+#
+# RK3326 uses Mesa Panfrost as the GLES provider.
+# All other packages are inherited from world-common.

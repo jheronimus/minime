@@ -1,0 +1,4 @@
+# Minime Alpine world (H700) — board-specific package set.
+#
+# H700 uses Mesa Panfrost as the GLES provider.
+# All other packages are inherited from world-common.
