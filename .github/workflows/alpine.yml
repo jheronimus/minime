@@ -29,16 +29,7 @@ on:
         required: false
         default: true
         type: boolean
-      clean_output:
-        description: 'Clean the Alpine output directory before building'
-        required: false
-        default: false
-        type: boolean
-      clean_apk_cache:
-        description: 'Wipe alpine-repos + alpine-dl + built APK cache before building'
-        required: false
-        default: false
-        type: boolean
+
 
 jobs:
   compute-matrix:
@@ -85,63 +76,9 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Restore Alpine caches
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/alpine-repos
-            ~/alpine-dl
-            ~/alpine-ccache
-          key: minime-alpine-${{ matrix.board }}-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            minime-alpine-${{ matrix.board }}-${{ runner.os }}-
-
-      # Cache built local APKs (esp. tinykernel, ~7min to rebuild) keyed on
-      # every APKBUILD + kernel config + Dockerfile so a signing key change
-      # forces a rebuild (stale APKINDEX from a different key causes
-      # UNTRUSTED signature errors in abuild).
-      - name: Restore built APK cache
-        uses: actions/cache@v4
-        with:
-          path: ~/alpine-output/${{ matrix.board }}/packages
-          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/board/**', 'alpine/container/Dockerfile') }}
-
-      # Cache the assembled builder container image so builds don't re-run
-      # the Dockerfile apk-add chain on every commit.  Auto-invalidates
-      # only when the Dockerfile (or this workflow) actually changes.
-      - name: Restore builder image
-        id: builder-image
-        uses: actions/cache@v4
-        with:
-          path: ~/alpine-builder.tar
-          key: minime-builder-alpine-${{ hashFiles('alpine/container/Dockerfile', '.github/workflows/alpine.yml') }}
-
-      - name: Load builder image
-        if: ${{ steps.builder-image.outputs.cache-hit == 'true' }}
-        run: docker load -i ~/alpine-builder.tar
-
-      - name: Clean Alpine output
-        if: ${{ inputs.clean_output }}
-        run: |
-          make clean BOARD=${{ matrix.board }}
-
-      - name: Clean APK cache
-        if: ${{ inputs.clean_apk_cache }}
-        run: |
-          rm -rf ~/alpine-repos ~/alpine-dl ~/alpine-ccache \
-            ~/alpine-output/${{ matrix.board }}/packages
-
       - name: Build Alpine builder container & image
         run: |
           make image BOARD=${{ matrix.board }}
-
-      - name: Save builder image
-        if: ${{ steps.builder-image.outputs.cache-hit != 'true' && always() }}
-        continue-on-error: true
-        run: |
-          docker image inspect minime-builder-alpine >/dev/null 2>&1 || \
-            { echo "builder image missing; nothing to cache"; exit 0; }
-          docker save minime-builder-alpine -o ~/alpine-builder.tar
 
       - name: Run Smoke Test (QEMU Emulation)
         # Board-specific tinykernel builds (rk3326/rk3566/h700) currently
