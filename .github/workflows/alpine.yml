@@ -145,6 +145,13 @@ jobs:
           docker save minime-builder-alpine -o ~/alpine-builder.tar
 
       - name: Run Smoke Test (QEMU Emulation)
+        # Board-specific tinykernel builds (rk3326/rk3566/h700) currently
+        # hang silently when booted on qemu-system-aarch64 -machine virt
+        # because their early-printk paths target real-SoC MMIO, not the
+        # virtual platform.  Disabled until the script either boots a
+        # multi-platform kernel or is rewritten to exercise rootfs-only
+        # checks (no full-QEMU boot).
+        if: false
         working-directory: ${{ github.workspace }}
         run: |
           ./buildroot/scripts/run_smoke_test.sh \
