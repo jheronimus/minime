@@ -1,0 +1,20 @@
+{
+  "name": "retroarch",
+  "source_type": "github_tag",
+  "github_repo": "libretro/RetroArch",
+  "strip_v_prefix": true,
+  "targets": [
+    {
+      "path": "alpine/aports/retroarch/APKBUILD",
+      "type": "alpine_apkbuild",
+      "download_url": "https://github.com/libretro/RetroArch/archive/v{version}.tar.gz",
+      "download_filename": "retroarch-{version}.tar.gz"
+    },
+    {
+      "path": "buildroot/external/package/retroarch/retroarch.mk",
+      "type": "regex",
+      "pattern": "^RETROARCH_VERSION = v.*",
+      "replacement": "RETROARCH_VERSION = v{version}"
+    }
+  ]
+}

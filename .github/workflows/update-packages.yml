@@ -1,0 +1,32 @@
+name: Update package versions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Run uptodate.py
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run uptodate.py
+        run: python3 scripts/uptodate/uptodate.py
+
+      - name: Commit and push changes
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "packages: update versions via uptodate.py"
+            git push
+          else
+            echo "No changes to commit"
+          fi

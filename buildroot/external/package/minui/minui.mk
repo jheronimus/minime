@@ -10,7 +10,7 @@ MINUI_SITE_METHOD = git
 MINUI_LICENSE = See upstream
 MINUI_LICENSE_FILES = README.md
 
-MINUI_DEPENDENCIES = dbus libretro-common lz4 sdl2 sdl2_image sdl2_ttf zlib
+MINUI_DEPENDENCIES = dbus libretro-headers lz4 sdl2 sdl2_image sdl2_ttf zlib
 MINUI_INSTALL_IMAGES = YES
 
 # Minime SD-card layout contract. These values are baked into the UI binaries

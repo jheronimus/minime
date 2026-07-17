@@ -15,7 +15,7 @@ makedepends="
 	clang-dev
 	gcc-aarch64
 	binutils-aarch64
-	libretro-common
+	libretro-headers
 	linux-headers
 	ncurses-dev
 	openssl-dev
@@ -26,8 +26,8 @@ source="allium-$ALLIUM_VERSION.tar.gz::https://github.com/jheronimus/Allium/arch
 
 build() {
 	# Allium needs LIBCLANG_PATH for bindgen, BINDGEN_EXTRA_CLANG_ARGS for
-	# the cross-sysroot, and LIBRETRO_HEADER pointing at libretro-common's
-	# installed libretro.h.  Alpine's `libretro-common` package provides
+	# the cross-sysroot, and LIBRETRO_HEADER pointing at libretro-headers's
+	# installed libretro.h.  Alpine's `libretro-headers` package provides
 	# that header.
 	export LIBCLANG_PATH=/usr/lib
 	export LIBRETRO_HEADER=/usr/include/libretro.h

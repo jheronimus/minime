@@ -3,7 +3,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=syncthing
-pkgver=2.1.1
+pkgver=2.1.2
 pkgrel=0
 pkgdesc="Continuous file synchronization (Alpine aarch64 musl build)"
 url="https://github.com/syncthing/syncthing"
@@ -17,7 +17,7 @@ makedepends="
 	linux-headers
 "
 source="$pkgname-$pkgver.tar.gz::https://github.com/syncthing/syncthing/archive/v$pkgver.tar.gz"
-sha512sums="0ee89a89f12cdfefaa083fa9fe5f28cb9bc1cc7dc71ab41d70c79c403e4b0ebe710070d1f20902aaf23f1141f675ec303c165e426084ba3a8472349ff0317481  syncthing-2.1.1.tar.gz"
+sha512sums="52d22bf25957e843a9501d06312a2471a4881f587b0a9e5496dfd757c791d281032453ba90a6a75f33bb7f374689caea9c347e9fcae6307e35445b4520d0caec  syncthing-2.1.2.tar.gz"
 
 build() {
 	cd "$srcdir/syncthing-$pkgver" || return 1

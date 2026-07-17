@@ -1,0 +1,19 @@
+{
+  "name": "libretro-headers",
+  "source_type": "github_commit",
+  "github_repo": "libretro/libretro-common",
+  "targets": [
+    {
+      "path": "alpine/aports/libretro-headers/APKBUILD",
+      "type": "regex",
+      "pattern": "^export LIBRETRO_HEADERS_VERSION=.*",
+      "replacement": "export LIBRETRO_HEADERS_VERSION={version}"
+    },
+    {
+      "path": "buildroot/external/package/libretro-headers/libretro-headers.mk",
+      "type": "regex",
+      "pattern": "^LIBRETRO_HEADERS_VERSION = .*",
+      "replacement": "LIBRETRO_HEADERS_VERSION = {version}"
+    }
+  ]
+}

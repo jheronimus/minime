@@ -1,0 +1,26 @@
+{
+  "name": "fatresize",
+  "source_type": "github_release",
+  "github_repo": "ya-mouse/fatresize",
+  "strip_v_prefix": true,
+  "targets": [
+    {
+      "path": "alpine/aports/fatresize/APKBUILD",
+      "type": "alpine_apkbuild",
+      "download_url": "https://deb.debian.org/debian/pool/main/f/fatresize/fatresize_{version}.orig.tar.gz",
+      "download_filename": "fatresize_{version}.orig.tar.gz"
+    },
+    {
+      "path": "buildroot/external/package/fatresize/fatresize.mk",
+      "type": "regex",
+      "pattern": "^FATRESIZE_VERSION = .*",
+      "replacement": "FATRESIZE_VERSION = {version}"
+    },
+    {
+      "path": "buildroot/external/package/fatresize/fatresize.hash",
+      "type": "buildroot_hash",
+      "download_url": "https://deb.debian.org/debian/pool/main/f/fatresize/fatresize_{version}.orig.tar.gz",
+      "download_filename": "fatresize_{version}.orig.tar.gz"
+    }
+  ]
+}
