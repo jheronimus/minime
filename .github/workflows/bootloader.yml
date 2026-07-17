@@ -1,0 +1,111 @@
+name: Prebuild Bootloaders
+
+on:
+  workflow_dispatch:
+    inputs:
+      uboot_version:
+        description: 'U-Boot version (blank = auto-fetch latest stable)'
+        required: false
+        default: ''
+      boards:
+        description: 'Comma-separated boards to rebuild (blank = all: h700,rk3326,rk3566)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-boards:
+    name: Resolve board matrix
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.set.outputs.boards }}
+    steps:
+      - id: set
+        run: |
+          if [ -n "${{ inputs.boards }}" ]; then
+            boards=$(echo '${{ inputs.boards }}' | tr ',' '\n' | jq -R . | jq -sc .)
+          else
+            boards='["h700","rk3326","rk3566"]'
+          fi
+          echo "boards=${boards}" >> "$GITHUB_OUTPUT"
+
+  prebuild:
+    name: Rebuild ${{ matrix.board }}
+    needs: resolve-boards
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.resolve-boards.outputs.boards) }}
+    defaults:
+      run:
+        working-directory: buildroot
+    env:
+      USE_PODMAN: '0'
+      BOARD: ${{ matrix.board }}
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Resolve latest U-Boot version
+        id: uboot
+        run: |
+          if [ -n "${{ inputs.uboot_version }}" ]; then
+            ver="${{ inputs.uboot_version }}"
+          else
+            tag=$(curl -fsSL https://api.github.com/repos/u-boot/u-boot/releases/latest | jq -r .tag_name)
+            if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+              echo "ERROR: could not resolve latest U-Boot tag" >&2; exit 1
+            fi
+            ver="${tag#v}"
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "Resolved U-Boot version: $ver"
+
+      - name: Prepare build environment
+        run: |
+          ./scripts/prepare-linux.sh
+          mkdir -p ~/.buildroot-dl ~/.buildroot-ccache
+
+      - name: Configure U-Boot-only build
+        run: |
+          make defconfig BOARD=${{ matrix.board }}
+          # Append bootloader fragment (re-enables U-Boot / ATF / rkbin)
+          sed -e "s/__UBOOT_VERSION__/${{ steps.uboot.outputs.version }}/g" \
+            external/configs/bootloader/bootloader-${{ matrix.board }}.config \
+            >> "$HOME/buildroot-output/${{ matrix.board }}/.config"
+          make olddefconfig BOARD=${{ matrix.board }}
+
+      - name: Build U-Boot
+        run: |
+          make -j$(nproc) arm-trusted-firmware uboot BOARD=${{ matrix.board }}
+
+      - name: Stage prebuilt blobs
+        run: |
+          IMAGES_DIR="$HOME/buildroot-output/${{ matrix.board }}/images"
+          BL_DIR="../alpine/bootloader/${{ matrix.board }}"
+          mkdir -p "${BL_DIR}"
+          if [ "${{ matrix.board }}" = "h700" ]; then
+            cp -f "${IMAGES_DIR}/u-boot-sunxi-with-spl.bin" "${BL_DIR}/"
+          else
+            cp -f "${IMAGES_DIR}/idbloader.img" "${BL_DIR}/"
+            cp -f "${IMAGES_DIR}/u-boot.itb" "${BL_DIR}/"
+          fi
+          echo "${{ steps.uboot.outputs.version }}" > "${BL_DIR}/.uboot-version"
+
+      - name: Commit changes
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet alpine/bootloader/${{ matrix.board }}/; then
+            git add alpine/bootloader/${{ matrix.board }}/
+            git commit -m "bootloaders: rebuild ${{ matrix.board }} for U-Boot ${{ steps.uboot.outputs.version }}"
+            git push
+          else
+            echo "No changes to commit for ${{ matrix.board }}"
+          fi
