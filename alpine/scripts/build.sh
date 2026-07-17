@@ -243,7 +243,6 @@ assemble_rootfs() {
 	cat > "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
 		${ALPINE_REPO_BASE}/main
 		${ALPINE_REPO_BASE}/community
-		@testing ${ALPINE_REPO_BASE}/testing
 		/local-repo
 	EOF
 
