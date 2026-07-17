@@ -351,10 +351,10 @@ assemble_image() {
 		cp -rp "${ALPINE_OUTPUT_DIR}/boot/ui" "${IMG_BIN}/ui"
 	fi
 
-	# Build a rootfs.tar that post-image.sh expects.
+	# Build a rootfs.tar that post-image.sh expects in BINARIES_DIR (images/).
 	# Exclude proc/sys/dev: lazy umount may not have fully settled yet and
 	# these directories should never be archived anyway.
-	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${ALPINE_OUTPUT_DIR}/rootfs.tar" \
+	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${IMG_BIN}/rootfs.tar" \
 		--exclude="./proc/*" --exclude="./sys/*" --exclude="./dev/*" .)
 
 	# Hand off to the image assembly script.  -d alpine switches to the
