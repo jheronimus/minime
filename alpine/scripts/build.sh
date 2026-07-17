@@ -43,11 +43,14 @@ BOARD="${BOARD:-rk3566}"
 ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 
 log() { printf '[alpine] %s\n' "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
+die() {
+	log "ERROR: $*"
+	exit 1
+}
 
 case "${BOARD}" in
-	rk3566|rk3326|h700) ;;
-	*) die "unsupported BOARD=${BOARD} (supported: rk3566, rk3326, h700)" ;;
+rk3566 | rk3326 | h700) ;;
+*) die "unsupported BOARD=${BOARD} (supported: rk3566, rk3326, h700)" ;;
 esac
 export DTB_BOARD="${BOARD}"
 
@@ -90,8 +93,8 @@ resolve_minirootfs() {
 	' "${mm_index}") || die "no minirootfs sha256 in latest-releases.yaml"
 
 	case "${mm_version}" in
-		${ALPINE_BRANCH#v}.*) ;;
-		*) die "minime is locked to ${ALPINE_BRANCH}; got ${mm_version}" ;;
+	${ALPINE_BRANCH#v}.*) ;;
+	*) die "minime is locked to ${ALPINE_BRANCH}; got ${mm_version}" ;;
 	esac
 
 	mm_tar="alpine-minirootfs-${mm_version}-${ALPINE_ARCH}.tar.gz"
@@ -100,13 +103,13 @@ resolve_minirootfs() {
 
 	if [ ! -f "${mm_path}" ]; then
 		log "downloading ${mm_url}"
-		curl -fL --retry 3 -o "${mm_path}" "${mm_url}" \
-			|| die "download failed: ${mm_url}"
+		curl -fL --retry 3 -o "${mm_path}" "${mm_url}" ||
+			die "download failed: ${mm_url}"
 	fi
 
 	mm_got=$(sha256sum "${mm_path}" | awk '{print $1}')
-	[ "${mm_got}" = "${mm_sha}" ] \
-		|| die "minirootfs sha256 mismatch (want ${mm_sha}, got ${mm_got})"
+	[ "${mm_got}" = "${mm_sha}" ] ||
+		die "minirootfs sha256 mismatch (want ${mm_sha}, got ${mm_got})"
 
 	log "minirootfs: ${mm_version} (sha256 $(printf '%s' "${mm_got}" | cut -c1-12)…)"
 	MINIROOTFS_TAR="${mm_path}"
@@ -155,7 +158,7 @@ build_local_apks() {
 		# even if the per-package stamp looks up to date (defends
 		# against stale unpack/ pkgdir state from interrupted runs).
 		MAKEFLAGS="-j${ALPINE_JOBS}" \
-		abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
+			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
 	done
 }
 
@@ -189,7 +192,7 @@ build_tinykernel() {
 	# fakeroot-owned files in src/ and pkg/ that the agent user cannot
 	# delete; abuild's up-to-date cache will then skip the unpack step
 	# and the package stage fails with "can't cd to src/<name>".
-	rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null || \
+	rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null ||
 		die "could not clear ${ALPINE_BUILD_DIR}/tinykernel; rm as root first"
 	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
 	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
@@ -203,7 +206,7 @@ build_tinykernel() {
 	# because the source was never unpacked.
 	log "abuild: tinykernel"
 	MAKEFLAGS="-j${ALPINE_JOBS}" \
-	abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
+		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 
 	# Stage the kernel artifacts for post-image.sh to consume.
 	# abuild -P appends the parent-dir name of the APKBUILD as a repo
@@ -240,7 +243,7 @@ assemble_rootfs() {
 	# Build a local aports index so apk can resolve minime-overlay etc. from
 	# the same repo as the official Alpine packages.
 	ALPINE_REPO_BASE="${ALPINE_MINIROOTFS_BASE_URL%/releases/${ALPINE_ARCH}}"
-	cat > "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
+	cat >"${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
 		${ALPINE_REPO_BASE}/main
 		${ALPINE_REPO_BASE}/community
 		/local-repo
@@ -278,7 +281,7 @@ assemble_rootfs() {
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
-	TRAITS_SRC="/workspace/buildroot/external/board/${BOARD}/traits"
+	TRAITS_SRC="/workspace/alpine/board/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
@@ -330,7 +333,7 @@ assemble_image() {
 		cp -f "${BL_ITB}" "${IMG_BIN}/u-boot.itb"
 	fi
 	if [ -d "${ALPINE_BUILD_DIR}/tinykernel/staging" ]; then
-		cp -f "${ALPINE_BUILD_DIR}/tinykernel/staging/Image" "${IMG_BIN}/Image" 2>/dev/null || \
+		cp -f "${ALPINE_BUILD_DIR}/tinykernel/staging/Image" "${IMG_BIN}/Image" 2>/dev/null ||
 			cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"
 	else
 		cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"
@@ -338,7 +341,7 @@ assemble_image() {
 	[ -f "${IMG_BIN}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
 	# Compile boot.cmd -> boot.scr using mkimage.
-	BOOT_CMD="/workspace/buildroot/external/board/${BOARD}/boot.cmd"
+	BOOT_CMD="/workspace/alpine/board/${BOARD}/boot.cmd"
 	[ -f "${BOOT_CMD}" ] || die "missing ${BOOT_CMD}"
 	mkimage -C none -A arm -T script -d "${BOOT_CMD}" "${IMG_BIN}/boot.scr"
 	log "boot.scr: ${IMG_BIN}/boot.scr"
@@ -370,9 +373,13 @@ assemble_image() {
 	# Hand off to the image assembly script.  -d alpine switches to the
 	# distro-qualified output name.
 	BUILD_DIR="${ALPINE_BUILD_DIR}" \
-	HOST_DIR="/usr" \
-	MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
-	"${POST_IMAGE}" -c "/workspace/buildroot/external/board/${BOARD}/genimage.cfg" \
+		HOST_DIR="/usr" \
+		MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
+		GENIMAGE_CFG="/workspace/alpine/board/common/genimage.cfg"
+	if [ "${BOARD}" = "h700" ]; then
+		GENIMAGE_CFG="/workspace/alpine/board/h700/genimage.cfg"
+	fi
+	"${POST_IMAGE}" -c "${GENIMAGE_CFG}" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"
@@ -386,20 +393,20 @@ assemble_image() {
 
 CMD="${1:-all}"
 case "${CMD}" in
-	all)
-		resolve_minirootfs
-		build_local_apks
-		assemble_rootfs
-		assemble_image
-		;;
-	minirootfs) resolve_minirootfs ;;
-	apks)       build_local_apks ;;
-	rootfs)     assemble_rootfs ;;
-	image)      assemble_image ;;
-	shell)
-		exec /bin/sh
-		;;
-	*)
-		die "unknown subcommand: ${CMD} (use all|minirootfs|apks|rootfs|image|shell)"
-		;;
+all)
+	resolve_minirootfs
+	build_local_apks
+	assemble_rootfs
+	assemble_image
+	;;
+minirootfs) resolve_minirootfs ;;
+apks) build_local_apks ;;
+rootfs) assemble_rootfs ;;
+image) assemble_image ;;
+shell)
+	exec /bin/sh
+	;;
+*)
+	die "unknown subcommand: ${CMD} (use all|minirootfs|apks|rootfs|image|shell)"
+	;;
 esac
