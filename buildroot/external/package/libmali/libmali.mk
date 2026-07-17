@@ -39,11 +39,17 @@ LIBMALI_BOARD = rk3566
 LIBMALI_BLOB = libmali-bifrost-g52-g2p0-gbm.so
 endif
 
+# Copy the selected blob into the directory the grabber.sh script searches.
+# grabber.sh switches DIR between lib/ and optimize_<N>/ based on the
+# -Doptimize-level option (see drivers/libmali/scripts/grabber.sh). We pin
+# optimize-level=O0 below, so the blob must land in optimize_0/.
+LIBMALI_BLOB_DIR = optimize_0
+
 # Copy the selected blob to the build directory before building
 define LIBMALI_COPY_BLOB
-	mkdir -p $(@D)/lib/aarch64-linux-gnu
+	mkdir -p $(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu
 	cp $(BR2_EXTERNAL)/../../drivers/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
-		$(@D)/lib/aarch64-linux-gnu/libmali-bifrost-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
+		$(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu/libmali-bifrost-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
 endef
 LIBMALI_POST_EXTRACT_HOOKS += LIBMALI_COPY_BLOB
 
