@@ -119,6 +119,24 @@ resolve_minirootfs() {
 # 2. Build local Minime APKs
 #──────────────────────────────────────────────────────────────────────────────
 
+setup_signing_keys() {
+	log "setting up abuild signing keys..."
+	PERSISTENT_KEYS_DIR="/alpine-repos/.abuild"
+	mkdir -p "${PERSISTENT_KEYS_DIR}"
+
+	if [ -z "$(find "${PERSISTENT_KEYS_DIR}" -name '*.rsa' 2>/dev/null)" ]; then
+		log "no persistent signing key found; generating a new one..."
+		su builder -s /bin/sh -c "abuild-keygen -a -n"
+		cp -p /home/builder/.abuild/* "${PERSISTENT_KEYS_DIR}/"
+	else
+		log "restoring signing keys from persistent storage..."
+		mkdir -p /home/builder/.abuild
+		cp -rp "${PERSISTENT_KEYS_DIR}/." /home/builder/.abuild/
+		chown -R builder:builder /home/builder/.abuild
+	fi
+	cp -p /home/builder/.abuild/*.pub /etc/apk/keys/
+}
+
 build_local_apks() {
 	# abuild's CBUILD = host (x86_64), CHOST = aarch64-linux-musl so the
 	# package's build() is invoked with the cross toolchain.  Each APKBUILD
@@ -131,6 +149,7 @@ build_local_apks() {
 	export CBUILD CHOST CARCH REPODEST
 
 	mkdir -p "${ALPINE_PACKAGES_DIR}" "${ALPINE_BUILD_DIR}"
+	setup_signing_keys
 
 	# Update apk repositories index so we can resolve build dependencies at runtime
 	log "updating apk repositories index..."
@@ -168,7 +187,7 @@ build_tinykernel() {
 
 	# If the package is already built, extract the artifacts directly from the .apk
 	# to avoid rebuilding the kernel (which takes ~3 hours).
-	local apk_file=""
+	apk_file=""
 	if [ -f "${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk" ]; then
 		apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
 	fi
