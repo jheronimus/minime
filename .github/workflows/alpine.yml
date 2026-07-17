@@ -97,14 +97,14 @@ jobs:
             minime-alpine-${{ matrix.board }}-${{ runner.os }}-
 
       # Cache built local APKs (esp. tinykernel, ~7min to rebuild) keyed on
-      # every APKBUILD + kernel config so a content change forces a rebuild.
+      # every APKBUILD + kernel config + Dockerfile so a signing key change
+      # forces a rebuild (stale APKINDEX from a different key causes
+      # UNTRUSTED signature errors in abuild).
       - name: Restore built APK cache
         uses: actions/cache@v4
         with:
           path: ~/alpine-output/${{ matrix.board }}/packages
-          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/board/**') }}
-          restore-keys: |
-            alpine-apks-${{ matrix.board }}-
+          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/board/**', 'alpine/container/Dockerfile') }}
 
       # Cache the assembled builder container image so builds don't re-run
       # the Dockerfile apk-add chain on every commit.  Auto-invalidates
