@@ -96,24 +96,22 @@ RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
 # without signing, but the directory must exist or abuild errors out.
 # abuild-keygen -a writes a fresh key pair non-interactively and
 # registers it with abuild.conf in the same -a pass.
-RUN mkdir -p /home/builder/.abuild \
+# Copy static abuild signing keys into the container image.
+COPY container/minime-builder.rsa /home/builder/.abuild/minime-builder.rsa
+COPY container/minime-builder.rsa.pub /home/builder/.abuild/minime-builder.rsa.pub
+COPY container/minime-builder.rsa.pub /etc/apk/keys/minime-builder.rsa.pub
+
+RUN chmod 600 /home/builder/.abuild/minime-builder.rsa \
+	&& chmod 644 /home/builder/.abuild/minime-builder.rsa.pub /etc/apk/keys/minime-builder.rsa.pub \
 	&& chown -R builder:builder /home/builder/.abuild
 
-# Generate a self-hosted abuild signing key.  This key is only used
-# for the local APK repository that build.sh installs into the
-# immutable rootfs; the assembled rootfs ships its public key so
-# apk-add inside the running system can verify the packages.  The
-# key is per-image and intentionally not shared between runs.
-# abuild-keygen -a rewrites the abuild.conf with the new key paths,
-# so we seed it with the non-key settings first.
+# Configure abuild.conf with the static key path.
 RUN printf '%s\n' \
 		'REPODEST="/alpine-output/packages/main"' \
 		'SRCDEST="/alpine-dl/src"' \
 		'BUILDDIR="/alpine-output/build"' \
-		> /home/builder/.abuild/abuild.conf \
-	&& su builder -s /bin/sh -c 'abuild-keygen -a -n' \
-	&& cp /home/builder/.abuild/*.pub /etc/apk/keys/ \
-	&& cat /home/builder/.abuild/abuild.conf
+		'PACKAGER_PRIVKEY="/home/builder/.abuild/minime-builder.rsa"' \
+		> /home/builder/.abuild/abuild.conf
 
 # Cache + output directories the Makefile mounts from the host.  The
 # `--user $(id -u):$(id -g)` flag combined with --userns=keep-id makes
