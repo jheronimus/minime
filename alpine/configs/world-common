@@ -9,7 +9,7 @@
 #   - minui               UI binaries + assets
 #   - allium / allium-themes, drkhrse-miyoo-bezels, preloaded-roms
 #   - bootsplash          boot splash binary
-#   - dufs, syncthing, fatresize, libretro-common, retroarch-{cores,frontend}
+#   - dufs, syncthing, fatresize, libretro-headers, libretro-cores, retroarch
 #
 # Notes:
 #   - musl replaces glibc; the gcompat compatibility layer is intentionally
@@ -93,6 +93,6 @@ zlib
 # dufs             static file server
 # syncthing        P2P file sync
 # fatresize        FAT32 expansion
-# libretro-common  libretro.h
-# retroarch-cores  libretro cores
-# retroarch-frontend  retroarch binary
+# libretro-headers  libretro.h
+# libretro-cores  libretro cores
+# retroarch  retroarch binary

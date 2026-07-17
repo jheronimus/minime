@@ -2,7 +2,7 @@
 # shellcheck shell=bash disable=SC3043,SC2154
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
-pkgname=retroarch-cores
+pkgname=libretro-cores
 pkgver=1.0.0
 pkgrel=0
 pkgdesc="Libretro cores (Alpine aarch64 musl build) for the Minime userdata image"
@@ -49,5 +49,5 @@ build() {
 }
 
 package() {
-	install -Dm644 /dev/null "$pkgdir/var/lib/minime/retroarch-cores.stamp"
+	install -Dm644 /dev/null "$pkgdir/var/lib/minime/libretro-cores.stamp"
 }

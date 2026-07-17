@@ -1,0 +1,16 @@
+{
+  "name": "tinykernel",
+  "source_type": "alpine_stable",
+  "targets": [
+    {
+      "path": "alpine/aports/tinykernel/APKBUILD",
+      "type": "alpine_apkbuild"
+    },
+    {
+      "path": "buildroot/external/configs/minime_common.config",
+      "type": "regex",
+      "pattern": "^BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\".*\"",
+      "replacement": "BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"{version}\""
+    }
+  ]
+}

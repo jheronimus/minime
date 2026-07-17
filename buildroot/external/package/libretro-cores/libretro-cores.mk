@@ -1,18 +1,18 @@
 ################################################################################
 #
-# retroarch-cores
+# libretro-cores
 #
 ################################################################################
 
-RETROARCH_CORES_VERSION = 1.6
-RETROARCH_CORES_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores
-RETROARCH_CORES_SITE_METHOD = local
-RETROARCH_CORES_SOURCE =
-RETROARCH_CORES_DEPENDENCIES = zlib
+LIBRETRO_CORES_VERSION = 1.6
+LIBRETRO_CORES_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/libretro-cores
+LIBRETRO_CORES_SITE_METHOD = local
+LIBRETRO_CORES_SOURCE =
+LIBRETRO_CORES_DEPENDENCIES = zlib
 
-RETROARCH_CORES_INSTALL_IMAGES = YES
+LIBRETRO_CORES_INSTALL_IMAGES = YES
 
-define RETROARCH_CORES_BUILD_CMDS
+define LIBRETRO_CORES_BUILD_CMDS
 	mkdir -p $(@D)/src
 
 	# 1. FCEUmm (NES)
@@ -99,7 +99,7 @@ define RETROARCH_CORES_BUILD_CMDS
 		platform=unix
 endef
 
-define RETROARCH_CORES_INSTALL_IMAGES_CMDS
+define LIBRETRO_CORES_INSTALL_IMAGES_CMDS
 	mkdir -p $(BINARIES_DIR)/ui/.cores
 	mkdir -p $(BINARIES_DIR)/ui/.cores/config/info
 
@@ -115,7 +115,7 @@ define RETROARCH_CORES_INSTALL_IMAGES_CMDS
 	cp -f $(@D)/src/fbneo/src/burner/libretro/fbneo_libretro.so $(BINARIES_DIR)/ui/.cores/
 
 	# Install info files
-	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/retroarch-cores/info/*.info $(BINARIES_DIR)/ui/.cores/config/info/
+	cp -f $(BR2_EXTERNAL_MINIME_PATH)/package/libretro-cores/info/*.info $(BINARIES_DIR)/ui/.cores/config/info/
 endef
 
 $(eval $(generic-package))

@@ -1,0 +1,26 @@
+{
+  "name": "syncthing",
+  "source_type": "github_release",
+  "github_repo": "syncthing/syncthing",
+  "strip_v_prefix": true,
+  "targets": [
+    {
+      "path": "alpine/aports/syncthing/APKBUILD",
+      "type": "alpine_apkbuild",
+      "download_url": "https://github.com/syncthing/syncthing/archive/v{version}.tar.gz",
+      "download_filename": "syncthing-{version}.tar.gz"
+    },
+    {
+      "path": "buildroot/external/package/syncthing/syncthing.mk",
+      "type": "regex",
+      "pattern": "^SYNCTHING_VERSION = .*",
+      "replacement": "SYNCTHING_VERSION = {version}"
+    },
+    {
+      "path": "buildroot/external/package/syncthing/syncthing.hash",
+      "type": "buildroot_hash",
+      "download_url": "https://github.com/syncthing/syncthing/archive/v{version}.tar.gz",
+      "download_filename": "syncthing-{version}.tar.gz"
+    }
+  ]
+}

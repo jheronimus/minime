@@ -6,7 +6,7 @@ config BR2_PACKAGE_ALLIUM
 	select BR2_PACKAGE_DUFS
 	select BR2_PACKAGE_HOST_LIBCLANG_SYSTEM
 	select BR2_PACKAGE_HOST_RUSTC
-	select BR2_PACKAGE_LIBRETRO_COMMON
+	select BR2_PACKAGE_LIBRETRO_HEADERS
 	select BR2_PACKAGE_SYNCTHING
 	help
 	  Allium launcher and Play libretro frontend for Minime.

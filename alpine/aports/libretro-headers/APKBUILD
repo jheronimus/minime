@@ -2,7 +2,7 @@
 # shellcheck shell=bash disable=SC3043,SC2154
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
-pkgname=libretro-common
+pkgname=libretro-headers
 pkgver=1.0.0
 pkgrel=0
 pkgdesc="libretro.h header (Alpine packaging for Allium + RetroArch frontend)"
@@ -11,7 +11,7 @@ arch="aarch64"
 license="MIT"
 options="!strip !check"
 source=""
-export LIBRETRO_COMMON_VERSION=668749ae38a9e85744d1c15a652a1e8db8ab9e82
+export LIBRETRO_HEADERS_VERSION=48930e4b687028055d137de28874da6adb0fae5f
 
 build() {
 	local workdir="$srcdir/build"
@@ -21,7 +21,7 @@ build() {
 	if [ ! -d libretro-common ]; then
 		git clone --no-checkout \
 			https://github.com/libretro/libretro-common.git
-		(cd libretro-common && git checkout "${LIBRETRO_COMMON_VERSION}")
+		(cd libretro-common && git checkout "${LIBRETRO_HEADERS_VERSION}")
 	fi
 }
 

@@ -24,3 +24,5 @@ buildroot/logs/
 **/__pycache__/
 **/*.pyc
 
+# Local scripts
+scripts/update_kernel_version.py

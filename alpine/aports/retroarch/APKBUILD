@@ -2,8 +2,8 @@
 # shellcheck shell=bash disable=SC3043,SC2154
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
-pkgname=retroarch-frontend
-pkgver=1.19.1
+pkgname=retroarch
+pkgver=1.22.2
 pkgrel=0
 pkgdesc="RetroArch frontend (Alpine aarch64 musl build)"
 url="https://github.com/libretro/RetroArch"
@@ -25,7 +25,7 @@ makedepends="
 	zlib-dev
 "
 source="$pkgname-$pkgver.tar.gz::https://github.com/libretro/RetroArch/archive/v$pkgver.tar.gz"
-sha512sums="35e44ffc776cbc7f58fa76c686d3c3693d125fccf482c8f3b66378058b8400ada37ebf2549e9bd362e46c3bfb586971a217cc3142dcf7a7468c95ec78638ee23  retroarch-frontend-1.19.1.tar.gz"
+sha512sums="59057d3fff3bec3bcb01143a270c3b9e74d148a2f1caa413d52f3533af94564576d2fce6f6273b5c79d11904ef670a6bf7c2c328fe3534a05d160e8a49b9daa1  retroarch-1.22.2.tar.gz"
 
 build() {
 	cd "$srcdir/RetroArch-$pkgver" || return 1

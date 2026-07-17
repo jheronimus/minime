@@ -1,5 +1,5 @@
-config BR2_PACKAGE_RETROARCH_CORES
-	bool "retroarch-cores"
+config BR2_PACKAGE_LIBRETRO_CORES
+	bool "libretro-cores"
 	select BR2_PACKAGE_ZLIB
 	help
 	  Centralized RetroArch/libretro cores package for minime.
