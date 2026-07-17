@@ -66,7 +66,7 @@ Push changes to the respective branch on `jheronimus/minime` to trigger CI build
 
 ## Scripts & Git Exclusions
 
-`buildroot/scripts/` is strictly for:
+`scripts/` is strictly for:
 
 1. Makefile/pipeline orchestration (`check_rebuild.py`, `prepare-linux.sh`).
 2. Developer/agent utilities.
@@ -77,8 +77,8 @@ Push changes to the respective branch on `jheronimus/minime` to trigger CI build
 
 Telnet daemon runs on target console (`<target-ip>:23`).
 
-- **`buildroot/scripts/run_telnet.py`** (gitignored): Socket script for command execution with prompt detection, stdout streaming, and 120s timeout.
-  - *Usage*: `python3 buildroot/scripts/run_telnet.py "ls -la /mnt/sdcard"`
+- **`scripts/run_telnet.py`** (gitignored): Socket script for command execution with prompt detection, stdout streaming, and 120s timeout.
+  - *Usage*: `python3 scripts/run_telnet.py "ls -la /mnt/sdcard"`
 
 ## CI Pipeline & Remote Runner
 
@@ -118,4 +118,4 @@ shellcheck --shell=sh --severity=warning <script_path>
 - **Syntax**: `sh -n <script_path>`
 - **Git**: `git diff --check`
 - **Permissions**: `ls -l <script_path>` (must be executable)
-- **Stamps**: `python3 buildroot/scripts/check_rebuild.py`
+- **Stamps**: `python3 scripts/check_rebuild.py`

@@ -78,7 +78,7 @@ jobs:
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
-          ./scripts/prepare-linux.sh
+          ../scripts/prepare-linux.sh
           for board in rk3326 rk3566; do
             echo "Downloading sources for $board..."
             make defconfig BOARD=$board
@@ -131,7 +131,7 @@ jobs:
 
       - name: Verify/Install Dependencies
         run: |
-          ./scripts/prepare-linux.sh
+          ../scripts/prepare-linux.sh
           ccache --max-size=8G || true
 
       - name: Build Image
@@ -141,7 +141,7 @@ jobs:
 
       - name: Run Smoke Test (QEMU Emulation)
         run: |
-          ./scripts/run_smoke_test.sh \
+          ../scripts/run_smoke_test.sh \
             "${{ env.BOARD }}" \
             "$HOME/buildroot-output/${{ env.BOARD }}/images/Image" \
             "$HOME/buildroot-output/${{ env.BOARD }}/images/initramfs" \

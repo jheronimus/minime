@@ -6,3 +6,21 @@ local.mk
 # Alpine abuild artifacts
 alpine/aports/*/src
 alpine/aports/*/pkg
+
+# Folder-specific outputs and dependencies
+alpine/out/
+alpine/buildroot/
+alpine/logs/
+buildroot/out/
+buildroot/buildroot/
+buildroot/logs/
+
+# Build and local configurations
+**/local.mk
+**/TODO.md
+**/.antigravitycli/
+
+# Python caching
+**/__pycache__/
+**/*.pyc
+
