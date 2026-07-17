@@ -57,8 +57,11 @@ jobs:
           if [ -n "${{ inputs.uboot_version }}" ]; then
             ver="${{ inputs.uboot_version }}"
           else
-            tag=$(curl -fsSL https://api.github.com/repos/u-boot/u-boot/releases/latest | jq -r .tag_name)
-            if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            tag=$(git ls-remote --tags --refs https://github.com/u-boot/u-boot.git \
+              | awk -F/ '{print $NF}' \
+              | grep -E '^v20[0-9]+\.[0-9]+$' \
+              | sort -V | tail -1)
+            if [ -z "$tag" ]; then
               echo "ERROR: could not resolve latest U-Boot tag" >&2; exit 1
             fi
             ver="${tag#v}"
