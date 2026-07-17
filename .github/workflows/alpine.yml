@@ -145,6 +145,7 @@ jobs:
           docker save minime-builder-alpine -o ~/alpine-builder.tar
 
       - name: Run Smoke Test (QEMU Emulation)
+        working-directory: ${{ github.workspace }}
         run: |
           ./buildroot/scripts/run_smoke_test.sh \
             "${{ matrix.board }}" \
