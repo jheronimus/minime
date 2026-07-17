@@ -34,19 +34,12 @@ jobs:
   prebuild:
     name: Rebuild ${{ matrix.board }}
     needs: resolve-boards
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.resolve-boards.outputs.boards) }}
-    defaults:
-      run:
-        working-directory: buildroot
-    env:
-      USE_PODMAN: '0'
-      BOARD: ${{ matrix.board }}
-      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -69,39 +62,16 @@ jobs:
           echo "version=$ver" >> "$GITHUB_OUTPUT"
           echo "Resolved U-Boot version: $ver"
 
-      - name: Prepare build environment
+      - name: Install dependencies
         run: |
-          ../scripts/prepare-linux.sh
-          mkdir -p ~/.buildroot-dl ~/.buildroot-ccache
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libssl-dev bc python3-dev python3-setuptools device-tree-compiler swig python3-libfdt python3-pyelftools
 
-      - name: Configure U-Boot-only build
+      - name: Build Bootloader
         run: |
-          make defconfig BOARD=${{ matrix.board }}
-          # Append bootloader fragment (re-enables U-Boot / ATF / rkbin)
-          sed -e "s/__UBOOT_VERSION__/${{ steps.uboot.outputs.version }}/g" \
-            external/configs/bootloader/bootloader-${{ matrix.board }}.config \
-            >> "$HOME/buildroot-output/${{ matrix.board }}/.config"
-          make olddefconfig BOARD=${{ matrix.board }}
-
-      - name: Build U-Boot
-        run: |
-          make -j$(nproc) arm-trusted-firmware uboot BOARD=${{ matrix.board }}
-
-      - name: Stage prebuilt blobs
-        run: |
-          IMAGES_DIR="$HOME/buildroot-output/${{ matrix.board }}/images"
-          BL_DIR="../alpine/bootloader/${{ matrix.board }}"
-          mkdir -p "${BL_DIR}"
-          if [ "${{ matrix.board }}" = "h700" ]; then
-            cp -f "${IMAGES_DIR}/u-boot-sunxi-with-spl.bin" "${BL_DIR}/"
-          else
-            cp -f "${IMAGES_DIR}/idbloader.img" "${BL_DIR}/"
-            cp -f "${IMAGES_DIR}/u-boot.itb" "${BL_DIR}/"
-          fi
-          echo "${{ steps.uboot.outputs.version }}" > "${BL_DIR}/.uboot-version"
+          ./scripts/build-bootloader.sh "${{ matrix.board }}" "${{ steps.uboot.outputs.version }}"
 
       - name: Commit changes
-        working-directory: .
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
