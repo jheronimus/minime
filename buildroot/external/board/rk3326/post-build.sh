@@ -5,7 +5,7 @@
 
 set -eu
 
-FW_SRC_DIR="${BOARD_DIR}/firmware"
+FW_SRC_DIR="${BR_BOARD_DIR}/firmware"
 
 if [ -d "${FW_SRC_DIR}" ]; then
 	echo "Installing RK3326-specific USB dongle firmware..."
@@ -13,7 +13,7 @@ if [ -d "${FW_SRC_DIR}" ]; then
 		# Extract path relative to the board's firmware folder
 		rel="${fwfile#${FW_SRC_DIR}/}"
 		target_path="${TARGET_DIR}/lib/firmware/${rel}"
-		
+
 		# Ensure destination folder exists and copy the file
 		mkdir -p "$(dirname "${target_path}")"
 		cp -f "${fwfile}" "${target_path}"

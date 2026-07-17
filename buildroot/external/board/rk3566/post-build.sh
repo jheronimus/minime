@@ -4,4 +4,4 @@
 
 set -eu
 
-cp -a "${BOARD_DIR}/overlay/." "${TARGET_DIR}/"
+cp -a "${BR_BOARD_DIR}/overlay/." "${TARGET_DIR}/"

@@ -85,7 +85,7 @@ build() {
 	cd "$src" || return 1
 
 	# 1. Apply Minime's kernel patch series.
-	local patch_dir="/workspace/buildroot/external/board/${DTB_BOARD}/patches/linux"
+	local patch_dir="/workspace/alpine/board/${DTB_BOARD}/patches/linux"
 	if [ -d "$patch_dir" ]; then
 		for p in "$patch_dir"/*.patch; do
 			[ -f "$p" ] || continue
@@ -96,23 +96,23 @@ build() {
 
 	# 2. Copy custom DTS files.
 	if [ "${DTB_BOARD}" = "h700" ]; then
-		cp /workspace/buildroot/external/board/h700/dts/*.dts arch/arm64/boot/dts/allwinner/
+		cp /workspace/alpine/board/h700/dts/*.dts arch/arm64/boot/dts/allwinner/
 	elif [ "${DTB_BOARD}" = "rk3326" ]; then
-		cp /workspace/buildroot/external/board/rk3326/dts/*.dts arch/arm64/boot/dts/rockchip/
+		cp /workspace/alpine/board/rk3326/dts/*.dts arch/arm64/boot/dts/rockchip/
 		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
 		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
 	fi
 
 	# 3. Merge kernel config:
-	#    tiny-base.config -> tiny-<board>.config -> tiny-alpine.config -> olddefconfig
+	#    tiny-base.config -> tiny-<board>.config -> tiny-panfrost.config -> olddefconfig
 	local cfg_src="/workspace/alpine"
 	cat > .config <<-EOF
 		# merged by APKBUILD build()
 		# tiny-base.config first
 	EOF
-	cat "/workspace/buildroot/external/board/common/tiny-base.config" >> .config
-	cat "/workspace/buildroot/external/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
-	cat "$cfg_src/kernel/tiny-alpine.config" >> .config
+	cat "/workspace/alpine/board/common/tiny-base.config" >> .config
+	cat "/workspace/alpine/board/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
+	cat "$cfg_src/board/common/tiny-panfrost.config" >> .config
 
 	# 4. Resolve new options and surface any unresolved ones.
 	sed -i "s|__MINIME_BOARD_FIRMWARE_DIR__|/workspace/buildroot/external/board/${DTB_BOARD}/firmware|g" .config

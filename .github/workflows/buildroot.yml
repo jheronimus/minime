@@ -9,17 +9,14 @@ on:
       - 'buildroot/external/board/**'
       - 'buildroot/support/**'
       - 'buildroot/container/**'
+      - 'alpine/board/**'
       - '.github/workflows/buildroot.yml'
-  workflow_run:
-    workflows: ["Prebuild LLVM packages"]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       build_h700:
-        description: 'Build H700'
+        description: 'Build H700 (experimental)'
         required: false
-        default: true
+        default: false
         type: boolean
       build_rk3326:
         description: 'Build RK3326'
@@ -28,16 +25,6 @@ on:
         type: boolean
       build_rk3566:
         description: 'Build RK3566'
-        required: false
-        default: true
-        type: boolean
-      build_bootlin_musl:
-        description: 'Build bootlin-musl flavor'
-        required: false
-        default: true
-        type: boolean
-      build_arm_glibc:
-        description: 'Build arm-glibc flavor'
         required: false
         default: true
         type: boolean
@@ -53,36 +40,26 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       boards: ${{ steps.set.outputs.boards }}
-      flavors: ${{ steps.set.outputs.flavors }}
     steps:
-      - name: Select boards and flavors
+      - name: Select boards
         id: set
         run: |
-          boards='["h700","rk3326","rk3566"]'
-          flavors='["bootlin-musl","arm-glibc"]'
+          boards='["rk3326","rk3566"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
-                  --argjson h700   '${{ inputs.build_h700   || true }}' \
+                  --argjson h700   '${{ inputs.build_h700   || false }}' \
                   --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
                   --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
                   'if $h700   then . + ["h700"]   else . end |
                    if $rk3326 then . + ["rk3326"] else . end |
                    if $rk3566 then . + ["rk3566"] else . end')
-            flavors=$(echo '[]' \
-              | jq -c \
-                  --argjson musl  '${{ inputs.build_bootlin_musl || true }}' \
-                  --argjson glibc '${{ inputs.build_arm_glibc    || true }}' \
-                  'if $musl  then . + ["bootlin-musl"] else . end |
-                   if $glibc then . + ["arm-glibc"]    else . end')
           fi
-          echo "boards=${boards}"   >> "$GITHUB_OUTPUT"
-          echo "flavors=${flavors}" >> "$GITHUB_OUTPUT"
+          echo "boards=${boards}" >> "$GITHUB_OUTPUT"
 
   shared-sources:
     name: Download Shared Sources
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     defaults:
       run:
         working-directory: buildroot
@@ -103,14 +80,14 @@ jobs:
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
           ./scripts/prepare-linux.sh
-          for board in h700 rk3326 rk3566; do
+          for board in rk3326 rk3566; do
             echo "Downloading sources for $board..."
-            make defconfig BOARD=$board
-            make source BOARD=$board
+            make defconfig BOARD=$board FLAVOR=arm-glibc
+            make source BOARD=$board FLAVOR=arm-glibc
           done
 
   build:
-    name: Build Buildroot ${{ matrix.board }} (${{ matrix.flavor }})
+    name: Build Buildroot ${{ matrix.board }}
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -121,11 +98,10 @@ jobs:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
-        flavor: ${{ fromJSON(needs.compute-matrix.outputs.flavors) }}
     env:
       USE_PODMAN: '0'
       BOARD: ${{ matrix.board }}
-      FLAVOR: ${{ matrix.flavor }}
+      FLAVOR: arm-glibc
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
@@ -152,7 +128,7 @@ jobs:
       - name: Clean output
         if: ${{ inputs.clean_output }}
         run: |
-          echo "Cleaning output for ${{ env.BOARD }} (${{ env.FLAVOR }})"
+          echo "Cleaning output for ${{ env.BOARD }}"
           make clean BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
 
       - name: Verify/Install Dependencies
@@ -162,7 +138,7 @@ jobs:
 
       - name: Build Image
         run: |
-          echo "Building image for ${{ env.BOARD }} (${{ env.FLAVOR }})"
+          echo "Building image for ${{ env.BOARD }}"
           make image BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
 
       - name: Run Smoke Test (QEMU Emulation)

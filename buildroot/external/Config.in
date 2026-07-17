@@ -1,5 +1,6 @@
 source "$BR2_EXTERNAL_MINIME_PATH/package/libretro-common/Config.in"
-source "$BR2_EXTERNAL_MINIME_PATH/package/minime-prebuilt-llvm/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/libmali/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
 
 choice
 	prompt "Minime user interface"

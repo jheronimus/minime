@@ -11,18 +11,18 @@ opts="$(getopt -n "${0##*/}" -o c: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
-		-c)
-			GENIMAGE_CFG="$2"
-			shift 2
-			;;
-		--)
-			shift
-			break
-			;;
-		*)
-			usage
-			exit 1
-			;;
+	-c)
+		GENIMAGE_CFG="$2"
+		shift 2
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		usage
+		exit 1
+		;;
 	esac
 done
 
@@ -32,6 +32,7 @@ if [ -z "$GENIMAGE_CFG" ]; then
 fi
 
 BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
+BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/$(basename "$BOARD_DIR")"
 
 if [ ! -f "${BOARD_DIR}/boot.cmd" ]; then
 	echo "ERROR: ${BOARD_DIR}/boot.cmd is missing!" >&2
@@ -43,13 +44,13 @@ mkimage -C none -A arm -T script -d "${BOARD_DIR}/boot.cmd" "${BINARIES_DIR}/boo
 
 # 2. Add udev rule for Mali contiguous memory allocation (CMA) symlink
 mkdir -p "${TARGET_DIR}/etc/udev/rules.d"
-echo 'KERNEL=="default_cma_region", SYMLINK+="dma_heap/system-uncached"' > "${TARGET_DIR}/etc/udev/rules.d/99-mali.rules"
+echo 'KERNEL=="default_cma_region", SYMLINK+="dma_heap/system-uncached"' >"${TARGET_DIR}/etc/udev/rules.d/99-mali.rules"
 
 # 3. Create modules-load configuration files
 mkdir -p "${TARGET_DIR}/etc/modules-load.d"
 
 # Wifi drivers
-cat << 'EOF' > "${TARGET_DIR}/etc/modules-load.d/wifi.conf"
+cat <<'EOF' >"${TARGET_DIR}/etc/modules-load.d/wifi.conf"
 cfg80211
 mac80211
 rtw88_core
@@ -58,11 +59,10 @@ rtw88_8821c
 rtw88_8821cs
 EOF
 
-
 # 3.5. Create modprobe options files to disable deep low-power saving states
 
 mkdir -p "${TARGET_DIR}/etc/modprobe.d"
-cat << 'EOF' > "${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
+cat <<'EOF' >"${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
 options rtw88_core disable_lps_deep=y
 options rtw88_sdio disable_lps_deep=y
 EOF
@@ -94,11 +94,11 @@ mkdir -p "${TARGET_DIR}/usr/share/minime/traits"
 cp -a "${BOARD_DIR}/traits/." "${TARGET_DIR}/usr/share/minime/traits/"
 
 # 6. Run optional board-specific post-build hook if it exists
-if [ -f "${BOARD_DIR}/post-build.sh" ]; then
+if [ -f "${BR_BOARD_DIR}/post-build.sh" ]; then
 	echo "Running board-specific post-build hook for $(basename "${BOARD_DIR}")..."
 	# Export variables so the hook script can use them
-	export TARGET_DIR BINARIES_DIR BOARD_DIR BR2_EXTERNAL_MINIME_PATH
-	sh "${BOARD_DIR}/post-build.sh"
+	export TARGET_DIR BINARIES_DIR BR_BOARD_DIR BR2_EXTERNAL_MINIME_PATH
+	sh "${BR_BOARD_DIR}/post-build.sh"
 fi
 
 echo "Post-build stage completed successfully."
