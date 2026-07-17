@@ -2,3 +2,7 @@
 local.mk
 .DS_Store
 **/.DS_Store
+
+# Alpine abuild artifacts
+alpine/aports/*/src
+alpine/aports/*/pkg

@@ -5,7 +5,7 @@
 ################################################################################
 
 LIBMALI_VERSION = local
-LIBMALI_SITE = $(BR2_EXTERNAL_MINIME_PATH)/package/libmali
+LIBMALI_SITE = $(BR2_EXTERNAL)/../../drivers/libmali
 LIBMALI_SITE_METHOD = local
 LIBMALI_LICENSE = proprietary
 LIBMALI_LICENSE_FILES = END_USER_LICENCE_AGREEMENT.txt
@@ -42,7 +42,7 @@ endif
 # Copy the selected blob to the build directory before building
 define LIBMALI_COPY_BLOB
 	mkdir -p $(@D)/lib/aarch64-linux-gnu
-	cp $(BR2_EXTERNAL_MINIME_PATH)/board/$(LIBMALI_BOARD)/overlay/usr/lib/$(LIBMALI_BLOB) \
+	cp $(BR2_EXTERNAL)/../../drivers/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
 		$(@D)/lib/aarch64-linux-gnu/libmali-bifrost-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
 endef
 LIBMALI_POST_EXTRACT_HOOKS += LIBMALI_COPY_BLOB
@@ -62,7 +62,7 @@ LIBMALI_CONF_OPTS = \
 define LIBMALI_BUILD_SHIM
 	$(TARGET_CC) $(TARGET_CFLAGS) -shared -fPIC -O2 -Wall \
 		-o $(@D)/libminime_clock_shim.so \
-		$(BR2_EXTERNAL_MINIME_PATH)/package/libmali/clock_shim.c \
+		$(BR2_EXTERNAL)/../../drivers/libmali/shim/clock_shim.c \
 		-ldl
 endef
 LIBMALI_POST_BUILD_HOOKS += LIBMALI_BUILD_SHIM

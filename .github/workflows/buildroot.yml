@@ -7,7 +7,6 @@ on:
       - 'buildroot/external/configs/**'
       - 'buildroot/external/package/**'
       - 'buildroot/external/board/**'
-      - 'buildroot/support/**'
       - 'buildroot/container/**'
       - 'alpine/board/**'
       - '.github/workflows/buildroot.yml'
@@ -82,8 +81,8 @@ jobs:
           ./scripts/prepare-linux.sh
           for board in rk3326 rk3566; do
             echo "Downloading sources for $board..."
-            make defconfig BOARD=$board FLAVOR=arm-glibc
-            make source BOARD=$board FLAVOR=arm-glibc
+            make defconfig BOARD=$board
+            make source BOARD=$board
           done
 
   build:
@@ -101,7 +100,6 @@ jobs:
     env:
       USE_PODMAN: '0'
       BOARD: ${{ matrix.board }}
-      FLAVOR: arm-glibc
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
@@ -117,9 +115,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
-          key: minime-${{ env.BOARD }}-${{ env.FLAVOR }}-ccache-${{ runner.os }}-${{ github.sha }}
+          key: minime-${{ env.BOARD }}-ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            minime-${{ env.BOARD }}-${{ env.FLAVOR }}-ccache-${{ runner.os }}-
+            minime-${{ env.BOARD }}-ccache-${{ runner.os }}-
 
       - name: Prepare cache directories
         run: |
@@ -129,7 +127,7 @@ jobs:
         if: ${{ inputs.clean_output }}
         run: |
           echo "Cleaning output for ${{ env.BOARD }}"
-          make clean BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
+          make clean BOARD=${{ env.BOARD }}
 
       - name: Verify/Install Dependencies
         run: |
@@ -139,20 +137,20 @@ jobs:
       - name: Build Image
         run: |
           echo "Building image for ${{ env.BOARD }}"
-          make image BOARD=${{ env.BOARD }} FLAVOR=${{ env.FLAVOR }}
+          make image BOARD=${{ env.BOARD }}
 
       - name: Run Smoke Test (QEMU Emulation)
         run: |
           ./scripts/run_smoke_test.sh \
             "${{ env.BOARD }}" \
-            "$HOME/buildroot-output/${{ env.BOARD }}-${{ env.FLAVOR }}/images/Image" \
-            "$HOME/buildroot-output/${{ env.BOARD }}-${{ env.FLAVOR }}/images/initramfs" \
-            "out/${{ env.BOARD }}-${{ env.FLAVOR }}/minime-${{ env.BOARD }}.img.gz"
+            "$HOME/buildroot-output/${{ env.BOARD }}/images/Image" \
+            "$HOME/buildroot-output/${{ env.BOARD }}/images/initramfs" \
+            "out/${{ env.BOARD }}/minime-${{ env.BOARD }}.img.gz"
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: minime-${{ env.BOARD }}-${{ env.FLAVOR }}-${{ github.sha }}
-          path: buildroot/out/${{ env.BOARD }}-${{ env.FLAVOR }}/**
+          name: minime-${{ env.BOARD }}-${{ github.sha }}
+          path: buildroot/out/${{ env.BOARD }}/**
           if-no-files-found: error
           retention-days: 14

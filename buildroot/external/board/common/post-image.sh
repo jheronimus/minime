@@ -161,7 +161,7 @@ EOF
 fi
 
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
-OVERLAY_SRC_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${SOC_NAME}/overlays"
+OVERLAY_SRC_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${SOC_NAME}/overlays"
 if [ -d "${OVERLAY_SRC_DIR}" ]; then
 	echo "Compiling DT overlays for ${SOC_NAME}..."
 	mkdir -p "${USERDATA_STAGE}/.minime/overlays"

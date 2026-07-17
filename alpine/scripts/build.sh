@@ -372,14 +372,14 @@ assemble_image() {
 
 	# Hand off to the image assembly script.  -d alpine switches to the
 	# distro-qualified output name.
-	BUILD_DIR="${ALPINE_BUILD_DIR}" \
-		HOST_DIR="/usr" \
-		MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
-		GENIMAGE_CFG="/workspace/alpine/board/common/genimage.cfg"
+	GENIMAGE_CFG="/workspace/alpine/board/common/genimage.cfg"
 	if [ "${BOARD}" = "h700" ]; then
 		GENIMAGE_CFG="/workspace/alpine/board/h700/genimage.cfg"
 	fi
-	"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "/workspace/buildroot/external/board/${BOARD}" \
+	BUILD_DIR="${ALPINE_BUILD_DIR}" \
+		HOST_DIR="/usr" \
+		MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
+		"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "/workspace/buildroot/external/board/${BOARD}" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"
