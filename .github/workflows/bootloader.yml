@@ -1,4 +1,4 @@
-name: Prebuild Bootloaders
+name: Build Bootloaders
 
 on:
   workflow_dispatch:
