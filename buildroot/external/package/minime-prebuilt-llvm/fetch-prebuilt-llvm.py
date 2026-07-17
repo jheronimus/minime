@@ -62,32 +62,85 @@ def main() -> int:
         if actual != expected:
             raise SystemExit(f"manifest {key} mismatch: expected {expected!r}, got {actual!r}")
 
-    url = manifest["url"]
     expected_sha = manifest["sha256"]
+    asset = manifest.get("asset", "llvm.tar.xz")
+    parts = manifest.get("parts")
     os.makedirs(args.output_dir, exist_ok=True)
 
-    asset = manifest.get("asset", "llvm.tar.xz")
     if args.cache_dir:
         os.makedirs(args.cache_dir, exist_ok=True)
-        archive = os.path.join(args.cache_dir, f"{expected_sha}-{asset}")
+
+    # Two paths:
+    #   * parts[] present  -> multi-asset chunked download (built by
+    #     package-prebuilt-llvm.sh when the assembled archive exceeded
+    #     GitHub's 2 GiB release-asset cap); chunks are downloaded,
+    #     verified per-chunk, then concatenated into the assembled
+    #     archive and verified against the top-level sha256.
+    #   * parts[] absent   -> legacy single-asset download path.
+    if parts:
+        cache_basedir = os.path.join(args.cache_dir, f"{expected_sha}-{asset}") if args.cache_dir \
+            else tempfile.mkdtemp(prefix="minime-prebuilt-llvm.")
+        os.makedirs(cache_basedir, exist_ok=True)
+        archive = os.path.join(cache_basedir, asset)
+
         if os.path.exists(archive) and sha256(archive) == expected_sha:
             print(f"Using cached {archive}", flush=True)
         else:
+            chunk_paths = []
+            for part in parts:
+                part_name = part["name"]
+                part_url = part["url"]
+                part_sha = part["sha256"]
+                part_path = os.path.join(cache_basedir, part_name)
+
+                if os.path.exists(part_path) and sha256(part_path) == part_sha:
+                    print(f"Using cached {part_path}", flush=True)
+                else:
+                    tmp_path = f"{part_path}.tmp"
+                    print(f"Downloading {part_url}", flush=True)
+                    download(part_url, tmp_path)
+                    actual = sha256(tmp_path)
+                    if actual != part_sha:
+                        raise SystemExit(
+                            f"sha256 mismatch for {part_url}: expected {part_sha}, got {actual}"
+                        )
+                    os.replace(tmp_path, part_path)
+                chunk_paths.append(part_path)
+
             tmp_archive = f"{archive}.tmp"
-            print(f"Downloading {url}", flush=True)
-            download(url, tmp_archive)
-            actual_sha = sha256(tmp_archive)
-            if actual_sha != expected_sha:
-                raise SystemExit(f"sha256 mismatch for {url}: expected {expected_sha}, got {actual_sha}")
+            print(f"Assembling {asset} from {len(chunk_paths)} chunk(s)...", flush=True)
+            with open(tmp_archive, "wb") as out:
+                for chunk_path in chunk_paths:
+                    with open(chunk_path, "rb") as f:
+                        shutil.copyfileobj(f, out, length=1024 * 1024)
+            actual_assembled = sha256(tmp_archive)
+            if actual_assembled != expected_sha:
+                raise SystemExit(
+                    f"assembled archive sha256 mismatch: expected {expected_sha}, got {actual_assembled}"
+                )
             os.replace(tmp_archive, archive)
     else:
-        tmp = tempfile.mkdtemp(prefix="minime-prebuilt-llvm.")
-        archive = os.path.join(tmp, asset)
-        print(f"Downloading {url}", flush=True)
-        download(url, archive)
-        actual_sha = sha256(archive)
-        if actual_sha != expected_sha:
-            raise SystemExit(f"sha256 mismatch for {url}: expected {expected_sha}, got {actual_sha}")
+        url = manifest["url"]
+        if args.cache_dir:
+            archive = os.path.join(args.cache_dir, f"{expected_sha}-{asset}")
+            if os.path.exists(archive) and sha256(archive) == expected_sha:
+                print(f"Using cached {archive}", flush=True)
+            else:
+                tmp_archive = f"{archive}.tmp"
+                print(f"Downloading {url}", flush=True)
+                download(url, tmp_archive)
+                actual_sha = sha256(tmp_archive)
+                if actual_sha != expected_sha:
+                    raise SystemExit(f"sha256 mismatch for {url}: expected {expected_sha}, got {actual_sha}")
+                os.replace(tmp_archive, archive)
+        else:
+            tmp = tempfile.mkdtemp(prefix="minime-prebuilt-llvm.")
+            archive = os.path.join(tmp, asset)
+            print(f"Downloading {url}", flush=True)
+            download(url, archive)
+            actual_sha = sha256(archive)
+            if actual_sha != expected_sha:
+                raise SystemExit(f"sha256 mismatch for {url}: expected {expected_sha}, got {actual_sha}")
 
     print(f"Extracting {archive} to {args.output_dir}", flush=True)
     # Use tar command rather than Python's lzma path for better streaming
