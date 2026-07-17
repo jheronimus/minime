@@ -40,7 +40,7 @@ gettext
 # busybox provides login, getty (via openrc service), and autologin
 # ── Filesystems / partitions ─────────────────────────────────────────────
 parted
-fatresize
+fatresize@testing
 e2fsprogs
 dosfstools
 f2fs-tools
