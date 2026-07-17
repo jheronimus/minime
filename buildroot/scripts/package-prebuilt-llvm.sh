@@ -129,5 +129,36 @@ XZ_OPT="-T0 -3" tar -C "$payload_dir" -cJf "$asset_path" .
 sha256sum "$asset_path" >"${asset_path%.tar.xz}.sha256"
 cp "${payload_dir}/manifest.json" "${asset_path%.tar.xz}.manifest.json"
 
+# GitHub release assets are capped at 2147483647 bytes (< 2 GiB); the
+# assembled LLVM tarball crosses that limit on a full LLVM/Clang/SPIRV
+# build.  Split it into <=chunk-size pieces so each fits under the cap;
+# the consumer (fetch-prebuilt-llvm.py) re-assembles them via plain
+# concatenation before xz extraction.
+chunk_size=1900000000
+chunk_prefix="${asset_path}."
+split -b "$chunk_size" -a 2 "$asset_path" "$chunk_prefix"
+
+# Per-chunk sha256 sidecars + a parts.tsv so the consumer can verify
+# each chunk independently (cheap retry of just the broken chunk on a
+# bad download, instead of re-downloading the whole archive).
+parts_tsv="${asset_path}.parts.tsv"
+: >"$parts_tsv"
+for chunk in "$chunk_prefix"??; do
+	[ -f "$chunk" ] || continue
+	chunk_name=$(basename "$chunk")
+	chunk_sha=$(sha256sum "$chunk" | awk '{print $1}')
+	chunk_size_actual=$(wc -c <"$chunk" | awk '{print $1}')
+	printf '%s\n' "$chunk_sha" >"${chunk}.sha256"
+	printf '%s\t%s\t%s\n' "$chunk_name" "$chunk_sha" "$chunk_size_actual" >>"$parts_tsv"
+done
+
+# The assembled archive is no longer the canonical asset (it would not
+# survive the release-asset upload); drop it so the workflow does not
+# try to publish it.
+rm "$asset_path"
+
 printf 'Created %s\n' "$asset_path"
+printf 'Chunks: %d, total bytes: %s\n' \
+	"$(wc -l <"$parts_tsv" | tr -d ' ')" \
+	"$(awk -F'\t' '{s+=$3} END {printf "%s", s}' "$parts_tsv")"
 cat "${asset_path%.tar.xz}.sha256"

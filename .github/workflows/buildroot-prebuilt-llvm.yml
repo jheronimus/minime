@@ -30,6 +30,7 @@ on:
     paths:
       - 'buildroot/scripts/make-prebuilt-config.sh'
       - 'buildroot/scripts/package-prebuilt-llvm.sh'
+      - 'buildroot/scripts/llvm-channel-manifest.py'
       - 'buildroot/Makefile'
 
 permissions:
@@ -76,16 +77,22 @@ jobs:
         run: |
           set -euo pipefail
           release_tag="prebuilt-llvm-${FLAVOR}-${BUILDROOT_VERSION}"
-          asset="llvm-${REVISION}.tar.xz"
           if [ "${{ inputs.manifest_only }}" = "true" ]; then
             echo "manifest_only requested — skipping build"
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          elif gh release view "${release_tag}" --json assets \
-               --jq ".assets[].name" 2>/dev/null | grep -qx "${asset}"; then
-            echo "Release asset ${release_tag}/${asset} already exists — skipping build"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            existing=$(gh release view "${release_tag}" --json assets \
+              --jq ".assets[].name" 2>/dev/null || true)
+            # Chunked releases ship parts.tsv + chunk files; legacy
+            # single-asset releases shipped the assembled tarball itself.
+            # Treat either as a complete release and skip the rebuild.
+            if printf '%s\n' "$existing" | grep -qx "llvm-${REVISION}.tar.xz.parts.tsv" \
+              || printf '%s\n' "$existing" | grep -qx "llvm-${REVISION}.tar.xz"; then
+              echo "Release assets for ${release_tag}/${REVISION} already exist — skipping build"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Validate inputs
@@ -163,22 +170,26 @@ jobs:
           scripts/package-prebuilt-llvm.sh "$BUILDROOT_DIR" "$OUTPUT_DIR" "$FLAVOR" "$BUILDROOT_VERSION" "$REVISION" "$asset"
           sha256="$(cut -d' ' -f1 "${asset%.tar.xz}.sha256")"
           release_tag="prebuilt-llvm-${FLAVOR}-${BUILDROOT_VERSION}"
-          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/llvm-${REVISION}.tar.xz"
-          cat >"$ASSET_DIR/stable.json" <<EOF_JSON
-          {
-            "flavor": "${FLAVOR}",
-            "buildroot_version": "${BUILDROOT_VERSION}",
-            "revision": "${REVISION}",
-            "release_tag": "${release_tag}",
-            "asset": "llvm-${REVISION}.tar.xz",
-            "url": "${url}",
-            "sha256": "${sha256}"
-          }
-          EOF_JSON
-          jq . "$ASSET_DIR/stable.json" > "$ASSET_DIR/stable.pretty.json"
-          mv "$ASSET_DIR/stable.pretty.json" "$ASSET_DIR/stable.json"
+          url_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}"
+          asset_name="llvm-${REVISION}.tar.xz"
+
+          # package-prebuilt-llvm.sh splits the assembled archive into
+          # <=1.9 GiB chunks (to fit GitHub's 2 GiB release-asset cap)
+          # and writes ${asset}.parts.tsv with one row per chunk.
+          # Build the channel stable.json via the shared helper.
+          scripts/llvm-channel-manifest.py \
+            --output "$ASSET_DIR/stable.json" \
+            --sha256 "$sha256" \
+            --flavor "$FLAVOR" \
+            --buildroot-version "$BUILDROOT_VERSION" \
+            --revision "$REVISION" \
+            --release-tag "$release_tag" \
+            --url-base "$url_base" \
+            --asset-name "$asset_name" \
+            --parts-tsv "${asset}.parts.tsv"
+
           echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
-          echo "asset=llvm-${REVISION}.tar.xz" >> "$GITHUB_OUTPUT"
+          echo "asset=${asset_name}" >> "$GITHUB_OUTPUT"
           echo "sha256=${sha256}" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub release assets
@@ -197,7 +208,7 @@ jobs:
 
             Assets are immutable. New rebuilds for the same Buildroot/flavor release should upload a new `llvm-rN.tar.xz` asset.
           files: |
-            ${{ env.ASSET_DIR }}/llvm-${{ env.REVISION }}.tar.xz
+            ${{ env.ASSET_DIR }}/llvm-${{ env.REVISION }}.tar.xz.*
             ${{ env.ASSET_DIR }}/llvm-${{ env.REVISION }}.sha256
             ${{ env.ASSET_DIR }}/llvm-${{ env.REVISION }}.manifest.json
           overwrite_files: true
@@ -207,27 +218,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # When skipping the build, reconstruct stable.json from the existing release.
+          # When skipping the build, reconstruct stable.json from the
+          # existing release (downloading both the assembled-archive
+          # sha256 sidecar and the chunked parts.tsv). The shared helper
+          # preserves the legacy single-asset schema when parts.tsv is
+          # absent (older releases uploaded before chunking landed).
           if [ "${{ steps.check.outputs.skip }}" = "true" ]; then
             release_tag="prebuilt-llvm-${FLAVOR}-${BUILDROOT_VERSION}"
-            asset_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/llvm-${REVISION}.tar.xz"
+            url_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}"
+            asset_name="llvm-${REVISION}.tar.xz"
+
             sha256=$(gh release view "${release_tag}" --json assets \
               --jq ".assets[] | select(.name==\"llvm-${REVISION}.sha256\") | .url" \
               | xargs curl -fsSL | cut -d' ' -f1)
+
             mkdir -p /tmp/dist
-            cat > /tmp/dist/stable.json <<EOF_JSON
-          {
-            "flavor": "${FLAVOR}",
-            "buildroot_version": "${BUILDROOT_VERSION}",
-            "revision": "${REVISION}",
-            "release_tag": "${release_tag}",
-            "asset": "llvm-${REVISION}.tar.xz",
-            "url": "${asset_url}",
-            "sha256": "${sha256}"
-          }
-          EOF_JSON
-            jq . /tmp/dist/stable.json > /tmp/dist/stable.pretty.json
-            mv /tmp/dist/stable.pretty.json /tmp/dist/stable.json
+            parts_tsv_url=$(gh release view "${release_tag}" --json assets \
+              --jq ".assets[] | select(.name==\"${asset_name}.parts.tsv\") | .url" 2>/dev/null || true)
+            if [ -n "$parts_tsv_url" ]; then
+              curl -fsSL "$parts_tsv_url" -o /tmp/dist/parts.tsv
+            else
+              : > /tmp/dist/parts.tsv
+            fi
+
+            scripts/llvm-channel-manifest.py \
+              --output /tmp/dist/stable.json \
+              --sha256 "$sha256" \
+              --flavor "$FLAVOR" \
+              --buildroot-version "$BUILDROOT_VERSION" \
+              --revision "$REVISION" \
+              --release-tag "$release_tag" \
+              --url-base "$url_base" \
+              --asset-name "$asset_name" \
+              --parts-tsv /tmp/dist/parts.tsv
             cp /tmp/dist/stable.json /tmp/stable.json
           else
             cp "$ASSET_DIR/stable.json" /tmp/stable.json
