@@ -68,7 +68,7 @@ jobs:
 
       - name: Prepare build environment
         run: |
-          ./scripts/prepare-linux.sh
+          ../scripts/prepare-linux.sh
           mkdir -p ~/.buildroot-dl ~/.buildroot-ccache
 
       - name: Configure U-Boot-only build

@@ -153,7 +153,7 @@ jobs:
         if: false
         working-directory: ${{ github.workspace }}
         run: |
-          ./buildroot/scripts/run_smoke_test.sh \
+          ./scripts/run_smoke_test.sh \
             "${{ matrix.board }}" \
             "$HOME/alpine-output/${{ matrix.board }}/images/Image" \
             "$HOME/alpine-output/${{ matrix.board }}/images/initramfs" \
