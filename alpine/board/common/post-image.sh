@@ -3,37 +3,42 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE [-d alpine] [-o OUTPUT_DIR]" >&2
+	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_DIR [-d alpine] [-o OUTPUT_DIR]" >&2
 }
 
 GENIMAGE_CFG=""
+BOARD_DIR_OVERRIDE=""
 DISTRO="alpine"
 OUTPUT_DIR=""
 
-opts="$(getopt -n "${0##*/}" -o c:d:o: -- "$@")" || exit $?
+opts="$(getopt -n "${0##*/}" -o b:c:d:o: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
-		-c)
-			GENIMAGE_CFG="$2"
-			shift 2
-			;;
-		-d)
-			DISTRO="$2"
-			shift 2
-			;;
-		-o)
-			OUTPUT_DIR="$2"
-			shift 2
-			;;
-		--)
-			shift
-			break
-			;;
-		*)
-			usage
-			exit 1
-			;;
+	-b)
+		BOARD_DIR_OVERRIDE="$2"
+		shift 2
+		;;
+	-c)
+		GENIMAGE_CFG="$2"
+		shift 2
+		;;
+	-d)
+		DISTRO="$2"
+		shift 2
+		;;
+	-o)
+		OUTPUT_DIR="$2"
+		shift 2
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		usage
+		exit 1
+		;;
 	esac
 done
 
@@ -43,15 +48,22 @@ if [ -z "$GENIMAGE_CFG" ]; then
 fi
 
 case "${DISTRO}" in
-	alpine) ;;
-	*) echo "ERROR: -d must be 'alpine'" >&2; exit 1 ;;
+alpine) ;;
+*)
+	echo "ERROR: -d must be 'alpine'" >&2
+	exit 1
+	;;
 esac
 
 if [ -n "${OUTPUT_DIR}" ]; then
 	BINARIES_DIR="${OUTPUT_DIR}"
 fi
 
-BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
+if [ -n "${BOARD_DIR_OVERRIDE}" ]; then
+	BOARD_DIR="${BOARD_DIR_OVERRIDE}"
+else
+	BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
+fi
 SOC_NAME="$(basename "$BOARD_DIR")"
 
 if [ ! -f "${BOARD_DIR}/board.env" ]; then
@@ -69,8 +81,8 @@ fi
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
 case "${DISTRO}" in
-	alpine)	IMG_TAG="minime-alpine-${SOC_NAME}" ;;
-	*)		IMG_TAG="minime-${SOC_NAME}" ;;
+alpine) IMG_TAG="minime-alpine-${SOC_NAME}" ;;
+*) IMG_TAG="minime-${SOC_NAME}" ;;
 esac
 FINAL_IMG="${BINARIES_DIR}/${IMG_TAG}.img"
 FINAL_IMG_GZ="${FINAL_IMG}.gz"
@@ -118,7 +130,6 @@ if [ -d "${MINIME_SOURCE_ROOT}/board/common/bios" ]; then
 	cp -rp "${MINIME_SOURCE_ROOT}/board/common/bios/." "${USERDATA_STAGE}/bios/"
 fi
 
-
 for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
@@ -136,13 +147,13 @@ cp -f "${MINIME_SOURCE_ROOT}/board/common/config/cores.cfg" \
 
 # Prepopulate self-documenting device.cfg
 DEVICE_CFG="${USERDATA_STAGE}/.minime/config/device.cfg"
-cat << 'EOF' > "${DEVICE_CFG}"
+cat <<'EOF' >"${DEVICE_CFG}"
 # minime Device Configuration
 #
 EOF
 
 if [ "${SOC_NAME}" = "rk3566" ]; then
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # CPU undervolt (RK3566 only). Lowers CPU core voltage per OPP to reduce
 # power and thermals. Opt-in: silicon lottery varies and an unstable
 # setting can corrupt data, not just crash.
@@ -155,7 +166,7 @@ EOF
 fi
 
 if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # By default, this is set to 'auto' to automatically detect your device.
 # If autodetection fails or you need to force a specific device/screen panel revision,
 # uncomment and set 'device' to one of the built-in options listed below.
@@ -164,15 +175,15 @@ if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
 EOF
 	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 		if [ -f "${dtb_file}" ]; then
-			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+			echo "# - $(basename "${dtb_file}")" >>"${DEVICE_CFG}"
 		fi
 	done
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 #
 device=auto
 EOF
 else
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # Autodetection is not supported on this platform.
 # You must set 'device' to one of the built-in options listed below
 # matching your specific handheld device.
@@ -181,15 +192,14 @@ else
 EOF
 	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 		if [ -f "${dtb_file}" ]; then
-			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+			echo "# - $(basename "${dtb_file}")" >>"${DEVICE_CFG}"
 		fi
 	done
-	cat << EOF >> "${DEVICE_CFG}"
+	cat <<EOF >>"${DEVICE_CFG}"
 #
 device=${DEFAULT_DTB}
 EOF
 fi
-
 
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
 OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/overlays"
@@ -225,13 +235,11 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	fi
 done
 
-
 # Copy UI files from the generic staging directory (if any)
 if [ -d "${BINARIES_DIR}/ui" ]; then
 	echo "Staging UI files onto SD card partition..."
 	cp -rp "${BINARIES_DIR}/ui/." "${USERDATA_STAGE}/"
 fi
-
 
 # Assemble custom boot-stage initrd
 echo "Assembling custom boot-stage loop-mount initrd..."
@@ -294,9 +302,8 @@ copy_runtime_binary() {
 copy_runtime_binary parted
 copy_runtime_binary fatresize
 
-
 # Write the Custom init script
-cat << 'EOF' > "${INITRD_STAGE}/init"
+cat <<'EOF' >"${INITRD_STAGE}/init"
 #!/bin/sh
 export PATH=/bin:/sbin
 mount -t proc proc /proc
@@ -411,9 +418,8 @@ if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 fi
 
-
 # Compile the uncompressed initramfs CPIO archive.
-(cd "${INITRD_STAGE}" && find . | cpio -H newc -o > "${BINARIES_DIR}/initramfs")
+(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs")
 
 # Copy initramfs to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
@@ -422,7 +428,6 @@ echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=1040
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
-
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
