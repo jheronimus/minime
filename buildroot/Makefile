@@ -86,7 +86,7 @@ endif
 
 export LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD USE_PODMAN PODMAN_CMD
 
-.PHONY: help prepare shell buildroot defconfig image h700-uboot clean clean-all clean-vm copy_images prepare_vm check-package packages-list FORCE
+.PHONY: help prepare shell buildroot defconfig image clean clean-all clean-vm copy_images prepare_vm check-package packages-list FORCE
 
 help:
 	@printf '%s\n' \
@@ -97,7 +97,6 @@ help:
 		"  make image         - Build complete bootable firmware image for BOARD" \
 		"  make shell         - Open an interactive shell inside the build container" \
 		"  make prepare       - Build builder container image (or install host tools on Linux)" \
-		"  make h700-uboot    - Compile and update prebuilt H700 bootloader" \
 		"  make check-rebuild - Scan packages for out-of-date build stamps" \
 		"  make check-package CHECK_PACKAGE_FILES='path ...'" \
 		"                       Run Buildroot's package linter on specified files" \
@@ -232,68 +231,6 @@ ifeq ($(USE_PODMAN),1)
 	@$(PODMAN_CMD) rmi $(PODMAN_IMAGE) 2>/dev/null || true
 else
 	@echo "clean-vm is only applicable when using Podman." >&2
-endif
-
-h700-uboot: $(BUILDROOT_STAMP) prepare_vm
-	@if [ "$(BOARD)" != "h700" ]; then \
-		echo "ERROR: h700-uboot only supports BOARD=h700" >&2; \
-		exit 1; \
-	fi
-	@echo "Configuring source U-Boot build for h700..."
-	@$(MAKE) defconfig BOARD=h700
-	@if [ "$(USE_PODMAN)" = "1" ]; then \
-		$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "\
-			grep -v -E '^(# BR2_TARGET_ARM_TRUSTED_FIRMWARE is not set|# BR2_TARGET_UBOOT is not set)' /buildroot-output/h700/.config > /buildroot-output/h700/.config.tmp && \
-			mv /buildroot-output/h700/.config.tmp /buildroot-output/h700/.config && \
-			printf '%s\n' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE=y' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION=y' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION_VALUE=\"v2.15.0\"' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_PLATFORM=\"sun50i_h616\"' \
-			'BR2_TARGET_UBOOT=y' \
-			'BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG=y' \
-			'BR2_TARGET_UBOOT_CUSTOM_VERSION=y' \
-			'BR2_TARGET_UBOOT_CUSTOM_VERSION_VALUE=\"2026.04\"' \
-			'BR2_TARGET_UBOOT_BOARD_DEFCONFIG=\"anbernic_rg35xx_h700\"' \
-			'BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES=\"/workspace/external/../alpine/board/h700/uboot.config\"' \
-			'BR2_TARGET_UBOOT_NEEDS_DTC=y' \
-			'BR2_TARGET_UBOOT_NEEDS_PYLIBFDT=y' \
-			'BR2_TARGET_UBOOT_NEEDS_OPENSSL=y' \
-			'BR2_TARGET_UBOOT_NEEDS_ATF_BL31=y' \
-			'BR2_TARGET_UBOOT_SPL=y' \
-			'BR2_TARGET_UBOOT_SPL_NAME=\"u-boot-sunxi-with-spl.bin\"' \
-			>> /buildroot-output/h700/.config"; \
-	else \
-		grep -v -E '^(# BR2_TARGET_ARM_TRUSTED_FIRMWARE is not set|# BR2_TARGET_UBOOT is not set)' $(BUILDROOT_OUTPUT_DIR)/.config > $(BUILDROOT_OUTPUT_DIR)/.config.tmp; \
-		mv $(BUILDROOT_OUTPUT_DIR)/.config.tmp $(BUILDROOT_OUTPUT_DIR)/.config; \
-		printf '%s\n' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE=y' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION=y' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_VERSION_VALUE="v2.15.0"' \
-			'BR2_TARGET_ARM_TRUSTED_FIRMWARE_PLATFORM="sun50i_h616"' \
-			'BR2_TARGET_UBOOT=y' \
-			'BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG=y' \
-			'BR2_TARGET_UBOOT_CUSTOM_VERSION=y' \
-			'BR2_TARGET_UBOOT_CUSTOM_VERSION_VALUE="2026.04"' \
-			'BR2_TARGET_UBOOT_BOARD_DEFCONFIG="anbernic_rg35xx_h700"' \
-			'BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL)/../alpine/board/h700/uboot.config"' \
-			'BR2_TARGET_UBOOT_NEEDS_DTC=y' \
-			'BR2_TARGET_UBOOT_NEEDS_PYLIBFDT=y' \
-			'BR2_TARGET_UBOOT_NEEDS_OPENSSL=y' \
-			'BR2_TARGET_UBOOT_NEEDS_ATF_BL31=y' \
-			'BR2_TARGET_UBOOT_SPL=y' \
-			'BR2_TARGET_UBOOT_SPL_NAME="u-boot-sunxi-with-spl.bin"' \
-			>> $(BUILDROOT_OUTPUT_DIR)/.config; \
-	fi
-	@$(call RUN_CMD,olddefconfig)
-	@echo "Building H700 U-Boot from source..."
-	@$(call RUN_CMD,-j$(TOPLEVEL_JLEVEL) arm-trusted-firmware uboot)
-	@echo "Copying H700 U-Boot prebuilt into external/board/h700/prebuilt/..."
-ifeq ($(USE_PODMAN),1)
-	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "mkdir -p /workspace/external/board/h700/prebuilt && cp -f /buildroot-output/h700/images/u-boot-sunxi-with-spl.bin /workspace/external/board/h700/prebuilt/u-boot-sunxi-with-spl.bin"
-else
-	@mkdir -p external/board/h700/prebuilt
-	@cp -f $(BUILDROOT_OUTPUT_DIR)/images/u-boot-sunxi-with-spl.bin external/board/h700/prebuilt/u-boot-sunxi-with-spl.bin
 endif
 
 Makefile: ;

@@ -408,16 +408,31 @@ for item in "${USERDATA_STAGE}"/*; do
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${item}" ::
 done
 
-# Copy idbloader.img from U-Boot build directory if it exists and is missing in BINARIES_DIR
-if [ ! -f "${BINARIES_DIR}/idbloader.img" ]; then
-	echo "Checking for idbloader.img in U-Boot build directory..."
-	for uboot_dir in "${BUILD_DIR}"/uboot-*; do
-		if [ -f "${uboot_dir}/idbloader.img" ]; then
-			echo "Found idbloader.img in ${uboot_dir}, copying to ${BINARIES_DIR}..."
-			cp -f "${uboot_dir}/idbloader.img" "${BINARIES_DIR}/idbloader.img"
-			break
-		fi
-	done
+# Stage prebuilt bootloader blobs from alpine/bootloader/<soc>/
+# into BINARIES_DIR so genimage's --inputpath can find them.
+# Bootloader blobs are built by the dedicated prebuild workflow
+# (.github/workflows/bootloader.yml) and committed to alpine/bootloader/.
+BL_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/bootloader/${SOC_NAME}"
+if [ "${SOC_NAME}" = "h700" ]; then
+	BL_BIN="${BL_DIR}/u-boot-sunxi-with-spl.bin"
+	[ -f "${BL_BIN}" ] || {
+		echo "ERROR: missing ${BL_BIN}" >&2
+		exit 1
+	}
+	cp -f "${BL_BIN}" "${BINARIES_DIR}/u-boot-sunxi-with-spl.bin"
+else
+	BL_IDB="${BL_DIR}/idbloader.img"
+	BL_ITB="${BL_DIR}/u-boot.itb"
+	[ -f "${BL_IDB}" ] || {
+		echo "ERROR: missing ${BL_IDB}" >&2
+		exit 1
+	}
+	[ -f "${BL_ITB}" ] || {
+		echo "ERROR: missing ${BL_ITB}" >&2
+		exit 1
+	}
+	cp -f "${BL_IDB}" "${BINARIES_DIR}/idbloader.img"
+	cp -f "${BL_ITB}" "${BINARIES_DIR}/u-boot.itb"
 fi
 
 echo "Running genimage..."

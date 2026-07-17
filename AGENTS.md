@@ -7,18 +7,22 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
 - `alpine/`: Core Alpine build system.
   - `aports/`: Custom Alpine package ports.
   - `board/`: Alpine board configurations and scripts.
+  - `bootloader/`: Prebuilt bootloader blobs (canonical location). Built by the [Prebuild Bootloaders workflow](file:///Users/ilembitov/Projects/minime/.github/workflows/bootloader.yml) (manual dispatch). `h700/` has `u-boot-sunxi-with-spl.bin`; `rk3326/`/`rk3566/` have `idbloader.img` + `u-boot.itb`; `rk3566/rkbin/` also has the committed `bl31.elf` (Rockchip proprietary, hybrid mainline U-Boot + rkbin ATF).
   - `configs/`: Alpine build configuration flags.
 - `buildroot/`: Core Buildroot build system (formerly `minime/`).
   - `Makefile`: Docker/Colima setups, builds, configs.
   - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
     - `configs/`: Defconfigs and config fragments.
       - `minime_common.config`: Shared Buildroot options (arch, toolchain, packages, rootfs).
+      - `bootloader/`: U-Boot/ATF re-enabling fragments, used ONLY by the [Prebuild Bootloaders workflow](file:///Users/ilembitov/Projects/minime/.github/workflows/bootloader.yml). Firmware defconfigs do NOT build U-Boot.
     - `board/h700/`: H700 overlays, DTS, patches, config fragments (`linux.config`/`uboot.config`), scripts.
     - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
   - `out/<board>/` / `logs/`: Bootable images / build logs.
 - `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
-- `drivers/`: GPU driver source code (e.g. `mali-kbase`).
+- `drivers/`: GPU driver source code and blobs.
+  - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
+  - `libmali/`: ARM Mali userspace driver source + proprietary blobs (blobs/, hook/, shim/, scripts/, include/).
 - `roms/`: Preloaded ROMs package.
 
 ## Core Configs & Unification
