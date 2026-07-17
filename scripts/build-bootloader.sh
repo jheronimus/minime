@@ -60,9 +60,9 @@ if [ "$BOARD" = "rk3566" ]; then
     # Download the TPL/DDR init binary from rkbin repo
     echo "Downloading DDR init TPL for RK3566..."
     mkdir -p "${WORK_DIR}/rkbin"
-    curl -sSfL "https://github.com/rockchip-linux/rkbin/raw/master/bin/rk35/rk3566_ddr_1056MHz_v1.23.bin" \
-        -o "${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.23.bin"
-    export ROCKCHIP_TPL="${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.23.bin"
+    curl -sSfL "https://github.com/rockchip-linux/rkbin/raw/master/bin/rk35/rk3566_ddr_1056MHz_v1.25.bin" \
+        -o "${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
+    export ROCKCHIP_TPL="${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
 else
     echo "Cloning and building ATF ${ATF_VERSION} for ${ATF_PLAT}..."
     if [ ! -d "${WORK_DIR}/atf" ]; then
@@ -77,7 +77,7 @@ else
     if [ "$BOARD" = "h700" ]; then
         BL31_PATH="${WORK_DIR}/atf/build/${ATF_PLAT}/release/bl31.bin"
     else
-        BL31_PATH="${WORK_DIR}/atf/build/${ATF_PLAT}/release/bl31.elf"
+        BL31_PATH="${WORK_DIR}/atf/build/${ATF_PLAT}/release/bl31/bl31.elf"
     fi
 fi
 
