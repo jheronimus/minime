@@ -1,4 +1,4 @@
-name: Build Bootloaders
+name: Build bootloaders
 
 on:
   workflow_dispatch:
