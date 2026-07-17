@@ -9,7 +9,6 @@ on:
       - 'alpine/bootloader/**'
       - 'alpine/configs/**'
       - 'alpine/container/**'
-      - 'alpine/kernel/**'
       - 'alpine/scripts/**'
       - 'alpine/Makefile'
       - '.github/workflows/alpine.yml'
@@ -103,7 +102,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/alpine-output/${{ matrix.board }}/packages
-          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/kernel/**') }}
+          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/board/**') }}
           restore-keys: |
             alpine-apks-${{ matrix.board }}-
 
