@@ -4,6 +4,10 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
 
 ## Monorepo Structure
 
+- `alpine/`: Core Alpine build system.
+  - `aports/`: Custom Alpine package ports.
+  - `board/`: Alpine board configurations and scripts.
+  - `configs/`: Alpine build configuration flags.
 - `buildroot/`: Core Buildroot build system (formerly `minime/`).
   - `Makefile`: Docker/Colima setups, builds, configs.
   - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
@@ -13,13 +17,9 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
     - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
   - `out/<board>/` / `logs/`: Bootable images / build logs.
-- `alpine/`: Core Alpine build system.
-  - `aports/`: Custom Alpine package ports.
-  - `board/`: Alpine board configurations and scripts.
-  - `configs/`: Alpine build configuration flags.
+- `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
 - `drivers/`: GPU driver source code (e.g. `mali-kbase`).
 - `roms/`: Preloaded ROMs package.
-- `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
 
 ## Core Configs & Unification
 
