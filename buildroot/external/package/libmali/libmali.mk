@@ -52,6 +52,7 @@ LIBMALI_CONF_OPTS = \
 	-Dgpu=$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU)) \
 	-Dversion=$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION)) \
 	-Dplatform=gbm \
+	-Doptimize-level=O0 \
 	-Dopencl-icd=false \
 	-Dkhr-header=false \
 	-Dvendor-package=false \
