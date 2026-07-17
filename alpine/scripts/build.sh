@@ -119,41 +119,6 @@ resolve_minirootfs() {
 # 2. Build local Minime APKs
 #──────────────────────────────────────────────────────────────────────────────
 
-setup_signing_keys() {
-	log "setting up abuild signing keys..."
-	PERSISTENT_KEYS_DIR="/alpine-repos/.abuild"
-	mkdir -p "${PERSISTENT_KEYS_DIR}"
-
-	if [ -z "$(find "${PERSISTENT_KEYS_DIR}" -name '*.rsa' 2>/dev/null)" ]; then
-		log "no persistent signing key found; generating a new one..."
-		su builder -s /bin/sh -c "abuild-keygen -a -n"
-		cp -p /home/builder/.abuild/* "${PERSISTENT_KEYS_DIR}/"
-	else
-		log "restoring signing keys from persistent storage..."
-		mkdir -p /home/builder/.abuild
-		cp -rp "${PERSISTENT_KEYS_DIR}/." /home/builder/.abuild/
-		chown -R builder:builder /home/builder/.abuild
-	fi
-	cp -p /home/builder/.abuild/*.pub /etc/apk/keys/
-
-	# Clean up any stale/untrusted index signatures from cached APKs
-	log "cleaning up stale cached repository signatures..."
-	find "${ALPINE_PACKAGES_DIR}" -name 'APKINDEX.tar.gz' -delete 2>/dev/null || true
-
-	# Re-sign all cached APKs with the current key to make them trusted
-	if [ -d "${ALPINE_PACKAGES_DIR}" ]; then
-		PRIVKEY=$(find /home/builder/.abuild -name '*.rsa' | head -n 1)
-		if [ -n "${PRIVKEY}" ] && [ -f "${PRIVKEY}" ]; then
-			log "re-signing cached APKs using key: ${PRIVKEY}..."
-			find "${ALPINE_PACKAGES_DIR}" -name '*.apk' | while read -r apk; do
-				abuild-sign -k "${PRIVKEY}" "${apk}" || log "WARNING: Failed to sign ${apk}"
-			done
-		else
-			log "WARNING: No private key found for signing!"
-		fi
-	fi
-}
-
 build_local_apks() {
 	# abuild's CBUILD = host (x86_64), CHOST = aarch64-linux-musl so the
 	# package's build() is invoked with the cross toolchain.  Each APKBUILD
@@ -166,7 +131,6 @@ build_local_apks() {
 	export CBUILD CHOST CARCH REPODEST
 
 	mkdir -p "${ALPINE_PACKAGES_DIR}" "${ALPINE_BUILD_DIR}"
-	setup_signing_keys
 
 	# Update apk repositories index so we can resolve build dependencies at runtime
 	log "updating apk repositories index..."
