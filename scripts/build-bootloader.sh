@@ -54,15 +54,9 @@ export ARCH=arm
 # 1. Build or Fetch ATF (BL31)
 BL31_PATH=""
 if [ "$BOARD" = "rk3566" ]; then
-    echo "Using prebuilt BL31 for RK3566..."
+    echo "Using prebuilt BL31 and DDR init TPL for RK3566..."
     BL31_PATH="${ALPINE_DIR}/bootloader/rk3566/rkbin/bl31.elf"
-    
-    # Download the TPL/DDR init binary from rkbin repo
-    echo "Downloading DDR init TPL for RK3566..."
-    mkdir -p "${WORK_DIR}/rkbin"
-    curl -sSfL "https://github.com/rockchip-linux/rkbin/raw/master/bin/rk35/rk3566_ddr_1056MHz_v1.25.bin" \
-        -o "${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
-    export ROCKCHIP_TPL="${WORK_DIR}/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
+    export ROCKCHIP_TPL="${ALPINE_DIR}/bootloader/rk3566/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
 else
     echo "Cloning and building ATF ${ATF_VERSION} for ${ATF_PLAT}..."
     if [ ! -d "${WORK_DIR}/atf" ]; then
