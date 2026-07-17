@@ -243,13 +243,17 @@ assemble_rootfs() {
 	cat > "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
 		${ALPINE_REPO_BASE}/main
 		${ALPINE_REPO_BASE}/community
+		@testing ${ALPINE_REPO_BASE}/testing
 		/local-repo
 	EOF
 
 	# Stage the local repo inside the rootfs so `apk add` inside chroot can resolve minime packages.
 	mkdir -p "${ALPINE_ROOTFS_DIR}/local-repo/aarch64"
 	find "${ALPINE_PACKAGES_DIR}" -name '*.apk' -exec cp -f {} "${ALPINE_ROOTFS_DIR}/local-repo/aarch64/" \;
-	(cd "${ALPINE_ROOTFS_DIR}/local-repo/aarch64" && apk index -o APKINDEX.tar.gz *.apk)
+	# Only build the index if there are actual APKs; an empty glob would error.
+	if ls "${ALPINE_ROOTFS_DIR}/local-repo/aarch64/"*.apk >/dev/null 2>&1; then
+		(cd "${ALPINE_ROOTFS_DIR}/local-repo/aarch64" && apk index -o APKINDEX.tar.gz *.apk)
+	fi
 
 	# Resolve the full package list and install it.  --allow-untrusted lets
 	# minime-overlay install without a signature.
