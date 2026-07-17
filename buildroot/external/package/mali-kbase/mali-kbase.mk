@@ -8,9 +8,9 @@ MALI_KBASE_VERSION = local
 MALI_KBASE_SITE = $(BR2_EXTERNAL)/../../drivers/mali-kbase
 MALI_KBASE_SITE_METHOD = local
 MALI_KBASE_LICENSE = GPL-2.0
-MALI_KBASE_LICENSE_FILES = product/kernel/license.txt
+MALI_KBASE_LICENSE_FILES = license.txt
 
-MALI_KBASE_MODULE_SUBDIRS = product/kernel/drivers/gpu/arm/midgard
+MALI_KBASE_MODULE_SUBDIRS = drivers/gpu/arm/midgard
 
 MALI_KBASE_MODULE_MAKE_OPTS = \
 	CONFIG_MALI_MIDGARD=m \
@@ -19,7 +19,7 @@ MALI_KBASE_MODULE_MAKE_OPTS = \
 	CONFIG_MALI_REAL_HW=y \
 	CONFIG_MALI_DEVFREQ=y \
 	CONFIG_MALI_BACKEND=gpu \
-	EXTRA_CFLAGS="-I$(@D)/product/kernel/include"
+	EXTRA_CFLAGS="-I$(@D)/include"
 
 $(eval $(kernel-module))
 $(eval $(generic-package))

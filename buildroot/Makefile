@@ -53,15 +53,8 @@ BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
 SUPPORTED_BOARDS := h700 rk3326 rk3566
 BOARD ?= rk3566
 
-SUPPORTED_FLAVORS := bootlin-musl arm-glibc
-FLAVOR ?= bootlin-musl
-
 ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
     $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
-endif
-
-ifeq ($(filter $(FLAVOR),$(SUPPORTED_FLAVORS)),)
-    $(error Invalid FLAVOR="$(FLAVOR)". Supported flavors: $(SUPPORTED_FLAVORS))
 endif
 
 ifeq ($(USE_PODMAN),1)
@@ -76,7 +69,7 @@ else
     BUILDROOT_DL_DIR := $(HOME)/.buildroot-dl
 endif
 
-BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)-$(FLAVOR)
+BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
 MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
 
@@ -100,8 +93,8 @@ help:
 		"Minime Firmware Build Orchestrator" \
 		"==================================" \
 		"Commands:" \
-		"  make defconfig     - Merge config fragments for BOARD+FLAVOR (default: rk3566 bootlin-musl)" \
-		"  make image         - Build complete bootable firmware image for BOARD+FLAVOR" \
+		"  make defconfig     - Merge config fragments for BOARD (default: rk3566)" \
+		"  make image         - Build complete bootable firmware image for BOARD" \
 		"  make shell         - Open an interactive shell inside the build container" \
 		"  make prepare       - Build builder container image (or install host tools on Linux)" \
 		"  make h700-uboot    - Compile and update prebuilt H700 bootloader" \
@@ -109,14 +102,13 @@ help:
 		"  make check-package CHECK_PACKAGE_FILES='path ...'" \
 		"                       Run Buildroot's package linter on specified files" \
 		"  make packages-list - Regenerate package inventory documentation (docs/PACKAGES.md)" \
-		"  make clean         - Remove compilation output for active BOARD+FLAVOR" \
+		"  make clean         - Remove compilation output for active BOARD" \
 		"  make clean-all     - Remove ALL compilation outputs and delete Buildroot source tree" \
 		"  make clean-vm      - Delete container images and clean up volumes" \
 		"  make <target>      - Pass arbitrary command directly to Buildroot (e.g., make menuconfig)" \
 		"" \
 		"Options (override with VAR=value):" \
 		"  BOARD              - Target hardware (default: rk3566, supported: $(SUPPORTED_BOARDS))" \
-		"  FLAVOR             - Toolchain flavor (default: bootlin-musl, supported: $(SUPPORTED_FLAVORS))" \
 		"  USE_PODMAN         - Toggle build container isolation (default: 1, set to 0 for host build)" \
 		"  TOPLEVEL_JLEVEL    - Number of parallel build jobs (default: auto-detected CPU cores)"
 
@@ -175,7 +167,6 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 				-O $(BUILDROOT_OUTPUT_DIR) \
 				-m \
 				/workspace/external/configs/minime_common.config \
-				/workspace/external/configs/toolchain-$(FLAVOR).config \
 				/workspace/external/configs/minime_$(BOARD).config && \
 			make -C /workspace/$(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig" 2>&1 | tee "$$LOG_FILE"; \
 	else \
@@ -184,7 +175,6 @@ defconfig: $(BUILDROOT_STAMP) prepare_vm
 			-O $(BUILDROOT_OUTPUT_DIR) \
 			-m \
 			external/configs/minime_common.config \
-			external/configs/toolchain-$(FLAVOR).config \
 			external/configs/minime_$(BOARD).config 2>&1 | tee "$$LOG_FILE" && \
 		$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"; \
 	fi
@@ -195,13 +185,13 @@ image: $(BUILDROOT_STAMP) prepare_vm defconfig
 	@$(MAKE) copy_images
 
 copy_images:
-	@mkdir -p $(CURDIR)/out/$(BOARD)-$(FLAVOR)
-	@echo "Copying built firmware images to out/$(BOARD)-$(FLAVOR)/..."
+	@mkdir -p $(CURDIR)/out/$(BOARD)
+	@echo "Copying built firmware images to out/$(BOARD)/..."
 ifeq ($(USE_PODMAN),1)
-	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)-$(FLAVOR)/ 2>/dev/null || true"
+	@$(PODMAN_CMD) run $(PODMAN_RUN_ARGS) $(PODMAN_IMAGE) sh -c "mkdir -p $(BUILDROOT_OUTPUT_DIR)/images && cp -r $(BUILDROOT_OUTPUT_DIR)/images/* $(LINUX_ROOT)/out/$(BOARD)/ 2>/dev/null || true"
 else
 	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
-	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)-$(FLAVOR)/ 2>/dev/null || true
+	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)/ 2>/dev/null || true
 endif
 
 check-package: prepare_vm

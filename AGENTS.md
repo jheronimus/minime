@@ -8,12 +8,11 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
   - `Makefile`: Docker/Colima setups, builds, configs.
   - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
     - `configs/`: Defconfigs and config fragments.
-      - `minime_common.config`: Shared Buildroot options (arch, packages, rootfs).
-      - `toolchain-arm-glibc.config`: Toolchain selection for the Buildroot arm-glibc flavor.
+      - `minime_common.config`: Shared Buildroot options (arch, toolchain, packages, rootfs).
     - `board/h700/`: H700 overlays, DTS, patches, config fragments (`linux.config`/`uboot.config`), scripts.
     - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
-  - `out/<board>-<flavor>/` / `logs/`: Bootable images / build logs.
+  - `out/<board>/` / `logs/`: Bootable images / build logs.
 - `alpine/`: Core Alpine build system.
   - `aports/`: Custom Alpine package ports.
   - `board/`: Alpine board configurations and scripts.
@@ -97,9 +96,9 @@ python3 buildroot/buildroot/utils/check-package <modified_files>
 ### 2. Defconfig Validation
 
 ```bash
-make defconfig BOARD=h700 FLAVOR=arm-glibc
-make defconfig BOARD=rk3326 FLAVOR=arm-glibc
-make defconfig BOARD=rk3566 FLAVOR=arm-glibc
+make defconfig BOARD=h700
+make defconfig BOARD=rk3326
+make defconfig BOARD=rk3566
 ```
 
 - **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally before committing.
