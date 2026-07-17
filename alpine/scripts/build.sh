@@ -265,10 +265,16 @@ assemble_rootfs() {
 	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
 	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
+	# NOTE: --root only relocates apk's install database + dest dir; it does
+	# NOT prefix repository paths.  Repositories starting with '/' are read
+	# verbatim from the host, so the local repo must be passed as its
+	# host-absolute path here even though it physically lives inside the
+	# rootfs (and is exposed as /local-repo to on-device apk via
+	# /etc/apk/repositories).
 	apk --root "${ALPINE_ROOTFS_DIR}" \
 		--repository "${ALPINE_REPO_BASE}/main" \
 		--repository "${ALPINE_REPO_BASE}/community" \
-		--repository "/local-repo" \
+		--repository "${ALPINE_ROOTFS_DIR}/local-repo" \
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
