@@ -379,7 +379,7 @@ assemble_image() {
 	if [ "${BOARD}" = "h700" ]; then
 		GENIMAGE_CFG="/workspace/alpine/board/h700/genimage.cfg"
 	fi
-	"${POST_IMAGE}" -c "${GENIMAGE_CFG}" \
+	"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "/workspace/buildroot/external/board/${BOARD}" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"
