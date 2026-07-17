@@ -49,7 +49,7 @@ LIBMALI_BLOB_DIR = optimize_0
 define LIBMALI_COPY_BLOB
 	mkdir -p $(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu
 	cp $(BR2_EXTERNAL)/../../drivers/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
-		$(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu/libmali-bifrost-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
+		$(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu/libmali-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
 endef
 LIBMALI_POST_EXTRACT_HOOKS += LIBMALI_COPY_BLOB
 
