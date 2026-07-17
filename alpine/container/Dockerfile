@@ -41,6 +41,7 @@ RUN apk add --no-cache --no-progress \
 		dtc \
 		file \
 		flex \
+		genimage \
 		git \
 		gmp-dev \
 		libarchive-tools \
