@@ -2,4 +2,3 @@
 local.mk
 .DS_Store
 **/.DS_Store
-buildroot/scripts/migrate-prebuilt-llvm.sh

@@ -11,18 +11,18 @@ opts="$(getopt -n "${0##*/}" -o c: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
-		-c)
-			GENIMAGE_CFG="$2"
-			shift 2
-			;;
-		--)
-			shift
-			break
-			;;
-		*)
-			usage
-			exit 1
-			;;
+	-c)
+		GENIMAGE_CFG="$2"
+		shift 2
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		usage
+		exit 1
+		;;
 	esac
 done
 
@@ -33,13 +33,14 @@ fi
 
 BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
 SOC_NAME="$(basename "$BOARD_DIR")"
+BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${SOC_NAME}"
 
-if [ ! -f "${BOARD_DIR}/board.env" ]; then
-	echo "ERROR: ${BOARD_DIR}/board.env is missing!" >&2
+if [ ! -f "${BR_BOARD_DIR}/board.env" ]; then
+	echo "ERROR: ${BR_BOARD_DIR}/board.env is missing!" >&2
 	exit 1
 fi
 
-. "${BOARD_DIR}/board.env"
+. "${BR_BOARD_DIR}/board.env"
 
 if [ -z "${DEFAULT_DTB:-}" ] || [ -z "${DTB_PATTERN:-}" ] || [ -z "${GENIMAGE_IMAGE_NAME:-}" ]; then
 	echo "ERROR: board.env must define DEFAULT_DTB, DTB_PATTERN, and GENIMAGE_IMAGE_NAME!" >&2
@@ -88,7 +89,6 @@ if [ -d "${BR2_EXTERNAL_MINIME_PATH}/board/common/bios" ]; then
 	cp -rp "${BR2_EXTERNAL_MINIME_PATH}/board/common/bios/." "${USERDATA_STAGE}/bios/"
 fi
 
-
 for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
@@ -106,13 +106,13 @@ cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/common/config/cores.cfg" \
 
 # Prepopulate self-documenting device.cfg
 DEVICE_CFG="${USERDATA_STAGE}/.minime/config/device.cfg"
-cat << 'EOF' > "${DEVICE_CFG}"
+cat <<'EOF' >"${DEVICE_CFG}"
 # minime Device Configuration
 #
 EOF
 
 if [ "${SOC_NAME}" = "rk3566" ]; then
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # CPU undervolt (RK3566 only). Lowers CPU core voltage per OPP to reduce
 # power and thermals. Opt-in: silicon lottery varies and an unstable
 # setting can corrupt data, not just crash.
@@ -125,7 +125,7 @@ EOF
 fi
 
 if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # By default, this is set to 'auto' to automatically detect your device.
 # If autodetection fails or you need to force a specific device/screen panel revision,
 # uncomment and set 'device' to one of the built-in options listed below.
@@ -134,15 +134,15 @@ if [ "${AUTODETECT_SUPPORTED:-}" = "y" ]; then
 EOF
 	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 		if [ -f "${dtb_file}" ]; then
-			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+			echo "# - $(basename "${dtb_file}")" >>"${DEVICE_CFG}"
 		fi
 	done
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 #
 device=auto
 EOF
 else
-	cat << 'EOF' >> "${DEVICE_CFG}"
+	cat <<'EOF' >>"${DEVICE_CFG}"
 # Autodetection is not supported on this platform.
 # You must set 'device' to one of the built-in options listed below
 # matching your specific handheld device.
@@ -151,15 +151,14 @@ else
 EOF
 	for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 		if [ -f "${dtb_file}" ]; then
-			echo "# - $(basename "${dtb_file}")" >> "${DEVICE_CFG}"
+			echo "# - $(basename "${dtb_file}")" >>"${DEVICE_CFG}"
 		fi
 	done
-	cat << EOF >> "${DEVICE_CFG}"
+	cat <<EOF >>"${DEVICE_CFG}"
 #
 device=${DEFAULT_DTB}
 EOF
 fi
-
 
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
 OVERLAY_SRC_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${SOC_NAME}/overlays"
@@ -175,7 +174,7 @@ if [ -d "${OVERLAY_SRC_DIR}" ]; then
 fi
 
 # Create the first boot trigger files
-if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
+if [ -f "${BR_BOARD_DIR}/first-boot-probe.sh" ]; then
 	touch "${USERDATA_STAGE}/.minime/config/first_boot_probe"
 fi
 touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
@@ -195,13 +194,11 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	fi
 done
 
-
 # Copy UI files from the generic staging directory (if any)
 if [ -d "${BINARIES_DIR}/ui" ]; then
 	echo "Staging UI files onto SD card partition..."
 	cp -rp "${BINARIES_DIR}/ui/." "${USERDATA_STAGE}/"
 fi
-
 
 # Assemble custom boot-stage initrd
 echo "Assembling custom boot-stage loop-mount initrd..."
@@ -264,9 +261,8 @@ copy_runtime_binary() {
 copy_runtime_binary parted
 copy_runtime_binary fatresize
 
-
 # Write the Custom init script
-cat << 'EOF' > "${INITRD_STAGE}/init"
+cat <<'EOF' >"${INITRD_STAGE}/init"
 #!/bin/sh
 export PATH=/bin:/sbin
 mount -t proc proc /proc
@@ -376,14 +372,13 @@ EOF
 chmod +x "${INITRD_STAGE}/init"
 
 # Copy optional board-specific first boot probe script if it exists
-if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
-	cp -f "${BOARD_DIR}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
+if [ -f "${BR_BOARD_DIR}/first-boot-probe.sh" ]; then
+	cp -f "${BR_BOARD_DIR}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 fi
 
-
 # Compile the uncompressed initramfs CPIO archive.
-(cd "${INITRD_STAGE}" && find . | cpio -H newc -o > "${BINARIES_DIR}/initramfs")
+(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs")
 
 # Copy initramfs to USERDATA_STAGE
 cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
@@ -392,7 +387,6 @@ echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count=2048
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
-
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
