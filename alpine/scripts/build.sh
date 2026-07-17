@@ -168,9 +168,12 @@ build_tinykernel() {
 
 	# If the package is already built, extract the artifacts directly from the .apk
 	# to avoid rebuilding the kernel (which takes ~3 hours).
-	apk_file=""
-	if [ -f "${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk" ]; then
-		apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
+	local tk_ver tk_rel apk_file=""
+	tk_ver=$(sed -n 's/^pkgver=//p' "${TK_APKB}")
+	tk_rel=$(sed -n 's/^pkgrel=//p' "${TK_APKB}")
+	apk_path="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
+	if [ -f "${apk_path}" ]; then
+		apk_file="${apk_path}"
 	fi
 
 	if [ -n "${apk_file}" ]; then
@@ -211,7 +214,7 @@ build_tinykernel() {
 	# Stage the kernel artifacts for post-image.sh to consume.
 	# abuild -P appends the parent-dir name of the APKBUILD as a repo
 	# subdirectory: APKBUILD lives in build/tinykernel/, so parent=build.
-	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-7.0.10-r0.apk"
+	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
 	if [ -f "${apk_file}" ]; then
 		log "Staging tinykernel from newly built APK: ${apk_file}"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
