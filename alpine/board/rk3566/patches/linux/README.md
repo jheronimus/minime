@@ -26,6 +26,7 @@ To ensure a mainline-clean and highly optimized system, we omit several Powkiddy
 ### Mainlined Upstream in 7.1.x (Dropped)
 The following patches have been merged into mainline Linux and are dropped from our local series:
 * **`0011-nvmem-rockchip-otp-Add-support-for-rk3568-otp.patch`**: Support for the RK3568 OTP controller is mainlined in `drivers/nvmem/rockchip-otp.c` (using `rk3568_data`).
+* **`0012-arm64-dts-rockchip-rk3568-Add-otp-device-node.patch`**: The OTP device node for `rk356x-base.dtsi` is now natively present in mainline Linux 7.1.x, so the separate DTS addition is no longer needed.
 * **`0017-arm64-dts-rockchip-Add-idle-states-for-rk356x.patch`**: CPU low-power idle sleep states are natively integrated in mainline `rk356x-base.dtsi` using the PSCI framework.
 
 ---
