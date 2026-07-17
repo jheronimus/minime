@@ -310,24 +310,25 @@ assemble_image() {
 	POST_IMAGE="${ALPINE_BOARD_DIR}/common/post-image.sh"
 	[ -x "${POST_IMAGE}" ] || die "post-image.sh is not executable"
 
-	# Copy Alpine-owned bootloader artifacts into the image staging dir.
-	mkdir -p "${ALPINE_OUTPUT_DIR}/bootloader"
+	IMG_BIN="${ALPINE_OUTPUT_DIR}/images"
+	mkdir -p "${IMG_BIN}"
+
+	# Drop the bootloader blobs into BINARIES_DIR so genimage's --inputpath
+	# sees them (matches Buildroot, which stages U-Boot artifacts in
+	# BINARIES_DIR via its U-Boot package install step).  genimage.cfg
+	# references these by bare filename relative to --inputpath.
 	if [ "${BOARD}" = "h700" ]; then
 		BL_BIN="${ALPINE_DIR}/bootloader/${BOARD}/u-boot-sunxi-with-spl.bin"
 		[ -f "${BL_BIN}" ] || die "missing ${BL_BIN}"
-		cp -f "${BL_BIN}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot-sunxi-with-spl.bin"
+		cp -f "${BL_BIN}" "${IMG_BIN}/u-boot-sunxi-with-spl.bin"
 	else
 		BL_IDB="${ALPINE_DIR}/bootloader/${BOARD}/idbloader.img"
 		BL_ITB="${ALPINE_DIR}/bootloader/${BOARD}/u-boot.itb"
 		[ -f "${BL_IDB}" ] || die "missing ${BL_IDB}"
 		[ -f "${BL_ITB}" ] || die "missing ${BL_ITB}"
-		cp -f "${BL_IDB}" "${ALPINE_OUTPUT_DIR}/bootloader/idbloader.img"
-		cp -f "${BL_ITB}" "${ALPINE_OUTPUT_DIR}/bootloader/u-boot.itb"
+		cp -f "${BL_IDB}" "${IMG_BIN}/idbloader.img"
+		cp -f "${BL_ITB}" "${IMG_BIN}/u-boot.itb"
 	fi
-
-	# Stage the kernel + boot.scr + DTBs + UI payload into BINARIES_DIR.
-	IMG_BIN="${ALPINE_OUTPUT_DIR}/images"
-	mkdir -p "${IMG_BIN}"
 	if [ -d "${ALPINE_BUILD_DIR}/tinykernel/staging" ]; then
 		cp -f "${ALPINE_BUILD_DIR}/tinykernel/staging/Image" "${IMG_BIN}/Image" 2>/dev/null || \
 			cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"

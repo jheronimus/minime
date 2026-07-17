@@ -36,7 +36,7 @@ on:
         default: false
         type: boolean
       clean_apk_cache:
-        description: 'Wipe alpine-repos + alpine-dl before building'
+        description: 'Wipe alpine-repos + alpine-dl + built APK cache before building'
         required: false
         default: false
         type: boolean
@@ -97,6 +97,16 @@ jobs:
           restore-keys: |
             minime-alpine-${{ matrix.board }}-${{ runner.os }}-
 
+      # Cache built local APKs (esp. tinykernel, ~7min to rebuild) keyed on
+      # every APKBUILD + kernel config so a content change forces a rebuild.
+      - name: Restore built APK cache
+        uses: actions/cache@v4
+        with:
+          path: ~/alpine-output/${{ matrix.board }}/packages
+          key: alpine-apks-${{ matrix.board }}-${{ hashFiles('alpine/aports/**', 'alpine/kernel/**') }}
+          restore-keys: |
+            alpine-apks-${{ matrix.board }}-
+
       # Cache the assembled builder container image so builds don't re-run
       # the Dockerfile apk-add chain on every commit.  Auto-invalidates
       # only when the Dockerfile (or this workflow) actually changes.
@@ -119,7 +129,8 @@ jobs:
       - name: Clean APK cache
         if: ${{ inputs.clean_apk_cache }}
         run: |
-          rm -rf ~/alpine-repos ~/alpine-dl ~/alpine-ccache
+          rm -rf ~/alpine-repos ~/alpine-dl ~/alpine-ccache \
+            ~/alpine-output/${{ matrix.board }}/packages
 
       - name: Build Alpine builder container & image
         run: |
