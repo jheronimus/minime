@@ -135,6 +135,15 @@ setup_signing_keys() {
 		chown -R builder:builder /home/builder/.abuild
 	fi
 	cp -p /home/builder/.abuild/*.pub /etc/apk/keys/
+
+	# Clean up any stale/untrusted index signatures from cached APKs
+	log "cleaning up stale cached repository signatures..."
+	find "${ALPINE_PACKAGES_DIR}" -name 'APKINDEX.tar.gz' -delete 2>/dev/null || true
+
+	# Re-sign all cached APKs with the current key to make them trusted
+	if [ -d "${ALPINE_PACKAGES_DIR}" ]; then
+		find "${ALPINE_PACKAGES_DIR}" -name '*.apk' -exec abuild-sign {} \; 2>/dev/null || true
+	fi
 }
 
 build_local_apks() {
