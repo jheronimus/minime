@@ -142,7 +142,15 @@ setup_signing_keys() {
 
 	# Re-sign all cached APKs with the current key to make them trusted
 	if [ -d "${ALPINE_PACKAGES_DIR}" ]; then
-		find "${ALPINE_PACKAGES_DIR}" -name '*.apk' -exec abuild-sign {} \; 2>/dev/null || true
+		PRIVKEY=$(find /home/builder/.abuild -name '*.rsa' | head -n 1)
+		if [ -n "${PRIVKEY}" ] && [ -f "${PRIVKEY}" ]; then
+			log "re-signing cached APKs using key: ${PRIVKEY}..."
+			find "${ALPINE_PACKAGES_DIR}" -name '*.apk' | while read -r apk; do
+				abuild-sign -k "${PRIVKEY}" "${apk}" || log "WARNING: Failed to sign ${apk}"
+			done
+		else
+			log "WARNING: No private key found for signing!"
+		fi
 	fi
 }
 
