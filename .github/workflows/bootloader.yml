@@ -71,14 +71,46 @@ jobs:
         run: |
           ./scripts/build-bootloader.sh "${{ matrix.board }}" "${{ steps.uboot.outputs.version }}"
 
-      - name: Commit changes
+      - name: Upload bootloader artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootloader-${{ matrix.board }}
+          path: alpine/bootloader/${{ matrix.board }}/
+          if-no-files-found: error
+
+  commit:
+    name: Commit and push changes
+    needs: [resolve-boards, prebuild]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all bootloader artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: temp-artifacts
+
+      - name: Copy artifacts and commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet alpine/bootloader/${{ matrix.board }}/; then
-            git add alpine/bootloader/${{ matrix.board }}/
-            git commit -m "bootloaders: rebuild ${{ matrix.board }} for U-Boot ${{ steps.uboot.outputs.version }}"
+
+          for board in $(echo '${{ needs.resolve-boards.outputs.boards }}' | jq -r '.[]'); do
+            if [ -d "temp-artifacts/bootloader-${board}" ]; then
+              echo "Restoring bootloader for ${board}..."
+              rm -rf "alpine/bootloader/${board}"
+              mkdir -p "alpine/bootloader/${board}"
+              cp -a "temp-artifacts/bootloader-${board}/." "alpine/bootloader/${board}/"
+            fi
+          done
+
+          if ! git diff --quiet alpine/bootloader/; then
+            git add alpine/bootloader/
+            git commit -m "bootloaders: rebuild requested boards"
             git push
           else
-            echo "No changes to commit for ${{ matrix.board }}"
+            echo "No changes to commit for any board"
           fi
