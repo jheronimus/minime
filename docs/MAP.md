@@ -48,6 +48,9 @@ All under `alpine/aports/minime-overlay/files/`.
 ## World configs (`alpine/configs/`)
 Alpine package sets (world-common, world-<board>).
 
+## Validation scripts
+- `alpine/board/common/check-traits.sh` — traits validator.
+
 ## Build infrastructure
 - `alpine/Makefile` — Alpine build orchestrator
 - `alpine/scripts/build.sh` — Alpine image builder
@@ -71,8 +74,7 @@ Buildroot configurations (minime_common.config, minime_<board>.config).
 `buildroot/external/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
 
 ## Validation scripts
-`buildroot/external/board/common/check-traits.sh` — traits validator.
-`buildroot/external/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
+- `buildroot/external/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
 
 ## Build infrastructure
 - `buildroot/Makefile` — Buildroot build orchestrator
