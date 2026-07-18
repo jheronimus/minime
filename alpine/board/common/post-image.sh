@@ -125,11 +125,6 @@ MINIME_SOURCE_ROOT="${MINIME_SOURCE_ROOT:-}"
 	exit 1
 }
 
-if [ -d "${MINIME_SOURCE_ROOT}/board/common/bios" ]; then
-	echo "Staging BIOS files onto SD card partition..."
-	cp -rp "${MINIME_SOURCE_ROOT}/board/common/bios/." "${USERDATA_STAGE}/bios/"
-fi
-
 for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"

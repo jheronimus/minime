@@ -16,7 +16,7 @@ source "$BR2_EXTERNAL_MINIME_PATH/package/dufs/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/syncthing/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 
-source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse_miyoo_bezels/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse-miyoo-bezels/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/preloaded-roms/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/libretro-cores/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/retroarch/Config.in"

@@ -5,7 +5,7 @@
 
 set -eu
 
-FW_SRC_DIR="${BR_BOARD_DIR}/firmware"
+FW_SRC_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/rk3326/firmware"
 
 if [ -d "${FW_SRC_DIR}" ]; then
 	echo "Installing RK3326-specific USB dongle firmware..."
