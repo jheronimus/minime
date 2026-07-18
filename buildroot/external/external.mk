@@ -1,3 +1,5 @@
+MINIME_BOARD_NAME = $(notdir $(patsubst %/patches,%,$(qstrip $(BR2_GLOBAL_PATCH_DIR))))
+
 include $(sort $(wildcard $(BR2_EXTERNAL_MINIME_PATH)/package/*/*.mk))
 
 # Hooks to copy custom DTS files and patch base DTS file in Linux kernel
@@ -19,8 +21,8 @@ LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 define MINIME_PATCH_LINUX_CONFIG
 	mkdir -p $(LINUX_DIR)/minime-firmware
 	cp -rL $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/common/firmware/* $(LINUX_DIR)/minime-firmware/
-	if [ -d $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/h700/firmware ]; then \
-		cp -rL $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/h700/firmware/* $(LINUX_DIR)/minime-firmware/; \
+	if [ -d $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/$(MINIME_BOARD_NAME)/firmware ]; then \
+		cp -rL $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/$(MINIME_BOARD_NAME)/firmware/* $(LINUX_DIR)/minime-firmware/; \
 	fi
 	sed -i 's|__MINIME_BOARD_FIRMWARE_DIR__|$(LINUX_DIR)/minime-firmware|g' $(LINUX_DIR)/.config
 	sed -i 's|__MINIME_COMMON_FIRMWARE_DIR__|$(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/common/firmware|g' $(LINUX_DIR)/.config
