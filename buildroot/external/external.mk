@@ -17,7 +17,12 @@ LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 
 
 define MINIME_PATCH_LINUX_CONFIG
-	sed -i 's|__MINIME_BOARD_FIRMWARE_DIR__|$(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/h700/firmware|g' $(LINUX_DIR)/.config
+	mkdir -p $(LINUX_DIR)/minime-firmware
+	cp -rL $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/common/firmware/* $(LINUX_DIR)/minime-firmware/
+	if [ -d $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/h700/firmware ]; then \
+		cp -rL $(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/h700/firmware/* $(LINUX_DIR)/minime-firmware/; \
+	fi
+	sed -i 's|__MINIME_BOARD_FIRMWARE_DIR__|$(LINUX_DIR)/minime-firmware|g' $(LINUX_DIR)/.config
 	sed -i 's|__MINIME_COMMON_FIRMWARE_DIR__|$(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/common/firmware|g' $(LINUX_DIR)/.config
 endef
 LINUX_POST_CONFIGURE_HOOKS += MINIME_PATCH_LINUX_CONFIG
