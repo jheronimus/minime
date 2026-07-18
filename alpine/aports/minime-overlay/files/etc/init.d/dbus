@@ -1,13 +1,13 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-dbus: on-demand dbus-daemon, only started when the user has
+# dbus: on-demand dbus-daemon, only started when the user has
 # enabled Bluetooth under /mnt/sdcard/.minime/config/bluetooth/enabled.
 
 description="System D-Bus (on demand for Bluetooth)"
 
 depend() {
-	need minime-modules
-	before minime-bluetooth minime-bluealsa
+	need modules
+	before bluetooth bluealsa
 }
 
 start_pre() {

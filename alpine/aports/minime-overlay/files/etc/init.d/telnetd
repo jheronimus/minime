@@ -1,27 +1,26 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-ftpd: anonymous-feel FTP to the SD card.  Mirrors the
-# Passwordless local FTP service.
+# telnetd: passwordless telnet on TCP 23, autologin shell.
 
-description="Minime FTP daemon"
+description="Minime telnet daemon"
 
 command="/usr/sbin/tcpsvd"
-command_args="-vE 0.0.0.0 21 /usr/sbin/ftpd -w /mnt/sdcard"
-pidfile="/run/ftpd.pid"
+command_args="-vE 0.0.0.0 23 /usr/sbin/telnetd -i -l /usr/bin/autologin"
+pidfile="/run/telnetd.pid"
 
 depend() {
-	need minime-modules
+	need modules
 }
 
 start() {
-	ebegin "Starting ftpd"
+	ebegin "Starting telnetd"
 	start-stop-daemon --start --background --make-pidfile \
 		--pidfile "$pidfile" --exec "$command" -- $command_args
 	eend $?
 }
 
 stop() {
-	ebegin "Stopping ftpd"
+	ebegin "Stopping telnetd"
 	start-stop-daemon --stop --pidfile "$pidfile" --exec "$command"
 	eend $?
 }

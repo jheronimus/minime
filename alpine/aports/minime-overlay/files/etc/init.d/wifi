@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# wifi: wpa_supplicant + udhcpc. Keep behavior aligned with
+# /usr/share/minime/scripts/wifi.
+
+description="Minime Wi-Fi (wpa_supplicant + udhcpc)"
+
+command=":"
+command_background="yes"
+pidfile="/run/wifi.pid"
+
+depend() {
+	need modules
+	after fb-unblank
+}
+
+start() {
+	ebegin "Starting Wi-Fi"
+	/usr/share/minime/scripts/wifi start &
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping Wi-Fi"
+	/usr/share/minime/scripts/wifi stop
+	eend $?
+}

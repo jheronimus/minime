@@ -1,14 +1,14 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-traits: write /mnt/sdcard/.minime/traits from the immutable
+# traits: write /mnt/sdcard/.minime/traits from the immutable
 # /usr/share/minime/traits payload.
 
 description="Generate Minime device traits"
 
 depend() {
-	need minime-modules
-	before minime-ui
-	after minime-fb-unblank
+	need modules
+	before ui
+	after fb-unblank
 }
 
 start() {

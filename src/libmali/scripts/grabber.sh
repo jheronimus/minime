@@ -7,8 +7,8 @@ SUBVERSION=${4:-none}
 PLATFORM=${5:-gbm}
 OPTIMIZE=${6:-O3}
 
-[ ${ARCH} = 'armv7l' -o ${ARCH} = 'armhf' -o ${ARCH} = 'arm32' ] && ARCH=arm
-[ ${ARCH} = 'armv8' -o ${ARCH} = 'arm64' ] && ARCH=aarch64
+{ [ "${ARCH}" = 'armv7l' ] || [ "${ARCH}" = 'armhf' ] || [ "${ARCH}" = 'arm32' ]; } && ARCH=arm
+{ [ "${ARCH}" = 'armv8' ] || [ "${ARCH}" = 'arm64' ]; } && ARCH=aarch64
 
 # Normalize platform variable
 PLATFORM=$(scripts/parse_name.sh --platform $PLATFORM)

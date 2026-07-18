@@ -30,6 +30,7 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
 A short summary of where important files live. For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
 
 - **Shared Assets (Alpine-owned)**: All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the `alpine/board/` folder. Buildroot's makefiles and build scripts reference or import them directly from there.
+  - `alpine/board/common/scripts/` is the canonical home for cross-distro runtime scripts (`wifi.sh`, `ui.sh`, `traits.sh`). Alpine's APKBUILD installs them via `install`; Buildroot's `post-build.sh` copies them into `$TARGET_DIR/usr/share/minime/scripts/`. **Never maintain separate copies in each distro's subtree.**
 - **Unshareable Distro-Specific Files**: Files that cannot be shared (such as OpenRC vs. BusyBox init scripts and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually.
 - **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
 
@@ -63,32 +64,47 @@ Builds compile on GitHub Actions runner. Workflows for `buildroot/` and `alpine/
 ## Unified Validation Quality Gates
 
 All checks must pass before committing. Do not suppress/bypass warnings.
+All gates are defined in the root `Justfile` and must be run via `just`.
 
-### 1. Shell Script Validation
-- **Syntax check**: `sh -n <script_path>`
-- **Shellcheck**: `shellcheck --shell=sh --severity=warning <script_path>` (or specify `shell=dash` / `shell=bash` if POSIX-extensions like `local` are used).
-- **Permissions**: Verify script has executable permissions (`chmod +x <script_path>`).
+### Fast gates — run before every commit
 
-### 2. Traits Validation
-- Validate the device traits configuration using the validation script:
-  ```bash
-  ./alpine/board/common/check-traits.sh
-  ```
+```sh
+just validate
+```
 
-### 3. Defconfig Validation
-- Merge and validate Buildroot configuration fragments locally to ensure no syntax errors:
-  ```bash
-  make defconfig BOARD=h700
-  make defconfig BOARD=rk3326
-  make defconfig BOARD=rk3566
-  ```
-- **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally when modified.
+Runs: `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-traits`, `check-git`.
 
-### 4. Buildroot Package Linting
-- Lint Buildroot package files:
-  ```bash
-  python3 buildroot/buildroot/utils/check-package <modified_files>
-  ```
+| Recipe | What it checks | Shell flag | Notes |
+|---|---|---|---|
+| `check-scripts` | `*.sh` files (all distros) | auto from shebang | Enforces exec bit |
+| `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | ash target; no shebang/exec check |
+| `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | ash target; enforces exec bit |
+| `check-traits` | `alpine/board/common/check-traits.sh` | — | Traits config validation |
+| `check-git` | staged diff | — | Whitespace / merge markers |
 
-### 5. Repository Integrity
-- **Git diff whitespace/check**: `git diff --check`
+### CI-only gates — require upstream Buildroot tree
+
+```sh
+just validate-ci
+```
+
+Runs `validate` plus `check-defconfigs` and `check-packages`.
+
+- **`check-defconfigs`**: merges and validates our config fragments for all boards via `make defconfig BOARD=<board>`.
+- **`check-packages`**: lints our `buildroot/external/package/` files via `python3 buildroot/buildroot/utils/check-package`.
+- **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally when a package is modified.
+
+### Shell conventions enforced by shellcheck
+
+- All scripts target **POSIX sh / busybox ash** unless they carry a `#!/bin/bash` shebang.
+- APKBUILDs: no shebang (sourced by `abuild`), targeting ash. `SC2154` suppressed per-file (abuild injects `srcdir`/`builddir`/`pkgdir`).
+- OpenRC init.d scripts: `#!/sbin/openrc-run`, targeting ash. `SC2034` suppressed per-file (openrc-run framework globals).
+- OpenRC service names are **unprefixed** (`wifi`, `modules`, `bluetooth`, etc.). Do not add a `minime-` prefix.
+
+### Developer setup
+
+Install the pre-commit hook to enforce `just validate` on every commit:
+
+```sh
+just install-hooks
+```

@@ -1,5 +1,4 @@
-#!/bin/bash
-# shellcheck shell=bash disable=SC3043,SC2154
+# shellcheck shell=sh disable=SC2034,SC2154,SC3043
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=drkhrse-miyoo-bezels

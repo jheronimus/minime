@@ -1,8 +1,8 @@
 #!/bin/sh
-# minime-wifi: connect configured Wi-Fi networks.
-# Identical state machine, copied verbatim so the existing UI wifi menu
-# and wpa_supplicant profile files keep working without a per-distro
-# port of the diagnostics logic.
+# shellcheck shell=sh
+# wifi.sh: connect configured Wi-Fi networks on Minime.
+# Called by both the Alpine OpenRC 'wifi' service and the Buildroot S45wifi wrapper.
+# Interface: wifi.sh {start|stop|reload|restart}
 
 set -eu
 
@@ -130,6 +130,7 @@ log_failure_diagnostics() {
 			printf '%s\n' "wpa_cli missing"
 		fi
 	} >> "${diagnostic_logfile}"
+	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
 	echo "wifi: startup failed: ${reason}" >&2
 }
 
@@ -163,6 +164,11 @@ stop_dhcp_client() {
 	if [ -f "${udhcpc_pidfile}" ]; then
 		kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
 	fi
+	# Kill any stray udhcpc processes for this interface
+	for pid in $(pidof udhcpc 2>/dev/null); do
+		tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null |
+			grep -q -- "-i ${wifi_interface}" && kill "${pid}" 2>/dev/null || true
+	done
 	rm -f "${udhcpc_pidfile}"
 }
 
@@ -170,14 +176,17 @@ start_dhcp_client() {
 	stop_dhcp_client
 	: > "${udhcpc_logfile}"
 	udhcpc -b -R -x hostname:"$(hostname)" -F "$(hostname)" \
+		-O search -O staticroutes \
 		-p "${udhcpc_pidfile}" \
 		-i "${wifi_interface}" \
 		-s /usr/share/udhcpc/default.script \
 		>> "${udhcpc_logfile}" 2>&1
 }
 
-do_start() {
+start_background() {
+	has_profiles="$1"
 	exec >/dev/null 2>&1
+
 	if ! prepare_wifi_interface; then
 		log_failure_diagnostics "missing-${wifi_interface}"
 		return 1
@@ -196,7 +205,7 @@ do_start() {
 
 	wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
 
-	if ! grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+	if [ "$has_profiles" -eq 0 ]; then
 		return 0
 	fi
 
@@ -205,32 +214,73 @@ do_start() {
 		return 1
 	fi
 
-	if wait_for_ipv4_address; then return 0; fi
+	if wait_for_ipv4_address; then
+		logger -t wifi "connection established (pre-DHCP)" 2>/dev/null || true
+		return 0
+	fi
 
 	start_dhcp_client
 	if ! wait_for_ipv4_address; then
 		log_failure_diagnostics "ipv4-timeout"
 		return 1
 	fi
+
+	logger -t wifi "connection established with IP" 2>/dev/null || true
 	return 0
 }
 
-do_stop() {
+start() {
+	printf "Starting wifi: "
+	init_wpa_supplicant_conf
+	generate_wpa_profiles_from_config
+	seed_wpa_profiles
+
+	has_profiles=0
+	if grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
+		has_profiles=1
+	fi
+
+	start_background "${has_profiles}" &
+	echo "OK (background)"
+	return 0
+}
+
+stop() {
+	printf "Stopping wifi: "
 	stop_dhcp_client
-	if [ -f /var/run/wpa_supplicant.pid ]; then
-		kill "$(cat /var/run/wpa_supplicant.pid)" >/dev/null 2>&1 || true
-		rm -f /var/run/wpa_supplicant.pid
+	if [ -f "/var/run/wpa_supplicant.pid" ]; then
+		kill "$(cat "/var/run/wpa_supplicant.pid")" >/dev/null 2>&1 || true
+		rm -f "/var/run/wpa_supplicant.pid"
 	fi
 	ip link set "${wifi_interface}" down >/dev/null 2>&1 || true
+	echo "OK"
+}
+
+reload() {
+	printf "Reloading wifi: "
+	init_wpa_supplicant_conf
+	generate_wpa_profiles_from_config
+	seed_wpa_profiles
+
+	if ! wpa_cli -i "${wifi_interface}" ping >/dev/null 2>&1; then
+		echo "starting"
+		start
+		return $?
+	fi
+
+	if ! wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1; then
+		echo "FAIL"
+		return 1
+	fi
+	wpa_cli -i "${wifi_interface}" reassociate >/dev/null 2>&1 || true
+	start_dhcp_client
+	echo "OK"
 }
 
 case "${1:-}" in
-	start)
-		init_wpa_supplicant_conf
-		generate_wpa_profiles_from_config
-		seed_wpa_profiles
-		do_start &
-		;;
-	stop) do_stop ;;
-	*) echo "Usage: $0 {start|stop}" >&2; exit 1 ;;
+	start)   start ;;
+	stop)    stop ;;
+	reload)  reload ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|reload|restart}" >&2; exit 1 ;;
 esac

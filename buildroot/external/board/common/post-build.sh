@@ -103,6 +103,14 @@ rm -rf "${TARGET_DIR}/usr/share/minime/traits"
 mkdir -p "${TARGET_DIR}/usr/share/minime/traits"
 cp -a "${BOARD_DIR}/traits/." "${TARGET_DIR}/usr/share/minime/traits/"
 
+# Install shared Minime runtime scripts from the canonical source
+scripts_src="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/scripts"
+scripts_dst="${TARGET_DIR}/usr/share/minime/scripts"
+mkdir -p "${scripts_dst}"
+cp "${scripts_src}/wifi.sh" "${scripts_src}/ui.sh" "${scripts_src}/traits.sh" \
+	"${scripts_dst}/"
+chmod +x "${scripts_dst}/wifi.sh" "${scripts_dst}/ui.sh" "${scripts_dst}/traits.sh"
+
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BR_BOARD_DIR}/post-build.sh" ]; then
 	echo "Running board-specific post-build hook for $(basename "${BOARD_DIR}")..."
