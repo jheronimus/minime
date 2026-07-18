@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=sh disable=SC3043
 # Minime Alpine image builder.
 #
 # Pipeline:
@@ -36,7 +37,7 @@ ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
 ALPINE_CCACHE_DIR="${ALPINE_CCACHE_DIR:-/alpine-ccache}"
 
 # Source tree roots inside the container.
-ALPINE_DIR="${ALPINE_DIR:-/workspace/alpine}"
+ALPINE_DIR="${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 ALPINE_BOARD_DIR="${ALPINE_DIR}/board"
 
 BOARD="${BOARD:-rk3566}"
@@ -284,7 +285,7 @@ assemble_rootfs() {
 		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
-	TRAITS_SRC="/workspace/alpine/board/${BOARD}/traits"
+	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
@@ -344,7 +345,7 @@ assemble_image() {
 	[ -f "${IMG_BIN}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
 	# Compile boot.cmd -> boot.scr using mkimage.
-	BOOT_CMD="/workspace/alpine/board/${BOARD}/boot.cmd"
+	BOOT_CMD="${ALPINE_DIR}/board/${BOARD}/boot.cmd"
 	[ -f "${BOOT_CMD}" ] || die "missing ${BOOT_CMD}"
 	mkimage -C none -A arm -T script -d "${BOOT_CMD}" "${IMG_BIN}/boot.scr"
 	log "boot.scr: ${IMG_BIN}/boot.scr"
@@ -375,14 +376,15 @@ assemble_image() {
 
 	# Hand off to the image assembly script.  -d alpine switches to the
 	# distro-qualified output name.
-	GENIMAGE_CFG="/workspace/alpine/board/common/genimage.cfg"
+	GENIMAGE_CFG="${ALPINE_DIR}/board/common/genimage.cfg"
 	if [ "${BOARD}" = "h700" ]; then
-		GENIMAGE_CFG="/workspace/alpine/board/h700/genimage.cfg"
+		GENIMAGE_CFG="${ALPINE_DIR}/board/h700/genimage.cfg"
 	fi
+	MINIME_ROOT="$(cd "${ALPINE_DIR}/.." && pwd)"
 	BUILD_DIR="${ALPINE_BUILD_DIR}" \
 		HOST_DIR="/usr" \
 		MINIME_SOURCE_ROOT="${ALPINE_DIR}" \
-		"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "/workspace/buildroot/external/board/${BOARD}" \
+		"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "${MINIME_ROOT}/buildroot/external/board/${BOARD}" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
 	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"
