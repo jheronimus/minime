@@ -23,8 +23,7 @@ Under `alpine/board/h700/firmware/panels/`:
 |---|---|
 | `anbernic,rg35xx-plus-panel.panel` | MIPI DPI panel timing/init for H700 |
 
-Referenced by kernel `CONFIG_EXTRA_FIRMWARE`. Buildroot's `external.mk`
-and Alpine's `tiny-h700.config` both point here.
+Referenced by kernel `CONFIG_EXTRA_FIRMWARE`. During kernel compilation, both Buildroot's `external.mk` and Alpine's `APKBUILD` stage these files along with common firmwares into a temporary directory, pointing `CONFIG_EXTRA_FIRMWARE_DIR` to it.
 
 ## RK3326 board firmware
 
