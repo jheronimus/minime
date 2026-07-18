@@ -33,6 +33,15 @@ A short summary of where important files live. For precise paths, consult [docs/
 - **Unshareable Distro-Specific Files**: Files that cannot be shared (such as OpenRC vs. BusyBox init scripts and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually.
 - **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
 
+## Local Alpine Builds (Containerized)
+
+Alpine builds require a Linux/musl environment with APK packaging tools, and must be compiled using Podman or Docker (with `--platform linux/arm64` cross-compilation support).
+
+Commands are run within the `alpine/` subdirectory:
+- **Build Container**: `make prepare` compiles the `minime-builder-alpine` docker image.
+- **Build Image**: `make image BOARD=<board>` (e.g. `BOARD=rk3566`) compiles the final bootable firmware image.
+- **Interactive Shell**: `make shell` logs into the build environment for manual debugging/packaging.
+
 ## Agent Directives (Buildroot Quirks)
 
 - **Stale Target Cleanup**: Buildroot doesn't auto-clean `output/target/` when packages/configs change. Check/delete stale files (e.g. `S50dropbear`, `S50telnet` in `buildroot/output/target/etc/init.d/`) when modifying defconfigs/packages. If unsure, run `make clean` or purge target dir.
