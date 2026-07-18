@@ -23,7 +23,7 @@ build() {
 
 package() {
 	local src="$startdir/files"
-	local scripts_src="$startdir/../../../board/common/scripts"
+	local scripts_src="$startdir/../../board/common/scripts"
 	local dst="$pkgdir"
 
 	mkdir -p "$dst"
