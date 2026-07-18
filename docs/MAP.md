@@ -50,6 +50,7 @@ Alpine package sets (world-common, world-<board>).
 
 ## Validation scripts
 - `alpine/board/common/check-traits.sh` — traits validator.
+- `alpine/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
 
 ## Build infrastructure
 - `alpine/Makefile` — Alpine build orchestrator
@@ -72,10 +73,6 @@ Buildroot configurations (minime_common.config, minime_<board>.config).
 
 ## GPU kernel fragment
 `buildroot/external/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
-
-## Validation scripts
-- `buildroot/external/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
-
 ## Build infrastructure
 - `buildroot/Makefile` — Buildroot build orchestrator
 - `buildroot/external/board/common/post-build.sh` — Buildroot post-build script

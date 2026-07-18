@@ -173,7 +173,7 @@ if [ -d "${OVERLAY_SRC_DIR}" ]; then
 fi
 
 # Create the first boot trigger files
-if [ -f "${BR_BOARD_DIR}/first-boot-probe.sh" ]; then
+if [ -f "${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${SOC_NAME}/first-boot-probe.sh" ]; then
 	touch "${USERDATA_STAGE}/.minime/config/first_boot_probe"
 fi
 touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
@@ -371,8 +371,8 @@ EOF
 chmod +x "${INITRD_STAGE}/init"
 
 # Copy optional board-specific first boot probe script if it exists
-if [ -f "${BR_BOARD_DIR}/first-boot-probe.sh" ]; then
-	cp -f "${BR_BOARD_DIR}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
+if [ -f "${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${SOC_NAME}/first-boot-probe.sh" ]; then
+	cp -f "${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${SOC_NAME}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 fi
 
