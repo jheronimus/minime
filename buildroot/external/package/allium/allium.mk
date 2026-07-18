@@ -51,7 +51,7 @@ define ALLIUM_INSTALL_IMAGES_CMDS
 		> "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
 	chmod +x "$(BINARIES_DIR)/ui/apps/Screenshot Viewer.pak/screenshot-viewer"
 	$(ALLIUM_PKGDIR)/generate-configs.sh \
-		$(BR2_EXTERNAL_MINIME_PATH)/board/common/config/cores.cfg \
+		$(BR2_EXTERNAL_MINIME_PATH)/../../alpine/board/common/config/cores.cfg \
 		$(BINARIES_DIR)/ui/.ui/config
 
 	printf '%s\n' \

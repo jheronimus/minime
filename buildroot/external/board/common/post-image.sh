@@ -100,7 +100,7 @@ done
 # done
 
 # Prepopulate core mapping contract
-cp -f "${BR2_EXTERNAL_MINIME_PATH}/board/common/config/cores.cfg" \
+cp -f "${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/config/cores.cfg" \
 	"${USERDATA_STAGE}/.minime/config/cores.cfg"
 
 # Prepopulate self-documenting device.cfg

@@ -23,12 +23,8 @@ via mkimage. Both post-image scripts reference DTS overlays from
 
 ## `config/cores.cfg`
 
-| Alpine | Buildroot |
-|---|---|
-| `alpine/board/common/config/cores.cfg` | `buildroot/external/board/common/config/cores.cfg` |
-
-**Identical content.** Touching one without the other creates drift.
-Should be unified (e.g. `src/cores.cfg` or single authoritative copy).
+**Source of truth: Alpine tree (`alpine/board/common/config/cores.cfg`).**
+Buildroot packages/scripts reference it directly from the Alpine path. No duplicates exist.
 
 ## `usr/bin/autologin`
 
