@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-bootsplash: optional animated boot splash, before the UI.
+# bootsplash: optional animated boot splash, before the UI.
 
 description="Minime boot splash"
 
@@ -9,8 +9,8 @@ command_args="--fullscreen --config /mnt/sdcard/.minime/config/bootsplash.cfg"
 pidfile="/run/bootsplash.pid"
 
 depend() {
-	after minime-fb-unblank minime-traits
-	before minime-ui
+	after fb-unblank traits
+	before ui
 }
 
 start_pre() {

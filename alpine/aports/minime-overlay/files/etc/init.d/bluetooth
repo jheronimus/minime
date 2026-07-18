@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-bluetooth: on-demand bluetoothd.
+# bluetooth: on-demand bluetoothd.
 # (which short-circuits on /mnt/sdcard/.minime/config/bluetooth/enabled).
 
 description="Bluetooth daemon (on demand)"
@@ -10,8 +10,8 @@ command_args="-n"
 pidfile="/run/bluetoothd.pid"
 
 depend() {
-	need minime-dbus
-	after minime-modules
+	need dbus
+	after modules
 }
 
 start_pre() {

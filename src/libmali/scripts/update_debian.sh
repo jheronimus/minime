@@ -2,7 +2,7 @@
 
 
 # Generate targets
-TARGETS=$(echo ${@:-$(find lib -type f)} | xargs -n 1 | sed 's,^lib/,,' | sort)
+TARGETS=$(echo "${@:-$(find lib -type f)}" | xargs -n 1 | sed 's,^lib/,,' | sort)
 echo $TARGETS | xargs -n 1 > debian/targets
 
 rm -f control.*

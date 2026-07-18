@@ -1,5 +1,4 @@
-#!/bin/bash
-# shellcheck shell=bash disable=SC3043,SC2154
+# shellcheck shell=sh disable=SC2034,SC2154,SC3043
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=minime-overlay
@@ -24,6 +23,7 @@ build() {
 
 package() {
 	local src="$startdir/files"
+	local scripts_src="$startdir/../../../board/common/scripts"
 	local dst="$pkgdir"
 
 	mkdir -p "$dst"
@@ -37,6 +37,14 @@ package() {
 		--exclude='.git*' --exclude='Makefile' --exclude='README*' \
 		--exclude='APKBUILD' --exclude='files' \
 		"$src"/ "$dst"/
+
+	# Install shared runtime scripts from the canonical source.
+	mkdir -p "$dst/usr/share/minime/scripts"
+	install -m 0755 \
+		"$scripts_src/wifi.sh" \
+		"$scripts_src/ui.sh" \
+		"$scripts_src/traits.sh" \
+		"$dst/usr/share/minime/scripts/"
 
 	# Ensure executable bits on init.d / OpenRC services.
 	if [ -d "$dst/etc/init.d" ]; then

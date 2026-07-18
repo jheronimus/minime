@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Minime shell profile.  Loaded by /etc/profile for login shells only.
 # Sets up the SD-card layout contract so any user-issued shell is identical
 # to what MinUI/Allium expect at runtime.

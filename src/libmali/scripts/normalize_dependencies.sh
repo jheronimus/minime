@@ -20,7 +20,7 @@ if [ $major -gt $major_min ]; then
 	exit 0
 fi
 
-if [ $major -eq $major_min -a $minor -ge $minor_min ]; then
+if [ "$major" -eq "$major_min" ] && [ "$minor" -ge "$minor_min" ]; then
 	exit 0
 fi
 

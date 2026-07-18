@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-bluealsa: A2DP sink/source for Bluetooth audio routing.
+# bluealsa: A2DP sink/source for Bluetooth audio routing.
 
 description="BlueALSA (Bluetooth audio ALSA bridge)"
 
@@ -9,8 +9,8 @@ command_args="-p a2dp-sink -p a2dp-source"
 pidfile="/run/bluealsa.pid"
 
 depend() {
-	need minime-bluetooth minime-dbus
-	after minime-modules
+	need bluetooth dbus
+	after modules
 }
 
 start_pre() {

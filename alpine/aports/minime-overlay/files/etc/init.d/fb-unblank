@@ -1,12 +1,12 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# minime-fb-unblank: unblank the framebuffer so the panel lights up before
+# fb-unblank: unblank the framebuffer so the panel lights up before
 # the UI takes over.
 
 description="Unblank framebuffer console"
 
 depend() {
-	before minime-traits minime-ui
+	before traits ui
 }
 
 start() {

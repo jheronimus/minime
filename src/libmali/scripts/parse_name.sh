@@ -10,7 +10,7 @@ PLATFORMS="cl|nocl|minicl|vulkan|dummy|x11|wayland|gbm"
 
 # Normalize platform variable
 normalize_platform() {
-	PLATFORM="$@"
+	PLATFORM="$*"
 
 	for platform in $(echo $PLATFORMS|xargs -d'|'); do
 		echo $PLATFORM|grep -ow $platform|uniq
@@ -18,7 +18,7 @@ normalize_platform() {
 }
 
 parse_name() {
-	FILE="$@"
+	FILE="$*"
 	LIB=${FILE##*/}
 	LIB=${LIB%.so}
 

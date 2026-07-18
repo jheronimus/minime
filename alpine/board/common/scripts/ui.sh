@@ -1,6 +1,8 @@
 #!/bin/sh
-# minime-ui: launch the configured frontend.
-# Same lifecycle contract, same SD-card path exports, same UI launcher.
+# shellcheck shell=sh
+# ui.sh: launch the configured Minime frontend (MinUI/Allium).
+# Called by both the Alpine OpenRC 'ui' service and the Buildroot S60ui wrapper.
+# Interface: ui.sh {start|stop|restart|reload}
 
 set -eu
 
@@ -30,7 +32,7 @@ start() {
 		echo $! > /tmp/watch_jack.pid
 	fi
 
-	# Minime SD-card layout contract.
+	# Minime SD-card layout contract
 	export HOME=/mnt/sdcard
 	export SDCARD_PATH=/mnt/sdcard
 	export ROMS_PATH="$SDCARD_PATH/roms"
@@ -52,14 +54,16 @@ start() {
 		fi
 	fi
 
-	# Ensure backlight is visible until userspace takes over.
+	# Ensure backlight is visible until userspace takes over
 	for bl in /sys/class/backlight/*/brightness; do
 		[ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
 	done
 
+	# Clear GPU failure boot-loop sentinel and stale next commands
 	rm -f "$SDCARD_PATH/.minime/gpu_fail"
 	rm -f /tmp/next
 
+	# UI lifecycle loop runs in the background so boot can finish
 	(
 		while true; do
 			if [ -f /tmp/poweroff ]; then
@@ -107,7 +111,8 @@ stop() {
 }
 
 case "${1:-}" in
-	start) start ;;
-	stop) stop ;;
-	*) echo "Usage: $0 {start|stop}" >&2; exit 1 ;;
+	start)          start ;;
+	stop)           stop ;;
+	restart|reload) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart|reload}" >&2; exit 1 ;;
 esac
