@@ -51,7 +51,7 @@ define LIBMALI_COPY_BLOB
 	cp $(BR2_EXTERNAL)/../../drivers/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
 		$(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu/libmali-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
 endef
-LIBMALI_POST_EXTRACT_HOOKS += LIBMALI_COPY_BLOB
+LIBMALI_POST_RSYNC_HOOKS += LIBMALI_COPY_BLOB
 
 LIBMALI_CONF_OPTS = \
 	-Darch=aarch64 \
