@@ -3,16 +3,21 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE" >&2
+	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_NAME" >&2
 }
 
 GENIMAGE_CFG=""
-opts="$(getopt -n "${0##*/}" -o c: -- "$@")" || exit $?
+BOARD_NAME=""
+opts="$(getopt -n "${0##*/}" -o c:b: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
 	-c)
 		GENIMAGE_CFG="$2"
+		shift 2
+		;;
+	-b)
+		BOARD_NAME="$2"
 		shift 2
 		;;
 	--)
@@ -27,12 +32,17 @@ while true; do
 done
 
 if [ -z "$GENIMAGE_CFG" ]; then
-	echo "ERROR: -c option is required for post-build script to determine board config." >&2
+	echo "ERROR: -c option is required for post-build script." >&2
 	exit 1
 fi
 
-BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
-BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/$(basename "$BOARD_DIR")"
+if [ -z "$BOARD_NAME" ]; then
+	echo "ERROR: -b option is required for post-build script." >&2
+	exit 1
+fi
+
+BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${BOARD_NAME}"
+BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${BOARD_NAME}"
 
 if [ ! -f "${BOARD_DIR}/boot.cmd" ]; then
 	echo "ERROR: ${BOARD_DIR}/boot.cmd is missing!" >&2

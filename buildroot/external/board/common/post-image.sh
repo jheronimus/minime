@@ -3,16 +3,21 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE" >&2
+	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_NAME" >&2
 }
 
 GENIMAGE_CFG=""
-opts="$(getopt -n "${0##*/}" -o c: -- "$@")" || exit $?
+BOARD_NAME=""
+opts="$(getopt -n "${0##*/}" -o c:b: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
 	-c)
 		GENIMAGE_CFG="$2"
+		shift 2
+		;;
+	-b)
+		BOARD_NAME="$2"
 		shift 2
 		;;
 	--)
@@ -26,13 +31,12 @@ while true; do
 	esac
 done
 
-if [ -z "$GENIMAGE_CFG" ]; then
+if [ -z "$GENIMAGE_CFG" ] || [ -z "$BOARD_NAME" ]; then
 	usage
 	exit 1
 fi
 
-BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
-SOC_NAME="$(basename "$BOARD_DIR")"
+SOC_NAME="${BOARD_NAME}"
 BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${SOC_NAME}"
 
 if [ ! -f "${BR_BOARD_DIR}/board.env" ]; then
