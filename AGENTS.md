@@ -46,7 +46,6 @@ Commands are run within the `alpine/` subdirectory:
 
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Container Image Rebuild**: `buildroot/container/Dockerfile` is only rebuilt when the `minime-builder` image is missing. If the Dockerfile changes, manually rebuild it locally.
-- **Private Docs**: Keep docs in private directories, never in public repositories.
 - **Never build locally**: Use GitHub Actions for all target builds.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
