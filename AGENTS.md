@@ -25,31 +25,13 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
   - `libmali/`: ARM Mali userspace driver source + proprietary blobs (blobs/, hook/, shim/, scripts/, include/).
 - `roms/`: Preloaded ROMs package.
 
-## Core Configs & Unification
+## File Locations & Repository Mapping
 
-Alpine owns all board assets (kernel configs, patches, genimage, boot.cmd, DTS, traits, uboot.config). Buildroot keeps only its own overlay, post-build.sh, post-image.sh, board.env, busybox.config, bios/, firmware/.
+A short summary of where important files live. For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
 
-### Fragment ownership
-
-If a config option is needed on every device, put it in a common fragment (`alpine/board/common/tiny-base.config` for kernel options, `buildroot/external/configs/minime_common.config` for Buildroot options). If it is only needed on one device, put it in that board's fragment (`alpine/board/<board>/tiny-<board>.config` or `buildroot/external/configs/minime_<board>.config`). GPU selection fragments: `alpine/board/common/tiny-panfrost.config` (Alpine) and `buildroot/external/board/common/tiny-libmali.config` (Buildroot). Never duplicate the same option across multiple board fragments; before adding it to a second board, move it to the common fragment.
-
-- **Shared (`alpine/board/common/`)**:
-  - [tiny-base.config](file:///Users/ilembitov/Projects/minime/alpine/board/common/tiny-base.config): Base kernel options (GPU-agnostic).
-  - [tiny-panfrost.config](file:///Users/ilembitov/Projects/minime/alpine/board/common/tiny-panfrost.config): Panfrost GPU fragment for Alpine.
-  - [genimage.cfg](file:///Users/ilembitov/Projects/minime/alpine/board/common/genimage.cfg): Shared RK3326/RK3566 partition layout.
-- **Buildroot Shared (`buildroot/external/board/common/`)**:
-  - [busybox.config](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/busybox.config): Shared BusyBox config.
-  - [overlay/](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/overlay): System overlay (telnet/ftp, GPU driver init).
-  - [tiny-libmali.config](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/tiny-libmali.config): Libmali GPU fragment for Buildroot.
-  - [post-build.sh](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/post-build.sh): Common script (udev, network, board hooks).
-  - [post-image.sh](file:///Users/ilembitov/Projects/minime/buildroot/external/board/common/post-image.sh): Shared packaging script.
-- **Board Directories (`h700/`, `rk3326/`, `rk3566/`)**:
-  - `board.env`: Env vars (default DTBs, images).
-  - `boot.cmd`: Platform boot config.
-  - `tiny-<board>.config`: Device-specific kernel config.
-- **Genimage Configs (Partition Layouts)**:
-  - H700: [h700/genimage.cfg](file:///Users/ilembitov/Projects/minime/alpine/board/h700/genimage.cfg) (MBR).
-  - RK3326/RK3566: [common/genimage.cfg](file:///Users/ilembitov/Projects/minime/alpine/board/common/genimage.cfg) (GPT).
+- **Shared Assets (Alpine-owned)**: All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the `alpine/board/` folder. Buildroot's makefiles and build scripts reference or import them directly from there.
+- **Unshareable Distro-Specific Files**: Files that cannot be shared (such as OpenRC vs. BusyBox init scripts and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually.
+- **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
 
 ## Agent Directives (Buildroot Quirks)
 
@@ -68,56 +50,41 @@ Push changes to the respective branch on `jheronimus/minime` to trigger CI build
 
 ## Scripts & Git Exclusions
 
-`scripts/` is strictly for:
-
-1. Makefile/pipeline orchestration (`check_rebuild.py`, `prepare-linux.sh`).
-2. Developer/agent utilities.
-
-- **Git Exclusions**: Custom scripts/helpers (`test_otp.py`, `run_telnet.py`) MUST be in `.gitignore`. Track only Makefile dependencies.
-
-## Remote Device Telnet Utilities
-
-Telnet daemon runs on target console (`<target-ip>:23`).
-
-- **`scripts/run_telnet.py`** (gitignored): Socket script for command execution with prompt detection, stdout streaming, and 120s timeout.
-  - *Usage*: `python3 scripts/run_telnet.py "ls -la /mnt/sdcard"`
+`scripts/` is strictly for Makefile/pipeline orchestration (`prepare-linux.sh`, `build-bootloader.sh`, `update_kernel_version.py`) and developer utilities.
 
 ## CI Pipeline & Remote Runner
 
-Builds compile on GitHub Actions runner.
+Builds compile on GitHub Actions runner. Workflows for `buildroot/` and `alpine/` are located under `.github/workflows/`.
 
-- **Workflows**: `buildroot/` and `alpine/` workflows are located under `.github/workflows/`.
-- **Sync Artifacts**: Fetch built images using the respective scripts.
+## Unified Validation Quality Gates
 
-## Pre-Commit Quality Gates (Strict Validation)
+All checks must pass before committing. Do not suppress/bypass warnings.
 
-All warnings are blocking. Do not suppress/bypass; fix the root cause.
+### 1. Shell Script Validation
+- **Syntax check**: `sh -n <script_path>`
+- **Shellcheck**: `shellcheck --shell=sh --severity=warning <script_path>` (or specify `shell=dash` / `shell=bash` if POSIX-extensions like `local` are used).
+- **Permissions**: Verify script has executable permissions (`chmod +x <script_path>`).
 
-### 1. Buildroot Linting (`python3-magic` & `python3-flake8`)
+### 2. Traits Validation
+- Validate the device traits configuration using the validation script:
+  ```bash
+  ./alpine/board/common/check-traits.sh
+  ```
 
-```bash
-python3 buildroot/buildroot/utils/check-package <modified_files>
-```
+### 3. Defconfig Validation
+- Merge and validate Buildroot configuration fragments locally to ensure no syntax errors:
+  ```bash
+  make defconfig BOARD=h700
+  make defconfig BOARD=rk3326
+  make defconfig BOARD=rk3566
+  ```
+- **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally when modified.
 
-### 2. Defconfig Validation
+### 4. Buildroot Package Linting
+- Lint Buildroot package files:
+  ```bash
+  python3 buildroot/buildroot/utils/check-package <modified_files>
+  ```
 
-```bash
-make defconfig BOARD=h700
-make defconfig BOARD=rk3326
-make defconfig BOARD=rk3566
-```
-
-- **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally before committing.
-
-### 3. Shellcheck
-
-```bash
-shellcheck --shell=sh --severity=warning <script_path>
-```
-
-### 4. Integrity Gates
-
-- **Syntax**: `sh -n <script_path>`
-- **Git**: `git diff --check`
-- **Permissions**: `ls -l <script_path>` (must be executable)
-- **Stamps**: `python3 scripts/check_rebuild.py`
+### 5. Repository Integrity
+- **Git diff whitespace/check**: `git diff --check`
