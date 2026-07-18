@@ -408,8 +408,8 @@ EOF
 chmod +x "${INITRD_STAGE}/init"
 
 # Copy optional board-specific first boot probe script if it exists
-if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
-	cp -f "${BOARD_DIR}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
+if [ -f "${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/first-boot-probe.sh" ]; then
+	cp -f "${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/first-boot-probe.sh" "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 fi
 
