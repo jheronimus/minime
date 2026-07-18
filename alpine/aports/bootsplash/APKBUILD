@@ -17,15 +17,15 @@ makedepends="
 	linux-headers
 "
 source="
-	LICENSE
-	Makefile
-	bootsplash.c
-	bootsplash.h
-	common.c
-	dmg.c
-	font.c
-	gba.c
-	gbc.c
+	../../../src/bootsplash/LICENSE
+	../../../src/bootsplash/Makefile
+	../../../src/bootsplash/bootsplash.c
+	../../../src/bootsplash/bootsplash.h
+	../../../src/bootsplash/common.c
+	../../../src/bootsplash/dmg.c
+	../../../src/bootsplash/font.c
+	../../../src/bootsplash/gba.c
+	../../../src/bootsplash/gbc.c
 "
 sha512sums="
 924a66e29b436922dc9ccfe7e1beb734f5b4d5190bafdaf77e20dd0b1ab83c5a386f96f9308f1e1f40c33e77e962c8c0b2d6cf07395ba3b6764589e73ef03b89  LICENSE
@@ -41,9 +41,6 @@ a8646bfe0840e941c58e5e4b158452855b952553d60b18833df65eeef5065ceb39e2a299faa39bf6
 
 build() {
 	cd "$srcdir" || return 1
-	# The Alpine SDL2 package ships pkg-config; use it to pick the right
-	# cross sysroot.
-	# directly; here we let pkg-config resolve SDL2's CFLAGS/LIBS.
 	make CC="${CC:-gcc}" PKG_CONFIG="${PKG_CONFIG:-pkg-config}"
 }
 

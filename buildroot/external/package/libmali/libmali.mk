@@ -5,7 +5,7 @@
 ################################################################################
 
 LIBMALI_VERSION = local
-LIBMALI_SITE = $(BR2_EXTERNAL)/../../drivers/libmali
+LIBMALI_SITE = $(BR2_EXTERNAL)/../../src/libmali
 LIBMALI_SITE_METHOD = local
 LIBMALI_LICENSE = proprietary
 LIBMALI_LICENSE_FILES = END_USER_LICENCE_AGREEMENT.txt
@@ -41,14 +41,14 @@ endif
 
 # Copy the selected blob into the directory the grabber.sh script searches.
 # grabber.sh switches DIR between lib/ and optimize_<N>/ based on the
-# -Doptimize-level option (see drivers/libmali/scripts/grabber.sh). We pin
+# -Doptimize-level option (see src/libmali/scripts/grabber.sh). We pin
 # optimize-level=O0 below, so the blob must land in optimize_0/.
 LIBMALI_BLOB_DIR = optimize_0
 
 # Copy the selected blob to the build directory before building
 define LIBMALI_COPY_BLOB
 	mkdir -p $(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu
-	cp $(BR2_EXTERNAL)/../../drivers/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
+	cp $(BR2_EXTERNAL)/../../src/libmali/blobs/$(LIBMALI_BOARD)/$(LIBMALI_BLOB) \
 		$(@D)/$(LIBMALI_BLOB_DIR)/aarch64-linux-gnu/libmali-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU))-$(call qstrip,$(BR2_PACKAGE_LIBMALI_GPU_VERSION))-gbm.so
 endef
 LIBMALI_POST_RSYNC_HOOKS += LIBMALI_COPY_BLOB
@@ -68,7 +68,7 @@ LIBMALI_CONF_OPTS = \
 define LIBMALI_BUILD_SHIM
 	$(TARGET_CC) $(TARGET_CFLAGS) -shared -fPIC -O2 -Wall \
 		-o $(@D)/libminime_clock_shim.so \
-		$(BR2_EXTERNAL)/../../drivers/libmali/shim/clock_shim.c \
+		$(BR2_EXTERNAL)/../../src/libmali/shim/clock_shim.c \
 		-ldl
 endef
 LIBMALI_POST_BUILD_HOOKS += LIBMALI_BUILD_SHIM

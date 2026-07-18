@@ -20,7 +20,7 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
   - `out/<board>/` / `logs/`: Bootable images / build logs.
 - `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
-- `drivers/`: GPU driver source code and blobs.
+- `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver, bootsplash).
   - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
   - `libmali/`: ARM Mali userspace driver source + proprietary blobs (blobs/, hook/, shim/, scripts/, include/).
 - `roms/`: Preloaded ROMs package.

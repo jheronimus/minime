@@ -84,7 +84,7 @@ ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 mkdir -p "${TARGET_DIR}/mnt/sdcard"
 
 # 5.5. Install shared Realtek firmware from common tree if present
-common_fw_dir="${BR2_EXTERNAL_MINIME_PATH}/board/common/firmware"
+common_fw_dir="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/firmware"
 if [ -d "${common_fw_dir}" ]; then
 	find "${common_fw_dir}" -type f | while read -r fwfile; do
 		rel="${fwfile#${common_fw_dir}/}"

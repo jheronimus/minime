@@ -88,11 +88,6 @@ mkdir -p "${USERDATA_STAGE}/roms"
 mkdir -p "${USERDATA_STAGE}/bios"
 mkdir -p "${USERDATA_STAGE}/saves"
 
-if [ -d "${BR2_EXTERNAL_MINIME_PATH}/board/common/bios" ]; then
-	echo "Staging BIOS files onto SD card partition..."
-	cp -rp "${BR2_EXTERNAL_MINIME_PATH}/board/common/bios/." "${USERDATA_STAGE}/bios/"
-fi
-
 for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
