@@ -4,71 +4,52 @@
 pkgname=minui
 pkgver=1.0.0
 pkgrel=0
-pkgdesc="Minimal launcher frontend for Minime (Alpine aarch64 musl build)"
+pkgdesc="MinUI launcher frontend for Minime (prebuilt distribution)"
 url="https://github.com/jheronimus/MinUI"
 arch="aarch64"
 license="MIT"
 options="!strip !check"
-makedepends="
-	bash
-	cmake
-	gcc-aarch64
-	binutils-aarch64
-	linux-headers
-	ncurses-dev
-	pkgconf
-	python3
-	sdl2-dev
-	sdl2_image-dev
-	sdl2_ttf-dev
-	dbus-dev
-	libpng-dev
-	zlib-dev
-	lz4-dev
-"
-source=""
+makedepends="curl unzip"
 
-# The Alpine build uses MinUI's upstream Makefile. The toolchain
-# is a preconfigured external AArch64 glibc toolchain; in Alpine the
-# cross gcc is `aarch64-alpine-linux-musl-gcc` plus musl's headers.
-#
-# Source is fetched fresh from the upstream commit pinned below.  We do
-# not duplicate the source tree in aports to keep APKBUILD diffs small.
-export MINUI_VERSION=ac7ee447b6f417239923f5a1511790dec6d21d1c
-MINUI_BUILD_DATE=$(date +%Y.%m.%d)
-export MINUI_BUILD_DATE
-MINUI_BUILD_HASH=$(printf '%s' "${MINUI_VERSION}" | cut -c1-7)
-export MINUI_BUILD_HASH
+MINUI_DATE=20260719
+MINUI_DOT=0
+MINUI_VERSION="v${MINUI_DATE}"
+MINUI_PLATFORM=minime
+source="https://github.com/jheronimus/MinUI/releases/download/${MINUI_VERSION}/MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip"
+sha512sums="SKIP"
 
 build() {
-	local workdir="$srcdir/build"
-	mkdir -p "$workdir"
-	cd "$workdir" || return 1
-
-	if [ ! -d minui ]; then
-		git clone --no-checkout \
-			https://github.com/jheronimus/MinUI.git minui
-		(cd minui && git checkout "${MINUI_VERSION}")
-	fi
-
-	# Stage the SD-card UI payload.
-	# `make image` outputs so the immutable EROFS rootfs + SD-card
-	# userdata contract stays stable.
-	mkdir -p "$workdir/staging/ui/.ui/bin"
-	mkdir -p "$workdir/staging/ui/.ui/res"
-	mkdir -p "$workdir/staging/ui/.ui/config"
-	mkdir -p "$workdir/staging/ui/.cores/config"
-	mkdir -p "$workdir/staging/ui/.ui/bezels"
-
-	# build() is a stub.  The actual compile is run by the Alpine build
-	# pipeline (alpine/scripts/build.sh) which has the cross toolchain
-	# already on PATH and can resolve aports' SDL2 / libpng / dbus.
+	cd "$srcdir" || return 1
+	unzip -o "MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip"
+	unzip -o MinUI.zip
 }
 
 package() {
-	# minui's runtime payload is staged to /alpine-output/boot/ui by the
-	# build pipeline; post-image.sh picks it up.  The Alpine rootfs itself
-	# does not contain minui binaries; they live on the SD card.
+	# Stage the UI payload to /alpine-output/boot/ui for post-image.sh
+	# to consume.  The Alpine rootfs does not contain minui binaries;
+	# they live on the SD card's FAT32 partition.
+	mkdir -p /alpine-output/boot/ui/.ui
+	cp -a "$srcdir"/.system/${MINUI_PLATFORM}/. /alpine-output/boot/ui/.ui/
+
+	# Strip .elf extensions (MinUI convention; Minime expects bare names)
+	for f in /alpine-output/boot/ui/.ui/bin/*.elf; do
+		[ -f "$f" ] && mv -f "$f" "${f%.elf}"
+	done
+
+	# Move libmsettings.so next to binaries
+	if [ -d "$srcdir"/.system/${MINUI_PLATFORM}/lib ]; then
+		cp -a "$srcdir"/.system/${MINUI_PLATFORM}/lib/. \
+			/alpine-output/boot/ui/.ui/bin/
+	fi
+
+	# Install cores
+	if [ -d "$srcdir"/.system/${MINUI_PLATFORM}/cores ]; then
+		mkdir -p /alpine-output/boot/ui/.cores
+		cp -a "$srcdir"/.system/${MINUI_PLATFORM}/cores/. \
+			/alpine-output/boot/ui/.cores/
+	fi
+
+	# Stamp for the Alpine rootfs
 	install -dm755 "$pkgdir/var/lib/minime"
 	install -Dm644 /dev/null "$pkgdir/var/lib/minime/minui.stamp"
 }

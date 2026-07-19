@@ -7,9 +7,9 @@
 # Local packages (built from minime/alpine/aports/*):
 #   - minime-overlay      filesystem layout, OpenRC services, trait payload
 #   - minui               UI binaries + assets
-#   - allium / allium-themes, drkhrse-miyoo-bezels, preloaded-roms
+#   - allium / allium-themes, preloaded-roms
 #   - bootsplash          boot splash binary
-#   - dufs, syncthing, fatresize, libretro-headers, libretro-cores, retroarch
+#   - dufs, syncthing, fatresize, libretro-headers
 #
 # Notes:
 #   - musl replaces glibc; the gcompat compatibility layer is intentionally
@@ -87,12 +87,9 @@ zlib
 # minui            UI binaries
 # allium           activity tracker + apps
 # allium-themes    Allium UI themes
-# drkhrse-miyoo-bezels  overlay bezels
 # preloaded-roms   free / shareware ROMs
 # bootsplash       boot splash helper
 # dufs             static file server
 # syncthing        P2P file sync
 # fatresize        FAT32 expansion
 # libretro-headers  libretro.h
-# libretro-cores  libretro cores
-# retroarch  retroarch binary
