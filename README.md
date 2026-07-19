@@ -2,11 +2,13 @@
 
 The goal of Minime is to provide a simple foundation to play around with different UIs and ideas on Anbernic handhelds without having to rely on the stock firmware.
 
+It is structured as a single FAT32 partition with a read-only erofs image, which holds the immutable base system. In theory, this should make it easier to port firmwares designed for the stock OS — but Minime is built on mainline Linux kernel and up-to-date components. Plus, the whole system being a single file on the disk should make updates much easier.
+
 It aspires (strong emphasis for the moment) to cover three lines of devices:
 
-- RK3326 (testing on RG351MP and RG351V);
+- RK3566 (testing on RG Arc D);
 - H700 (testing on RG35xxSP);
-- RK3566 (testing on RG Arc D).
+- RK3326 (testing on RG351MP and RG351V).
 
 It comes in two flavors:
 
