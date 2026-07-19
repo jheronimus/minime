@@ -38,7 +38,7 @@ for board in h700 rk3326 rk3566; do
 			echo "$file: duplicate match $match" >&2
 			exit 1
 		fi
-		echo "$match" >> "$seen"
+		echo "$match" >>"$seen"
 		if grep -Eq '^(has_|button_layout=)|=$' "$file" "$platform"; then
 			echo "$file: obsolete or empty trait" >&2
 			exit 1
