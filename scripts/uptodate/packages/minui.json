@@ -1,0 +1,26 @@
+{
+  "name": "minui",
+  "source_type": "github_release",
+  "github_repo": "jheronimus/MinUI",
+  "strip_v_prefix": true,
+  "targets": [
+    {
+      "path": "alpine/aports/minui/APKBUILD",
+      "type": "alpine_apkbuild",
+      "download_url": [
+        "https://github.com/jheronimus/MinUI/releases/download/v{version}/MinUI-{version}-0-base.zip",
+        "https://github.com/jheronimus/MinUI/releases/download/v{version}/MinUI-{version}-0-extras.zip"
+      ],
+      "download_filename": [
+        "MinUI-{version}-0-base.zip",
+        "MinUI-{version}-0-extras.zip"
+      ]
+    },
+    {
+      "path": "buildroot/external/package/minui/minui.mk",
+      "type": "regex",
+      "pattern": "^MINUI_VERSION = .*",
+      "replacement": "MINUI_VERSION = v{version}"
+    }
+  ]
+}
