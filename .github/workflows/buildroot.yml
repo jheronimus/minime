@@ -89,6 +89,8 @@ jobs:
     name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }})
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 360
     defaults:
       run:
@@ -150,3 +152,12 @@ jobs:
           path: buildroot/out/${{ env.BOARD }}/**
           if-no-files-found: error
           retention-days: 14
+
+      - name: Rename and Upload to Nightly Release
+        run: |
+          cp out/${{ matrix.board }}/minime-${{ matrix.board }}.img.xz ../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
+          cd ..
+          gh release create nightly --title "Nightly Builds" --notes "Automatically updated on each push" || true
+          gh release upload nightly minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
