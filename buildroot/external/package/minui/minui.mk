@@ -33,7 +33,7 @@ define MINUI_INSTALL_IMAGES_CMDS
 		[ -f "$$f" ] && mv -f "$$f" "$$(basename "$$f" .elf)"; done
 
 	# Download and install extras (emulator paks + tools)
-	$(BR2_WGET) -O $(@D)/extras.zip $(MINUI_SITE)/$(MINUI_RELEASE_BASE)-extras.zip
+	wget -nd -t 3 --connect-timeout=10 -O $(@D)/extras.zip $(MINUI_SITE)/$(MINUI_RELEASE_BASE)-extras.zip
 	cd $(@D) && unzip -o extras.zip
 	if [ -d $(@D)/Emus ]; then \
 		cp -a $(@D)/Emus $(BINARIES_DIR)/ui/; \

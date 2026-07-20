@@ -1,0 +1,4 @@
+config BR2_PACKAGE_ALLIUM
+	bool "Allium"
+	help
+	  Allium launcher frontend (prebuilt from releases).

@@ -10,7 +10,7 @@ arch="aarch64"
 license="MIT"
 options="!strip !check"
 makedepends="curl unzip"
-conflicts="minui"
+depends="!minui"
 provides="minime-ui"
 
 ALLIUM_DATE=20260720
