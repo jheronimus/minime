@@ -1,16 +1,28 @@
 #!/bin/sh
 # shellcheck shell=sh
-# ui.sh: launch the configured Minime frontend (MinUI/Allium).
+# ui.sh: launch the installed Minime frontend.
 # Called by both the Alpine OpenRC 'ui' service and the Buildroot S60ui wrapper.
 # Interface: ui.sh {start|stop|restart|reload}
+#
+# Each UI ships its own filesystem layout and boot script.
+# Minime only provides the hardware glue and lifecycle loop.
 
 set -eu
 
-UI_BIN="/mnt/sdcard/.system/minime/bin/minui"
-DAEMON=ui
+# UI detection: prefer MinUI, fall back to Allium.
+if [ -x "/mnt/sdcard/.system/minime/bin/minui" ]; then
+	UI_BIN="/mnt/sdcard/.system/minime/bin/minui"
+	UI_NAME="MinUI"
+elif [ -x "/mnt/sdcard/.ui/bin/alliumd" ]; then
+	UI_BIN="/mnt/sdcard/.ui/bin/alliumd"
+	UI_NAME="Allium"
+else
+	UI_BIN=""
+	UI_NAME="unknown"
+fi
 
 start() {
-	echo "Starting UI ($DAEMON)..."
+	echo "Starting UI (${UI_NAME})..."
 
 	# Headphone jack routing daemon for rk817ext sound card
 	if amixer -c rk817ext controls >/dev/null 2>&1; then
@@ -53,7 +65,7 @@ start() {
 	done
 
 	# Clear GPU failure boot-loop sentinel and stale next commands
-	rm -f "$SDCARD_PATH/.minime/gpu_fail"
+	rm -f /mnt/sdcard/.minime/gpu_fail
 	rm -f /tmp/next
 
 	# UI lifecycle loop runs in the background so boot can finish
@@ -65,10 +77,10 @@ start() {
 				exit 0
 			fi
 
-			if [ -x "$UI_BIN" ]; then
+			if [ -n "${UI_BIN:-}" ] && [ -x "$UI_BIN" ]; then
 				"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
 			else
-				echo "Missing UI binary: $UI_BIN" >/tmp/ui.log
+				echo "No UI binary found" >/tmp/ui.log
 				sleep 5
 				continue
 			fi
@@ -87,7 +99,7 @@ start() {
 }
 
 stop() {
-	echo "Stopping UI ($DAEMON)..."
+	echo "Stopping UI (${UI_NAME})..."
 	if [ -f /tmp/watch_jack.pid ]; then
 		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
 		rm -f /tmp/watch_jack.pid
@@ -96,11 +108,13 @@ stop() {
 		kill "$(cat /tmp/ui_loop.pid)" 2>/dev/null || true
 		rm -f /tmp/ui_loop.pid
 	fi
+	# Best-effort cleanup of known UI processes.
+	# Each UI should handle its own children; these are belt-and-suspenders.
 	killall minui minarch keymon clock minput syncsettings say \
-		2>/dev/null || true
+		alliumd allium-launcher allium-menu 2>/dev/null || true
 	sleep 0.5
 	killall -9 minui minarch keymon clock minput syncsettings say \
-		2>/dev/null || true
+		alliumd allium-launcher allium-menu 2>/dev/null || true
 }
 
 case "${1:-}" in

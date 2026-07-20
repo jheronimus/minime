@@ -82,36 +82,11 @@ mkdir -p "${USERDATA_STAGE}/.minime/config"
 mkdir -p "${USERDATA_STAGE}/.minime/devices"
 mkdir -p "${USERDATA_STAGE}/.system" "${USERDATA_STAGE}/.userdata"
 
-# Create standard roms, bios, and saves folder structure on SD card root
-# (MinUI expects capitalized Roms/Saves/Bios — safe on case-insensitive FAT32)
+# Create standard roms, bios, and saves folders on SD card root.
+# Each UI bootstraps its own per-system subdirectories.
 mkdir -p "${USERDATA_STAGE}/Roms"
 mkdir -p "${USERDATA_STAGE}/Bios"
 mkdir -p "${USERDATA_STAGE}/Saves"
-
-# Create per-system roms/saves directories using MinUI's "Display Name (TAG)" convention
-for system in \
-	"Game Boy (GB)" "Game Boy Color (GBC)" "Game Boy Advance (GBA)" \
-	"Nintendo Entertainment System (FC)" \
-	"Super Nintendo Entertainment System (SFC)" \
-	"Sega Genesis (MD)" "Sega Game Gear (GG)" "Sega Master System (SMS)" \
-	"TurboGrafx-16 (PCE)" "Sony PlayStation (PS)" \
-	"Sega Saturn (SS)" "Neo Geo CD (NGCD)"; do
-	mkdir -p "${USERDATA_STAGE}/Roms/${system}"
-	mkdir -p "${USERDATA_STAGE}/Saves/${system% (*}" # tag only: e.g. "GB"
-done
-
-# Arcade (FBNeo)
-mkdir -p "${USERDATA_STAGE}/Roms/Arcade"
-mkdir -p "${USERDATA_STAGE}/Saves/ARC"
-
-# Create per-tag Bios directories that minarch expects
-for tag in GB GBC GBA FC SFC MD GG SMS PCE PS SS ARC; do
-	mkdir -p "${USERDATA_STAGE}/Bios/${tag}"
-done
-
-# Prepopulate core mapping contract
-cp -f "${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/config/cores.cfg" \
-	"${USERDATA_STAGE}/.minime/config/cores.cfg"
 
 # Prepopulate self-documenting device.cfg
 DEVICE_CFG="${USERDATA_STAGE}/.minime/config/device.cfg"
