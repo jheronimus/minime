@@ -22,26 +22,15 @@ define MINUI_EXTRACT_CMDS
 endef
 
 define MINUI_INSTALL_IMAGES_CMDS
-	mkdir -p $(BINARIES_DIR)/ui/.ui/bin
-	mkdir -p $(BINARIES_DIR)/ui/.ui/config
-	mkdir -p $(BINARIES_DIR)/ui/.ui/res
-	mkdir -p $(BINARIES_DIR)/ui/.cores
-
 	cd $(@D) && unzip -o MinUI.zip
 
-	cp -a $(@D)/.system/minime/. $(BINARIES_DIR)/ui/.ui/
-	cd $(BINARIES_DIR)/ui/.ui && for f in bin/*.elf; do \
-		[ -f "$$f" ] && mv -f "$$f" "bin/$$(basename "$$f" .elf)"; done
+	# Stage MinUI system directory to .system/
+	mkdir -p $(BINARIES_DIR)/ui/.system
+	cp -a $(@D)/.system/. $(BINARIES_DIR)/ui/.system/
 
-	# Move libmsettings.so next to binaries
-	if [ -d $(@D)/.system/minime/lib ]; then \
-		cp -a $(@D)/.system/minime/lib/. $(BINARIES_DIR)/ui/.ui/bin/; \
-	fi
-
-	# Install cores
-	if [ -d $(@D)/.system/minime/cores ]; then \
-		cp -a $(@D)/.system/minime/cores/. $(BINARIES_DIR)/ui/.cores/; \
-	fi
+	# Strip .elf extensions (MinUI convention; Minime expects bare names)
+	cd $(BINARIES_DIR)/ui/.system/minime/bin && for f in *.elf; do \
+		[ -f "$$f" ] && mv -f "$$f" "$$(basename "$$f" .elf)"; done
 
 	# Download and install extras (emulator paks + tools)
 	$(BR2_WGET) -O $(@D)/extras.zip $(MINUI_SITE)/$(MINUI_RELEASE_BASE)-extras.zip
@@ -53,20 +42,17 @@ define MINUI_INSTALL_IMAGES_CMDS
 		cp -a $(@D)/Tools $(BINARIES_DIR)/ui/; \
 	fi
 
-	# launcher entry point; UI-specific env setup
+	# Minimal launch.sh wrapper — MinUI hardcodes its own paths internally.
+	# ui.sh calls the minui binary directly; this wrapper exists as a
+	# convenience entry point for debugging or manual use.
 	printf '%s\n' \
 		'#!/bin/sh' \
-		'export SDCARD_PATH=/mnt/sdcard' \
-		'export SYSTEM_PATH="$$SDCARD_PATH/.ui"' \
-		'export USERDATA_PATH="$$SYSTEM_PATH/config"' \
-		'export CORES_PATH="$$SDCARD_PATH/.cores"' \
-		'export LD_LIBRARY_PATH="$$SYSTEM_PATH/bin"' \
-		'export HOME="$$SDCARD_PATH"' \
 		'killall keymon 2>/dev/null || true' \
-		'[ ! -x "$$SYSTEM_PATH/bin/keymon" ] || "$$SYSTEM_PATH/bin/keymon" > /tmp/keymon.log 2>&1 &' \
-		'exec "$$SYSTEM_PATH/bin/minui"' \
-		> $(BINARIES_DIR)/ui/.ui/launch.sh
-	chmod +x $(BINARIES_DIR)/ui/.ui/launch.sh
+		'MINIME_BINDIR=/mnt/sdcard/.system/minime/bin' \
+		'[ ! -x "$$MINIME_BINDIR/keymon" ] || "$$MINIME_BINDIR/keymon" > /tmp/keymon.log 2>&1 &' \
+		'exec "$$MINIME_BINDIR/minui"' \
+		> $(BINARIES_DIR)/ui/.system/minime/launch.sh
+	chmod +x $(BINARIES_DIR)/ui/.system/minime/launch.sh
 endef
 
 $(eval $(generic-package))
