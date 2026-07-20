@@ -16,7 +16,7 @@ MINUI_DOT=0
 MINUI_VERSION="v${MINUI_DATE}"
 MINUI_PLATFORM=minime
 source="https://github.com/jheronimus/MinUI/releases/download/${MINUI_VERSION}/MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip"
-sha512sums="SKIP"
+sha512sums="54454dcce6f298fbaced2cba012eaa78f2f7d74207c6b34235be1ac729dca3de8575d6f146c1c7cea359a80b6597ff8463950d712863a4df9c587a94a7944d3a  MinUI-20260720-0-base.zip"
 
 build() {
 	cd "$srcdir" || return 1
