@@ -17,6 +17,10 @@ MINUI_LICENSE_FILES = README.txt
 MINUI_DEPENDENCIES =
 MINUI_INSTALL_IMAGES = YES
 
+define MINUI_EXTRACT_CMDS
+	cd $(@D) && unzip -o $(DL_DIR)/minui/$(MINUI_SOURCE)
+endef
+
 define MINUI_INSTALL_IMAGES_CMDS
 	mkdir -p $(BINARIES_DIR)/ui/.ui/bin
 	mkdir -p $(BINARIES_DIR)/ui/.ui/config
