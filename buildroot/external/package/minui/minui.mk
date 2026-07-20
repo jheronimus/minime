@@ -43,6 +43,16 @@ define MINUI_INSTALL_IMAGES_CMDS
 		cp -a $(@D)/.system/minime/cores/. $(BINARIES_DIR)/ui/.cores/; \
 	fi
 
+	# Download and install extras (emulator paks + tools)
+	$(BR2_WGET) -O $(@D)/extras.zip $(MINUI_SITE)/$(MINUI_RELEASE_BASE)-extras.zip
+	cd $(@D) && unzip -o extras.zip
+	if [ -d $(@D)/Emus ]; then \
+		cp -a $(@D)/Emus $(BINARIES_DIR)/ui/; \
+	fi
+	if [ -d $(@D)/Tools ]; then \
+		cp -a $(@D)/Tools $(BINARIES_DIR)/ui/; \
+	fi
+
 	# launcher entry point; UI-specific env setup
 	printf '%s\n' \
 		'#!/bin/sh' \
