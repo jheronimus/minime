@@ -28,7 +28,7 @@ makedepends="
 source="
 	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-${pkgver}.tar.xz
 "
-sha512sums="1c5e7e16c73f4942dcdc1783987e65351259d1f2d4ff39c91182529e2f9e689b62b3df3ec89b61514c473eb13ecb004a3825716b9c583fc41e25fc01fe569b30  linux-7.1.3.tar.xz"
+sha512sums="753b53b3f9a240b5838fe1156ad61f2356e2042941e571450492b5c8c46fd32140aede34fd4b074705650bac503deccec20ad9b8caee9d4c5fdc575401c76cc4  linux-7.1.4.tar.xz"
 
 : "${DTB_BOARD:=rk3566}"
 case "$DTB_BOARD" in
