@@ -79,7 +79,7 @@ jobs:
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: minime-alpine-${{ matrix.board }}-${{ github.sha }}
+          name: minime-alpine-${{ matrix.board }}-${{ matrix.ui }}-${{ github.sha }}
           path: alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.gz
           if-no-files-found: error
           retention-days: 14
