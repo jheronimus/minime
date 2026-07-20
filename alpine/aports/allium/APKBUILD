@@ -4,45 +4,49 @@
 pkgname=allium
 pkgver=1.0.0
 pkgrel=0
-pkgdesc="Allium frontend (Rust) for Minime — Alpine aarch64 musl build"
+pkgdesc="Allium launcher frontend for Minime (prebuilt distribution)"
 url="https://github.com/jheronimus/Allium"
 arch="aarch64"
 license="MIT"
 options="!strip !check"
-makedepends="
-	cargo
-	clang-dev
-	gcc-aarch64
-	binutils-aarch64
-	libretro-headers
-	linux-headers
-	ncurses-dev
-	openssl-dev
-	rust
-"
-export ALLIUM_VERSION=3e2d6095817519437a4f7cf691806cc58a02af7c
-source="allium-$ALLIUM_VERSION.tar.gz::https://github.com/jheronimus/Allium/archive/$ALLIUM_VERSION.tar.gz"
+makedepends="curl unzip"
+conflicts="minui"
+provides="minime-ui"
+
+ALLIUM_DATE=20260720
+ALLIUM_VERSION="v${ALLIUM_DATE}"
+source="https://github.com/jheronimus/Allium/releases/download/${ALLIUM_VERSION}/allium-minime-aarch64.zip"
+sha512sums="SKIP  allium-minime-aarch64.zip"
 
 build() {
-	# Allium needs LIBCLANG_PATH for bindgen, BINDGEN_EXTRA_CLANG_ARGS for
-	# the cross-sysroot, and LIBRETRO_HEADER pointing at libretro-headers's
-	# installed libretro.h.  Alpine's `libretro-headers` package provides
-	# that header.
-	export LIBCLANG_PATH=/usr/lib
-	export LIBRETRO_HEADER=/usr/include/libretro.h
-	export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/aarch64-linux-musl -I/usr/aarch64-linux-musl/usr/include"
-
-	cd "$srcdir/allium-$ALLIUM_VERSION" || return 1
-	cargo build --release --target aarch64-alpine-linux-musl --features minime
+	cd "$srcdir" || return 1
+	unzip -o "allium-minime-aarch64.zip"
 }
 
 package() {
-	local bindir="$pkgdir/var/lib/minime/bin"
-	mkdir -p "$bindir"
+	# Stage the UI payload to /alpine-output/boot/ui for post-image.sh
+	# to consume.  Allium expects .ui/ at SD card root.
+	mkdir -p /alpine-output/boot/ui/.ui
+	cp -a "$srcdir"/.ui/. /alpine-output/boot/ui/.ui/
 
-	# Allium's runtime payload goes to /alpine-output/boot/ui (same as
-	# Image assembly copies the staged UI payload. This APK only stamps the slot.
+	# Apps directory
+	if [ -d "$srcdir"/apps ]; then
+		mkdir -p /alpine-output/boot/ui/apps
+		cp -a "$srcdir"/apps/. /alpine-output/boot/ui/apps/
+	fi
+
+	# .tmp_update (screenshot/say/show helpers)
+	if [ -d "$srcdir"/.tmp_update ]; then
+		mkdir -p /alpine-output/boot/ui/.tmp_update
+		cp -a "$srcdir"/.tmp_update/. /alpine-output/boot/ui/.tmp_update/
+	fi
+
+	# RetroArch
+	if [ -d "$srcdir"/RetroArch ]; then
+		cp -a "$srcdir"/RetroArch /alpine-output/boot/ui/
+	fi
+
+	# Stamp for the Alpine rootfs
+	install -dm755 "$pkgdir/var/lib/minime"
 	install -Dm644 /dev/null "$pkgdir/var/lib/minime/allium.stamp"
 }
-
-sha512sums="d6d1395861fda05ae2629c5b30aa243027cc816a458050260c1d606b2b3a24685229f7f49c191a089bf6eba589aa5d081e9c71f3ca59e05b7b2afcfc1f99e49f  allium-3e2d6095817519437a4f7cf691806cc58a02af7c.tar.gz"

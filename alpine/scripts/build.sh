@@ -158,7 +158,7 @@ build_local_apks() {
 	# All other local packages share one abuild run: each APKBUILD produces
 	# an APK that lands in REPODEST.  Order matters: tinykernel only feeds
 	# the SD payload, so the rootfs list is everything else.
-	ALPINE_PKGS="libretro-headers bootsplash \
+	ALPINE_PKGS="bootsplash \
 		fatresize minime-overlay minui preloaded-roms"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
