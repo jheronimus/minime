@@ -6,7 +6,7 @@
 
 set -eu
 
-UI_LAUNCHER="/mnt/sdcard/.ui/launch.sh"
+UI_BIN="/mnt/sdcard/.system/minime/bin/minui"
 DAEMON=ui
 
 start() {
@@ -29,17 +29,10 @@ start() {
 				sleep 2
 			done
 		) &
-		echo $! > /tmp/watch_jack.pid
+		echo $! >/tmp/watch_jack.pid
 	fi
 
-	# Minime SD-card layout contract
 	export HOME=/mnt/sdcard
-	export SDCARD_PATH=/mnt/sdcard
-	export ROMS_PATH="$SDCARD_PATH/roms"
-	export SAVES_PATH="$SDCARD_PATH/saves"
-	export BIOS_PATH="$SDCARD_PATH/bios"
-	export CORES_PATH="$SDCARD_PATH/.cores"
-	export UI_PATH="$SDCARD_PATH/.ui"
 
 	# Set up dynamic .asoundrc based on traits sound_card
 	TRAITS_FILE="/mnt/sdcard/.minime/traits"
@@ -48,7 +41,7 @@ start() {
 		sound_card=$(grep "^sound_card=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r')
 		if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
 			printf "pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n" \
-				"$sound_card" "$sound_card" > "$ASOUNDRC_FILE"
+				"$sound_card" "$sound_card" >"$ASOUNDRC_FILE"
 		else
 			rm -f "$ASOUNDRC_FILE"
 		fi
@@ -56,7 +49,7 @@ start() {
 
 	# Ensure backlight is visible until userspace takes over
 	for bl in /sys/class/backlight/*/brightness; do
-		[ -w "$bl" ] && echo 5 > "$bl" 2>/dev/null || true
+		[ -w "$bl" ] && echo 5 >"$bl" 2>/dev/null || true
 	done
 
 	# Clear GPU failure boot-loop sentinel and stale next commands
@@ -72,10 +65,10 @@ start() {
 				exit 0
 			fi
 
-			if [ -x "$UI_LAUNCHER" ]; then
-				"$UI_LAUNCHER" < /dev/console > /tmp/ui.log 2>&1
+			if [ -x "$UI_BIN" ]; then
+				"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
 			else
-				echo "Missing UI launcher: $UI_LAUNCHER" > /tmp/ui.log
+				echo "Missing UI binary: $UI_BIN" >/tmp/ui.log
 				sleep 5
 				continue
 			fi
@@ -83,14 +76,14 @@ start() {
 			if [ -f /tmp/next ]; then
 				CMD=$(cat /tmp/next)
 				rm -f /tmp/next
-				eval "$CMD" < /dev/console > /dev/console 2>&1
+				eval "$CMD" </dev/console >/dev/console 2>&1
 			else
 				sleep 3600
 				exit 0
 			fi
 		done
 	) &
-	echo $! > /tmp/ui_loop.pid
+	echo $! >/tmp/ui_loop.pid
 }
 
 stop() {
@@ -103,16 +96,23 @@ stop() {
 		kill "$(cat /tmp/ui_loop.pid)" 2>/dev/null || true
 		rm -f /tmp/ui_loop.pid
 	fi
-	killall minui minarch settings keymon alliumd allium-launcher allium-menu play \
+	killall minui minarch keymon clock minput syncsettings say \
 		2>/dev/null || true
 	sleep 0.5
-	killall -9 minui minarch settings keymon alliumd allium-launcher allium-menu play \
+	killall -9 minui minarch keymon clock minput syncsettings say \
 		2>/dev/null || true
 }
 
 case "${1:-}" in
-	start)          start ;;
-	stop)           stop ;;
-	restart|reload) stop; sleep 1; start ;;
-	*) echo "Usage: $0 {start|stop|restart|reload}" >&2; exit 1 ;;
+start) start ;;
+stop) stop ;;
+restart | reload)
+	stop
+	sleep 1
+	start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart|reload}" >&2
+	exit 1
+	;;
 esac

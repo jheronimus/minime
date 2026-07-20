@@ -111,30 +111,42 @@ echo "Preparing single FAT32 partition filesystem staging..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${USERDATA_STAGE}/.minime/config"
 mkdir -p "${USERDATA_STAGE}/.minime/devices"
-mkdir -p "${USERDATA_STAGE}/.ui" "${USERDATA_STAGE}/.ui/config"
-mkdir -p "${USERDATA_STAGE}/.cores" "${USERDATA_STAGE}/.cores/config"
+mkdir -p "${USERDATA_STAGE}/.system" "${USERDATA_STAGE}/.userdata"
 
 # Create standard roms, bios, and saves folder structure on SD card root
-mkdir -p "${USERDATA_STAGE}/roms"
-mkdir -p "${USERDATA_STAGE}/bios"
-mkdir -p "${USERDATA_STAGE}/saves"
+# (MinUI expects capitalized Roms/Saves/Bios — safe on case-insensitive FAT32)
+mkdir -p "${USERDATA_STAGE}/Roms"
+mkdir -p "${USERDATA_STAGE}/Bios"
+mkdir -p "${USERDATA_STAGE}/Saves"
+
+# Create per-system roms/saves directories.
+# MinUI uses "Display Name (TAG)" convention; we populate a minimal set
+# for the built-in cores — MinUI will scan whatever exists at runtime.
+for system in \
+	"Game Boy (GB)" "Game Boy Color (GBC)" "Game Boy Advance (GBA)" \
+	"Nintendo Entertainment System (FC)" \
+	"Super Nintendo Entertainment System (SFC)" \
+	"Sega Genesis (MD)" "Sega Game Gear (GG)" "Sega Master System (SMS)" \
+	"TurboGrafx-16 (PCE)" "Sony PlayStation (PS)" \
+	"Sega Saturn (SS)" "Neo Geo CD (NGCD)"; do
+	mkdir -p "${USERDATA_STAGE}/Roms/${system}"
+	mkdir -p "${USERDATA_STAGE}/Saves/${system% (*}" # tag only: e.g. "GB"
+done
+
+# Arcade (FBNeo) — no parenthetical tag needed
+mkdir -p "${USERDATA_STAGE}/Roms/Arcade"
+mkdir -p "${USERDATA_STAGE}/Saves/ARC"
+
+# Create per-tag Bios directories that minarch expects
+for tag in GB GBC GBA FC SFC MD GG SMS PCE PS SS ARC; do
+	mkdir -p "${USERDATA_STAGE}/Bios/${tag}"
+done
 
 MINIME_SOURCE_ROOT="${MINIME_SOURCE_ROOT:-}"
 [ -n "${MINIME_SOURCE_ROOT}" ] || {
 	echo "ERROR: MINIME_SOURCE_ROOT is not set" >&2
 	exit 1
 }
-
-for system in gb gbc gba nes snes md gg sms pce psx ss arc neocd; do
-	mkdir -p "${USERDATA_STAGE}/roms/${system}"
-	mkdir -p "${USERDATA_STAGE}/saves/${system}"
-done
-
-# Commented out systems (no emulators shipped yet):
-# for system in lynx ngp vb pkm pico8 wswan mduck watara; do
-# 	mkdir -p "${USERDATA_STAGE}/roms/${system}"
-# 	mkdir -p "${USERDATA_STAGE}/saves/${system}"
-# done
 
 # Prepopulate core mapping contract
 cp -f "${MINIME_SOURCE_ROOT}/board/common/config/cores.cfg" \
@@ -426,7 +438,7 @@ mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
-for item in .minime .ui .cores; do
+for item in .minime .system .userdata; do
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
 		-s "${USERDATA_STAGE}/${item}" ::
 	MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}"

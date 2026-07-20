@@ -31,28 +31,17 @@ package() {
 	# Stage the UI payload to /alpine-output/boot/ui for post-image.sh
 	# to consume.  The Alpine rootfs does not contain minui binaries;
 	# they live on the SD card's FAT32 partition.
-	mkdir -p /alpine-output/boot/ui/.ui
-	cp -a "$srcdir"/.system/${MINUI_PLATFORM}/. /alpine-output/boot/ui/.ui/
+	# MinUI expects .system/minime/ at SD card root; post-image.sh copies
+	# boot/ui/ → SD card root, so we stage under that prefix.
+	mkdir -p /alpine-output/boot/ui/.system
+	cp -a "$srcdir"/.system/. /alpine-output/boot/ui/.system/
 
 	# Strip .elf extensions (MinUI convention; Minime expects bare names)
-	for f in /alpine-output/boot/ui/.ui/bin/*.elf; do
+	for f in /alpine-output/boot/ui/.system/minime/bin/*.elf; do
 		[ -f "$f" ] && mv -f "$f" "${f%.elf}"
 	done
 
-	# Move libmsettings.so next to binaries
-	if [ -d "$srcdir"/.system/${MINUI_PLATFORM}/lib ]; then
-		cp -a "$srcdir"/.system/${MINUI_PLATFORM}/lib/. \
-			/alpine-output/boot/ui/.ui/bin/
-	fi
-
-	# Install cores
-	if [ -d "$srcdir"/.system/${MINUI_PLATFORM}/cores ]; then
-		mkdir -p /alpine-output/boot/ui/.cores
-		cp -a "$srcdir"/.system/${MINUI_PLATFORM}/cores/. \
-			/alpine-output/boot/ui/.cores/
-	fi
-
-	# Install extras (emulator paks + tools)
+	# Install extras (emulator paks + tools) to SD card root
 	if [ -d "$srcdir"/Emus ]; then
 		cp -a "$srcdir"/Emus /alpine-output/boot/ui/
 	fi
