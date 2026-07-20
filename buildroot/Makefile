@@ -22,6 +22,7 @@ BUILDROOT_DL_DIR := $(HOME)/.buildroot-dl
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
 MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
+UI ?= minui
 
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 LOG_DIR := $(CURDIR)/logs
@@ -88,7 +89,8 @@ defconfig_internal:
 		-O $(BUILDROOT_OUTPUT_DIR) \
 		-m \
 		external/configs/minime_common.config \
-		external/configs/minime_$(BOARD).config 2>&1 | tee "$$LOG_FILE" && \
+		external/configs/minime_$(BOARD).config \
+		external/configs/minime_$(UI).config 2>&1 | tee "$$LOG_FILE" && \
 	$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"
 
 image: $(BUILDROOT_STAMP) defconfig
