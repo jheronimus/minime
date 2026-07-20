@@ -108,10 +108,11 @@ def update_apkbuild(path, version, target):
         if isinstance(dl_filenames, str):
             dl_filenames = [dl_filenames]
 
+        major = version.split('.')[0] if '.' in version else version
         sha_lines = []
         for dl_url, dl_filename in zip(dl_urls, dl_filenames):
-            formatted_url = dl_url.format(version=version)
-            formatted_filename = dl_filename.format(version=version)
+            formatted_url = dl_url.format(version=version, version_major=major)
+            formatted_filename = dl_filename.format(version=version, version_major=major)
             sha512 = compute_hash(formatted_url, "sha512")
             if sha512:
                 sha_lines.append(f"{sha512}  {formatted_filename}")
@@ -138,8 +139,9 @@ def update_buildroot_hash(path, version, target):
     if not (dl_url and dl_filename):
         return
 
-    formatted_url = dl_url.format(version=version)
-    formatted_filename = dl_filename.format(version=version)
+    major = version.split('.')[0] if '.' in version else version
+    formatted_url = dl_url.format(version=version, version_major=major)
+    formatted_filename = dl_filename.format(version=version, version_major=major)
     
     sha256 = compute_hash(formatted_url, "sha256")
     if not sha256:
@@ -189,7 +191,8 @@ def process_package(schema_path):
         
         if ttype == "regex":
             pattern = target["pattern"]
-            replacement = target["replacement"].format(version=version)
+            major = version.split('.')[0] if '.' in version else version
+            replacement = target["replacement"].format(version=version, version_major=major)
             update_file_regex(path, pattern, replacement)
         elif ttype == "alpine_apkbuild":
             update_apkbuild(path, version, target)

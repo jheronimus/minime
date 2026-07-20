@@ -4,7 +4,9 @@
   "targets": [
     {
       "path": "alpine/aports/tinykernel/APKBUILD",
-      "type": "alpine_apkbuild"
+      "type": "alpine_apkbuild",
+      "download_url": "https://cdn.kernel.org/pub/linux/kernel/v{version_major}.x/linux-{version}.tar.xz",
+      "download_filename": "linux-{version}.tar.xz"
     },
     {
       "path": "buildroot/external/configs/minime_common.config",
