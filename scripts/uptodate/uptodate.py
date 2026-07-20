@@ -97,29 +97,30 @@ def update_apkbuild(path, version, target):
     with open(path, "r") as f:
         content = f.read()
 
-    # Update pkgver
-    content = re.sub(r"^pkgver=\d+\.\d+\.\d+", f"pkgver={version}", content, flags=re.MULTILINE)
-    # Also handle commit shas if the version is a commit
-    if len(version) == 40:
-        content = re.sub(r"^pkgver=[a-fA-F0-9]{40}", f"pkgver={version}", content, flags=re.MULTILINE)
+    # Update pkgver (generic replacement)
+    content = re.sub(r"^pkgver=.*", f"pkgver={version}", content, flags=re.MULTILINE)
 
-    dl_url = target.get("download_url")
-    dl_filename = target.get("download_filename")
-    if dl_url and dl_filename:
-        formatted_url = dl_url.format(version=version)
-        formatted_filename = dl_filename.format(version=version)
-        
-        # Calculate SHA512
-        sha512 = compute_hash(formatted_url, "sha512")
-        if sha512:
-            new_sha_line = f'sha512sums="{sha512}  {formatted_filename}"'
-            # Replace the old sha512sums line matching the filename pattern
-            # For simplicity, we search for sha512sums="... [filename]"
-            escaped_filename = re.escape(formatted_filename)
-            escaped_filename = re.sub(r'\\\d+\\\.\\\d+\\\.\\\d+', r'.*', escaped_filename) # make version wildcard
-            pattern = r'^sha512sums="[a-f0-9]{128}\s+.*"'
-            # If there's a custom line, we can just replace the whole sha512sums line if it contains the filename
-            content = re.sub(r'^sha512sums=".*"', new_sha_line, content, flags=re.MULTILINE)
+    dl_urls = target.get("download_url")
+    dl_filenames = target.get("download_filename")
+    if dl_urls and dl_filenames:
+        if isinstance(dl_urls, str):
+            dl_urls = [dl_urls]
+        if isinstance(dl_filenames, str):
+            dl_filenames = [dl_filenames]
+
+        sha_lines = []
+        for dl_url, dl_filename in zip(dl_urls, dl_filenames):
+            formatted_url = dl_url.format(version=version)
+            formatted_filename = dl_filename.format(version=version)
+            sha512 = compute_hash(formatted_url, "sha512")
+            if sha512:
+                sha_lines.append(f"{sha512}  {formatted_filename}")
+
+        if sha_lines:
+            new_sha_content = "\n".join(sha_lines)
+            new_sha_line = f'sha512sums="{new_sha_content}"'
+            # Match multi-line sha512sums="..." block cleanly
+            content = re.sub(r'^sha512sums="[\s\S]*?"', new_sha_line, content, flags=re.MULTILINE)
 
     with open(path, "w") as f:
         f.write(content)

@@ -2,7 +2,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=tinykernel
-pkgver=7.1.3
+pkgver=7.1.4
 pkgrel=0
 pkgdesc="Minime minimal Linux kernel + DTBs for Alpine"
 url="https://github.com/gregkh/linux"

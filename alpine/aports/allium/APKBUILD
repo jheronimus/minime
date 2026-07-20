@@ -2,7 +2,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=allium
-pkgver=1.0.0
+pkgver=20260720
 pkgrel=0
 pkgdesc="Allium launcher frontend for Minime (prebuilt distribution)"
 url="https://github.com/jheronimus/Allium"
@@ -13,9 +13,7 @@ makedepends="curl unzip"
 depends="!minui"
 provides="minime-ui"
 
-ALLIUM_DATE=20260720
-ALLIUM_VERSION="v${ALLIUM_DATE}"
-source="https://github.com/jheronimus/Allium/releases/download/${ALLIUM_VERSION}/allium-minime-aarch64.zip"
+source="https://github.com/jheronimus/Allium/releases/download/v${pkgver}/allium-minime-aarch64.zip"
 sha512sums="be037fe0dac532dfb0ddae9b2ea68436094b77020eceb34bef1630c2e2b7721a8b6c0c4f1bbb7b468f7dee1dcfefc7b9764342e8f505d548b564d66ba2e3b828  allium-minime-aarch64.zip"
 
 build() {

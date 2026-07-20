@@ -1,0 +1,20 @@
+{
+  "name": "allium",
+  "source_type": "github_release",
+  "github_repo": "jheronimus/Allium",
+  "strip_v_prefix": true,
+  "targets": [
+    {
+      "path": "alpine/aports/allium/APKBUILD",
+      "type": "alpine_apkbuild",
+      "download_url": "https://github.com/jheronimus/Allium/releases/download/v{version}/allium-minime-aarch64.zip",
+      "download_filename": "allium-minime-aarch64.zip"
+    },
+    {
+      "path": "buildroot/external/package/allium/allium.mk",
+      "type": "regex",
+      "pattern": "^ALLIUM_VERSION = .*",
+      "replacement": "ALLIUM_VERSION = v{version}"
+    }
+  ]
+}

@@ -74,6 +74,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Run uptodate.py (self-healing)
+        run: python3 scripts/uptodate/uptodate.py
+        working-directory: .
+
       - name: Build Alpine builder container & image
         run: |
           make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}

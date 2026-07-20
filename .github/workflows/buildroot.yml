@@ -109,6 +109,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Run uptodate.py (self-healing)
+        run: python3 scripts/uptodate/uptodate.py
+        working-directory: .
+
       - name: Restore dl cache
         uses: actions/cache@v4
         with:
