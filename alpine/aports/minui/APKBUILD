@@ -10,6 +10,8 @@ arch="aarch64"
 license="MIT"
 options="!strip !check"
 makedepends="curl unzip"
+conflicts="allium"
+provides="minime-ui"
 
 MINUI_DATE=20260720
 MINUI_DOT=0
