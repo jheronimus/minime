@@ -54,7 +54,7 @@ fi
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
 FINAL_IMG="${BINARIES_DIR}/minime-${SOC_NAME}.img"
-FINAL_IMG_GZ="${FINAL_IMG}.gz"
+FINAL_IMG_XZ="${FINAL_IMG}.xz"
 
 cleanup() {
 	rm -rf "${ROOTPATH_TMP}"
@@ -421,7 +421,7 @@ fi
 
 echo "Running genimage..."
 rm -rf "${GENIMAGE_TMP}"
-rm -f "${FINAL_IMG}" "${FINAL_IMG_GZ}"
+rm -f "${FINAL_IMG}" "${FINAL_IMG_XZ}"
 
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
 sed -i "s/__IMAGE_NAME__/minime-${SOC_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
@@ -439,5 +439,5 @@ if [ ! -f "${FINAL_IMG}" ]; then
 fi
 
 echo "Compressing final image..."
-gzip -f -9 "${FINAL_IMG}"
-echo "Image produced: ${FINAL_IMG_GZ}"
+xz -f -T0 "${FINAL_IMG}"
+echo "Image produced: ${FINAL_IMG_XZ}"

@@ -405,7 +405,7 @@ assemble_image() {
 		"${POST_IMAGE}" -c "${GENIMAGE_CFG}" -b "${MINIME_ROOT}/buildroot/external/board/${BOARD}" \
 		-d alpine -o "${ALPINE_OUTPUT_DIR}/images"
 
-	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.gz"
+	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.xz"
 	[ -f "${FINAL_IMG}" ] || die "post-image.sh did not produce ${FINAL_IMG}"
 	log "image: ${FINAL_IMG}"
 }

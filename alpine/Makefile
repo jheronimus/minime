@@ -65,7 +65,7 @@ image: prepare
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/alpine /workspace/alpine/scripts/build.sh all" \
 		2>&1 | tee "$$LOG_FILE"
 	@mkdir -p $(CURDIR)/out/$(BOARD)
-	@cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.gz $(CURDIR)/out/$(BOARD)/
+	@cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.xz $(CURDIR)/out/$(BOARD)/
 
 clean:
 	@rm -rf $(LOG_DIR) $(CURDIR)/out/$(BOARD) $(ALPINE_OUTPUT_DIR)
