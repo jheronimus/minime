@@ -1,5 +1,5 @@
 #!/bin/sh
-# shellcheck shell=sh disable=SC3043
+# shellcheck shell=sh disable=SC3043,SC3045
 # Minime Alpine image builder.
 #
 # Pipeline:
@@ -54,6 +54,19 @@ rk3566 | rk3326 | h700) ;;
 *) die "unsupported BOARD=${BOARD} (supported: rk3566, rk3326, h700)" ;;
 esac
 export DTB_BOARD="${BOARD}"
+
+# macOS Docker Desktop inherits the host kernel's per-process fd limit
+# (kern.maxfilesperproc, default 61440).  The Linux kernel build opens
+# thousands of files and will fail with "No file descriptors available"
+# once that ceiling is hit.  Warn early so the user can raise it:
+#   sudo sysctl kern.maxfilesperproc=1048576 kern.maxfiles=1048576
+if [ "$(uname)" = "Linux" ] && grep -qi docker /proc/1/cgroup 2>/dev/null; then
+	fd_limit=$(ulimit -n 2>/dev/null || echo 0)
+	if [ "$fd_limit" -lt 100000 ] 2>/dev/null; then
+		log "WARNING: per-process fd limit is ${fd_limit} — kernel build may fail."
+		log "  On macOS host, run: sudo sysctl kern.maxfilesperproc=1048576 kern.maxfiles=1048576"
+	fi
+fi
 
 #──────────────────────────────────────────────────────────────────────────────
 # 1. Resolve + verify minirootfs

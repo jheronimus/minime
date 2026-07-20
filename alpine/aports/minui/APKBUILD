@@ -11,7 +11,7 @@ license="MIT"
 options="!strip !check"
 makedepends="curl unzip"
 
-MINUI_DATE=20260719
+MINUI_DATE=20260720
 MINUI_DOT=0
 MINUI_VERSION="v${MINUI_DATE}"
 MINUI_PLATFORM=minime
