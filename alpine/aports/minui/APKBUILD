@@ -15,13 +15,16 @@ MINUI_DATE=20260720
 MINUI_DOT=0
 MINUI_VERSION="v${MINUI_DATE}"
 MINUI_PLATFORM=minime
-source="https://github.com/jheronimus/MinUI/releases/download/${MINUI_VERSION}/MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip"
-sha512sums="54454dcce6f298fbaced2cba012eaa78f2f7d74207c6b34235be1ac729dca3de8575d6f146c1c7cea359a80b6597ff8463950d712863a4df9c587a94a7944d3a  MinUI-20260720-0-base.zip"
+source="https://github.com/jheronimus/MinUI/releases/download/${MINUI_VERSION}/MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip
+	https://github.com/jheronimus/MinUI/releases/download/${MINUI_VERSION}/MinUI-${MINUI_DATE}-${MINUI_DOT}-extras.zip"
+sha512sums="54454dcce6f298fbaced2cba012eaa78f2f7d74207c6b34235be1ac729dca3de8575d6f146c1c7cea359a80b6597ff8463950d712863a4df9c587a94a7944d3a  MinUI-20260720-0-base.zip
+b6183b816031d1a518c986cb2f41a2c7668f4888a909b3b4cb9d42b6c7014e51ad5519abd9bba6f97dacbc87a89b310551a0c49d6073f0a8407c00325704bb7c  MinUI-20260720-0-extras.zip"
 
 build() {
 	cd "$srcdir" || return 1
 	unzip -o "MinUI-${MINUI_DATE}-${MINUI_DOT}-base.zip"
 	unzip -o MinUI.zip
+	unzip -o "MinUI-${MINUI_DATE}-${MINUI_DOT}-extras.zip"
 }
 
 package() {
@@ -47,6 +50,14 @@ package() {
 		mkdir -p /alpine-output/boot/ui/.cores
 		cp -a "$srcdir"/.system/${MINUI_PLATFORM}/cores/. \
 			/alpine-output/boot/ui/.cores/
+	fi
+
+	# Install extras (emulator paks + tools)
+	if [ -d "$srcdir"/Emus ]; then
+		cp -a "$srcdir"/Emus /alpine-output/boot/ui/
+	fi
+	if [ -d "$srcdir"/Tools ]; then
+		cp -a "$srcdir"/Tools /alpine-output/boot/ui/
 	fi
 
 	# Stamp for the Alpine rootfs
