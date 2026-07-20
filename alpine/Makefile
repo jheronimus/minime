@@ -14,6 +14,7 @@ ALPINE_REPOS_DIR := $(HOME)/alpine-repos
 ALPINE_CCACHE_DIR := $(HOME)/alpine-ccache
 ALPINE_DL_DIR := $(HOME)/alpine-dl
 ALPINE_JOBS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+UI ?= minui
 LOG_DIR := $(CURDIR)/logs
 ALPINE_BUILD_LOG := $(LOG_DIR)/alpine-image-$(BOARD).log
 
@@ -61,7 +62,7 @@ shell: prepare
 image: prepare
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
 	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
-		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) ALPINE_DIR=/workspace/alpine /workspace/alpine/scripts/build.sh all" \
+		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/alpine /workspace/alpine/scripts/build.sh all" \
 		2>&1 | tee "$$LOG_FILE"
 	@mkdir -p $(CURDIR)/out/$(BOARD)
 	@cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.gz $(CURDIR)/out/$(BOARD)/

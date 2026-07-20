@@ -55,13 +55,14 @@ jobs:
           echo "boards=${boards}" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build Alpine ${{ matrix.board }}
+    name: Build Alpine ${{ matrix.board }} (${{ matrix.ui }})
     needs: compute-matrix
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
+        ui: [minui, allium]
     defaults:
       run:
         working-directory: alpine
@@ -73,7 +74,7 @@ jobs:
 
       - name: Build Alpine builder container & image
         run: |
-          make image BOARD=${{ matrix.board }}
+          make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4

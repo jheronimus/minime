@@ -42,6 +42,7 @@ ALPINE_BOARD_DIR="${ALPINE_DIR}/board"
 
 BOARD="${BOARD:-rk3566}"
 ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
+UI="${UI:-minui}"
 
 log() { printf '[alpine] %s\n' "$*" >&2; }
 die() {
@@ -155,11 +156,16 @@ build_local_apks() {
 	# directly, not installed as a rootfs package.
 	build_tinykernel
 
+	case "${UI}" in
+	minui | allium) ;;
+	*) die "unsupported UI=${UI} (supported: minui, allium)" ;;
+	esac
+
 	# All other local packages share one abuild run: each APKBUILD produces
 	# an APK that lands in REPODEST.  Order matters: tinykernel only feeds
 	# the SD payload, so the rootfs list is everything else.
 	ALPINE_PKGS="bootsplash \
-		fatresize minime-overlay minui preloaded-roms"
+		fatresize minime-overlay ${UI} preloaded-roms"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
