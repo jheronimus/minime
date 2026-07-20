@@ -22,7 +22,6 @@ ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
 endif
 
 RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 --platform linux/arm64 \
-	--ulimit nofile=1048576:1048576 \
 	-e HOME=/home/builder \
 	-v $(ROOT_DIR):/workspace \
 	-v $(ALPINE_OUTPUT_DIR):/alpine-output \
