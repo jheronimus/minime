@@ -16,7 +16,7 @@ provides="minime-ui"
 ALLIUM_DATE=20260720
 ALLIUM_VERSION="v${ALLIUM_DATE}"
 source="https://github.com/jheronimus/Allium/releases/download/${ALLIUM_VERSION}/allium-minime-aarch64.zip"
-sha512sums="SKIP  allium-minime-aarch64.zip"
+sha512sums="d4bee5b867706095e8e9e50a33077e8b69f094d465a9355fb5801410fa37c9be7498c634294814f7c270bc8ce83bcf92056ca124826aa39184e8a622e53d0bd9  allium-minime-aarch64.zip"
 
 build() {
 	cd "$srcdir" || return 1
