@@ -16,7 +16,7 @@ It comes in two flavors:
 
 1) **Alpine**
 
-Very fast to build (basically only needs to build the kernel and bootloaders), simple, uses busybox and has other traits of a nice embedded OS.
+Very fast to build (basically only needs to build the kernel), simple, uses busybox and has other traits of a nice embedded OS.
 
 But Alpine is limited by musl, so has issues with proprietary parts like libmali, drastic, etc. Also optimized for size, not performance — think Os optimization, no jemmaloc, etc. However, Github builds Alpine images of Minime in roughly 10 minutes for all platforms, so it's the main platform for the project.
 
