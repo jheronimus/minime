@@ -12,8 +12,8 @@ options="!strip !check"
 makedepends="
 	autoconf
 	automake
-	binutils-aarch64
-	gcc-aarch64
+	
+	
 	libtool
 	linux-headers
 	parted-dev

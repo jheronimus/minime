@@ -18,6 +18,8 @@
 
 set -eu
 
+ulimit -n 65536 2>/dev/null || true
+
 # Wrapper to allow abuild to run as root within container
 abuild() {
 	/usr/bin/abuild -F "$@"
@@ -227,7 +229,7 @@ build_tinykernel() {
 	# straight to the package stage in fakeroot, which then fails
 	# because the source was never unpacked.
 	log "abuild: tinykernel"
-	MAKEFLAGS="-j${ALPINE_JOBS}" \
+	JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
 		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 
 	# Stage the kernel artifacts for post-image.sh to consume.
@@ -258,8 +260,12 @@ assemble_rootfs() {
 	[ -f "${WORLD_COMMON}" ] || die "missing ${WORLD_COMMON}"
 	[ -f "${WORLD_BOARD}" ] || die "missing ${WORLD_BOARD}"
 
+	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	chmod -R +w "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
+	rm -rf "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
 	mkdir -p "${ALPINE_ROOTFS_DIR}"
-	rm -rf "${ALPINE_ROOTFS_DIR:?}/"*
 	tar -xf "${MINIROOTFS_TAR}" -C "${ALPINE_ROOTFS_DIR}"
 
 	# Build a local aports index so apk can resolve minime-overlay etc. from
@@ -389,8 +395,9 @@ assemble_image() {
 	# Build a rootfs.tar that post-image.sh expects in BINARIES_DIR (images/).
 	# Exclude proc/sys/dev: lazy umount may not have fully settled yet and
 	# these directories should never be archived anyway.
+	chmod -R a+r "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
 	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf "${IMG_BIN}/rootfs.tar" \
-		--exclude="./proc/*" --exclude="./sys/*" --exclude="./dev/*" .)
+		--exclude="./proc/*" --exclude="./sys/*" --exclude="./dev/*" .) || [ -f "${IMG_BIN}/rootfs.tar" ]
 
 	# Hand off to the image assembly script.  -d alpine switches to the
 	# distro-qualified output name.

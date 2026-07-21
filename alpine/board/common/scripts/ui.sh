@@ -78,9 +78,21 @@ start() {
 			fi
 
 			if [ -n "${UI_BIN:-}" ] && [ -x "$UI_BIN" ]; then
+				if [ -d /mnt/sdcard ]; then
+					printf '[UI %s] Executing %s (%s)\n' \
+						"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
+					sync 2>/dev/null || true
+				fi
 				"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
+				[ -d /mnt/sdcard ] && cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
 			else
 				echo "No UI binary found" >/tmp/ui.log
+				if [ -d /mnt/sdcard ]; then
+					printf '[UI %s] ERROR: No UI binary found\n' \
+						"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+					cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
+					sync 2>/dev/null || true
+				fi
 				sleep 5
 				continue
 			fi
