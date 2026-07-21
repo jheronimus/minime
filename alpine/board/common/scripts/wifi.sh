@@ -130,6 +130,12 @@ log_failure_diagnostics() {
 			printf '%s\n' "wpa_cli missing"
 		fi
 	} >> "${diagnostic_logfile}"
+	if [ -d /mnt/sdcard ]; then
+		cp -f "${diagnostic_logfile}" /mnt/sdcard/wifi.diagnostics 2>/dev/null || true
+		printf '[WIFI %s] startup failed: %s; diagnostics in /mnt/sdcard/wifi.diagnostics\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
 	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
 	echo "wifi: startup failed: ${reason}" >&2
 }
@@ -226,6 +232,11 @@ start_background() {
 	fi
 
 	logger -t wifi "connection established with IP" 2>/dev/null || true
+	if [ -d /mnt/sdcard ]; then
+		printf '[WIFI %s] Connection established with IP\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
 	return 0
 }
 

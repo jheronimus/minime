@@ -72,5 +72,10 @@ start() {
 		tr_write_section device "$tr_devfile"
 	} > "$tr_tmp"
 	mv "$tr_tmp" "$tr_tfile"
+	if [ -d /mnt/sdcard ]; then
+		printf '[TRAITS %s] Model: %s, Device file: %s\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "$tr_model" "${tr_devfile##*/}" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
 	eend 0 " (${tr_devfile##*/})"
 }

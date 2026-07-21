@@ -10,8 +10,8 @@ arch="aarch64"
 license="MIT"
 options="!strip"
 makedepends="
-	gcc-aarch64
-	binutils-aarch64
+	
+	
 	sdl2-dev
 	linux-headers
 "
