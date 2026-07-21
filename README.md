@@ -1,5 +1,7 @@
 # Minime is a minimal Linux firmware for Anbernic handhelds
 
+*Disclaimer*: this is an experimental personal project, and it's not really meant for daily usage (at least yet). AI has been used for maintaining the repo and automation. Use at your own risk, no support is offered.
+
 The goal of Minime is to provide a simple foundation to play around with different UIs and ideas on Anbernic handhelds without having to rely on the stock firmware.
 
 It is structured as a single FAT32 partition with a read-only erofs image, which holds the immutable base system. In theory, this should make it easier to port firmwares designed for the stock OS — but Minime is built on mainline Linux kernel and up-to-date components. Plus, the whole system being a single file on the disk should make updates much easier.
