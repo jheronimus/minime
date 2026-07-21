@@ -22,7 +22,7 @@ But Alpine is limited by musl, so has issues with proprietary parts like libmali
 
 2) **Buildroot**
 
-Builds almost everything from source. Panfrost pulls LLVM stack that takes hours to build, so Buildroot images use libmali. I haven't figured out libmali for H700 devices on mainline kernel, so only RK3326 and RK3566 are being built for now.
+Builds almost everything from source. Panfrost pulls LLVM stack that takes hours to build, so Buildroot images use libmali. This allows them to build in under 30 minutes. I haven't figured out libmali for H700 devices on mainline kernel, so only RK3326 and RK3566 are being built for now.
 
 So in theory once I'm glad with the features and the hardware support and get to a point where rebuilds are not that frequent, Buildroot becomes the new main.
 
