@@ -85,7 +85,7 @@ zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minime-overlay   filesystem layout + OpenRC services + trait payload
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
-# preloaded-roms   free / shareware ROMs
+preloaded-roms
 # bootsplash       boot splash helper
 # fatresize        FAT32 expansion
 # libretro-headers  libretro.h
