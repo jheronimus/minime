@@ -167,9 +167,9 @@ deploy image disk_device:
         sleep 2
 
         # Find partition mount point dynamically
-        mount_point=$(mount | grep -E "^${device}s[0-9]+" | head -n 1 | awk -F ' on ' '{print $2}' | awk -F ' \(' '{print $1}')
+        mount_point=$(mount | grep -E "^${device}s[0-9]+" | head -n 1 | sed 's/.* on //' | sed 's/ (.*//')
         if [ -z "${mount_point}" ]; then
-            mount_point=$(mount | grep -i 'minime' | head -n 1 | awk -F ' on ' '{print $2}' | awk -F ' \(' '{print $1}')
+            mount_point=$(mount | grep -i 'minime' | head -n 1 | sed 's/.* on //' | sed 's/ (.*//')
         fi
 
         if [ -n "${mount_point}" ] && [ -d "${mount_point}" ]; then
