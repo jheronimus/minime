@@ -99,11 +99,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Rename and Upload to Nightly Release
+      - name: Rename and Upload to Testing Release
         run: |
           cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz ../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
           cd ..
-          gh release create nightly --title "Nightly Builds" --notes "Automatically updated on each push" || true
-          gh release upload nightly minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
+          gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
+          gh release upload testing minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

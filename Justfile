@@ -102,7 +102,7 @@ install-hooks:
 
 # ── Image Management ──────────────────────────────────────────────────────────
 
-# Fetch the latest nightly image for a specific OS, board, and UI option
+# Fetch the latest testing image for a specific OS, board, and UI option
 fetch os board ui:
     #!/usr/bin/env sh
     set -eu
@@ -125,7 +125,7 @@ fetch os board ui:
         filename="minime-buildroot-{{board}}-{{ui}}.img.xz"
     fi
 
-    url="https://github.com/jheronimus/minime/releases/download/nightly/${filename}"
+    url="https://github.com/jheronimus/minime/releases/download/testing/${filename}"
     mkdir -p downloads
     dest="downloads/${filename}"
     img="downloads/${filename%.xz}"
