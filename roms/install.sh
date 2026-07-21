@@ -32,29 +32,30 @@ log "Installing ROMs to ${DEST_DIR} for UI: ${UI_TYPE}..."
 mkdir -p "${DEST_DIR}/Roms"
 
 # System mappings
-# Format: short_name|minui_name
+# Format: short_name|minui_name|allium_name
 mappings="
-gb|Game Boy (GB)
-gba|Game Boy Advance (GBA)
-nes|Nintendo Entertainment System (FC)
-snes|Super Nintendo (SFC)
-md|Sega Genesis (MD)
-gg|Game Gear (GG)
-sms|Master System (SMS)
-psx|Sony PlayStation (PS)
-pce|PC Engine (PCE)
-lynx|Atari Lynx (LYNX)
-ngp|Neo Geo Pocket (NGP)
-wswan|WonderSwan (WS)
-arc|Arcade (ARC)
-neocd|Neo Geo CD (NEOCD)
-ss|Sega Saturn (SS)
+gb|Game Boy (GB)|GB
+gba|Game Boy Advance (GBA)|GBA
+nes|Nintendo Entertainment System (FC)|FC
+snes|Super Nintendo (SFC)|SFC
+md|Sega Genesis (MD)|MD
+gg|Game Gear (GG)|GG
+sms|Master System (SMS)|MS
+psx|Sony PlayStation (PS)|PS
+pce|PC Engine (PCE)|PCE
+lynx|Atari Lynx (LYNX)|LYNX
+ngp|Neo Geo Pocket (NGP)|NGP
+wswan|WonderSwan (WS)|WS
+arc|Arcade (ARC)|ARCADE
+neocd|Neo Geo CD (NEOCD)|NEOCD
+ss|Sega Saturn (SS)|SATURN
 "
 
 for map in ${mappings}; do
     [ -n "${map}" ] || continue
-    src_name="${map%%|*}"
-    minui_name="${map##*|}"
+    src_name="$(echo "${map}" | cut -d'|' -f1)"
+    minui_name="$(echo "${map}" | cut -d'|' -f2)"
+    allium_name="$(echo "${map}" | cut -d'|' -f3)"
     
     src_dir="${ROMS_SRC}/${src_name}"
     [ -d "${src_dir}" ] || continue
@@ -63,7 +64,7 @@ for map in ${mappings}; do
     if [ "${UI_TYPE}" = "minui" ]; then
         target_dir="${DEST_DIR}/Roms/${minui_name}"
     else
-        target_dir="${DEST_DIR}/Roms/${src_name}"
+        target_dir="${DEST_DIR}/Roms/${allium_name}"
     fi
     
     log "Copying ${src_name} -> ${target_dir}..."
