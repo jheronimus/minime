@@ -40,4 +40,4 @@ A Github build job just pulls whatever fragments it needs for each platform. Thi
 
 # Credits
 [Rocknix](https://github.com/ROCKNIX/distribution) for platform-specific patches and the libmali workaround for mainline.
-[MinUI](https://github.com/ROCKNIX/distribution) and [Allium](https://github.com/ROCKNIX/distribution) as the main launcher options.
+[MinUI](https://github.com/shauninman/MinUI) and [Allium](https://github.com/goweiwen/Allium) as the main launcher options.
