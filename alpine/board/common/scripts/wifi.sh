@@ -147,16 +147,13 @@ log_failure_diagnostics() {
 	echo "wifi: startup failed: ${reason}" >&2
 }
 
-# Check if wpa_supplicant has completed WPA authentication
-station_has_connection() {
-	wpa_cli -i "${wifi_interface}" status 2>/dev/null | grep -q "wpa_state=COMPLETED"
-}
-
-# Poll station_has_connection until associated or timed out
+# Poll wpa_cli status until WPA authentication completes or times out
 wait_for_station_connected() {
 	i=0
 	while [ "${i}" -lt "${station_connect_wait_seconds}" ]; do
-		if station_has_connection; then return 0; fi
+		if wpa_cli -i "${wifi_interface}" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+			return 0
+		fi
 		i=$((i + 1))
 		sleep 1
 	done
