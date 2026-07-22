@@ -2,8 +2,24 @@ default: validate
 
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
-# Run all fast quality gates (shell validation, traits, git hygiene)
-validate: check-scripts check-apkbuilds check-openrc check-traits check-git
+# Run all fast quality gates (shell validation, traits, git hygiene, kernel config, patches, hashes)
+validate: check-scripts check-apkbuilds check-openrc check-openrc-deps check-traits check-kernel-config check-patches check-hashes check-git
+
+# Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
+check-kernel-config:
+    ./scripts/check-kernel-config.py
+
+# Verify all patch files are referenced in build manifests
+check-patches:
+    ./scripts/check-patches.py
+
+# Validate SHA-256 and SHA-512 hash formats in package manifests
+check-hashes:
+    ./scripts/check-hashes.py
+
+# Validate OpenRC service dependency resolution
+check-openrc-deps:
+    ./scripts/check-openrc-deps.py
 
 # ── Shell script validation ───────────────────────────────────────────────────
 

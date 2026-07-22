@@ -65,14 +65,18 @@ All gates are defined in the root `Justfile` and must be run via `just`.
 just validate
 ```
 
-Runs: `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-traits`, `check-git`.
+Runs: `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-openrc-deps`, `check-traits`, `check-kernel-config`, `check-patches`, `check-hashes`, `check-git`.
 
 | Recipe | What it checks | Shell flag | Notes |
 |---|---|---|---|
 | `check-scripts` | `*.sh` files (all distros) | auto from shebang | Enforces exec bit |
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | ash target; no shebang/exec check |
 | `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | ash target; enforces exec bit |
+| `check-openrc-deps` | OpenRC init script dependencies | — | Resolves `need`/`use`/`before`/`after` |
 | `check-traits` | `alpine/board/common/check-traits.sh` | — | Traits config validation |
+| `check-kernel-config` | Merged kernel config fragments | — | Duplicates, symbol format & vendor toggles |
+| `check-patches` | `.patch` files across repo | — | Ensures patches are referenced in manifests |
+| `check-hashes` | `.hash` files and `APKBUILD`s | — | Validates SHA-256 (64 hex) & SHA-512 (128 hex) |
 | `check-git` | staged diff | — | Whitespace / merge markers |
 
 ### CI-only gates — require upstream Buildroot tree

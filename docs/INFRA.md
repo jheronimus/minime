@@ -32,6 +32,10 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 ## 2. Repository Scripts & Entrypoints
 
 ### Orchestration & Build Scripts (`scripts/` and `alpine/scripts/`)
+- **`scripts/check-kernel-config.py`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
+- **`scripts/check-patches.py`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
+- **`scripts/check-hashes.py`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
+- **`scripts/check-openrc-deps.py`**: Validates OpenRC init script service dependencies and resolves `need`/`use`/`before`/`after` directives.
 - **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 - **`scripts/build-bootloader.sh`**: Helper script invoked by `bootloader.yml` to compile ATF and U-Boot for `h700`, `rk3326`, or `rk3566`.
 - **`scripts/uptodate/uptodate.py`**: Self-healing Python script that queries GitHub APIs for new release tags and computes SHA-512 hashes.
@@ -52,8 +56,12 @@ All local developer commands are managed via `Justfile` and executed with `just`
 
 | Recipe | Description |
 |---|---|
-| `just validate` | **Fast pre-commit gate**. Runs shell script checks, `APKBUILD` ash validation, OpenRC init checks, traits validation, and git diff checks. |
+| `just validate` | **Fast pre-commit gate**. Runs `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-openrc-deps`, `check-traits`, `check-kernel-config`, `check-patches`, `check-hashes`, and `check-git`. |
 | `just validate-ci` | **CI quality gate**. Runs `validate` plus defconfig merging (`check-defconfigs`) and package linting (`check-packages`). |
+| `just check-kernel-config` | Validates kernel config fragments for duplicates, symbol format, and vendor toggles. |
+| `just check-patches` | Verifies all `.patch` files are referenced in build manifests. |
+| `just check-hashes` | Validates SHA-256 and SHA-512 format integrity across package manifests. |
+| `just check-openrc-deps` | Verifies OpenRC init script service dependencies. |
 | `just fetch <os> <board> <ui>` | Downloads the specified release image from the `testing` release, decompresses it to `downloads/`, and offers an interactive prompt to deploy. |
 | `just deploy <image> [disk]` | Flashes a firmware image to an SD card using `dd`, automatically injects `wifi.cfg` if present, and ejects the card. Supports `deploy.cfg` with `minime` label guard. |
 | `just install-hooks` | Installs the repository git pre-commit hook to enforce `just validate` before every commit. |
