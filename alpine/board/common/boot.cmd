@@ -59,9 +59,6 @@ fi
 
 fdt set /chosen bootargs "${bootargs}"
 
-setexpr initrd_end ${ramdisk_addr_r} + ${initrd_size}
-fdt chosen ${ramdisk_addr_r} ${initrd_end}
-
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
 sleep 5
 reset
