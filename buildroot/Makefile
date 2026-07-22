@@ -88,9 +88,9 @@ defconfig_internal:
 	$(BUILDROOT_DIR)/support/kconfig/merge_config.sh \
 		-O $(BUILDROOT_OUTPUT_DIR) \
 		-m \
-		external/configs/minime_common.config \
-		external/configs/minime_$(BOARD).config \
-		external/configs/minime_$(UI).config 2>&1 | tee "$$LOG_FILE" && \
+		external/configs/common.config \
+		external/configs/$(BOARD).config \
+		external/configs/$(UI).config 2>&1 | tee "$$LOG_FILE" && \
 	$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"
 
 image: $(BUILDROOT_STAMP) defconfig

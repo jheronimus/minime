@@ -13,7 +13,7 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
   - `Makefile`: Docker/Colima setups, builds, configs.
   - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
     - `configs/`: Defconfigs and config fragments.
-      - `minime_common.config`: Shared Buildroot options (arch, toolchain, packages, rootfs).
+      - `common.config`: Shared Buildroot options (arch, toolchain, packages, rootfs).
       - `bootloader/`: U-Boot/ATF re-enabling fragments, used ONLY by the [Prebuild Bootloaders workflow](file:///Users/ilembitov/Projects/minime/.github/workflows/bootloader.yml). Firmware defconfigs do NOT build U-Boot.
     - `board/h700/`: H700 overlays, DTS, patches, config fragments (`linux.config`/`uboot.config`), scripts.
     - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
