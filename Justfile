@@ -273,7 +273,9 @@ deploy image disk_device="":
         fi
     fi
 
-    echo "Ejecting ${device}..."
+    echo "Flushing buffers and ejecting ${device}..."
+    sync
+    diskutil unmountDisk "${device}" 2>/dev/null || true
     diskutil eject "${device}" 2>/dev/null || true
     echo "Deployment complete!"
 
