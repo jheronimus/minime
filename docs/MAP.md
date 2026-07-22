@@ -74,13 +74,13 @@ All under `buildroot/external/board/common/overlay/etc/init.d/`.
 All under `buildroot/external/board/common/overlay/`.
 
 ## Defconfigs (`buildroot/external/configs/`)
-Buildroot configurations (minime_common.config, minime_<board>.config).
+Buildroot configurations (common.config, <board>.config).
 
 ## BusyBox config
 `buildroot/external/board/common/busybox.config` — BusyBox applet selection.
 
 ## GPU kernel fragment
-`buildroot/external/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
+`alpine/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
 
 ## Build infrastructure
 - `buildroot/Makefile` — Buildroot build orchestrator
