@@ -4,7 +4,7 @@ source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
 
 choice
 	prompt "Minime user interface"
-	default BR2_PACKAGE_MINUI
+	optional
 
 source "$BR2_EXTERNAL_MINIME_PATH/package/minui/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/allium/Config.in"
