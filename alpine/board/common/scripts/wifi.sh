@@ -32,7 +32,7 @@ init_wpa_supplicant_conf() {
 	chmod 600 "${wpa_supplicant_config_file}" 2>/dev/null || true
 }
 
-# Append pre-configured wpa_supplicant profile snippets from SD card
+# Append pre-configured wpa_supplicant profile snippets from SD card directory
 seed_wpa_profiles() {
 	[ -d "${wpa_supplicant_seed_dir}" ] || return 0
 	for profile_path in "${wpa_supplicant_seed_dir}"/*.conf; do
@@ -42,8 +42,8 @@ seed_wpa_profiles() {
 	done
 }
 
-# Append a network block to the wpa_supplicant config file
-write_wpa_network_block() {
+# Append a Wi-Fi profile to the wpa_supplicant config file
+write_wpa_profile() {
 	ssid="$1"
 	psk="$2"
 	{
@@ -59,7 +59,7 @@ write_wpa_network_block() {
 	} >> "${wpa_supplicant_config_file}"
 }
 
-# Parse wifi.cfg key-value pairs into wpa_supplicant network blocks
+# Parse wifi.cfg key-value pairs into wpa_supplicant profiles
 generate_wpa_profiles_from_config() {
 	[ -f "${wifi_config_file}" ] || return 0
 	config_ssid=""
@@ -72,7 +72,7 @@ generate_wpa_profiles_from_config() {
 			\#*) continue ;;
 			SSID)
 				if [ -n "$config_ssid" ]; then
-					write_wpa_network_block "$config_ssid" "$config_pass"
+					write_wpa_profile "$config_ssid" "$config_pass"
 					config_pass=""
 				fi
 				config_ssid="$val"
@@ -81,7 +81,7 @@ generate_wpa_profiles_from_config() {
 		esac
 	done < "${wifi_config_file}"
 	if [ -n "$config_ssid" ]; then
-		write_wpa_network_block "$config_ssid" "$config_pass"
+		write_wpa_profile "$config_ssid" "$config_pass"
 	fi
 }
 
