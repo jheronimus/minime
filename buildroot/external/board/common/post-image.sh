@@ -392,7 +392,7 @@ echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
 VFAT_MB=$(( STAGE_MB + 256 ))
-[ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
+[ "$VFAT_MB" -lt 1024 ] && VFAT_MB=1024
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}"
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
