@@ -49,17 +49,7 @@ EOF
 #
 # Supported device options:
 EOF
-		if [ -n "${BINARIES_DIR:-}" ] && [ -n "${DTB_PATTERN:-}" ]; then
-			for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
-				if [ -f "${dtb_file}" ]; then
-					echo "# - $(basename "${dtb_file}")" >>"${target_cfg}"
-				fi
-			done
-		fi
-		cat <<'EOF' >>"${target_cfg}"
-#
-device=auto
-EOF
+		default_device="auto"
 	else
 		cat <<'EOF' >>"${target_cfg}"
 # Autodetection is not supported on this platform.
@@ -68,18 +58,20 @@ EOF
 #
 # Supported device options:
 EOF
-		if [ -n "${BINARIES_DIR:-}" ] && [ -n "${DTB_PATTERN:-}" ]; then
-			for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
-				if [ -f "${dtb_file}" ]; then
-					echo "# - $(basename "${dtb_file}")" >>"${target_cfg}"
-				fi
-			done
-		fi
-		cat <<EOF >>"${target_cfg}"
-#
-device=${DEFAULT_DTB:-auto}
-EOF
+		default_device="${DEFAULT_DTB:-auto}"
 	fi
+
+	if [ -n "${BINARIES_DIR:-}" ] && [ -n "${DTB_PATTERN:-}" ]; then
+		for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
+			if [ -f "${dtb_file}" ]; then
+				echo "# - $(basename "${dtb_file}")" >>"${target_cfg}"
+			fi
+		done
+	fi
+	cat <<EOF >>"${target_cfg}"
+#
+device=${default_device}
+EOF
 }
 
 get_cfg() {

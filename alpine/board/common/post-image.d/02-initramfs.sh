@@ -7,7 +7,6 @@ set -eu
 echo "Assembling custom boot-stage loop-mount initrd..."
 SYSTEM_STAGE="${ROOTPATH_TMP}/system"
 INITRD_STAGE="${ROOTPATH_TMP}/initrd"
-USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 
 mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
 	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
@@ -80,7 +79,3 @@ fi
 
 # Compile the initramfs CPIO archive.
 (cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs")
-
-# Copy initramfs to USERDATA_STAGE
-mkdir -p "${USERDATA_STAGE}/.minime"
-cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"

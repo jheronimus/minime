@@ -37,8 +37,9 @@ if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 fi
 touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
 
-# Copy main erofs system image
+# Copy main erofs system image and initramfs
 cp -f "${BINARIES_DIR}/system.erofs" "${USERDATA_STAGE}/.minime/system"
+cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
 
 # Copy kernel and U-Boot script
 cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
