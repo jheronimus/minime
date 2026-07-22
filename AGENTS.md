@@ -1,6 +1,19 @@
 # Minime (Custom Linux/Buildroot firmware)
 
-Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbernic handhelds (RK3326/H700/RK3566; tested on RG35xxSP v1) with mainline kernel, libmali, auto-connecting Wi-Fi (`wpa_supplicant`), and passwordless telnet/ftp (`busybox`).
+Minime is a basic custom firmware for Anbernic handhelds (RK3326/H700/RK3566).
+
+## Goals
+
+- Fast to build and test. Builds completely on Github Actions in under 30 minutes per image.
+- Wide compatibility. Comes in two versions: Alpine (smaller, faster to build), Buildroot (glibc, so compatible with closed source software like libmali, Drastic, Pico-8).
+- Automates as much as possible: tests, quality gates, builds, release process.
+- Strict separation between firmware and UI. Implements a trait system and a UI contract that makes it easy to add Minime support to existing projects (currently Allium and MinUI support Minime).
+- Clean modular architecture.
+
+
+## What's included
+
+Only the basic components required by launchers: alsa, wpa_supplicant, bluez, telnet, ftp, GPU drivers, etc.
 
 ## Monorepo Structure
 
@@ -27,16 +40,19 @@ Consolidated monorepo for Minime firmware. Minimal Buildroot firmware for Anbern
 
 ## File Locations & Repository Mapping
 
-A short summary of where important files live. For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
+Minime supports two build targets: Alpine and Buildroot. Any config that has the same syntax, should be reused between the two firmwares. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the `alpine/board/` folder. Buildroot's makefiles and build scripts reference or import them directly from there.
 
-- **Shared Assets (Alpine-owned)**: All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the `alpine/board/` folder. Buildroot's makefiles and build scripts reference or import them directly from there.
-  - `alpine/board/common/scripts/` is the canonical home for cross-distro runtime scripts (`wifi.sh`, `ui.sh`, `traits.sh`). Alpine's APKBUILD installs them via `install`; Buildroot's `post-build.sh` copies them into `$TARGET_DIR/usr/share/minime/scripts/`. **Never maintain separate copies in each distro's subtree.**
+For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
+
+For init scripts `alpine/board/common/scripts/` is the canonical home for cross-distro runtime scripts (`wifi.sh`, `ui.sh`, `traits.sh`). Alpine's APKBUILD installs them via `install`; Buildroot's `post-build.sh` copies them into `$TARGET_DIR/usr/share/minime/scripts/`. **Never maintain separate copies in each distro's subtree.**
+
 - **Unshareable Distro-Specific Files**: Files that cannot be shared (such as OpenRC vs. BusyBox init scripts and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually.
+
 - **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
 
 ## Local Alpine Builds (Containerized)
 
-Alpine builds require a Linux/musl environment with APK packaging tools, and must be compiled using Podman or Docker (with `--platform linux/arm64` cross-compilation support).
+Ideally, Github should be used for builds. However, for debugging Alpine can be built locally using Podman or Docker (with `--platform linux/arm64` cross-compilation support).
 
 Commands are run within the `alpine/` subdirectory:
 - **Build Container**: `make prepare` compiles the `minime-builder-alpine` docker image.
