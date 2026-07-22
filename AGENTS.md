@@ -67,18 +67,7 @@ just validate
 
 Runs: `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-openrc-deps`, `check-traits`, `check-kernel-config`, `check-firmware`, `check-patches`, `check-hashes`, `check-git`.
 
-| Recipe | What it checks | Shell flag | Notes |
-|---|---|---|---|
-| `check-scripts` | `*.sh` files (all distros) | auto from shebang | Enforces exec bit |
-| `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | ash target; no shebang/exec check |
-| `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | ash target; enforces exec bit |
-| `check-openrc-deps` | OpenRC init script dependencies | — | Resolves `need`/`use`/`before`/`after` |
-| `check-traits` | `alpine/board/common/check-traits.sh` | — | Traits config validation |
-| `check-kernel-config` | Merged kernel config fragments | — | Duplicates, symbol format & vendor toggles |
-| `check-firmware` | Required firmware files | — | Verifies `CONFIG_EXTRA_FIRMWARE` & DTS declarations |
-| `check-patches` | `.patch` files across repo | — | Ensures patches are referenced in manifests |
-| `check-hashes` | `.hash` files and `APKBUILD`s | — | Validates SHA-256 (64 hex) & SHA-512 (128 hex) |
-| `check-git` | staged diff | — | Whitespace / merge markers |
+For detailed descriptions of what each quality gate recipe checks, see [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md#3-developer-command-utilities-justfile).
 
 ### CI-only gates — require upstream Buildroot tree
 
