@@ -484,4 +484,6 @@ if [ ! -f "${FINAL_IMG}" ]; then
 	exit 1
 fi
 
-echo "Image produced: ${FINAL_IMG}"
+echo "Compressing final image..."
+xz -f -T2 "${FINAL_IMG}"
+echo "Image produced: ${FINAL_IMG_XZ}"
