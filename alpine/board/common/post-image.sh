@@ -50,14 +50,6 @@ if [ -z "$GENIMAGE_CFG" ]; then
 	exit 1
 fi
 
-case "${DISTRO}" in
-alpine | buildroot) ;;
-*)
-	echo "ERROR: -d must be 'alpine' or 'buildroot'" >&2
-	exit 1
-	;;
-esac
-
 # ── Distro-specific resolution ───────────────────────────────────────────────
 # All DISTRO-dependent logic lives here. The rest of the script must be
 # distro-agnostic. See AGENTS.md for the canonical pattern.
@@ -71,6 +63,10 @@ buildroot)
 	if [ -n "${BOARD_DIR_OVERRIDE}" ] && [ ! -d "${BOARD_DIR_OVERRIDE}" ]; then
 		BOARD_DIR_OVERRIDE="${MINIME_SOURCE_ROOT}/../buildroot/external/board/${BOARD_DIR_OVERRIDE}"
 	fi
+	;;
+*)
+	echo "ERROR: -d must be 'alpine' or 'buildroot'" >&2
+	exit 1
 	;;
 esac
 
