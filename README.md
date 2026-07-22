@@ -34,7 +34,7 @@ Minime uses cascaded config fragments whenever it can. For example, the kernel h
 
 - tiny-base.config — the base modules needed by any target in Minime
 - tiny-<platform, e.g. H700>.config — device-specific drivers and options
-- tiny-panfrost.config and tiny-libmali.config - different GPU drivers
+- tiny-panfrost.config and tiny-libmali.config — different GPU drivers
 
 A Github build job just pulls whatever fragments it needs for each platform. This means minimal config drift and simpler maintanence for a dual-target architecture.
 
