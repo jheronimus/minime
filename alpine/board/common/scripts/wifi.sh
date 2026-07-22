@@ -148,7 +148,7 @@ log_failure_diagnostics() {
 }
 
 # Poll wpa_cli status until WPA authentication completes or times out
-wait_for_station_connected() {
+wait_for_wpa_handshake() {
 	i=0
 	while [ "${i}" -lt "${station_connect_wait_seconds}" ]; do
 		if wpa_cli -i "${wifi_interface}" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
@@ -225,7 +225,7 @@ start_background() {
 		return 0
 	fi
 
-	if ! wait_for_station_connected; then
+	if ! wait_for_wpa_handshake; then
 		log_failure_diagnostics "station-connect-timeout"
 		return 1
 	fi
