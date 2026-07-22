@@ -32,9 +32,9 @@ In the past I would keep switching between the Alpine and Buildroot when I wante
 
 Minime uses cascaded config fragments whenever it can. For example, the kernel has:
 
-- tinyconfig.base — the base modules needed by any target in Minime
-- tinyconfig.<platform, e.g. H700> — device-specific drivers and options
-- tinyconfig.panfrost and tinyconfig.libmali - different GPU drivers
+- tiny-base.config — the base modules needed by any target in Minime
+- tiny-<platform, e.g. H700>.config — device-specific drivers and options
+- tiny-panfrost.config and tiny-libmali.config - different GPU drivers
 
 A Github build job just pulls whatever fragments it needs for each platform. This means minimal config drift and simpler maintanence for a dual-target architecture.
 
