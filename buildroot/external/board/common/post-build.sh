@@ -124,8 +124,9 @@ scripts_src="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/scripts"
 scripts_dst="${TARGET_DIR}/usr/share/minime/scripts"
 mkdir -p "${scripts_dst}"
 cp "${scripts_src}/wifi.sh" "${scripts_src}/ui.sh" "${scripts_src}/traits.sh" \
-	"${scripts_dst}/"
-chmod +x "${scripts_dst}/wifi.sh" "${scripts_dst}/ui.sh" "${scripts_dst}/traits.sh"
+	"${scripts_src}/device.sh" "${scripts_dst}/"
+chmod +x "${scripts_dst}/wifi.sh" "${scripts_dst}/ui.sh" "${scripts_dst}/traits.sh" \
+	"${scripts_dst}/device.sh"
 
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BR_BOARD_DIR}/post-build.sh" ]; then

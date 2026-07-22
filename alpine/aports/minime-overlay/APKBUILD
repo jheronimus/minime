@@ -44,6 +44,7 @@ package() {
 		"$scripts_src/wifi.sh" \
 		"$scripts_src/ui.sh" \
 		"$scripts_src/traits.sh" \
+		"$scripts_src/device.sh" \
 		"$dst/usr/share/minime/scripts/"
 
 	# Ensure executable bits on init.d / OpenRC services.
