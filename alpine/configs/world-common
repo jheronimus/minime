@@ -56,6 +56,7 @@ iproute2-minimal
 # ── DNS / mDNS ───────────────────────────────────────────────────────────
 # ── Wi-Fi + regulatory ───────────────────────────────────────────────────
 wpa_supplicant
+wireless-regdb
 # busybox udhcpc is sufficient for DHCP; the Alpine package set above
 # already pulls in busybox.  wireless-regdb lives in /usr/share/wireless.
 # Realtek firmware fragments are installed by minime-overlay's post-install.

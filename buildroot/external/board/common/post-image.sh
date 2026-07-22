@@ -261,7 +261,7 @@ log_console() {
 
 log_card() {
 	echo "$*"
-	if grep -q " /mnt/card " /proc/mounts 2>/dev/null; then
+	if mountpoint -q /mnt/card 2>/dev/null || grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
 		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >> /mnt/card/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
@@ -296,7 +296,7 @@ for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
 	fi
 done
 
-if ! grep -q " /mnt/card " /proc/mounts 2>/dev/null; then
+if ! mountpoint -q /mnt/card 2>/dev/null && ! grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
 	log_console "ERROR: failed to mount a MINIME FAT partition"
 	exec sh
 fi
