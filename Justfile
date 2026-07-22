@@ -3,7 +3,7 @@ default: validate
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
 # Run all fast quality gates (shell validation, traits, git hygiene, kernel config, firmware, patches, hashes)
-validate: check-scripts check-apkbuilds check-openrc check-openrc-deps check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-defconfigs
+validate: check-scripts check-apkbuilds check-openrc check-openrc-deps check-traits check-kernel-config check-firmware check-patches check-hashes check-git
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
@@ -91,7 +91,7 @@ check-git:
 # ── CI-only gates (require upstream Buildroot tree) ───────────────────────────
 
 # Run all CI gates (fast gates + Buildroot-dependent checks)
-validate-ci: validate check-packages
+validate-ci: validate check-defconfigs check-packages
 
 # Merge and validate our custom config fragments for all boards
 check-defconfigs:
@@ -104,7 +104,7 @@ check-packages:
     #!/usr/bin/env sh
     set -eu
     if [ -d buildroot/buildroot ]; then
-        python3 buildroot/buildroot/utils/check-package buildroot/external/package/*/*
+        python3 buildroot/buildroot/utils/check-package -b buildroot/external/package/*/*
     else
         echo "Buildroot source tree not found — skipping (CI only)."
     fi

@@ -42,7 +42,7 @@ define MINUI_INSTALL_IMAGES_CMDS
 		cp -a $(@D)/Tools $(BINARIES_DIR)/ui/; \
 	fi
 
-	# Minimal launch.sh wrapper — MinUI hardcodes its own paths internally.
+	# Minimal launch.sh wrapper - MinUI hardcodes its own paths internally.
 	# ui.sh calls the minui binary directly; this wrapper exists as a
 	# convenience entry point for debugging or manual use.
 	printf '%s\n' \
