@@ -12,4 +12,8 @@ fi
 fatload mmc 0:1 ${kernel_addr_r} .minime/kernel
 fatload mmc 0:1 ${fdt_addr_r} .minime/devices/${device}
 fatload mmc 0:1 ${ramdisk_addr_r} .minime/initramfs
+fdt addr ${fdt_addr_r}
+fdt resize
+fdt set /chosen bootargs "${bootargs}"
+fdt chosen ${ramdisk_addr_r} ${filesize}
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r}
