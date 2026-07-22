@@ -116,37 +116,6 @@ wait_for_wpa_supplicant_ready() {
 	return 1
 }
 
-# Dump interface/SDIO state to diagnostic log on connection failure
-log_failure_diagnostics() {
-	reason="$1"
-	{
-		printf '%s\n' "reason=${reason}"
-		printf '%s ' "/sys/class/net/${wifi_interface}:"
-		if [ -e "/sys/class/net/${wifi_interface}" ]; then
-			printf '%s\n' "present"
-			ip link show "${wifi_interface}" 2>&1 || true
-		else
-			printf '%s\n' "missing"
-		fi
-		printf '%s\n' "/sys/bus/sdio/devices:"
-		ls -la /sys/bus/sdio/devices 2>&1 || true
-		printf '%s\n' "wpa_cli -i ${wifi_interface} status:"
-		if command -v wpa_cli >/dev/null 2>&1; then
-			wpa_cli -i "${wifi_interface}" status 2>&1 || true
-		else
-			printf '%s\n' "wpa_cli missing"
-		fi
-	} >> "${diagnostic_logfile}"
-	if [ -d /mnt/sdcard ]; then
-		cp -f "${diagnostic_logfile}" /mnt/sdcard/wifi.diagnostics 2>/dev/null || true
-		printf '[WIFI %s] startup failed: %s; diagnostics in /mnt/sdcard/wifi.diagnostics\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >> /mnt/sdcard/boot.log 2>/dev/null || true
-		sync 2>/dev/null || true
-	fi
-	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
-	echo "wifi: startup failed: ${reason}" >&2
-}
-
 # Poll wpa_cli status until WPA authentication completes or times out
 wait_for_wpa_handshake() {
 	i=0
@@ -299,6 +268,37 @@ reload() {
 	wpa_cli -i "${wifi_interface}" reassociate >/dev/null 2>&1 || true
 	start_dhcp_client
 	echo "OK"
+}
+
+# Dump interface/SDIO state to diagnostic log on connection failure
+log_failure_diagnostics() {
+	reason="$1"
+	{
+		printf '%s\n' "reason=${reason}"
+		printf '%s ' "/sys/class/net/${wifi_interface}:"
+		if [ -e "/sys/class/net/${wifi_interface}" ]; then
+			printf '%s\n' "present"
+			ip link show "${wifi_interface}" 2>&1 || true
+		else
+			printf '%s\n' "missing"
+		fi
+		printf '%s\n' "/sys/bus/sdio/devices:"
+		ls -la /sys/bus/sdio/devices 2>&1 || true
+		printf '%s\n' "wpa_cli -i ${wifi_interface} status:"
+		if command -v wpa_cli >/dev/null 2>&1; then
+			wpa_cli -i "${wifi_interface}" status 2>&1 || true
+		else
+			printf '%s\n' "wpa_cli missing"
+		fi
+	} >> "${diagnostic_logfile}"
+	if [ -d /mnt/sdcard ]; then
+		cp -f "${diagnostic_logfile}" /mnt/sdcard/wifi.diagnostics 2>/dev/null || true
+		printf '[WIFI %s] startup failed: %s; diagnostics in /mnt/sdcard/wifi.diagnostics\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
+	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
+	echo "wifi: startup failed: ${reason}" >&2
 }
 
 case "${1:-}" in
