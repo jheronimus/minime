@@ -32,7 +32,7 @@ init_wpa_supplicant_conf() {
 	chmod 600 "${wpa_supplicant_config_file}" 2>/dev/null || true
 }
 
-# Append pre-configured wpa_supplicant profile snippets from SD card directory
+# Append wpa_supplicant .conf files written by frontends (Allium, MinUI, etc.) from SD card
 seed_wpa_profiles() {
 	[ -d "${wpa_supplicant_seed_dir}" ] || return 0
 	for profile_path in "${wpa_supplicant_seed_dir}"/*.conf; do
@@ -42,7 +42,7 @@ seed_wpa_profiles() {
 	done
 }
 
-# Parse wifi.cfg key-value pairs and append Wi-Fi profiles to wpa_supplicant config
+# Parse the user-facing wifi.cfg (SSID=/Passphrase= pairs) and convert to wpa_supplicant profiles
 load_wifi_cfg_profiles() {
 	[ -f "${wifi_config_file}" ] || return 0
 	ssid=""
