@@ -20,6 +20,7 @@ station_connect_wait_seconds=40
 ipv4_wait_seconds=20
 wifi_driver_wait_seconds=5
 
+# Initialize base wpa_supplicant config with control interface
 init_wpa_supplicant_conf() {
 	mkdir -p "${wpa_supplicant_state_dir}"
 	chmod 755 "${wpa_supplicant_state_dir}" 2>/dev/null || true
@@ -31,6 +32,7 @@ init_wpa_supplicant_conf() {
 	chmod 600 "${wpa_supplicant_config_file}" 2>/dev/null || true
 }
 
+# Append pre-configured wpa_supplicant profile snippets from SD card
 seed_wpa_profiles() {
 	[ -d "${wpa_supplicant_seed_dir}" ] || return 0
 	for profile_path in "${wpa_supplicant_seed_dir}"/*.conf; do
@@ -40,6 +42,7 @@ seed_wpa_profiles() {
 	done
 }
 
+# Append a network block to the wpa_supplicant config file
 write_wpa_network_block() {
 	ssid="$1"
 	psk="$2"
@@ -56,6 +59,7 @@ write_wpa_network_block() {
 	} >> "${wpa_supplicant_config_file}"
 }
 
+# Parse wifi.cfg key-value pairs into wpa_supplicant network blocks
 generate_wpa_profiles_from_config() {
 	[ -f "${wifi_config_file}" ] || return 0
 	config_ssid=""
@@ -81,6 +85,7 @@ generate_wpa_profiles_from_config() {
 	fi
 }
 
+# Unblock rfkill and wait for network interface to appear
 prepare_wifi_interface() {
 	i=0
 	if command -v rfkill >/dev/null 2>&1; then
@@ -97,6 +102,7 @@ prepare_wifi_interface() {
 	return 1
 }
 
+# Poll wpa_cli until wpa_supplicant daemon responds
 wait_for_wpa_supplicant_ready() {
 	i=0
 	while [ "${i}" -lt "${wpa_cli_wait_seconds}" ]; do
@@ -110,6 +116,7 @@ wait_for_wpa_supplicant_ready() {
 	return 1
 }
 
+# Dump interface/SDIO state to diagnostic log on connection failure
 log_failure_diagnostics() {
 	reason="$1"
 	{
@@ -140,10 +147,12 @@ log_failure_diagnostics() {
 	echo "wifi: startup failed: ${reason}" >&2
 }
 
+# Check if wpa_supplicant has completed WPA authentication
 station_has_connection() {
 	wpa_cli -i "${wifi_interface}" status 2>/dev/null | grep -q "wpa_state=COMPLETED"
 }
 
+# Poll station_has_connection until associated or timed out
 wait_for_station_connected() {
 	i=0
 	while [ "${i}" -lt "${station_connect_wait_seconds}" ]; do
@@ -154,6 +163,7 @@ wait_for_station_connected() {
 	return 1
 }
 
+# Poll interface until an IPv4 address is assigned
 wait_for_ipv4_address() {
 	i=0
 	while [ "${i}" -lt "${ipv4_wait_seconds}" ]; do
@@ -166,6 +176,7 @@ wait_for_ipv4_address() {
 	return 1
 }
 
+# Terminate running udhcpc DHCP client instances
 stop_dhcp_client() {
 	if [ -f "${udhcpc_pidfile}" ]; then
 		kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
@@ -178,6 +189,7 @@ stop_dhcp_client() {
 	rm -f "${udhcpc_pidfile}"
 }
 
+# Launch background udhcpc client for IPv4 address assignment
 start_dhcp_client() {
 	stop_dhcp_client
 	: > "${udhcpc_logfile}"
@@ -189,6 +201,7 @@ start_dhcp_client() {
 		>> "${udhcpc_logfile}" 2>&1
 }
 
+# Async worker: brings up interface, daemon, connection, and DHCP
 start_background() {
 	has_profiles="$1"
 	exec >/dev/null 2>&1
@@ -240,6 +253,7 @@ start_background() {
 	return 0
 }
 
+# Non-blocking boot entrypoint: prepares config and forks background worker
 start() {
 	printf "Starting wifi: "
 	init_wpa_supplicant_conf
@@ -256,6 +270,7 @@ start() {
 	return 0
 }
 
+# Stop Wi-Fi connection, DHCP client, and wpa_supplicant daemon
 stop() {
 	printf "Stopping wifi: "
 	stop_dhcp_client
@@ -267,6 +282,7 @@ stop() {
 	echo "OK"
 }
 
+# Re-read Wi-Fi configurations and trigger wpa_supplicant reconfiguration
 reload() {
 	printf "Reloading wifi: "
 	init_wpa_supplicant_conf
