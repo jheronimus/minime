@@ -30,8 +30,26 @@ Source of truth is UI packages (`alpine/aports/minui/`, `alpine/aports/allium/`,
 ## Boot scripts (`boot.cmd`) + DTS overlays
 Source of truth is Alpine tree (`alpine/board/*/`). Buildroot compiles them from the Alpine path.
 
+## DTS source files (`alpine/board/*/dts/`)
+Custom device tree source files copied into the kernel tree during `tinykernel/APKBUILD` build. Used for boards whose DTS is not yet upstream.
+- `alpine/board/h700/dts/` — H700 Allwinner boards (rg35xx, rg40xx, rg28xx, rgcubexx, etc.)
+- `alpine/board/rk3326/dts/` — RK3326 boards (rg351p, rg351mp)
+
+## Kernel and U-Boot patches (`alpine/board/*/patches/`)
+Per-board patch series applied during kernel (via `tinykernel/APKBUILD`) and Buildroot (via `BR2_GLOBAL_PATCH_DIR`) builds.
+- `alpine/board/h700/patches/linux/` — H700 kernel patches (panels, GPU, peripherals)
+- `alpine/board/rk3326/patches/linux/` — RK3326 kernel patches (panels, input, Wi-Fi)
+- `alpine/board/rk3566/patches/linux/` — RK3566 kernel patches (panels, DTS, audio)
+- `alpine/board/rk3566/patches/uboot/` — RK3566 U-Boot patches (panel detection, DTB naming)
+
 ## U-Boot configs (`uboot.config`)
 Source of truth is Alpine tree (`alpine/board/*/uboot.config`). Buildroot references them from there.
+
+## U-Boot env files (`boot.env`)
+Per-board boot parameters (`BOOTARGS`, `DEFAULT_DEVICE`, `EXTRA_ENV`). Sourced by `post-build.sh` (Buildroot) and `build.sh` (Alpine) to compile `boot.cmd` → `boot.scr`.
+- `alpine/board/h700/boot.env`
+- `alpine/board/rk3326/boot.env`
+- `alpine/board/rk3566/boot.env`
 
 ## Genimage configs
 Source of truth is Alpine tree (`alpine/board/`). Buildroot uses the same files passed via `-c`.
@@ -73,14 +91,27 @@ All under `buildroot/external/board/common/overlay/etc/init.d/`.
 ## Overlay configs
 All under `buildroot/external/board/common/overlay/`.
 
+## Board-specific Buildroot directories
+Per-board extensions under `buildroot/external/board/<board>/`. Invoked by the common `post-build.sh` if present.
+- `buildroot/external/board/h700/` — `board.env`
+- `buildroot/external/board/rk3326/` — `board.env`, `post-build.sh` (installs USB dongle firmware from Alpine tree)
+- `buildroot/external/board/rk3566/` — `board.env`, `post-build.sh` (installs thermal watchdog overlay), `overlay/` (thermal watchdog init script)
+
 ## Defconfigs (`buildroot/external/configs/`)
 Buildroot configurations (common.config, <board>.config).
 
 ## BusyBox config
 `buildroot/external/board/common/busybox.config` — BusyBox applet selection.
 
-## GPU kernel fragment
-`alpine/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
+## Kernel config fragments (`tiny-*.config`)
+Layered kernel configuration fragments merged by `tinykernel/APKBUILD` (Alpine) and referenced by `buildroot/external/configs/*.config` (Buildroot). Order: `tiny-base.config` → `tiny-<board>.config` → `tiny-panfrost.config` → `olddefconfig`.
+- `alpine/board/common/tiny-base.config` — base kernel config for all boards
+- `alpine/board/common/tiny-panfrost.config` — Panfrost (open-source Mali) fragment
+- `alpine/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali
+- `alpine/board/h700/tiny-h700.config` — H700 board-specific fragment
+- `alpine/board/rk3326/tiny-rk3326.config` — RK3326 board-specific fragment
+- `alpine/board/rk3326/tiny-dongles.config` — RK3326 USB dongle Wi-Fi/BT fragment
+- `alpine/board/rk3566/tiny-rk3566.config` — RK3566 board-specific fragment
 
 ## Build infrastructure
 - `buildroot/Makefile` — Buildroot build orchestrator
