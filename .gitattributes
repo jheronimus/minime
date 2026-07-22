@@ -1,2 +1,7 @@
 alpine/aports/preloaded-roms/assets/Roms/Sony*/Magic*Castle*Japan*.chd filter=lfs diff=lfs merge=lfs -text
-*.patch -whitespace
+*.patch -whitespace linguist-vendored
+
+# GitHub Linguist overrides (exclude vendor source/headers from repo stats)
+src/mali-kbase/** linguist-vendored
+src/libmali/** linguist-vendored
+docs/** linguist-documentation
