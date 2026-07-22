@@ -58,40 +58,9 @@ For detailed documentation of GitHub Actions (GA) workflows, build orchestration
 
 All checks must pass before committing. Do not suppress/bypass warnings.
 All gates are defined in the root `Justfile` and must be run via `just`.
+For detailed descriptions of quality gate recipes and shell conventions, see [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md).
 
-### Fast gates — run before every commit
+- **Fast gates (pre-commit)**: `just validate`
+- **CI-only gates**: `just validate-ci`
+- **Developer setup**: `just install-hooks`
 
-```sh
-just validate
-```
-
-Runs: `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-openrc-deps`, `check-traits`, `check-kernel-config`, `check-firmware`, `check-patches`, `check-hashes`, `check-git`.
-
-For detailed descriptions of what each quality gate recipe checks, see [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md#3-developer-command-utilities-justfile).
-
-### CI-only gates — require upstream Buildroot tree
-
-```sh
-just validate-ci
-```
-
-Runs `validate` plus `check-defconfigs` and `check-packages`.
-
-- **`check-defconfigs`**: merges and validates our config fragments for all boards via `make defconfig BOARD=<board>`.
-- **`check-packages`**: lints our `buildroot/external/package/` files via `python3 buildroot/buildroot/utils/check-package`.
-- **Proactive Package Cleaning**: Run `make buildroot-<pkg>-dirclean BOARD=<board>` locally when a package is modified.
-
-### Shell conventions enforced by shellcheck
-
-- All scripts target **POSIX sh / busybox ash** unless they carry a `#!/bin/bash` shebang.
-- APKBUILDs: no shebang (sourced by `abuild`), targeting ash. `SC2154` suppressed per-file (abuild injects `srcdir`/`builddir`/`pkgdir`).
-- OpenRC init.d scripts: `#!/sbin/openrc-run`, targeting ash. `SC2034` suppressed per-file (openrc-run framework globals).
-- OpenRC service names are **unprefixed** (`wifi`, `modules`, `bluetooth`, etc.). Do not add a `minime-` prefix.
-
-### Developer setup
-
-Install the pre-commit hook to enforce `just validate` on every commit:
-
-```sh
-just install-hooks
-```
