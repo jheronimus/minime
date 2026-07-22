@@ -114,3 +114,11 @@ jobs:
           else
             echo "No changes to commit for any board"
           fi
+
+      - name: Dispatch image rebuild workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Dispatching image rebuild workflows..."
+          gh workflow run alpine.yml || true
+          gh workflow run buildroot.yml || true
