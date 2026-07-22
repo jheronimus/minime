@@ -27,6 +27,7 @@ buildroot/logs/
 # Local scripts
 scripts/update_kernel_version.py
 
-# Wi-Fi configuration and downloaded images
+# Local deployment, Wi-Fi configuration and downloaded images
+deploy.cfg
 wifi.cfg
 downloads/

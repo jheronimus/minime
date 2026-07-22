@@ -50,17 +50,9 @@ Commands are run within the `alpine/` subdirectory:
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
 
-## Commit Requirements for Remote Builds
+## Infrastructure & Scripts
 
-Push changes to the respective branch on `jheronimus/minime` to trigger CI builds.
-
-## Scripts & Git Exclusions
-
-`scripts/` is strictly for Makefile/pipeline orchestration (`prepare-linux.sh`, `build-bootloader.sh`, `update_kernel_version.py`) and developer utilities.
-
-## CI Pipeline & Remote Runner
-
-Builds compile on GitHub Actions runner. Workflows for `buildroot/` and `alpine/` are located under `.github/workflows/`.
+For detailed documentation of GitHub Actions (GA) workflows, build orchestration scripts, entrypoints, and `Justfile` commands, consult [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md).
 
 ## Unified Validation Quality Gates
 
