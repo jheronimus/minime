@@ -42,15 +42,29 @@ if [ -z "$BOARD_NAME" ]; then
 fi
 
 BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${BOARD_NAME}"
-BR_BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/board/${BOARD_NAME}"
+# 1. Generate and compile boot.cmd to boot.scr
+BOOT_CMD_TEMPLATE="${ALPINE_DIR}/board/common/boot.cmd"
+BOOT_ENV="${ALPINE_DIR}/board/${BOARD_NAME}/boot.env"
 
-if [ ! -f "${BOARD_DIR}/boot.cmd" ]; then
-	echo "ERROR: ${BOARD_DIR}/boot.cmd is missing!" >&2
+if [ ! -f "${BOOT_CMD_TEMPLATE}" ] || [ ! -f "${BOOT_ENV}" ]; then
+	echo "ERROR: ${BOOT_CMD_TEMPLATE} or ${BOOT_ENV} is missing!" >&2
 	exit 1
 fi
 
-# 1. Compile boot.cmd to boot.scr
-mkimage -C none -A arm -T script -d "${BOARD_DIR}/boot.cmd" "${BINARIES_DIR}/boot.scr"
+BOOTARGS=""
+DEFAULT_DEVICE=""
+EXTRA_ENV=""
+# shellcheck disable=SC1090
+. "${BOOT_ENV}"
+
+TMP_BOOT_CMD=$(mktemp)
+sed -e "s|@BOOTARGS@|${BOOTARGS}|g" \
+    -e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" \
+    -e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" \
+    "${BOOT_CMD_TEMPLATE}" > "${TMP_BOOT_CMD}"
+
+mkimage -C none -A arm -T script -d "${TMP_BOOT_CMD}" "${BINARIES_DIR}/boot.scr"
+rm -f "${TMP_BOOT_CMD}"
 
 # 2. Add udev rule for Mali contiguous memory allocation (CMA) symlink
 mkdir -p "${TARGET_DIR}/etc/udev/rules.d"
