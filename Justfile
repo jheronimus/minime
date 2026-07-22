@@ -150,12 +150,20 @@ fetch os board ui:
     dest="downloads/${filename}"
     img="downloads/${filename%.xz}"
 
-    echo "Fetching ${filename}..."
-    curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
+    if command -v aria2c >/dev/null 2>&1; then
+        echo "Fetching ${filename} using aria2 (10 parallel connections)..."
+        aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 -d downloads -o "${filename}" "${url}"
+    else
+        echo "Fetching ${filename}..."
+        curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
+    fi
 
     echo "Decompressing to ${img}..."
     xz -d -f "${dest}"
     echo "Success! Image saved to ${img}"
+
+    # Push desktop notification (OSC 9) and audio bell chime (\a)
+    printf '\033]9;Minime: Download Complete (%s)\007\a' "${filename%.xz}" 2>/dev/null || true
 
     if [ -t 0 ]; then
         printf "Deploy image %s to SD card? [y/N] " "${img}"
@@ -268,3 +276,6 @@ deploy image disk_device="":
     echo "Ejecting ${device}..."
     diskutil eject "${device}" 2>/dev/null || true
     echo "Deployment complete!"
+
+    # Push desktop notification (OSC 9) and audio bell chime (\a)
+    printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
