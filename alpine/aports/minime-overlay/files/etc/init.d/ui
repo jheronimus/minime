@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
 # ui: launch the UI (MinUI/Allium) and the headphone-jack watcher
-# for the rk817ext sound card.  Runs in the background; the boot stage
+# for the active sound card.  Runs in the background; the boot stage
 # does not block on the UI lifecycle.
 
 description="Minime UI (MinUI/Allium)"

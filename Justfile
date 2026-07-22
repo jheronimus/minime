@@ -82,7 +82,7 @@ check-openrc:
 
 # Validate device traits configuration
 check-traits:
-    ./alpine/board/common/check-traits.sh
+    ./alpine/board/common/scripts/traits.sh check
 
 # Check git diff for whitespace errors and merge conflict markers
 check-git:
