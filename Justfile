@@ -137,8 +137,21 @@ fetch os board ui:
     xz -d -f "${dest}"
     echo "Success! Image saved to ${img}"
 
+    if [ -t 0 ]; then
+        printf "Deploy image %s to SD card? [y/N] " "${img}"
+        read -r ans
+        case "${ans}" in
+            y|Y|yes|YES)
+                just deploy "${img}"
+                ;;
+            *)
+                echo "Skipping deployment."
+                ;;
+        esac
+    fi
+
 # Deploy a firmware image to a target disk device
-deploy image disk_device:
+deploy image disk_device="":
     #!/usr/bin/env sh
     set -eu
     if [ ! -f "{{image}}" ]; then
@@ -146,14 +159,48 @@ deploy image disk_device:
         exit 1
     fi
 
-    _base=$(echo "{{disk_device}}" | sed 's|/dev/r\{0,1\}disk|/dev/disk|')
+    target_device="{{disk_device}}"
+
+    if [ -z "${target_device}" ]; then
+        if [ ! -f "deploy.cfg" ]; then
+            echo "ERROR: No disk device specified and deploy.cfg file not found." >&2
+            echo "Copy deploy_sample.cfg to deploy.cfg or pass the device explicitly:" >&2
+            echo "  just deploy {{image}} /dev/rdiskN" >&2
+            exit 1
+        fi
+
+        target_device=$(grep -E '^\s*disk_device=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\'\r')
+        if [ -z "${target_device}" ]; then
+            echo "ERROR: deploy.cfg exists but does not specify a valid disk_device=" >&2
+            exit 1
+        fi
+
+        # Guard: Only auto-deploy if disk contains a partition labeled 'minime'
+        _base_chk=$(echo "${target_device}" | sed 's|/dev/r\{0,1\}disk|/dev/disk|')
+        has_minime=""
+        if command -v diskutil >/dev/null 2>&1; then
+            has_minime=$(diskutil info "${_base_chk}s1" 2>/dev/null | grep -i "minime" || diskutil list "${_base_chk}" 2>/dev/null | grep -i "minime" || true)
+        elif command -v lsblk >/dev/null 2>&1; then
+            has_minime=$(lsblk -o LABEL "${_base_chk}" 2>/dev/null | grep -i "minime" || blkid "${_base_chk}"* 2>/dev/null | grep -i "minime" || true)
+        fi
+
+        if [ -z "${has_minime}" ]; then
+            echo "ERROR: Target disk '${target_device}' in deploy.cfg does not contain a partition labeled 'minime'." >&2
+            echo "Auto-deploy via deploy.cfg is restricted to previously flashed Minime cards." >&2
+            echo "To flash a fresh card, specify the target disk explicitly:" >&2
+            echo "  just deploy {{image}} ${target_device}" >&2
+            exit 1
+        fi
+    fi
+
+    _base=$(echo "${target_device}" | sed 's|/dev/r\{0,1\}disk|/dev/disk|')
     device="${_base}"
     rdevice=$(echo "${_base}" | sed 's|/dev/disk|/dev/rdisk|')
 
     echo "Unmounting target disk: ${device}..."
     diskutil unmountDisk force "${device}" 2>/dev/null || true
 
-    echo "Writing image..."
+    echo "Writing image to ${device}..."
     img_file="{{image}}"
     if [ ! -f "${img_file}" ] && [ -f "${img_file%.xz}" ]; then
         img_file="${img_file%.xz}"
@@ -199,5 +246,5 @@ deploy image disk_device:
     fi
 
     echo "Ejecting ${device}..."
-    diskutil eject "${device}"
+    diskutil eject "${device}" 2>/dev/null || true
     echo "Deployment complete!"
