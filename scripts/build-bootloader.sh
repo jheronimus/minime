@@ -99,7 +99,7 @@ fi
 
     # Apply our config fragment
     echo "Applying config fragment..."
-    ./scripts/kconfig/merge_config.sh -m .config "${ALPINE_DIR}/board/${BOARD}/uboot.config"
+    ./scripts/kconfig/merge_config.sh -m .config "${ALPINE_DIR}/board/common/uboot.config"
     make olddefconfig
 
     # Compile
