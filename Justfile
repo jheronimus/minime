@@ -2,12 +2,16 @@ default: validate
 
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
-# Run all fast quality gates (shell validation, traits, git hygiene, kernel config, patches, hashes)
-validate: check-scripts check-apkbuilds check-openrc check-openrc-deps check-traits check-kernel-config check-patches check-hashes check-git
+# Run all fast quality gates (shell validation, traits, git hygiene, kernel config, firmware, patches, hashes)
+validate: check-scripts check-apkbuilds check-openrc check-openrc-deps check-traits check-kernel-config check-firmware check-patches check-hashes check-git
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
     ./scripts/check-kernel-config.py
+
+# Verify all required firmware files (CONFIG_EXTRA_FIRMWARE and DTS declarations) exist on disk
+check-firmware:
+    ./scripts/check-firmware.py
 
 # Verify all patch files are referenced in build manifests
 check-patches:

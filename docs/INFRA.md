@@ -33,6 +33,7 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 
 ### Orchestration & Build Scripts (`scripts/` and `alpine/scripts/`)
 - **`scripts/check-kernel-config.py`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
+- **`scripts/check-firmware.py`**: Dynamically verifies that all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.py`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.py`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
 - **`scripts/check-openrc-deps.py`**: Validates OpenRC init script service dependencies and resolves `need`/`use`/`before`/`after` directives.
