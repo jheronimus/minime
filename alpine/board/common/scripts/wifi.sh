@@ -42,28 +42,12 @@ seed_wpa_profiles() {
 	done
 }
 
-# Append a Wi-Fi profile to the wpa_supplicant config file
-write_wpa_profile() {
-	ssid="$1"
-	psk="$2"
-	{
-		printf '%s\n' 'network={'
-		printf '\t%s\n' "ssid=\"${ssid}\""
-		if [ -n "${psk}" ]; then
-			printf '\t%s\n' "psk=\"${psk}\""
-		else
-			printf '\t%s\n' 'key_mgmt=NONE'
-		fi
-		printf '%s\n' '}'
-		printf '%s\n' ''
-	} >> "${wpa_supplicant_config_file}"
-}
-
-# Parse wifi.cfg key-value pairs into wpa_supplicant profiles
-generate_wpa_profiles_from_config() {
+# Parse wifi.cfg key-value pairs and append Wi-Fi profiles to wpa_supplicant config
+load_wifi_cfg_profiles() {
 	[ -f "${wifi_config_file}" ] || return 0
-	config_ssid=""
-	config_pass=""
+	ssid=""
+	psk=""
+
 	while IFS='=' read -r key val || [ -n "$key" ]; do
 		[ -n "$key" ] || continue
 		key=$(printf '%s' "$key" | tr -d '\r')
@@ -71,17 +55,26 @@ generate_wpa_profiles_from_config() {
 		case "$key" in
 			\#*) continue ;;
 			SSID)
-				if [ -n "$config_ssid" ]; then
-					write_wpa_profile "$config_ssid" "$config_pass"
-					config_pass=""
+				if [ -n "$ssid" ]; then
+					{
+						printf 'network={\n\tssid="%s"\n' "$ssid"
+						if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
+						printf '}\n\n'
+					} >> "${wpa_supplicant_config_file}"
+					psk=""
 				fi
-				config_ssid="$val"
+				ssid="$val"
 				;;
-			Passphrase) config_pass="$val" ;;
+			Passphrase) psk="$val" ;;
 		esac
 	done < "${wifi_config_file}"
-	if [ -n "$config_ssid" ]; then
-		write_wpa_profile "$config_ssid" "$config_pass"
+
+	if [ -n "$ssid" ]; then
+		{
+			printf 'network={\n\tssid="%s"\n' "$ssid"
+			if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
+			printf '}\n\n'
+		} >> "${wpa_supplicant_config_file}"
 	fi
 }
 
@@ -223,7 +216,7 @@ start_background() {
 start() {
 	printf "Starting wifi: "
 	init_wpa_supplicant_conf
-	generate_wpa_profiles_from_config
+	load_wifi_cfg_profiles
 	seed_wpa_profiles
 
 	has_profiles=0
@@ -252,7 +245,7 @@ stop() {
 reload() {
 	printf "Reloading wifi: "
 	init_wpa_supplicant_conf
-	generate_wpa_profiles_from_config
+	load_wifi_cfg_profiles
 	seed_wpa_profiles
 
 	if ! wpa_cli -i "${wifi_interface}" ping >/dev/null 2>&1; then
