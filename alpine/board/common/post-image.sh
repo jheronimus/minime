@@ -64,8 +64,8 @@ fi
 if [ -n "${BOARD_DIR_OVERRIDE}" ]; then
 	if [ -f "${BOARD_DIR_OVERRIDE}/board.env" ]; then
 		BOARD_DIR="${BOARD_DIR_OVERRIDE}"
-	elif [ -f "${MINIME_SOURCE_ROOT}/alpine/board/${BOARD_DIR_OVERRIDE}/board.env" ]; then
-		BOARD_DIR="${MINIME_SOURCE_ROOT}/alpine/board/${BOARD_DIR_OVERRIDE}"
+	elif [ -f "${MINIME_SOURCE_ROOT}/board/${BOARD_DIR_OVERRIDE}/board.env" ]; then
+		BOARD_DIR="${MINIME_SOURCE_ROOT}/board/${BOARD_DIR_OVERRIDE}"
 	else
 		BOARD_DIR="${BOARD_DIR_OVERRIDE}"
 	fi
@@ -436,7 +436,7 @@ cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
 echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
-VFAT_MB=$(( STAGE_MB + 256 ))
+VFAT_MB=$((STAGE_MB + 256))
 [ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}"
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
@@ -462,7 +462,7 @@ for item in "${USERDATA_STAGE}"/*; do
 done
 
 # Stage prebuilt bootloader blobs from alpine/bootloader/<soc>/ into BINARIES_DIR
-BL_DIR="${MINIME_SOURCE_ROOT}/alpine/bootloader/${SOC_NAME}"
+BL_DIR="${MINIME_SOURCE_ROOT}/bootloader/${SOC_NAME}"
 if [ "${SOC_NAME}" = "h700" ]; then
 	BL_BIN="${BL_DIR}/u-boot-sunxi-with-spl.bin"
 	if [ -f "${BL_BIN}" ]; then
