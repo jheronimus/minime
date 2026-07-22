@@ -21,7 +21,7 @@ BUILDROOT_DL_DIR := $(HOME)/.buildroot-dl
 
 BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
 BR2_EXTERNAL := $(LINUX_ROOT)/external
-MINIME_DEFCONFIG := minime_$(BOARD)_defconfig
+MINIME_DEFCONFIG := $(BOARD).config
 UI ?= minui
 
 TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
