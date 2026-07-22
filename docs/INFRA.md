@@ -63,7 +63,7 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
 | `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
 | `check-openrc-deps` | OpenRC init script dependencies | `scripts/check-openrc-deps.py` | Resolves `need`/`use`/`before`/`after` directives against installed services. |
-| `check-traits` | Device traits configuration | `alpine/board/common/check-traits.sh` | Validates board hardware traits config against schema. |
+| `check-traits` | Device traits configuration | `alpine/board/common/scripts/traits.sh check` | Validates board hardware traits config against schema. |
 | `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.py` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
 | `check-firmware` | Required firmware files | `scripts/check-firmware.py` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.py` | Ensures all `.patch` files are referenced in build manifests. |

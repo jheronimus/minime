@@ -9,34 +9,50 @@
 
 set -eu
 
-# UI detection: prefer MinUI, fall back to Allium.
-if [ -x "/mnt/sdcard/.system/minime/bin/minui" ]; then
-	UI_BIN="/mnt/sdcard/.system/minime/bin/minui"
-	UI_NAME="MinUI"
-elif [ -x "/mnt/sdcard/.ui/bin/alliumd" ]; then
-	UI_BIN="/mnt/sdcard/.ui/bin/alliumd"
-	UI_NAME="Allium"
-else
-	UI_BIN=""
-	UI_NAME="unknown"
-fi
+TRAITS_FILE="/mnt/sdcard/.minime/traits"
+ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
+UI_ENV_FILE="/mnt/sdcard/.minime/ui.env"
+
+get_trait() {
+	key="$1"
+	[ -f "$TRAITS_FILE" ] || return 0
+	grep "^${key}=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r' || true
+}
+
+read_ui_env() {
+	key="$1"
+	[ -f "$UI_ENV_FILE" ] || return 0
+	grep "^${key}=" "$UI_ENV_FILE" | cut -d= -f2 | tr -d '\r"' || true
+}
+
+UI_NAME=$(read_ui_env UI_NAME)
+UI_BIN=$(read_ui_env UI_BIN)
+UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
 start() {
-	echo "Starting UI (${UI_NAME})..."
+	echo "Starting UI (${UI_NAME:-none})..."
 
-	# Headphone jack routing daemon for rk817ext sound card
-	if amixer -c rk817ext controls >/dev/null 2>&1; then
+	sound_card=$(get_trait sound_card)
+	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
+		printf "pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n" \
+			"$sound_card" "$sound_card" >"$ASOUNDRC_FILE"
+	else
+		rm -f "$ASOUNDRC_FILE"
+	fi
+
+	# Headphone jack routing daemon for sound card
+	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ] && amixer -c "$sound_card" controls >/dev/null 2>&1; then
 		(
 			while true; do
-				if amixer -c rk817ext cget numid=1 2>/dev/null | grep -q "values=on"; then
+				if amixer -c "$sound_card" cget numid=1 2>/dev/null | grep -q "values=on"; then
 					target_state="HP"
 					current_val="0"
 				else
 					target_state="SPK"
 					current_val="1"
 				fi
-				if ! amixer -c rk817ext cget name='Playback Mux' 2>/dev/null | grep -q "values=$current_val"; then
-					amixer -c rk817ext sset 'Playback Mux' "$target_state" >/dev/null 2>&1
+				if ! amixer -c "$sound_card" cget name='Playback Mux' 2>/dev/null | grep -q "values=$current_val"; then
+					amixer -c "$sound_card" sset 'Playback Mux' "$target_state" >/dev/null 2>&1
 				fi
 				sleep 2
 			done
@@ -45,19 +61,6 @@ start() {
 	fi
 
 	export HOME=/mnt/sdcard
-
-	# Set up dynamic .asoundrc based on traits sound_card
-	TRAITS_FILE="/mnt/sdcard/.minime/traits"
-	ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
-	if [ -f "$TRAITS_FILE" ]; then
-		sound_card=$(grep "^sound_card=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r')
-		if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
-			printf "pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n" \
-				"$sound_card" "$sound_card" >"$ASOUNDRC_FILE"
-		else
-			rm -f "$ASOUNDRC_FILE"
-		fi
-	fi
 
 	# Ensure backlight is visible until userspace takes over
 	for bl in /sys/class/backlight/*/brightness; do
@@ -68,6 +71,17 @@ start() {
 	rm -f /mnt/sdcard/.minime/gpu_fail
 	rm -f /tmp/next
 
+	if [ -z "$UI_BIN" ] || ! [ -x "$UI_BIN" ]; then
+		echo "No UI binary found" >/tmp/ui.log
+		if [ -d /mnt/sdcard ]; then
+			printf '[UI %s] ERROR: No UI binary found\n' \
+				"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
+			sync 2>/dev/null || true
+		fi
+		return 0
+	fi
+
 	# UI lifecycle loop runs in the background so boot can finish
 	(
 		while true; do
@@ -77,25 +91,13 @@ start() {
 				exit 0
 			fi
 
-			if [ -n "${UI_BIN:-}" ] && [ -x "$UI_BIN" ]; then
-				if [ -d /mnt/sdcard ]; then
-					printf '[UI %s] Executing %s (%s)\n' \
-						"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
-					sync 2>/dev/null || true
-				fi
-				"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
-				[ -d /mnt/sdcard ] && cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
-			else
-				echo "No UI binary found" >/tmp/ui.log
-				if [ -d /mnt/sdcard ]; then
-					printf '[UI %s] ERROR: No UI binary found\n' \
-						"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
-					cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
-					sync 2>/dev/null || true
-				fi
-				sleep 5
-				continue
+			if [ -d /mnt/sdcard ]; then
+				printf '[UI %s] Executing %s (%s)\n' \
+					"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
+				sync 2>/dev/null || true
 			fi
+			"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
+			[ -d /mnt/sdcard ] && cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
 
 			if [ -f /tmp/next ]; then
 				CMD=$(cat /tmp/next)
@@ -111,22 +113,24 @@ start() {
 }
 
 stop() {
-	echo "Stopping UI (${UI_NAME})..."
+	echo "Stopping UI (${UI_NAME:-frontend})..."
 	if [ -f /tmp/watch_jack.pid ]; then
 		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
 		rm -f /tmp/watch_jack.pid
 	fi
 	if [ -f /tmp/ui_loop.pid ]; then
-		kill "$(cat /tmp/ui_loop.pid)" 2>/dev/null || true
+		loop_pid="$(cat /tmp/ui_loop.pid)"
+		pkill -P "$loop_pid" 2>/dev/null || true
+		kill "$loop_pid" 2>/dev/null || true
 		rm -f /tmp/ui_loop.pid
 	fi
-	# Best-effort cleanup of known UI processes.
-	# Each UI should handle its own children; these are belt-and-suspenders.
-	killall minui minarch keymon clock minput syncsettings say \
-		alliumd allium-launcher allium-menu 2>/dev/null || true
-	sleep 0.5
-	killall -9 minui minarch keymon clock minput syncsettings say \
-		alliumd allium-launcher allium-menu 2>/dev/null || true
+	if [ -n "${UI_PROCESSES:-}" ]; then
+		# shellcheck disable=SC2086
+		killall $UI_PROCESSES 2>/dev/null || true
+		sleep 0.5
+		# shellcheck disable=SC2086
+		killall -9 $UI_PROCESSES 2>/dev/null || true
+	fi
 }
 
 case "${1:-}" in

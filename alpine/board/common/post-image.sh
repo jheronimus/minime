@@ -6,6 +6,8 @@ usage() {
 	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_DIR [-d alpine] [-o OUTPUT_DIR]" >&2
 }
 
+MINIME_SOURCE_ROOT="${MINIME_SOURCE_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+
 GENIMAGE_CFG=""
 BOARD_DIR_OVERRIDE=""
 DISTRO="alpine"
@@ -48,9 +50,9 @@ if [ -z "$GENIMAGE_CFG" ]; then
 fi
 
 case "${DISTRO}" in
-alpine) ;;
+alpine | buildroot) ;;
 *)
-	echo "ERROR: -d must be 'alpine'" >&2
+	echo "ERROR: -d must be 'alpine' or 'buildroot'" >&2
 	exit 1
 	;;
 esac
@@ -60,7 +62,13 @@ if [ -n "${OUTPUT_DIR}" ]; then
 fi
 
 if [ -n "${BOARD_DIR_OVERRIDE}" ]; then
-	BOARD_DIR="${BOARD_DIR_OVERRIDE}"
+	if [ -f "${BOARD_DIR_OVERRIDE}/board.env" ]; then
+		BOARD_DIR="${BOARD_DIR_OVERRIDE}"
+	elif [ -f "${MINIME_SOURCE_ROOT}/alpine/board/${BOARD_DIR_OVERRIDE}/board.env" ]; then
+		BOARD_DIR="${MINIME_SOURCE_ROOT}/alpine/board/${BOARD_DIR_OVERRIDE}"
+	else
+		BOARD_DIR="${BOARD_DIR_OVERRIDE}"
+	fi
 else
 	BOARD_DIR="$(dirname "$GENIMAGE_CFG")"
 fi
@@ -82,7 +90,7 @@ GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
 case "${DISTRO}" in
 alpine) IMG_TAG="minime-alpine-${SOC_NAME}" ;;
-*) IMG_TAG="minime-${SOC_NAME}" ;;
+buildroot) IMG_TAG="minime-${SOC_NAME}" ;;
 esac
 FINAL_IMG="${BINARIES_DIR}/${IMG_TAG}.img"
 FINAL_IMG_XZ="${FINAL_IMG}.xz"
@@ -453,7 +461,23 @@ for item in "${USERDATA_STAGE}"/*; do
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${item}" ::
 done
 
-# Copy idbloader.img from U-Boot build directory if it exists and is missing in BINARIES_DIR
+# Stage prebuilt bootloader blobs from alpine/bootloader/<soc>/ into BINARIES_DIR
+BL_DIR="${MINIME_SOURCE_ROOT}/alpine/bootloader/${SOC_NAME}"
+if [ "${SOC_NAME}" = "h700" ]; then
+	BL_BIN="${BL_DIR}/u-boot-sunxi-with-spl.bin"
+	if [ -f "${BL_BIN}" ]; then
+		cp -f "${BL_BIN}" "${BINARIES_DIR}/u-boot-sunxi-with-spl.bin"
+	fi
+else
+	BL_IDB="${BL_DIR}/idbloader.img"
+	BL_ITB="${BL_DIR}/u-boot.itb"
+	if [ -f "${BL_IDB}" ] && [ -f "${BL_ITB}" ]; then
+		cp -f "${BL_IDB}" "${BINARIES_DIR}/idbloader.img"
+		cp -f "${BL_ITB}" "${BINARIES_DIR}/u-boot.itb"
+	fi
+fi
+
+# Fallback: Copy idbloader.img from U-Boot build directory if missing in BINARIES_DIR
 if [ ! -f "${BINARIES_DIR}/idbloader.img" ]; then
 	echo "Checking for idbloader.img in U-Boot build directory..."
 	for uboot_dir in "${BUILD_DIR}"/uboot-*; do

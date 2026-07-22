@@ -16,10 +16,6 @@ Under `alpine/bootloader/`. Built by `.github/workflows/bootloader.yml`. Both Al
 - RK3326: `idbloader.img`, `u-boot.itb`
 - RK3566: `idbloader.img`, `u-boot.itb`, `rkbin/bl31.elf`, `rkbin/rk3566_ddr_1056MHz_v1.25.bin`
 
-## `config/cores.cfg`
-- Source of truth: Alpine tree (`alpine/board/common/config/cores.cfg`).
-- Buildroot packages/scripts reference it directly from the Alpine path. No duplicates exist.
-
 ## Source code (`src/`)
 - `src/bootsplash/` — bootsplash package source
 - `src/libmali/` — Mali GLES userspace driver blobs and headers
@@ -27,6 +23,9 @@ Under `alpine/bootloader/`. Built by `.github/workflows/bootloader.yml`. Both Al
 
 ## Traits (`platform.ini` + device `.inis`)
 Source of truth is Alpine tree (`alpine/board/*/traits/`). Buildroot's `post-build.sh` copies traits directly from there.
+
+## UI integration contract (`.minime/ui.env`)
+Source of truth is UI packages (`alpine/aports/minui/`, `alpine/aports/allium/`, `buildroot/external/package/minui/`). Staged to `/mnt/sdcard/.minime/ui.env` on SD card image assembly.
 
 ## Boot scripts (`boot.cmd`) + DTS overlays
 Source of truth is Alpine tree (`alpine/board/*/`). Buildroot compiles them from the Alpine path.
@@ -36,6 +35,15 @@ Source of truth is Alpine tree (`alpine/board/*/uboot.config`). Buildroot refere
 
 ## Genimage configs
 Source of truth is Alpine tree (`alpine/board/`). Buildroot uses the same files passed via `-c`.
+
+## Shared runtime scripts (`alpine/board/common/scripts/`)
+Canonical home for cross-distro runtime scripts installed into `/usr/share/minime/scripts/`:
+- `traits.sh` — Device traits detection (`start`) and static schema linting (`check`).
+- `ui.sh` — UI lifecycle manager and audio routing daemon.
+- `wifi.sh` — Wi-Fi network configuration daemon.
+
+## Post-image assembly script (`alpine/board/common/post-image.sh`)
+Canonical image packaging script shared between Alpine and Buildroot (`buildroot/external/board/common/post-image.sh` is a forwarder wrapper).
 
 # Alpine-specific
 
@@ -48,8 +56,8 @@ All under `alpine/aports/minime-overlay/files/`.
 ## World configs (`alpine/configs/`)
 Alpine package sets (world-common, world-<board>).
 
-## Validation scripts
-- `alpine/board/common/check-traits.sh` — traits validator.
+## Validation & probe scripts
+- `alpine/board/common/scripts/traits.sh check` — static trait schema validator.
 - `alpine/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
 
 ## Build infrastructure
@@ -73,8 +81,9 @@ Buildroot configurations (minime_common.config, minime_<board>.config).
 
 ## GPU kernel fragment
 `buildroot/external/board/common/tiny-libmali.config` — kernel fragment for proprietary libmali.
+
 ## Build infrastructure
 - `buildroot/Makefile` — Buildroot build orchestrator
 - `buildroot/external/board/common/post-build.sh` — Buildroot post-build script
-- `buildroot/external/board/common/post-image.sh` — Buildroot post-image script
+- `buildroot/external/board/common/post-image.sh` — Buildroot post-image forwarder wrapper
 - `buildroot/external/external.mk`, `external.desc`, `Config.in` — Buildroot external tree hooks
