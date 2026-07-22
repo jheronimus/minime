@@ -3,7 +3,7 @@ setenv bootargs "console=tty1 root=/dev/ram0 rdinit=/init rootwait pm_async=off 
 
 setenv bootdevtype mmc
 setenv bootdevnum 0:1
-if test -n "${devtype}" && test -n "${devnum}" && test -n "${distro_bootpart}"; then
+if test -n "${devtype}" -a -n "${devnum}" -a -n "${distro_bootpart}"; then
 	setenv bootdevtype "${devtype}"
 	setenv bootdevnum "${devnum}:${distro_bootpart}"
 fi
@@ -60,6 +60,9 @@ if test "${undervolt}" = "l1" -o "${undervolt}" = "l2" -o "${undervolt}" = "l3";
 		echo "Applied CPU undervolt ${undervolt} overlay"
 	fi
 fi
+
+fdt set /chosen bootargs "${bootargs}"
+fdt chosen ${ramdisk_addr_r} ${initrd_size}
 
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
 sleep 5
