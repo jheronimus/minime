@@ -55,14 +55,20 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 
 All local developer commands are managed via `Justfile` and executed with `just`:
 
-| Recipe | Description |
-|---|---|
-| `just validate` | **Fast pre-commit gate**. Runs `check-scripts`, `check-apkbuilds`, `check-openrc`, `check-openrc-deps`, `check-traits`, `check-kernel-config`, `check-patches`, `check-hashes`, and `check-git`. |
-| `just validate-ci` | **CI quality gate**. Runs `validate` plus defconfig merging (`check-defconfigs`) and package linting (`check-packages`). |
-| `just check-kernel-config` | Validates kernel config fragments for duplicates, symbol format, and vendor toggles. |
-| `just check-patches` | Verifies all `.patch` files are referenced in build manifests. |
-| `just check-hashes` | Validates SHA-256 and SHA-512 format integrity across package manifests. |
-| `just check-openrc-deps` | Verifies OpenRC init script service dependencies. |
-| `just fetch <os> <board> <ui>` | Downloads the specified release image from the `testing` release, decompresses it to `downloads/`, and offers an interactive prompt to deploy. |
-| `just deploy <image> [disk]` | Flashes a firmware image to an SD card using `dd`, automatically injects `wifi.cfg` if present, and ejects the card. Supports `deploy.cfg` with `minime` label guard. |
-| `just install-hooks` | Installs the repository git pre-commit hook to enforce `just validate` before every commit. |
+| Recipe | What it checks | Shell / Tool | Notes |
+|---|---|---|---|
+| `just validate` | **Fast pre-commit gate** | `just` | Runs all fast quality gates listed below. |
+| `just validate-ci` | **CI quality gate** | `just` | Runs `validate` plus `check-defconfigs` and `check-packages`. |
+| `check-scripts` | `*.sh` files (all distros) | auto from shebang | Syntax (`sh -n`), shellcheck, exec bit. Excludes upstream Buildroot. |
+| `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
+| `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
+| `check-openrc-deps` | OpenRC init script dependencies | `scripts/check-openrc-deps.py` | Resolves `need`/`use`/`before`/`after` directives against installed services. |
+| `check-traits` | Device traits configuration | `alpine/board/common/check-traits.sh` | Validates board hardware traits config against schema. |
+| `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.py` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
+| `check-firmware` | Required firmware files | `scripts/check-firmware.py` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
+| `check-patches` | `.patch` files across repository | `scripts/check-patches.py` | Ensures all `.patch` files are referenced in build manifests. |
+| `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.py` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
+| `check-git` | Git staged diff | `git diff --check` | Catches whitespace errors and unresolved merge conflict markers. |
+| `just fetch <os> <board> <ui>` | Download release image | `curl` / `xz` | Fetches release image to `downloads/` and prompts for auto-deployment. |
+| `just deploy <image> [disk]` | Flash image to SD card | `dd` / `diskutil` | Writes image to target disk, injects `wifi.cfg`, ejects card. Supports `deploy.cfg` + `minime` label guard. |
+| `just install-hooks` | Git pre-commit hook | `.git/hooks/pre-commit` | Installs hook to run `just validate` before every commit. |
