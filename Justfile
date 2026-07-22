@@ -189,7 +189,7 @@ deploy image disk_device="":
             exit 1
         fi
 
-        target_device=$(grep -E '^\s*disk_device=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\'\r')
+        target_device=$(grep -E '^\s*disk_device=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\r')
         if [ -z "${target_device}" ]; then
             echo "ERROR: deploy.cfg exists but does not specify a valid disk_device=" >&2
             exit 1
