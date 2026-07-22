@@ -46,9 +46,6 @@ pce|PC Engine (PCE)|PCE
 lynx|Atari Lynx (LYNX)|LYNX
 ngp|Neo Geo Pocket (NGP)|NGP
 wswan|WonderSwan (WS)|WS
-arc|Arcade (ARC)|ARCADE
-neocd|Neo Geo CD (NEOCD)|NEOCD
-ss|Sega Saturn (SS)|SATURN
 "
 
 for map in ${mappings}; do
