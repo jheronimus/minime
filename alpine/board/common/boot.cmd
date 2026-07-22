@@ -1,4 +1,4 @@
-setenv bootargs "root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 rtw88_core.disable_lps_deep=Y drm_kms_helper.drm_fbdev_overalloc=200 @BOARD_BOOTARGS@"
+setenv bootargs "console=tty1 root=/dev/ram0 rdinit=/init rootwait pm_async=off ignore_loglevel loglevel=7 printk.devkmsg=on consoleblank=0 rtw88_core.disable_lps_deep=Y drm_kms_helper.drm_fbdev_overalloc=200 @BOARD_BOOTARGS@"
 @EXTRA_ENV@
 
 setenv bootdevtype mmc
