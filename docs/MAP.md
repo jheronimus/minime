@@ -59,9 +59,15 @@ Canonical home for cross-distro runtime scripts installed into `/usr/share/minim
 - `traits.sh` — Device traits detection (`start`) and static schema linting (`check`).
 - `ui.sh` — UI lifecycle manager and audio routing daemon.
 - `wifi.sh` — Wi-Fi network configuration daemon.
+- `device.sh` — Device configuration (`device.cfg`) builder (`init-cfg`), reader (`get`), and writer (`set`).
 
 ## Post-image assembly script (`alpine/board/common/post-image.sh`)
-Canonical image packaging script shared between Alpine and Buildroot (`buildroot/external/board/common/post-image.sh` is a forwarder wrapper).
+Canonical image packaging pipeline driver shared between Alpine and Buildroot (`buildroot/external/board/common/post-image.sh` is a forwarder wrapper).
+Executes stage scripts under `alpine/board/common/post-image.d/`:
+- `01-system-erofs.sh` — extracts rootfs tar and generates `system.erofs`.
+- `02-initramfs.sh` — stages initramfs dependencies and compiles `initramfs` CPIO archive using `initramfs-init.sh`.
+- `03-userdata-vfat.sh` — initializes `device.cfg`, stages DTBs/overlays/UI, and generates `userdata.vfat`.
+- `04-genimage.sh` — stages bootloaders, runs `genimage`, and compresses the final image with `xz`.
 
 # Alpine-specific
 
