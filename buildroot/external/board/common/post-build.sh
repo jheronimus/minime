@@ -41,7 +41,8 @@ if [ -z "$BOARD_NAME" ]; then
 	exit 1
 fi
 
-BOARD_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/${BOARD_NAME}"
+ALPINE_DIR="${BR2_EXTERNAL_MINIME_PATH}/../../alpine"
+BOARD_DIR="${ALPINE_DIR}/board/${BOARD_NAME}"
 # 1. Generate and compile boot.cmd to boot.scr
 BOOT_CMD_TEMPLATE="${ALPINE_DIR}/board/common/boot.cmd"
 BOOT_ENV="${ALPINE_DIR}/board/${BOARD_NAME}/boot.env"
