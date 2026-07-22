@@ -57,6 +57,22 @@ alpine | buildroot) ;;
 	;;
 esac
 
+# ── Distro-specific resolution ───────────────────────────────────────────────
+# All DISTRO-dependent logic lives here.  The rest of the script must be
+# distro-agnostic.  See AGENTS.md for the canonical pattern.
+case "${DISTRO}" in
+alpine)
+	DISTRO_SUFFIX="-alpine"
+	;;
+buildroot)
+	DISTRO_SUFFIX=""
+	# Buildroot wrapper passes bare board name; resolve to full external path.
+	if [ -n "${BOARD_DIR_OVERRIDE}" ] && [ ! -d "${BOARD_DIR_OVERRIDE}" ]; then
+		BOARD_DIR_OVERRIDE="${MINIME_SOURCE_ROOT}/../buildroot/external/board/${BOARD_DIR_OVERRIDE}"
+	fi
+	;;
+esac
+
 if [ -n "${OUTPUT_DIR}" ]; then
 	BINARIES_DIR="${OUTPUT_DIR}"
 fi
@@ -88,10 +104,7 @@ fi
 
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
 ROOTPATH_TMP="$(mktemp -d)"
-case "${DISTRO}" in
-alpine) IMG_TAG="minime-alpine-${SOC_NAME}" ;;
-buildroot) IMG_TAG="minime-${SOC_NAME}" ;;
-esac
+IMG_TAG="minime${DISTRO_SUFFIX}-${SOC_NAME}"
 FINAL_IMG="${BINARIES_DIR}/${IMG_TAG}.img"
 FINAL_IMG_XZ="${FINAL_IMG}.xz"
 
