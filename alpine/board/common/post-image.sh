@@ -298,7 +298,7 @@ log_console() {
 
 log_card() {
 	echo "$*"
-	if mountpoint -q /mnt/card 2>/dev/null; then
+	if grep -q " /mnt/card " /proc/mounts 2>/dev/null; then
 		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >> /mnt/card/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
@@ -333,7 +333,7 @@ for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
 	fi
 done
 
-if ! mountpoint -q /mnt/card; then
+if ! grep -q " /mnt/card " /proc/mounts 2>/dev/null; then
 	log_console "ERROR: failed to mount a MINIME FAT partition"
 	exec sh
 fi
@@ -419,7 +419,7 @@ if [ -f "${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/first-boot-probe.sh" ]; then
 	chmod +x "${INITRD_STAGE}/sbin/first-boot-probe.sh"
 fi
 
-# Compile the uncompressed initramfs CPIO archive.
+# Compile the initramfs CPIO archive.
 (cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs")
 
 # Copy initramfs to USERDATA_STAGE
@@ -484,6 +484,4 @@ if [ ! -f "${FINAL_IMG}" ]; then
 	exit 1
 fi
 
-echo "Compressing final image..."
-xz -f -T2 "${FINAL_IMG}"
-echo "Image produced: ${FINAL_IMG_XZ}"
+echo "Image produced: ${FINAL_IMG}"

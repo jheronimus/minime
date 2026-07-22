@@ -146,20 +146,35 @@ deploy image disk_device:
         exit 1
     fi
 
-    device="{{disk_device}}"
-    case "${device}" in
-        /dev/disk*|/dev/rdisk*) ;;
-        *) echo "ERROR: device must start with /dev/disk or /dev/rdisk" >&2; exit 1 ;;
-    esac
-
-    # Use raw device (/dev/rdiskN) for significantly faster write speeds on macOS
-    rdevice=$(echo "${device}" | sed 's|/dev/disk|/dev/rdisk|')
+    _base=$(echo "{{disk_device}}" | sed 's|/dev/r\{0,1\}disk|/dev/disk|')
+    device="${_base}"
+    rdevice=$(echo "${_base}" | sed 's|/dev/disk|/dev/rdisk|')
 
     echo "Unmounting target disk: ${device}..."
-    diskutil unmountDisk "${device}"
+    diskutil unmountDisk force "${device}" 2>/dev/null || true
 
-    echo "Writing image to ${rdevice}..."
-    sudo dd if="{{image}}" of="${rdevice}" bs=1m status=progress
+    echo "Writing image..."
+    img_file="{{image}}"
+    if [ ! -f "${img_file}" ] && [ -f "${img_file%.xz}" ]; then
+        img_file="${img_file%.xz}"
+    fi
+
+    case "${img_file}" in
+        *.xz)
+            if ! (xz -dc "${img_file}" | sudo dd of="${rdevice}" bs=1m status=progress); then
+                echo "Raw device write interrupted; retrying on block device ${device}..."
+                diskutil unmountDisk force "${device}" 2>/dev/null || true
+                xz -dc "${img_file}" | sudo dd of="${device}" bs=1m status=progress
+            fi
+            ;;
+        *)
+            if ! sudo dd if="${img_file}" of="${rdevice}" bs=1m status=progress; then
+                echo "Raw device write interrupted; retrying on block device ${device}..."
+                diskutil unmountDisk force "${device}" 2>/dev/null || true
+                sudo dd if="${img_file}" of="${device}" bs=1m status=progress
+            fi
+            ;;
+    esac
 
     if [ -f wifi.cfg ]; then
         echo "wifi.cfg found! Mount disk to apply Wi-Fi settings..."
