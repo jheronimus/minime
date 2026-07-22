@@ -8,6 +8,10 @@ if test -n "${devtype}" && test -n "${devnum}" && test -n "${distro_bootpart}"; 
 	setenv bootdevnum "${devnum}:${distro_bootpart}"
 fi
 
+if test -z "${ramdisk_addr_r}"; then
+	setenv ramdisk_addr_r 0x46000000
+fi
+
 setenv default_device "@DEFAULT_DEVICE@"
 setenv device auto
 if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .minime/config/device.cfg; then
@@ -56,11 +60,6 @@ if test "${undervolt}" = "l1" -o "${undervolt}" = "l2" -o "${undervolt}" = "l3";
 		echo "Applied CPU undervolt ${undervolt} overlay"
 	fi
 fi
-
-fdt set /chosen bootargs "${bootargs}"
-
-setexpr initrd_end ${ramdisk_addr_r} + ${initrd_size}
-fdt chosen ${ramdisk_addr_r} ${initrd_end}
 
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
 sleep 5
