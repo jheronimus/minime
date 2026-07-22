@@ -2,6 +2,14 @@ SHELL := /bin/bash
 ROOT_DIR := $(CURDIR)
 OS := $(shell uname -s)
 
+ifeq ($(OS),Darwin)
+    HOMEBREW_PREFIX ?= $(shell brew --prefix 2>/dev/null || echo /opt/homebrew)
+    COREUTILS_GNUBIN := $(HOMEBREW_PREFIX)/opt/coreutils/libexec/gnubin
+    ifneq ($(wildcard $(COREUTILS_GNUBIN)),)
+        export PATH := $(COREUTILS_GNUBIN):$(PATH)
+    endif
+endif
+
 BUILDROOT_VERSION := 2026.05.1
 BUILDROOT_ARCHIVE := buildroot-$(BUILDROOT_VERSION).tar.gz
 BUILDROOT_URL := https://buildroot.org/downloads/$(BUILDROOT_ARCHIVE)
