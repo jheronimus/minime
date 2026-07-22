@@ -69,12 +69,14 @@ bluez-alsa
 alsa-lib
 alsa-utils
 alsa-plugins
-# ── OpenGL ES / DRM/GBM / KMS (Mesa Panfrost) ────────────────────────────
+# ── OpenGL ES / DRM/GBM / KMS / Vulkan (Mesa Panfrost & PanVK) ───────────
 mesa
 mesa-dri-gallium
 mesa-egl
 mesa-gbm
 mesa-gles
+vulkan-loader
+mesa-vulkan-panfrost
 libdrm
 # ── SDL2 (Alpine's sdl2 has KMSDRM/EGL/OpenGLES by default) ─────────────
 sdl2
