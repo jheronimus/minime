@@ -6,23 +6,29 @@ Accepted
 ## Context
 Minime produces raw bootable SD card disk images (`.img.xz`) containing bootloader partitions and a primary FAT32 user data partition (`userdata.vfat`). On first boot, a runtime initramfs script expands the FAT32 partition to 100% of the target SD card.
 
-Previously, `post-image.sh` hardcoded a 1040 MB floor and produced ~1.04–2.0 GB uncompressed images. With the removal of large/unsupported ROM bundles (Sega Saturn, Neo Geo CD, Arcade), staged filesystem payload size dropped to ~367 MB.
+When evaluating minimum image sizing, `VFAT_MB` was briefly dropped from 1040 MB to 1024 MB. This resulted in complete boot failures (black screen / no backlight on RG35xxSP v1) and volume mount failures on macOS/Linux/bootloaders.
 
-We needed to evaluate optimal cluster size and minimum image volume bounds to minimize SD card flashing times (`dd`) while maintaining peak runtime file access performance on handheld hardware.
+## Root Cause Analysis
+Microsoft FAT32 Specification (Section 3.5) defines FAT volume types strictly by cluster count:
+- If $\text{CountOfClusters} < 4085$, volume is FAT12.
+- If $4085 \le \text{CountOfClusters} < 65525$, volume is **FAT16**.
+- If $\text{CountOfClusters} \ge 65525$, volume is **FAT32**.
+
+When `mkdosfs -F 32 -s 32` was invoked on a `1024 MB` raw volume ($1,073,741,824$ bytes):
+1. Total Sectors = 2,097,152.
+2. Reserved Sectors = 32; FAT1 + FAT2 tables = 1,024 sectors.
+3. Usable Data Sectors = $2,097,152 - 32 - 1024 = 2,096,096$ sectors.
+4. Usable Cluster Count = $2,096,096 / 32 = \mathbf{65,503\text{ clusters}}$.
+
+Because $65,503 < 65,525$, all OS filesystem drivers (macOS `msdos`, Linux `fs/fat`, U-Boot `fs/fat`) classify the volume as **FAT16**, while the BPB structure written by `mkdosfs -F 32` contains 32-bit FAT32 headers. This causes severe BPB/cluster mismatch, rendering the filesystem unreadable by U-Boot and host operating systems.
 
 ## Decision
 1. **Cluster Size**: Fixed to 16 KB (`mkdosfs -F 32 -s 32` -> 32 sectors per cluster @ 512B/sector).
-2. **Minimum Volume Floor (`VFAT_MB`)**: Fixed to 1024 MB (1 GiB) in `post-image.sh` for both Alpine and Buildroot image builders.
+2. **Minimum Volume Floor (`VFAT_MB`)**: Hardcoded to **1040 MB** in `post-image.sh` for both Alpine and Buildroot image builders.
+
+At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clusters}} \ge 65,525$, producing a perfectly valid FAT32 volume.
 
 ## Rationale
-
-### 1. NAND Flash Alignment & Hardware Performance
-Modern SDHC/SDXC flash cards utilize 16 KB NAND flash page sizes. Setting cluster size to 16 KB matching the hardware page size prevents read-modify-write cycles (write amplification) and minimizes random read latency when loading ROMs, executables, and assets.
-
-### 2. FAT Table Footprint & Directory Reading Speed
-Compared to default 4 KB clusters (`-s 8`), 16 KB clusters reduce File Allocation Table (FAT) entry overhead by $4\times$. This dramatically speeds up directory enumeration in handheld launchers (MinUI / Allium) when navigating folders containing hundreds of ROMs.
-
-### 3. FAT32 Specification Constraints
-The FAT32 specification requires a minimum of 65,525 clusters (0xFFF5) to be recognized as a valid FAT32 volume by operating systems and bootloaders:
-$$\text{Min Volume Size} = 65,525 \times 16\text{ KB} = 1,048,400\text{ KB} \approx 1024\text{ MB}$$
-Setting `VFAT_MB=1024` produces exactly 65,536 clusters, satisfying the FAT32 spec floor while producing the smallest possible flashable disk image (~1.04 GB raw / ~140–200 MB compressed).
+- **Hardware NAND Flash Alignment**: 16 KB cluster size matches 16 KB NAND flash page sizes on modern SD cards, preventing write amplification and minimizing random read latency.
+- **Directory Read Performance**: 16 KB clusters reduce FAT table lookup entries by $4\times$ compared to 4 KB clusters, accelerating launcher directory scans in MinUI and Allium.
+- **Specification Compliance**: 1040 MB is the absolute minimum boundary required for a valid 16 KB cluster FAT32 volume.
