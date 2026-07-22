@@ -178,7 +178,8 @@ deploy image disk_device:
 
     if [ -f wifi.cfg ]; then
         echo "wifi.cfg found! Mount disk to apply Wi-Fi settings..."
-        diskutil mountDisk "${device}"
+        diskutil mountDisk "${device}" 2>/dev/null || true
+        diskutil mount "${device}s1" 2>/dev/null || true
         sleep 2
 
         # Find partition mount point dynamically
