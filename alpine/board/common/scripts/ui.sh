@@ -146,3 +146,4 @@ restart | reload)
 	exit 1
 	;;
 esac
+# Trigger buildroot too
