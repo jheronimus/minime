@@ -33,12 +33,3 @@ At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clust
 - **Directory Read Performance**: 16 KB clusters reduce FAT table lookup entries by $4\times$ compared to 4 KB clusters, accelerating launcher directory scans in MinUI and Allium.
 - **Specification Compliance**: 1040 MB is the absolute minimum boundary required for a valid 16 KB cluster FAT32 volume.
 
-## FAT32 Partition Expansion and Bootloader Signatures
-
-On first boot, `initramfs-init.sh` uses `fatresize` (which depends on `libparted`) to expand the FAT32 partition to the full size of the SD card. 
-
-During development, it was discovered that `fatresize` silently failed to expand the partition on the H700 board, but succeeded on the RK3566/RK3326 boards. The root cause is an unintended interaction between `libparted` and the board-specific partition structures:
-
-1. **MBR vs GPT**: The H700 requires an MBR partition table (defined in its board-specific `genimage.cfg`) with an `eGON` U-Boot bootloader signature written at sector 16 of the SD card. RK3326 and RK3566 use a GPT partition table (defined in the shared `common/genimage.cfg`) and boot using an `idbloader.img` payload.
-2. **libparted Confusion**: When `fatresize` attempts to resize a block device partition (e.g. `/dev/mmcblk0p1`), `libparted` traverses upward and reads the parent disk's partition table. On the H700, `libparted` misidentifies the `eGON` signature as a "mac" disk label. This overrides the actual MBR, causing `libparted` to read incorrect partition geometry (probing sector 0 instead of sector 8192) and fail to detect the FAT32 filesystem entirely.
-3. **The Solution**: To safely expand the filesystem without relying on brittle `fatresize` parsing logic, the expansion script now maps the target partition to an isolated loop device using `losetup`. By pointing `fatresize` directly at the loop device, the parent disk's MBR (and the confusing `eGON` signature) are completely hidden from `libparted`. This effectively bypasses the bug, allowing the resize operation to succeed transparently on all architectures.
