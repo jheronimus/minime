@@ -2,7 +2,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=minui
-pkgver=20260720
+pkgver=20260722
 pkgrel=0
 pkgdesc="MinUI launcher frontend for Minime (prebuilt distribution)"
 url="https://github.com/jheronimus/MinUI"
@@ -16,8 +16,8 @@ provides="minime-ui"
 MINUI_DOT=0
 source="https://github.com/jheronimus/MinUI/releases/download/v${pkgver}/MinUI-${pkgver}-${MINUI_DOT}-base.zip
 	https://github.com/jheronimus/MinUI/releases/download/v${pkgver}/MinUI-${pkgver}-${MINUI_DOT}-extras.zip"
-sha512sums="54454dcce6f298fbaced2cba012eaa78f2f7d74207c6b34235be1ac729dca3de8575d6f146c1c7cea359a80b6597ff8463950d712863a4df9c587a94a7944d3a  MinUI-20260720-0-base.zip
-b6183b816031d1a518c986cb2f41a2c7668f4888a909b3b4cb9d42b6c7014e51ad5519abd9bba6f97dacbc87a89b310551a0c49d6073f0a8407c00325704bb7c  MinUI-20260720-0-extras.zip"
+sha512sums="23abbd083038d317f7bcc62aee32632c863ec43728b9f80d167b06c103f80581cb6733992a066e46e334e3b5b24d6d80ddb9b4ce28c526006f836ffb11cceca2  MinUI-20260722-0-base.zip
+3bcbfa82816a5ff993bed766c6423b1e36bb108764aa5ae45ad479ff540ce5d9ad9999b12a2039925de9f64f7789aa88c5fae4cddf86a67315b79cf7045037ca  MinUI-20260722-0-extras.zip"
 
 build() {
 	cd "$srcdir" || return 1

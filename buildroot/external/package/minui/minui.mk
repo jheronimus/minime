@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MINUI_VERSION = v20260720
+MINUI_VERSION = v20260722
 MINUI_DATE = $(MINUI_VERSION:v%=%)
 MINUI_DOT_NUMBER = 0
 MINUI_RELEASE_BASE = MinUI-$(MINUI_DATE)-$(MINUI_DOT_NUMBER)

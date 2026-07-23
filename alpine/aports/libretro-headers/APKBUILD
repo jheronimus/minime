@@ -10,7 +10,7 @@ arch="aarch64"
 license="MIT"
 options="!strip !check"
 source=""
-export LIBRETRO_HEADERS_VERSION=9e2af2c23ff2595f096e2f591ea49a9bcb65401d
+export LIBRETRO_HEADERS_VERSION=1a81c98e9ebe4e67ab4420593777df76eba18bcc
 
 build() {
 	local workdir="$srcdir/build"
