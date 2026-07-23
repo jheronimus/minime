@@ -91,9 +91,9 @@ echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
 VFAT_MB=$((STAGE_MB + 384))
-[ "$VFAT_MB" -lt 1080 ] && VFAT_MB=1080
+[ "$VFAT_MB" -lt 1200 ] && VFAT_MB=1200
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}"
-mkdosfs -F 32 -s 32 -R 65520 -n minime "${BINARIES_DIR}/userdata.vfat"
+mkdosfs -F 32 -s 32 -R 262144 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
