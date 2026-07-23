@@ -99,6 +99,11 @@ fi
 # Grow partition 1 and FAT32 without reformatting.
 if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	log_card "[INITRAMFS] Expanding SD card on $CARD_DEV..."
+	if [ -f /mnt/card/.minime/reserved.bin ]; then
+		log_card "[INITRAMFS] Freeing FAT32 expansion headroom..."
+		rm -f /mnt/card/.minime/reserved.bin
+		sync
+	fi
 	umount /mnt/card 2>/dev/null || true
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
