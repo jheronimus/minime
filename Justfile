@@ -183,15 +183,11 @@ fetch os="*" board="*" ui="*":
         dest="downloads/${img}"
         img_decompressed="downloads/${img%.xz}"
 
-        if [ -f "$img_decompressed" ]; then
-            echo "Already downloaded: ${img_decompressed}"
-            downloaded="${downloaded:+$downloaded }$img_decompressed"
-            continue
-        fi
+        rm -f "${dest}"
 
         if command -v aria2c >/dev/null 2>&1; then
             echo "Fetching ${img} using aria2 (10 parallel connections)..."
-            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 -d downloads -o "${img}" "${url}"
+            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 --allow-overwrite=true -d downloads -o "${img}" "${url}"
         else
             echo "Fetching ${img}..."
             curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
