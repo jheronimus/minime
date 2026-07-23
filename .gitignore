@@ -2,6 +2,8 @@
 local.mk
 .DS_Store
 **/.DS_Store
+._*
+**/._*
 
 # Alpine abuild artifacts
 alpine/aports/*/src
