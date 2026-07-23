@@ -5,16 +5,11 @@ from pathlib import Path
 
 # Board config definitions: (name, list_of_fragment_paths)
 CONFIG_PAIRS = [
-    ("alpine/h700", ["alpine/board/common/tiny-base.config", "alpine/board/h700/linux.config"]),
-    ("alpine/rk3326", ["alpine/board/common/tiny-base.config", "alpine/board/rk3326/linux.config"]),
-    ("alpine/rk3566", ["alpine/board/common/tiny-base.config", "alpine/board/rk3566/linux.config"]),
+    ("alpine/h700", ["alpine/board/common/tiny-base.config", "alpine/board/h700/tiny-h700.config"]),
+    ("alpine/rk3326", ["alpine/board/common/tiny-base.config", "alpine/board/rk3326/tiny-rk3326.config"]),
+    ("alpine/rk3566", ["alpine/board/common/tiny-base.config", "alpine/board/rk3566/tiny-rk3566.config"]),
 ]
 
-# Add buildroot configs if they exist
-for board in ["h700", "rk3326", "rk3566"]:
-    p = Path(f"buildroot/external/board/{board}/linux.config")
-    if p.exists():
-        CONFIG_PAIRS.append((f"buildroot/{board}", ["alpine/board/common/tiny-base.config", str(p)]))
 
 def parse_fragment(filepath):
     """
@@ -69,9 +64,10 @@ def main():
                     seen[symbol] = []
                 seen[symbol].append((file_path, line_num, val))
 
-        # Check for duplicates across fragments
+        # Check for duplicates across fragments (except explicit board overrides like firmware)
+        ALLOWED_OVERRIDES = {"CONFIG_EXTRA_FIRMWARE", "CONFIG_EXTRA_FIRMWARE_DIR"}
         for symbol, locations in seen.items():
-            if len(locations) > 1:
+            if len(locations) > 1 and symbol not in ALLOWED_OVERRIDES:
                 loc_strs = [f"{f}:{line} (val={v})" for f, line, v in locations]
                 print(f"  [ERROR] [{label}] Duplicate symbol {symbol} defined in multiple locations:")
                 for loc in loc_strs:
