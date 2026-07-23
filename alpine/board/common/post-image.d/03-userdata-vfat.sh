@@ -91,11 +91,17 @@ echo "Generating userdata.vfat..."
 rm -f "${BINARIES_DIR}/userdata.vfat"
 STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
 VFAT_MB=$((STAGE_MB + 384))
-[ "$VFAT_MB" -lt 1080 ] && VFAT_MB=1080
+[ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}"
-mkdosfs -F 32 -s 32 -R 65520 -n minime "${BINARIES_DIR}/userdata.vfat"
+mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
-# Populate userdata.vfat recursively using mtools.
+# Populate userdata.vfat: copy a 128MB dummy file first to reserve low clusters (Cluster 2..8193)
+# for first-boot FAT table expansion, then copy system files.
+mkdir -p "${USERDATA_STAGE}/.minime"
+dd if=/dev/zero of="${USERDATA_STAGE}/.minime/reserved.bin" bs=1M count=128 2>/dev/null
+MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/.minime/reserved.bin" ::.minime/reserved.bin
+rm -f "${USERDATA_STAGE}/.minime/reserved.bin"
+
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 for item in .minime .system .userdata; do
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
