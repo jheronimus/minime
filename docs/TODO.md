@@ -10,6 +10,8 @@
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
   - [THEORY] Atomic profile application for governor, frequency bounds, and core limits via key combinations or minimal UI.
+- [ ] Make it so erofs image from Alpine can be replaced with an image from Buildroot (and vice versa without reflashing). This will allow running an automated test script (upload an image - reboot - upload another image - reboot)
+ - [THEORY] Can Buildroot and Alpine use the same infrastructure to build the final image so that only the erofs is different?
 
 ## Power Management & Suspend
 
