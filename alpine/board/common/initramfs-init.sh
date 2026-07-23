@@ -101,15 +101,22 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	log_card "[INITRAMFS] Expanding SD card on $CARD_DEV..."
 	umount /mnt/card 2>/dev/null || true
 	DISK_DEV="${CARD_DEV%p1}"
+	PART_NUM="${CARD_DEV##*p}"
+
 	log_card "[INITRAMFS] Running parted on $DISK_DEV..."
-	if ! parted -s -f "$DISK_DEV" resizepart 1 100%; then
+	if ! parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100%; then
 		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
-		log_card "ERROR: failed to expand partition 1 on $DISK_DEV"
+		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
 		exec sh
 	fi
+
+	if command -v partprobe >/dev/null 2>&1; then
+		partprobe "$DISK_DEV" 2>/dev/null || true
+	fi
 	sleep 1
+
 	log_card "[INITRAMFS] Running fatresize on $CARD_DEV..."
-	if ! fatresize -q -f -s max "$CARD_DEV"; then
+	if ! fatresize -q -f -s max -i "$PART_NUM" "$DISK_DEV" 2>/dev/null && ! fatresize -q -f -s max "$CARD_DEV"; then
 		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 		log_card "ERROR: failed to expand $CARD_DEV"
 		exec sh

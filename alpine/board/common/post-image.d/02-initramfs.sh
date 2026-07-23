@@ -67,6 +67,7 @@ copy_runtime_binary() {
 }
 
 copy_runtime_binary parted
+[ -f "${SYSTEM_STAGE}/usr/sbin/partprobe" ] && copy_runtime_binary partprobe || true
 copy_runtime_binary fatresize
 
 # Install custom init script
