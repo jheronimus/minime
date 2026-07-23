@@ -115,22 +115,11 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo unknown)"
 	DISK_BYTES="$(blockdev --getsize64 "$DISK_DEV" 2>/dev/null || echo unknown)"
 
-	# fatresize uses libparted which gets confused by the H700 eGON signature at sector 16
-	# and mistakenly detects a 'mac' disk label on the parent disk, causing it to fail.
-	# We isolate the partition using a loop device to hide the parent disk's MBR.
-	LOOP_DEV="$(losetup -f 2>/dev/null)"
-	if [ -n "$LOOP_DEV" ]; then
-		losetup "$LOOP_DEV" "$CARD_DEV"
-		FATRESIZE_OUT="$(fatresize -f -s max "$LOOP_DEV" 2>&1)"
+	FATRESIZE_OUT="$(fatresize -f -s max -i "$PART_NUM" "$DISK_DEV" 2>&1)"
+	FATRESIZE_RC=$?
+	if [ "$FATRESIZE_RC" -ne 0 ]; then
+		FATRESIZE_OUT="$(printf "%s\nFallback:\n" "$FATRESIZE_OUT"; fatresize -f -s max "$CARD_DEV" 2>&1)"
 		FATRESIZE_RC=$?
-		losetup -d "$LOOP_DEV"
-	else
-		FATRESIZE_OUT="$(fatresize -f -s max -i "$PART_NUM" "$DISK_DEV" 2>&1)"
-		FATRESIZE_RC=$?
-		if [ "$FATRESIZE_RC" -ne 0 ]; then
-			FATRESIZE_OUT="$(printf "%s\nFallback:\n" "$FATRESIZE_OUT"; fatresize -f -s max "$CARD_DEV" 2>&1)"
-			FATRESIZE_RC=$?
-		fi
 	fi
 
 	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
