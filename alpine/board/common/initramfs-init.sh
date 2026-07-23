@@ -103,32 +103,39 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
 
-	log_card "[INITRAMFS] Running parted on $DISK_DEV..."
-	if ! parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100%; then
-		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
-		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
-		exec sh
-	fi
+	PARTED_OUT="$(parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100% 2>&1)"
+	PARTED_RC=$?
 
 	if command -v partprobe >/dev/null 2>&1; then
 		partprobe "$DISK_DEV" 2>/dev/null || true
 	fi
 	sleep 1
 
-	# Diagnostic: log block device geometry before fatresize.
 	PART_BYTES="$(blockdev --getsize64 "$CARD_DEV" 2>/dev/null || echo unknown)"
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo unknown)"
 	DISK_BYTES="$(blockdev --getsize64 "$DISK_DEV" 2>/dev/null || echo unknown)"
+
+	FATRESIZE_OUT="$(fatresize -f -s max -i "$PART_NUM" "$DISK_DEV" 2>&1)"
+	FATRESIZE_RC=$?
+	if [ "$FATRESIZE_RC" -ne 0 ]; then
+		FATRESIZE_OUT="$(printf "%s\nFallback:\n" "$FATRESIZE_OUT"; fatresize -f -s max "$CARD_DEV" 2>&1)"
+		FATRESIZE_RC=$?
+	fi
+
+	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
+
+	log_card "[INITRAMFS] parted output: ${PARTED_OUT} (exit ${PARTED_RC})"
 	log_card "[INITRAMFS] $CARD_DEV: kernel size=${PART_BYTES}B sectors=${PART_SECTORS}"
 	log_card "[INITRAMFS] $DISK_DEV: kernel size=${DISK_BYTES}B"
-
-	log_card "[INITRAMFS] Running fatresize on $CARD_DEV..."
-	FATRESIZE_OUT="$(fatresize -f -s max "$CARD_DEV" 2>&1)"
-	FATRESIZE_RC=$?
 	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
 	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
+
+	if [ "$PARTED_RC" -ne 0 ]; then
+		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
+		exec sh
+	fi
+
 	if [ "$FATRESIZE_RC" -ne 0 ]; then
-		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 		log_card "ERROR: failed to expand $CARD_DEV"
 		exec sh
 	fi
