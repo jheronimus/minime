@@ -35,6 +35,7 @@ ln -sf busybox "${INITRD_STAGE}/bin/echo"
 ln -sf busybox "${INITRD_STAGE}/bin/dd"
 ln -sf busybox "${INITRD_STAGE}/bin/grep"
 ln -sf busybox "${INITRD_STAGE}/bin/sync"
+ln -sf busybox "${INITRD_STAGE}/bin/losetup"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
 copy_runtime_lib() {
