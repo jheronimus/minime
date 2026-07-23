@@ -115,8 +115,19 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	fi
 	sleep 1
 
+	# Diagnostic: log block device geometry before fatresize.
+	PART_BYTES="$(blockdev --getsize64 "$CARD_DEV" 2>/dev/null || echo unknown)"
+	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo unknown)"
+	DISK_BYTES="$(blockdev --getsize64 "$DISK_DEV" 2>/dev/null || echo unknown)"
+	log_card "[INITRAMFS] $CARD_DEV: kernel size=${PART_BYTES}B sectors=${PART_SECTORS}"
+	log_card "[INITRAMFS] $DISK_DEV: kernel size=${DISK_BYTES}B"
+
 	log_card "[INITRAMFS] Running fatresize on $CARD_DEV..."
-	if ! fatresize -q -f -s max -i "$PART_NUM" "$DISK_DEV" 2>/dev/null && ! fatresize -q -f -s max "$CARD_DEV"; then
+	FATRESIZE_OUT="$(fatresize -f -s max "$CARD_DEV" 2>&1)"
+	FATRESIZE_RC=$?
+	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
+	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
+	if [ "$FATRESIZE_RC" -ne 0 ]; then
 		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 		log_card "ERROR: failed to expand $CARD_DEV"
 		exec sh
