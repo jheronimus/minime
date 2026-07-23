@@ -76,3 +76,4 @@ clean:
 
 clean-vm:
 	@$(PODMAN_CMD) rmi $(ALPINE_IMAGE_NAME) 2>/dev/null || true
+# Trigger build
