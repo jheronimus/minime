@@ -59,7 +59,7 @@ log_card "[INITRAMFS] Initialized persistent logging on $CARD_DEV"
 # The default U-Boot at SD card offset 8K is built for LPDDR4 (DCDC3=1100mV).
 # If this device has LPDDR3 memory (DCDC3=1200mV), swap in the DDR3 U-Boot
 # binary stored on the FAT partition and reboot so it takes effect.
-if [ -f /mnt/card/.minime/u-boot-ddr3.bin ]; then
+if [ -f /mnt/card/.minime/u-boot-ddr3.bin ] && [ ! -f /mnt/card/.minime/.ddr3-swapped ]; then
 	dram_uv=""
 	for r in /sys/class/regulator/regulator.*/; do
 		if [ "$(cat "$r/name" 2>/dev/null)" = "vdd-dram" ]; then
@@ -71,6 +71,7 @@ if [ -f /mnt/card/.minime/u-boot-ddr3.bin ]; then
 		log_card "[INITRAMFS] LPDDR3 detected (DCDC3=${dram_uv}uV), swapping U-Boot binary..."
 		DISK_DEV="${CARD_DEV%p1}"
 		if dd if=/mnt/card/.minime/u-boot-ddr3.bin of="$DISK_DEV" bs=1k seek=8 2>/dev/null; then
+			touch /mnt/card/.minime/.ddr3-swapped
 			sync
 			log_card "[INITRAMFS] DDR3 U-Boot written to ${DISK_DEV}, rebooting..."
 			umount /mnt/card 2>/dev/null || true
