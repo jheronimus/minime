@@ -61,6 +61,7 @@ Commands are run within the `alpine/` subdirectory:
 
 ## Agent Directives (Buildroot Quirks)
 
+- **No Manual Workflow Dispatch**: Every push to `main` automatically triggers the Alpine and Buildroot build workflows. **Never** use `gh workflow run` to manually dispatch build workflows — this causes race conditions where concurrent builds corrupt the `testing` release assets. Only use manual dispatch for the bootloader workflow (`bootloader.yml`), which requires explicit invocation.
 - **Architecture & Optimization Knowledge**: Store all architectural decisions, filesystem/kernel performance optimizations, and design rationale in Architecture Decision Records under `docs/adr/` (e.g. `docs/adr/0001-fat32-cluster-and-image-sizing.md`).
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
