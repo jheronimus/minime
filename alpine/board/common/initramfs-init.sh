@@ -116,7 +116,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	sleep 1
 
 	log_card "[INITRAMFS] Running fatresize on $CARD_DEV..."
-	if ! fatresize -q -f -s max -i "$PART_NUM" "$DISK_DEV" 2>/dev/null && ! fatresize -q -f -s max "$CARD_DEV"; then
+	if ! fatresize -q -f -s max "$CARD_DEV" 2>/dev/null && ! fatresize -q -f -s max -i "$PART_NUM" "$DISK_DEV"; then
 		mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 		log_card "ERROR: failed to expand $CARD_DEV"
 		exec sh
