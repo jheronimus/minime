@@ -122,60 +122,136 @@ install-hooks:
 
 # ── Image Management ──────────────────────────────────────────────────────────
 
-# Fetch the latest testing image for a specific OS, board, and UI option
-fetch os board ui:
+# Fetch testing images. Use * or "all" for any slot to match all options.
+# Examples: just fetch alpine rk3566 \*    just fetch all    just fetch \* \* minui
+fetch os="*" board="*" ui="*":
     #!/usr/bin/env sh
     set -eu
-    case "{{os}}" in
-        alpine|buildroot) ;;
-        *) echo "ERROR: OS must be 'alpine' or 'buildroot'" >&2; exit 1 ;;
-    esac
-    case "{{board}}" in
-        h700|rk3326|rk3566) ;;
-        *) echo "ERROR: board must be 'h700', 'rk3326', or 'rk3566'" >&2; exit 1 ;;
-    esac
-    case "{{ui}}" in
-        minui|allium) ;;
-        *) echo "ERROR: UI must be 'minui' or 'allium'" >&2; exit 1 ;;
-    esac
 
-    if [ "{{os}}" = "alpine" ]; then
-        filename="minime-alpine-{{board}}-{{ui}}.img.xz"
-    else
-        filename="minime-buildroot-{{board}}-{{ui}}.img.xz"
+    os_val="{{os}}"
+    board_val="{{board}}"
+    ui_val="{{ui}}"
+
+    if [ "$os_val" = "all" ]; then
+        os_val="*"
+        board_val="*"
+        ui_val="*"
     fi
 
-    url="https://github.com/jheronimus/minime/releases/download/testing/${filename}"
+    # Expand OS
+    case "$os_val" in
+        "*") os_list="alpine buildroot" ;;
+        alpine|buildroot) os_list="$os_val" ;;
+        *) echo "ERROR: OS must be 'alpine', 'buildroot', or '*'" >&2; exit 1 ;;
+    esac
+
+    # Expand board
+    case "$board_val" in
+        "*") board_list="h700 rk3326 rk3566" ;;
+        h700|rk3326|rk3566) board_list="$board_val" ;;
+        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or '*'" >&2; exit 1 ;;
+    esac
+
+    # Expand UI
+    case "$ui_val" in
+        "*") ui_list="minui allium" ;;
+        minui|allium) ui_list="$ui_val" ;;
+        *) echo "ERROR: UI must be 'minui', 'allium', or '*'" >&2; exit 1 ;;
+    esac
+
+    # Build image list
+    images=""
+    for o in $os_list; do
+        for b in $board_list; do
+            for u in $ui_list; do
+                images="${images:+$images }minime-${o}-${b}-${u}.img.xz"
+            done
+        done
+    done
+
+    echo "Images to fetch:"
+    for img in $images; do
+        echo "  ${img}"
+    done
+    echo ""
+
+    # Download
     mkdir -p downloads
-    dest="downloads/${filename}"
-    img="downloads/${filename%.xz}"
+    downloaded=""
+    for img in $images; do
+        url="https://github.com/jheronimus/minime/releases/download/testing/${img}"
+        dest="downloads/${img}"
+        img_decompressed="downloads/${img%.xz}"
 
-    if command -v aria2c >/dev/null 2>&1; then
-        echo "Fetching ${filename} using aria2 (10 parallel connections)..."
-        aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 -d downloads -o "${filename}" "${url}"
-    else
-        echo "Fetching ${filename}..."
-        curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
-    fi
+        if [ -f "$img_decompressed" ]; then
+            echo "Already downloaded: ${img_decompressed}"
+            downloaded="${downloaded:+$downloaded }$img_decompressed"
+            continue
+        fi
 
-    echo "Decompressing to ${img}..."
-    xz -d -f "${dest}"
-    echo "Success! Image saved to ${img}"
+        if command -v aria2c >/dev/null 2>&1; then
+            echo "Fetching ${img} using aria2 (10 parallel connections)..."
+            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 -d downloads -o "${img}" "${url}"
+        else
+            echo "Fetching ${img}..."
+            curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
+        fi
 
-    # Push desktop notification (OSC 9) and audio bell chime (\a)
-    printf '\033]9;Minime: Download Complete (%s)\007\a' "${filename%.xz}" 2>/dev/null || true
+        echo "Decompressing to ${img_decompressed}..."
+        xz -d -f "${dest}"
+        echo "Success! Image saved to ${img_decompressed}"
+        downloaded="${downloaded:+$downloaded }$img_decompressed"
+    done
 
-    if [ -t 0 ]; then
-        printf "Deploy image %s to SD card? [y/N] " "${img}"
-        read -r ans
-        case "${ans}" in
-            y|Y|yes|YES)
-                just deploy "${img}"
-                ;;
-            *)
-                echo "Skipping deployment."
-                ;;
-        esac
+    # Desktop notification
+    img_count=$(echo "$downloaded" | wc -w | tr -d ' ')
+    printf '\033]9;Minime: Download Complete (%s images)\007\a' "$img_count" 2>/dev/null || true
+
+    # Flash phase (interactive only)
+    if [ -t 0 ] && [ -n "$downloaded" ]; then
+        if [ "$img_count" -eq 1 ]; then
+            printf "Deploy image %s to SD card? [y/N] " "$downloaded"
+            read -r ans
+            case "$ans" in
+                y|Y|yes|YES) just deploy "$downloaded" ;;
+                *) echo "Skipping deployment." ;;
+            esac
+        else
+            while true; do
+                echo ""
+                echo "Downloaded images:"
+                i=1
+                for img in $downloaded; do
+                    printf "  %s) %s\n" "$i" "$img"
+                    i=$((i + 1))
+                done
+                none_option=$i
+                printf "  %s) None (skip)\n" "$none_option"
+                echo ""
+                printf "Which image to flash? [1-%s] " "$none_option"
+                read -r choice
+
+                if [ -z "$choice" ] || [ "$choice" -eq "$none_option" ]; then
+                    echo "Skipping deployment."
+                    break
+                fi
+
+                if ! printf '%s' "$choice" | grep -qE '^[0-9]+$' || [ "$choice" -lt 1 ] || [ "$choice" -gt "$img_count" ]; then
+                    echo "Invalid choice. Please enter 1-${none_option}."
+                    continue
+                fi
+
+                selected_img=$(echo "$downloaded" | cut -d' ' -f"$choice")
+                just deploy "$selected_img"
+
+                printf "Flash another image? [y/N] "
+                read -r ans
+                case "$ans" in
+                    y|Y|yes|YES) continue ;;
+                    *) break ;;
+                esac
+            done
+        fi
     fi
 
 # Deploy a firmware image to a target disk device
