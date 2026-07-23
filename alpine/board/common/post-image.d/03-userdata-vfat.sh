@@ -59,6 +59,13 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	fi
 done
 
+# Copy the default DTB to a flat path for U-Boot (avoids LFN directory issues).
+DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/boot.env" | cut -d= -f2- | tr -d '"')"
+if [ -n "${DEFAULT_DEVICE}" ] && [ -f "${USERDATA_STAGE}/.minime/devices/${DEFAULT_DEVICE}" ]; then
+	cp -f "${USERDATA_STAGE}/.minime/devices/${DEFAULT_DEVICE}" "${USERDATA_STAGE}/.minime/dtb"
+	echo "Staged default DTB as .minime/dtb: ${DEFAULT_DEVICE}"
+fi
+
 # Copy UI files from the generic staging directory (if any)
 if [ -d "${BINARIES_DIR}/ui" ]; then
 	echo "Staging UI files onto SD card partition..."
