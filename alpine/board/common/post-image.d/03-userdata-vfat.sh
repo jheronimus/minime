@@ -59,11 +59,26 @@ for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	fi
 done
 
-# Copy the default DTB to a flat path for U-Boot (avoids LFN directory issues).
-DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/boot.env" | cut -d= -f2- | tr -d '"')"
+# Copy the default DTB to a flat path for U-Boot (avoids nested directory issues).
+# Read DEFAULT_DEVICE from boot.env; fall back to first available DTB if the
+# grep fails (e.g. path resolution issues inside the build container).
+DEFAULT_DEVICE=""
+_BOOT_ENV="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/boot.env"
+if [ -f "${_BOOT_ENV}" ]; then
+	DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${_BOOT_ENV}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+fi
+_DTB_SRC=""
 if [ -n "${DEFAULT_DEVICE}" ] && [ -f "${USERDATA_STAGE}/.minime/devices/${DEFAULT_DEVICE}" ]; then
-	cp -f "${USERDATA_STAGE}/.minime/devices/${DEFAULT_DEVICE}" "${USERDATA_STAGE}/.minime/dtb"
-	echo "Staged default DTB as .minime/dtb: ${DEFAULT_DEVICE}"
+	_DTB_SRC="${USERDATA_STAGE}/.minime/devices/${DEFAULT_DEVICE}"
+else
+	# Fallback: pick the first available DTB from the devices directory.
+	_DTB_SRC="$(ls "${USERDATA_STAGE}/.minime/devices/"*.dtb 2>/dev/null | head -1 || true)"
+fi
+if [ -n "${_DTB_SRC}" ] && [ -f "${_DTB_SRC}" ]; then
+	cp -f "${_DTB_SRC}" "${USERDATA_STAGE}/.minime/dtb"
+	echo "Staged default DTB as .minime/dtb: $(basename "${_DTB_SRC}")"
+else
+	echo "WARNING: No DTB available to stage as .minime/dtb" >&2
 fi
 
 # Copy UI files from the generic staging directory (if any)
