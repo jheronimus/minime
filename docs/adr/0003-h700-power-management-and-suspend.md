@@ -40,6 +40,10 @@ On the **Allwinner H700 (and H616)**:
 ### 1. CPU Frequency & Governor Tuning
 - **Governor Selection**: Use `schedutil` with fast-switching enabled. `schedutil` dynamically ramps CPU frequency up for demanding emulation frames and drops frequency instantly during idle loops.
 - **CPU Opp Tables**: Enforce lower frequency steps (down to 408 MHz) during light UI navigation to minimize voltage consumption.
+- **Reference Implementations**:
+  - **ROCKNIX**: `packages/sys/rocknix-scripts/system/usr/bin/cpufreq-set.sh` (manages `schedutil` governor and frequency scaling bounds per emulator core).
+  - **Knulli**: `package/batocera/core/batocera-system/sys/etc/init.d/S92power` (configures cpufreq governor on startup and during power events).
+  - **MuOS**: `/opt/muos/script/power.sh` (handles dynamic scaling profiles for handheld states).
 
 ### 2. AXP717 PMIC Regulator Control
 - **Unused LDO Power Down**: Ensure LDOs powering unused peripherals (e.g. Wi-Fi/BT module when wireless is disabled in UI) are fully disabled via I2C rather than left in bypass/standby.
@@ -47,13 +51,25 @@ On the **Allwinner H700 (and H616)**:
   - RG35XX SP features a Hall-effect lid sensor exposed as `gpio-keys` (`SW_LID`).
   - Closing lid triggers an event listener to execute `echo mem > /sys/power/state`.
   - Opening lid triggers GPIO interrupt to wake the SoC instantly.
+- **Reference Implementations**:
+  - **ROCKNIX**: `packages/sys/rocknix-scripts/system/usr/bin/rocknix-suspend.sh` and `packages/sys/udev-rules/sources/99-rocknix-input.rules` (captures `SW_LID` gpio-key event and triggers `mem` suspend).
+  - **Knulli**: `package/batocera/core/batocera-configgen/configs/batocera-power` (maps power button and lid switch events to system suspend daemon).
+  - **MuOS**: `/opt/muos/script/suspend.sh` and `/etc/udev/rules.d/99-lid.rules` (executes pre-suspend hardware cleanup and writes `mem` to `/sys/power/state`).
 
 ### 3. Display, Backlight & Audio Power Down
 - **Backlight Sequence**: Turn off PWM backlight (`bl_power = FB_BLANK_POWERDOWN`) *before* suspending DRM display pipeline to prevent backlight bleed or power leakage during sleep.
 - **Audio Codec Mute**: Disable sun4i audio codec internal DAC/headphone amplifier prior to suspend to eliminate idle pops and static drain.
+- **Reference Implementations**:
+  - **ROCKNIX**: `projects/H700/patches/linux/0005-rg35xx-enable-HDMI-LCD.patch` (defines backlight powerdown hooks in DRM panel driver).
+  - **Knulli**: `board/batocera/h700/target/overlay/usr/bin/display-power` (unblanks/blanks framebuffer console and turns off PWM backlight before sleep).
+  - **MuOS**: `/opt/muos/script/mux_suspend.sh` (mutes ALSA audio mixers before calling kernel suspend).
 
 ### 4. Wi-Fi & Bluetooth Power Management
 - **SDIO LPS Deep**: Wi-Fi module (`rtl8821cs`) uses `rtw88_core.disable_lps_deep=Y` in `bootargs` to prevent latency spikes during online play. When Wi-Fi is disabled via OS toggle, power off regulator completely via RFKILL.
+- **Reference Implementations**:
+  - **ROCKNIX**: `projects/H700/packages/linux/package.mk` (applies `rtw88` SDIO power management options).
+  - **Knulli**: `package/batocera/core/batocera-system/sys/etc/init.d/S30wifi` (powers down SDIO Wi-Fi interface and unloads `rtw88_8821cs` on sleep).
+  - **MuOS**: `/opt/muos/script/var_wifi.sh` (toggles RFKILL state and Wi-Fi PMIC rail).
 
 ---
 
