@@ -12,6 +12,10 @@ if test -z "${ramdisk_addr_r}"; then
 	setenv ramdisk_addr_r 0x46000000
 fi
 
+if test -z "${fdt_addr_r}"; then
+	setenv fdt_addr_r 0x4fa00000
+fi
+
 setenv default_device "@DEFAULT_DEVICE@"
 setenv device auto
 if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .minime/config/device.cfg; then
