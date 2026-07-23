@@ -44,11 +44,11 @@ else
 	reset
 fi
 
-if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/devices/${device}; then
-	echo "Loaded .minime/devices/${device}"
+if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/dtb; then
+	echo "Loaded .minime/dtb"
 	mw.b 0x4ff00001 0x46
 else
-	echo "Failed to load .minime/devices/${device}"
+	echo "Failed to load .minime/dtb"
 	mw.b 0x4ff00001 0x66
 	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 2
 	sleep 5
