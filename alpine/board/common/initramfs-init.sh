@@ -14,7 +14,7 @@ log_console() {
 log_card() {
 	echo "$*"
 	if mountpoint -q /mnt/card 2>/dev/null || grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
-		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >> /mnt/card/boot.log 2>/dev/null || true
+		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >>/mnt/card/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
 }
@@ -54,6 +54,32 @@ if ! mountpoint -q /mnt/card 2>/dev/null && ! grep -q "/mnt/card" /proc/mounts 2
 fi
 
 log_card "[INITRAMFS] Initialized persistent logging on $CARD_DEV"
+
+# H700 DDR3/DDR4 runtime detection.
+# The default U-Boot at SD card offset 8K is built for LPDDR4 (DCDC3=1100mV).
+# If this device has LPDDR3 memory (DCDC3=1200mV), swap in the DDR3 U-Boot
+# binary stored on the FAT partition and reboot so it takes effect.
+if [ -f /mnt/card/.minime/u-boot-ddr3.bin ]; then
+	dram_uv=""
+	for r in /sys/class/regulator/regulator.*/; do
+		if [ "$(cat "$r/name" 2>/dev/null)" = "vdd-dram" ]; then
+			dram_uv="$(cat "$r/microvolts" 2>/dev/null)"
+			break
+		fi
+	done
+	if [ "$dram_uv" = "1200000" ]; then
+		log_card "[INITRAMFS] LPDDR3 detected (DCDC3=${dram_uv}uV), swapping U-Boot binary..."
+		DISK_DEV="${CARD_DEV%p1}"
+		if dd if=/mnt/card/.minime/u-boot-ddr3.bin of="$DISK_DEV" bs=1k seek=8 2>/dev/null; then
+			sync
+			log_card "[INITRAMFS] DDR3 U-Boot written to ${DISK_DEV}, rebooting..."
+			umount /mnt/card 2>/dev/null || true
+			reboot -f
+		else
+			log_card "[INITRAMFS] WARNING: failed to write DDR3 U-Boot, continuing with DDR4"
+		fi
+	fi
+fi
 
 # First-boot hardware probe.
 if [ -f /mnt/card/.minime/config/first_boot_probe ]; then
@@ -106,7 +132,7 @@ log_card "[INITRAMFS] EROFS system image mounted successfully."
 # invisible until userspace takes over.
 for bl in /sys/class/backlight/*/brightness; do
 	if [ -w "$bl" ]; then
-		echo 5 > "$bl" 2>/dev/null || true
+		echo 5 >"$bl" 2>/dev/null || true
 		log_card "[INITRAMFS] Backlight device $bl set to 5"
 	fi
 done

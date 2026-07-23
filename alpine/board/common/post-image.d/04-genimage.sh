@@ -11,6 +11,11 @@ if [ "${SOC_NAME}" = "h700" ]; then
 	if [ -f "${BL_BIN}" ]; then
 		cp -f "${BL_BIN}" "${BINARIES_DIR}/u-boot-sunxi-with-spl.bin"
 	fi
+	# Stage DDR3 variant for runtime swap on LPDDR3 devices
+	BL_DDR3="${BL_DIR}/u-boot-sunxi-with-spl-ddr3.bin"
+	if [ -f "${BL_DDR3}" ]; then
+		cp -f "${BL_DDR3}" "${BINARIES_DIR}/u-boot-sunxi-with-spl-ddr3.bin"
+	fi
 else
 	BL_IDB="${BL_DIR}/idbloader.img"
 	BL_ITB="${BL_DIR}/u-boot.itb"

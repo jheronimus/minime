@@ -352,6 +352,10 @@ assemble_image() {
 		BL_BIN="${ALPINE_DIR}/bootloader/${BOARD}/u-boot-sunxi-with-spl.bin"
 		[ -f "${BL_BIN}" ] || die "missing ${BL_BIN}"
 		cp -f "${BL_BIN}" "${IMG_BIN}/u-boot-sunxi-with-spl.bin"
+		# Stage DDR3 variant for runtime swap on LPDDR3 devices
+		BL_DDR3="${ALPINE_DIR}/bootloader/${BOARD}/u-boot-sunxi-with-spl-ddr3.bin"
+		[ -f "${BL_DDR3}" ] || die "missing ${BL_DDR3}"
+		cp -f "${BL_DDR3}" "${IMG_BIN}/u-boot-sunxi-with-spl-ddr3.bin"
 	else
 		BL_IDB="${ALPINE_DIR}/bootloader/${BOARD}/idbloader.img"
 		BL_ITB="${ALPINE_DIR}/bootloader/${BOARD}/u-boot.itb"
@@ -383,9 +387,9 @@ assemble_image() {
 
 	TMP_BOOT_CMD=$(mktemp)
 	sed -e "s|@BOOTARGS@|${BOOTARGS}|g" \
-	    -e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" \
-	    -e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" \
-	    "${BOOT_CMD_TEMPLATE}" > "${TMP_BOOT_CMD}"
+		-e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" \
+		-e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" \
+		"${BOOT_CMD_TEMPLATE}" >"${TMP_BOOT_CMD}"
 
 	mkimage -C none -A arm -T script -d "${TMP_BOOT_CMD}" "${IMG_BIN}/boot.scr"
 	rm -f "${TMP_BOOT_CMD}"
