@@ -115,7 +115,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo unknown)"
 	DISK_BYTES="$(blockdev --getsize64 "$DISK_DEV" 2>/dev/null || echo unknown)"
 
-	FATRESIZE_OUT="$(fatresize -f -s max -i "$PART_NUM" "$DISK_DEV" 2>&1)"
+	FATRESIZE_OUT="$(fatresize -f -s max -n "$PART_NUM" "$DISK_DEV" 2>&1)"
 	FATRESIZE_RC=$?
 	if [ "$FATRESIZE_RC" -ne 0 ]; then
 		FATRESIZE_OUT="$(printf "%s\nFallback:\n" "$FATRESIZE_OUT"; fatresize -f -s max "$CARD_DEV" 2>&1)"
