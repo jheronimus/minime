@@ -28,6 +28,24 @@ Because $65,503 < 65,525$, all OS filesystem drivers (macOS `msdos`, Linux `fs/f
 
 At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clusters}} \ge 65,525$, producing a perfectly valid FAT32 volume.
 
+## Partition Mapping (H700 vs RK3326/RK3566)
+Minime must support heterogeneous SoC families with diverging partition table requirements:
+- **RK3326 / RK3566**: Requires a GPT partition table. Bootloader components (`idbloader.img`, `u-boot.itb`) reside in raw unpartitioned space before sector 32768, followed by `boot` and `userdata` GPT partitions.
+- **H700 / Allwinner**: Enforces a legacy MBR partition table. Bootloader (`u-boot-sunxi-with-spl.bin`) resides in unpartitioned space starting at sector 16, overlapping with standard GPT headers. `userdata` is an MBR partition.
+
+To unify infrastructure, `genimage.cfg` uses conditional includes. RK3326/RK3566 include `board/common/genimage.cfg` to emit GPT images, while H700 provides its own `board/h700/genimage.cfg` overriding to MBR.
+
+## First-Boot Expansion and `fatresize`
+During first boot on H700, expanding the `userdata` MBR partition triggered silent failures in `fatresize`, which logged `Error: Could not detect file system.` while RK3566 expanded flawlessly.
+
+**Root Cause**: The initramfs invoked `fatresize -f -s max -i "$PART_NUM" "$DISK_DEV"`. The `-i` argument in GNU `fatresize` stands for `--info`, taking no arguments. `getopt_long` consumed `-i`, leaving `1` (the partition index) and `/dev/mmcblk0` as positional arguments. `fatresize` parses positional arguments as target devices via `get_device()`.
+
+Because `get_device()` attempts to extract a trailing partition number from block devices (e.g. `/dev/sda1` -> `/dev/sda` partition 1), it stripped `0` from `/dev/mmcblk0`, probed `/dev/mmcblk` (which failed), and fell back to probing `/dev/mmcblk0`. During this fallback, `get_device()` improperly skipped assigning the extracted partition number (`opts.pnum = 0`).
+
+With `opts.pnum = 0`, `fatresize` mistakenly attempted to probe the *entire parent disk* (`/dev/mmcblk0`) for a FAT32 filesystem instead of the specific partition. Due to H700's MBR layout, libparted immediately choked on the MBR signature and failed. RK3566 succeeded merely because libparted on GPT disks coincidentally skips the raw bootloader blobs and resolves the underlying partition anyway.
+
+**Fix**: The initramfs command was corrected to use the proper partition index argument: `fatresize -n "$PART_NUM"`.
+
 ## Rationale
 - **Hardware NAND Flash Alignment**: 16 KB cluster size matches 16 KB NAND flash page sizes on modern SD cards, preventing write amplification and minimizing random read latency.
 - **Directory Read Performance**: 16 KB clusters reduce FAT table lookup entries by $4\times$ compared to 4 KB clusters, accelerating launcher directory scans in MinUI and Allium.
