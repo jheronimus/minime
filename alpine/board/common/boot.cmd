@@ -35,7 +35,7 @@ if fatload ${bootdevtype} ${bootdevnum} ${kernel_addr_r} .minime/kernel; then
 else
 	echo "Failed to load .minime/kernel"
 	mw.b 0x4ff00000 0x6b
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 1
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 1
 	sleep 5
 	reset
 fi
@@ -46,7 +46,7 @@ if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/devices/${device};
 else
 	echo "Failed to load .minime/devices/${device}"
 	mw.b 0x4ff00001 0x66
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 2
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 2
 	sleep 5
 	reset
 fi
@@ -58,7 +58,7 @@ if fatload ${bootdevtype} ${bootdevnum} ${ramdisk_addr_r} .minime/initramfs; the
 else
 	echo "Failed to load .minime/initramfs"
 	mw.b 0x4ff00002 0x69
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 3
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 3
 	sleep 5
 	reset
 fi
@@ -69,7 +69,7 @@ if test $? -eq 0; then
 else
 	echo "Failed: fdt addr"
 	mw.b 0x4ff00003 0x61
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 4
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 4
 	sleep 5
 	reset
 fi
@@ -80,7 +80,7 @@ if test $? -eq 0; then
 else
 	echo "Failed: fdt resize"
 	mw.b 0x4ff00004 0x72
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 5
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 5
 	sleep 5
 	reset
 fi
@@ -98,7 +98,7 @@ if test $? -eq 0; then
 else
 	echo "Failed: fdt set bootargs"
 	mw.b 0x4ff00005 0x73
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 6
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 6
 	sleep 5
 	reset
 fi
@@ -109,14 +109,14 @@ if test $? -eq 0; then
 else
 	echo "Failed: fdt chosen"
 	mw.b 0x4ff00006 0x63
-	fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 7
+	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 7
 	sleep 5
 	reset
 fi
 
 # Write full log before boot
 mw.b 0x4ff00007 0x42
-fatwrite ${bootdevtype} ${bootdevnum} .minime/boot.log 0x4ff00000 8
+fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 8
 
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
 sleep 5
