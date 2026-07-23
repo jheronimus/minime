@@ -32,6 +32,8 @@ ln -sf busybox "${INITRD_STAGE}/bin/mkdir"
 ln -sf busybox "${INITRD_STAGE}/bin/rm"
 ln -sf busybox "${INITRD_STAGE}/bin/cat"
 ln -sf busybox "${INITRD_STAGE}/bin/echo"
+ln -sf busybox "${INITRD_STAGE}/bin/dd"
+ln -sf busybox "${INITRD_STAGE}/bin/grep"
 ln -sf busybox "${INITRD_STAGE}/bin/sync"
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 

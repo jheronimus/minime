@@ -45,6 +45,12 @@ cp -f "${BINARIES_DIR}/initramfs" "${USERDATA_STAGE}/.minime/initramfs"
 cp -f "${BINARIES_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
 cp -f "${BINARIES_DIR}/boot.scr" "${USERDATA_STAGE}/boot.scr"
 
+# Copy DDR3 U-Boot binary for H700 runtime swap (initramfs detects DDR type
+# via AXP DCDC3 voltage and replaces the default DDR4 binary if needed).
+if [ "${SOC_NAME}" = "h700" ] && [ -f "${BINARIES_DIR}/u-boot-sunxi-with-spl-ddr3.bin" ]; then
+	cp -f "${BINARIES_DIR}/u-boot-sunxi-with-spl-ddr3.bin" "${USERDATA_STAGE}/.minime/u-boot-ddr3.bin"
+fi
+
 # Copy each platform DTB once.
 for dtb_file in "${BINARIES_DIR}"/${DTB_PATTERN}; do
 	if [ -f "${dtb_file}" ]; then
