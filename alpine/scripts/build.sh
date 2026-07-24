@@ -306,7 +306,7 @@ assemble_rootfs() {
 		--repository "${ALPINE_REPO_BASE}/main" \
 		--repository "${ALPINE_REPO_BASE}/community" \
 		--repository "${ALPINE_ROOTFS_DIR}/local-repo" \
-		add --no-cache --initdb --allow-untrusted ${WORLD_PKGS}
+		add --no-cache --initdb --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
 	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
