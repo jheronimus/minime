@@ -86,7 +86,7 @@ sdl2_ttf
 libpng
 zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
-# minime-overlay   filesystem layout + OpenRC services + trait payload
+minime-overlay
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 preloaded-roms
 # bootsplash       boot splash helper
