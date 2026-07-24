@@ -6,6 +6,7 @@
 description="Minime Wi-Fi (wpa_supplicant + udhcpc)"
 
 depend() {
+	need localmount
 	need modules
 	after fb-unblank
 }
