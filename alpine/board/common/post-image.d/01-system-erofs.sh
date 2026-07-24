@@ -11,6 +11,9 @@ mkdir -p "${SYSTEM_STAGE}"
 # Extract rootfs.tar to SYSTEM_STAGE
 tar -xf "${BINARIES_DIR}/rootfs.tar" -C "${SYSTEM_STAGE}"
 
+# Ensure standard mount points exist
+mkdir -p "${SYSTEM_STAGE}/mnt/sdcard"
+
 # Set file timestamps to epoch 0 for reproducible build
 find "${SYSTEM_STAGE}" -exec touch -d @0 {} + 2>/dev/null || true
 
