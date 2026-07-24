@@ -165,6 +165,11 @@ start_background() {
 	has_profiles="$1"
 	exec >/dev/null 2>&1
 
+	if [ -d /mnt/sdcard ]; then
+		printf '[WIFI %s] Starting background worker (has_profiles=%s)...\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "$has_profiles" >> /mnt/sdcard/boot.log 2>/dev/null || true
+	fi
+
 	if ! prepare_wifi_interface; then
 		log_failure_diagnostics "missing-${wifi_interface}"
 		return 1
@@ -184,7 +189,16 @@ start_background() {
 	wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
 
 	if [ "$has_profiles" -eq 0 ]; then
+		if [ -d /mnt/sdcard ]; then
+			printf '[WIFI %s] No profiles found in wifi.cfg or wpa_supplicant config. Idling.\n' \
+				"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		fi
 		return 0
+	fi
+
+	if [ -d /mnt/sdcard ]; then
+		printf '[WIFI %s] Waiting for WPA handshake...\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
 	if ! wait_for_wpa_handshake; then
@@ -192,9 +206,9 @@ start_background() {
 		return 1
 	fi
 
-	if wait_for_ipv4_address; then
-		logger -t wifi "connection established (pre-DHCP)" 2>/dev/null || true
-		return 0
+	if [ -d /mnt/sdcard ]; then
+		printf '[WIFI %s] WPA handshake completed. Requesting DHCP lease...\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
 	start_dhcp_client
