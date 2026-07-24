@@ -17,12 +17,12 @@ depend() {
 
 start() {
 	ebegin "Starting UI"
-	/usr/share/minime/scripts/ui start
+	/usr/share/minime/scripts/ui.sh start
 	eend 0
 }
 
 stop() {
 	ebegin "Stopping UI"
-	/usr/share/minime/scripts/ui stop
+	/usr/share/minime/scripts/ui.sh stop
 	eend $?
 }
