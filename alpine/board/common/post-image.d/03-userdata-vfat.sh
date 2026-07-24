@@ -100,10 +100,12 @@ mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat" 536870912
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
-for item in .minime .system .userdata; do
-	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
-		-s "${USERDATA_STAGE}/${item}" ::
-	MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}"
+for item in .minime .system .userdata .ui .tmp_update; do
+	if [ -d "${USERDATA_STAGE}/${item}" ] || [ -f "${USERDATA_STAGE}/${item}" ]; then
+		MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
+			-s "${USERDATA_STAGE}/${item}" ::
+		MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}"
+	fi
 done
 
 # Hide staged DT overlays directory if present.
