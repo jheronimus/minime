@@ -16,12 +16,12 @@ depend() {
 
 start() {
 	ebegin "Starting Wi-Fi"
-	/usr/share/minime/scripts/wifi start &
+	/usr/share/minime/scripts/wifi.sh start &
 	eend 0
 }
 
 stop() {
 	ebegin "Stopping Wi-Fi"
-	/usr/share/minime/scripts/wifi stop
+	/usr/share/minime/scripts/wifi.sh stop
 	eend $?
 }
