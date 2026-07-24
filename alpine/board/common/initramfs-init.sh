@@ -111,23 +111,24 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	fi
 	sleep 1
 
-	# Compute exact target size for fatresize.
-	# fatresize calculates: end_sector = part_start + size/sector_size
-	# We need end_sector == part_geom.end == part_start + part_length - 1
-	# So: target_size = (part_length - 1) * sector_size
-	SECTOR_SIZE="$(cat "/sys/block/${DISK_DEV##*/}/queue/logical_block_size" 2>/dev/null || echo 512)"
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
-	TARGET_BYTES=$(( (PART_SECTORS - 1) * SECTOR_SIZE ))
-
-	FATRESIZE_OUT="$(fatresize -f -s "${TARGET_BYTES}" -n "$PART_NUM" "$DISK_DEV" 2>&1)"
+	
+	# The FAT tables were pre-allocated at build time for 512GB to avoid
+	# fatresize geometry collisions. We just need to patch the BPB_TotSec32
+	# header (4 bytes at offset 0x20) to match the actual partition sector count.
+	log_card "[INITRAMFS] Patching FAT32 BPB_TotSec32 to $PART_SECTORS sectors..."
+	
+	HEX="$(printf "%08x" "$PART_SECTORS")"
+	# shellcheck disable=SC3057
+	printf "\\x${HEX:6:2}\\x${HEX:4:2}\\x${HEX:2:2}\\x${HEX:0:2}" |
+		dd of="$CARD_DEV" bs=1 seek=32 count=4 conv=notrunc 2>/dev/null
+	
 	FATRESIZE_RC=$?
 
 	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 
 	log_card "[INITRAMFS] parted output: ${PARTED_OUT} (exit ${PARTED_RC})"
-	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS} target_bytes=${TARGET_BYTES}"
-	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
-	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
+	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS}"
 
 	if [ "$PARTED_RC" -ne 0 ]; then
 		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"

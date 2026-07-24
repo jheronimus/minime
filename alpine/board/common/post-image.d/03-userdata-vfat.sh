@@ -93,7 +93,10 @@ STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
 VFAT_MB=$((STAGE_MB + 256))
 [ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}"
-mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
+# Pre-allocate FAT tables for a 512GB maximum card size (approx 128MB overhead).
+# This avoids the need for complex, geometry-sensitive fatresize at runtime.
+# Block count for 512GB = 512 * 1024 * 1024 = 536870912
+mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat" 536870912
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
