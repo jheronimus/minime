@@ -178,8 +178,8 @@ start_background() {
 	mkdir -p /var/run/wpa_supplicant
 	if ! start-stop-daemon -S -q -b -m \
 		-p /var/run/wpa_supplicant.pid \
-		-x /sbin/wpa_supplicant -- \
-		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}"; then
+		-x /usr/sbin/wpa_supplicant -- \
+		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}" 2>>"${diagnostic_logfile}"; then
 		log_failure_diagnostics "wpa_supplicant-failed-to-start"
 		return 1
 	fi
