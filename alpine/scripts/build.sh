@@ -166,6 +166,8 @@ build_local_apks() {
 	# All other local packages share one abuild run: each APKBUILD produces
 	# an APK that lands in REPODEST.  Order matters: tinykernel only feeds
 	# the SD payload, so the rootfs list is everything else.
+	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
+
 	ALPINE_PKGS="bootsplash \
 		fatresize minime-overlay ${UI} preloaded-roms"
 

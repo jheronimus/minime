@@ -239,6 +239,7 @@ start() {
 	fi
 
 	start_background "${has_profiles}" &
+	echo $! > /run/wifi.pid
 	echo "OK (background)"
 	return 0
 }
@@ -250,6 +251,10 @@ stop() {
 	if [ -f "/var/run/wpa_supplicant.pid" ]; then
 		kill "$(cat "/var/run/wpa_supplicant.pid")" >/dev/null 2>&1 || true
 		rm -f "/var/run/wpa_supplicant.pid"
+	fi
+	if [ -f "/run/wifi.pid" ]; then
+		kill "$(cat "/run/wifi.pid")" >/dev/null 2>&1 || true
+		rm -f "/run/wifi.pid"
 	fi
 	ip link set "${wifi_interface}" down >/dev/null 2>&1 || true
 	echo "OK"
