@@ -35,6 +35,11 @@ package() {
 	mkdir -p /alpine-output/boot/ui/.system
 	cp -a "$srcdir"/.system/. /alpine-output/boot/ui/.system/
 
+	if [ -d "$srcdir"/.minime ]; then
+		mkdir -p /alpine-output/boot/ui/.minime
+		cp -a "$srcdir"/.minime/. /alpine-output/boot/ui/.minime/
+	fi
+
 	# Strip .elf extensions (MinUI convention; Minime expects bare names)
 	for f in /alpine-output/boot/ui/.system/minime/bin/*.elf; do
 		[ -f "$f" ] && mv -f "$f" "${f%.elf}"
