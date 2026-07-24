@@ -28,7 +28,7 @@ init_wpa_supplicant_conf() {
 		printf '%s\n' 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=wheel'
 		printf '%s\n' 'update_config=1'
 		printf '%s\n' ''
-	} > "${wpa_supplicant_config_file}"
+	} >"${wpa_supplicant_config_file}"
 	chmod 600 "${wpa_supplicant_config_file}" 2>/dev/null || true
 }
 
@@ -37,8 +37,8 @@ seed_wpa_profiles() {
 	[ -d "${wpa_supplicant_seed_dir}" ] || return 0
 	for profile_path in "${wpa_supplicant_seed_dir}"/*.conf; do
 		[ -f "${profile_path}" ] || continue
-		cat "${profile_path}" >> "${wpa_supplicant_config_file}"
-		printf '\n' >> "${wpa_supplicant_config_file}"
+		cat "${profile_path}" >>"${wpa_supplicant_config_file}"
+		printf '\n' >>"${wpa_supplicant_config_file}"
 	done
 }
 
@@ -53,28 +53,28 @@ load_wifi_cfg_profiles() {
 		key=$(printf '%s' "$key" | tr -d '\r')
 		val=$(printf '%s' "$val" | tr -d '\r')
 		case "$key" in
-			\#*) continue ;;
-			SSID)
-				if [ -n "$ssid" ]; then
-					{
-						printf 'network={\n\tssid="%s"\n' "$ssid"
-						if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
-						printf '}\n\n'
-					} >> "${wpa_supplicant_config_file}"
-					psk=""
-				fi
-				ssid="$val"
-				;;
-			Passphrase) psk="$val" ;;
+		\#*) continue ;;
+		SSID)
+			if [ -n "$ssid" ]; then
+				{
+					printf 'network={\n\tssid="%s"\n' "$ssid"
+					if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
+					printf '}\n\n'
+				} >>"${wpa_supplicant_config_file}"
+				psk=""
+			fi
+			ssid="$val"
+			;;
+		Passphrase) psk="$val" ;;
 		esac
-	done < "${wifi_config_file}"
+	done <"${wifi_config_file}"
 
 	if [ -n "$ssid" ]; then
 		{
 			printf 'network={\n\tssid="%s"\n' "$ssid"
 			if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
 			printf '}\n\n'
-		} >> "${wpa_supplicant_config_file}"
+		} >>"${wpa_supplicant_config_file}"
 	fi
 }
 
@@ -142,7 +142,7 @@ stop_dhcp_client() {
 	fi
 	# Kill any stray udhcpc processes for this interface
 	for pid in $(pidof udhcpc 2>/dev/null); do
-		tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null |
+		tr '\0' ' ' <"/proc/${pid}/cmdline" 2>/dev/null |
 			grep -q -- "-i ${wifi_interface}" && kill "${pid}" 2>/dev/null || true
 	done
 	rm -f "${udhcpc_pidfile}"
@@ -151,13 +151,13 @@ stop_dhcp_client() {
 # Launch background udhcpc client for IPv4 address assignment
 start_dhcp_client() {
 	stop_dhcp_client
-	: > "${udhcpc_logfile}"
+	: >"${udhcpc_logfile}"
 	udhcpc -b -R -x hostname:"$(hostname)" -F "$(hostname)" \
 		-O search -O staticroutes \
 		-p "${udhcpc_pidfile}" \
 		-i "${wifi_interface}" \
 		-s /usr/share/udhcpc/default.script \
-		>> "${udhcpc_logfile}" 2>&1
+		>>"${udhcpc_logfile}" 2>&1
 }
 
 # Async worker: brings up interface, daemon, connection, and DHCP
@@ -167,7 +167,7 @@ start_background() {
 
 	if [ -d /mnt/sdcard ]; then
 		printf '[WIFI %s] Starting background worker (has_profiles=%s)...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "$has_profiles" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			"$(date -u +'%T' 2>/dev/null || true)" "$has_profiles" >>/mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
 	if ! prepare_wifi_interface; then
@@ -176,10 +176,13 @@ start_background() {
 	fi
 
 	mkdir -p /var/run/wpa_supplicant
-	start-stop-daemon -S -q -b -m \
+	if ! start-stop-daemon -S -q -b -m \
 		-p /var/run/wpa_supplicant.pid \
 		-x /usr/sbin/wpa_supplicant -- \
-		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}"
+		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}"; then
+		log_failure_diagnostics "wpa_supplicant-failed-to-start"
+		return 1
+	fi
 
 	if ! wait_for_wpa_supplicant_ready; then
 		log_failure_diagnostics "wpa_supplicant-not-ready"
@@ -191,14 +194,14 @@ start_background() {
 	if [ "$has_profiles" -eq 0 ]; then
 		if [ -d /mnt/sdcard ]; then
 			printf '[WIFI %s] No profiles found in wifi.cfg or wpa_supplicant config. Idling.\n' \
-				"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+				"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
 		fi
 		return 0
 	fi
 
 	if [ -d /mnt/sdcard ]; then
 		printf '[WIFI %s] Waiting for WPA handshake...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
 	if ! wait_for_wpa_handshake; then
@@ -208,7 +211,7 @@ start_background() {
 
 	if [ -d /mnt/sdcard ]; then
 		printf '[WIFI %s] WPA handshake completed. Requesting DHCP lease...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
 	start_dhcp_client
@@ -220,7 +223,7 @@ start_background() {
 	logger -t wifi "connection established with IP" 2>/dev/null || true
 	if [ -d /mnt/sdcard ]; then
 		printf '[WIFI %s] Connection established with IP\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
 	return 0
@@ -239,7 +242,7 @@ start() {
 	fi
 
 	start_background "${has_profiles}" &
-	echo $! > /run/wifi.pid
+	echo $! >/run/wifi.pid
 	echo "OK (background)"
 	return 0
 }
@@ -302,11 +305,11 @@ log_failure_diagnostics() {
 		else
 			printf '%s\n' "wpa_cli missing"
 		fi
-	} >> "${diagnostic_logfile}"
+	} >>"${diagnostic_logfile}"
 	if [ -d /mnt/sdcard ]; then
 		cp -f "${diagnostic_logfile}" /mnt/sdcard/wifi.diagnostics 2>/dev/null || true
 		printf '[WIFI %s] startup failed: %s; diagnostics in /mnt/sdcard/wifi.diagnostics\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >>/mnt/sdcard/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
 	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
@@ -314,9 +317,16 @@ log_failure_diagnostics() {
 }
 
 case "${1:-}" in
-	start)   start ;;
-	stop)    stop ;;
-	reload)  reload ;;
-	restart) stop; sleep 1; start ;;
-	*) echo "Usage: $0 {start|stop|reload|restart}" >&2; exit 1 ;;
+start) start ;;
+stop) stop ;;
+reload) reload ;;
+restart)
+	stop
+	sleep 1
+	start
+	;;
+*)
+	echo "Usage: $0 {start|stop|reload|restart}" >&2
+	exit 1
+	;;
 esac
