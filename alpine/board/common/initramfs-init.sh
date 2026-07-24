@@ -111,22 +111,21 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	fi
 	sleep 1
 
-	PART_BYTES="$(blockdev --getsize64 "$CARD_DEV" 2>/dev/null || echo unknown)"
-	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo unknown)"
-	DISK_BYTES="$(blockdev --getsize64 "$DISK_DEV" 2>/dev/null || echo unknown)"
+	# Compute exact target size for fatresize.
+	# fatresize calculates: end_sector = part_start + size/sector_size
+	# We need end_sector == part_geom.end == part_start + part_length - 1
+	# So: target_size = (part_length - 1) * sector_size
+	SECTOR_SIZE="$(cat "/sys/block/${DISK_DEV##*/}/queue/logical_block_size" 2>/dev/null || echo 512)"
+	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
+	TARGET_BYTES=$(( (PART_SECTORS - 1) * SECTOR_SIZE ))
 
-	FATRESIZE_OUT="$(fatresize -f -s max -n "$PART_NUM" "$DISK_DEV" 2>&1)"
+	FATRESIZE_OUT="$(fatresize -f -s "${TARGET_BYTES}" -n "$PART_NUM" "$DISK_DEV" 2>&1)"
 	FATRESIZE_RC=$?
-	if [ "$FATRESIZE_RC" -ne 0 ]; then
-		FATRESIZE_OUT="$(printf "%s\nFallback:\n" "$FATRESIZE_OUT"; fatresize -f -s max "$CARD_DEV" 2>&1)"
-		FATRESIZE_RC=$?
-	fi
 
 	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 
 	log_card "[INITRAMFS] parted output: ${PARTED_OUT} (exit ${PARTED_RC})"
-	log_card "[INITRAMFS] $CARD_DEV: kernel size=${PART_BYTES}B sectors=${PART_SECTORS}"
-	log_card "[INITRAMFS] $DISK_DEV: kernel size=${DISK_BYTES}B"
+	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS} target_bytes=${TARGET_BYTES}"
 	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
 	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
 
