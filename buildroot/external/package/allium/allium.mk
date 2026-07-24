@@ -24,6 +24,9 @@ define ALLIUM_INSTALL_IMAGES_CMDS
 	mkdir -p $(BINARIES_DIR)/ui/.ui
 	cp -a $(@D)/.ui/. $(BINARIES_DIR)/ui/.ui/
 
+	mkdir -p $(BINARIES_DIR)/ui/.minime
+	printf 'UI_NAME="Allium"\nUI_BIN="/mnt/sdcard/.ui/bin/alliumd"\nUI_PROCESSES="alliumd allium-launcher syncthing"\n' > $(BINARIES_DIR)/ui/.minime/ui.env
+
 	if [ -d $(@D)/apps ]; then \
 		mkdir -p $(BINARIES_DIR)/ui/apps; \
 		cp -a $(@D)/apps/. $(BINARIES_DIR)/ui/apps/; \

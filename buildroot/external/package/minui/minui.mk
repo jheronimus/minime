@@ -28,6 +28,11 @@ define MINUI_INSTALL_IMAGES_CMDS
 	mkdir -p $(BINARIES_DIR)/ui/.system
 	cp -a $(@D)/.system/. $(BINARIES_DIR)/ui/.system/
 
+	if [ -d $(@D)/.minime ]; then \
+		mkdir -p $(BINARIES_DIR)/ui/.minime; \
+		cp -a $(@D)/.minime/. $(BINARIES_DIR)/ui/.minime/; \
+	fi
+
 	# Strip .elf extensions (MinUI convention; Minime expects bare names)
 	cd $(BINARIES_DIR)/ui/.system/minime/bin && for f in *.elf; do \
 		[ -f "$$f" ] && mv -f "$$f" "$$(basename "$$f" .elf)"; done
