@@ -36,7 +36,6 @@ ALPINE_PACKAGES_DIR="${ALPINE_PACKAGES_DIR:-${ALPINE_OUTPUT_DIR}/packages/main}"
 ALPINE_REPO_DIR="${ALPINE_REPO_DIR:-${ALPINE_OUTPUT_DIR}/repo}"
 ALPINE_ROOTFS_DIR="${ALPINE_ROOTFS_DIR:-${ALPINE_OUTPUT_DIR}/rootfs}"
 ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
-ALPINE_CCACHE_DIR="${ALPINE_CCACHE_DIR:-/alpine-ccache}"
 
 # Source tree roots inside the container.
 ALPINE_DIR="${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -189,27 +188,9 @@ build_tinykernel() {
 	TK_APKB="${ALPINE_DIR}/aports/tinykernel/APKBUILD"
 	[ -f "${TK_APKB}" ] || die "missing aports/tinykernel/APKBUILD"
 
-	# If the package is already built, extract the artifacts directly from the .apk
-	# to avoid rebuilding the kernel (which takes ~3 hours).
-	local tk_ver tk_rel apk_file=""
+	local tk_ver tk_rel apk_file
 	tk_ver=$(sed -n 's/^pkgver=//p' "${TK_APKB}")
 	tk_rel=$(sed -n 's/^pkgrel=//p' "${TK_APKB}")
-	apk_path="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
-	if [ -f "${apk_path}" ]; then
-		apk_file="${apk_path}"
-	fi
-
-	if [ -n "${apk_file}" ]; then
-		log "tinykernel already built; extracting artifacts from APK"
-		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
-		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot" var/lib/minime
-		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/tinykernel.Image" "${ALPINE_OUTPUT_DIR}/boot/Image"
-		rm -rf "${ALPINE_OUTPUT_DIR}/boot/dtbs"
-		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/dtbs" "${ALPINE_OUTPUT_DIR}/boot/dtbs"
-		rm -rf "${ALPINE_OUTPUT_DIR}/boot/var"
-		log "tinykernel staged from APK: ${ALPINE_OUTPUT_DIR}/boot/Image and DTBs"
-		return 0
-	fi
 
 	# tinykernel uses the host kernel toolchain (the aarch64 target needs
 	# the cross gcc but aports' linux-stable recipe drives it via
@@ -297,10 +278,36 @@ assemble_rootfs() {
 	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
 	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
-	# Install packages via chroot so apk runs triggers (busybox symlinks,
-	# font caches, etc.) — apk --root does NOT run triggers.
+	# Install packages via chroot so apk runs triggers (font caches, etc.).
 	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
 		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
+
+	# Alpine's busybox.trigger only creates symlinks for /bin/busybox, not
+	# /bin/busybox-extras.  Create the missing symlinks manually — the
+	# trigger lists all enabled applets in /etc/busybox-paths.d/busybox-extras.
+	BUSYBOX_EXTRAS_LIST="${ALPINE_ROOTFS_DIR}/etc/busybox-paths.d/busybox-extras"
+	if [ -f "${BUSYBOX_EXTRAS_LIST}" ]; then
+		log "creating busybox-extras applet symlinks..."
+		while IFS= read -r applet_path; do
+			applet="${applet_path##*/}"
+			for dir in /usr/sbin /usr/bin /sbin /bin; do
+				ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
+			done
+		done <"${BUSYBOX_EXTRAS_LIST}"
+	fi
+
+	# Ensure wpa_supplicant/wpa_cli are reachable at /usr/sbin/ — the
+	# package may install to /usr/bin/ or /sbin/ depending on Alpine version.
+	for bin in wpa_supplicant wpa_cli; do
+		target="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
+		[ -e "${target}" ] && continue
+		for candidate in "/usr/bin/${bin}" "/sbin/${bin}" "/bin/${bin}"; do
+			if [ -e "${ALPINE_ROOTFS_DIR}${candidate}" ]; then
+				ln -sf "${candidate}" "${target}"
+				break
+			fi
+		done
+	done
 
 	# Install the board's immutable trait payload.
 	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
@@ -390,12 +397,7 @@ assemble_image() {
 		cp -f "${BL_IDB}" "${IMG_BIN}/idbloader.img"
 		cp -f "${BL_ITB}" "${IMG_BIN}/u-boot.itb"
 	fi
-	if [ -d "${ALPINE_BUILD_DIR}/tinykernel/staging" ]; then
-		cp -f "${ALPINE_BUILD_DIR}/tinykernel/staging/Image" "${IMG_BIN}/Image" 2>/dev/null ||
-			cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"
-	else
-		cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"
-	fi
+	cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${IMG_BIN}/Image"
 	[ -f "${IMG_BIN}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
 	# Generate and compile boot.cmd -> boot.scr using mkimage.
@@ -421,17 +423,10 @@ assemble_image() {
 	rm -f "${TMP_BOOT_CMD}"
 	log "boot.scr: ${IMG_BIN}/boot.scr"
 
-	# Copy DTBs from the tinykernel staging area or kernel build dir.
-	if [ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ]; then
-		find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
-			-exec cp -f {} "${IMG_BIN}/" \;
-	else
-		KERN_BUILD=$(find "${ALPINE_BUILD_DIR}/tinykernel" -name 'arch' -type d 2>/dev/null | head -1)
-		if [ -n "${KERN_BUILD}" ]; then
-			find "${KERN_BUILD}/../arch/arm64/boot/dts" -name '*.dtb' \
-				-exec cp -f {} "${IMG_BIN}/" \; 2>/dev/null || true
-		fi
-	fi
+	# Copy DTBs from kernel boot directory
+	[ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ] || die "kernel DTBs missing in ${ALPINE_OUTPUT_DIR}/boot/dtbs"
+	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
+		-exec cp -f {} "${IMG_BIN}/" \;
 
 	# Stage the UI payload (assembled by the minui/allium/drkhrse-miyoo-
 	# bezels/preloaded-roms packages via /alpine-output/boot/ui/).
