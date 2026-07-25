@@ -345,11 +345,17 @@ assemble_rootfs() {
 			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 	fi
 
-	# Validate that all binaries referenced by init scripts exist in the rootfs.
+	# Validate that all binaries referenced by Minime init scripts exist in the rootfs.
+	# Pass overlay source dirs so only scripts we deploy are checked — Alpine's
+	# own built-in services (bootmisc, cgroups, devfs, etc.) are intentionally excluded.
 	CHECK_PATHS="${ALPINE_DIR}/../scripts/check-openrc-paths.py"
 	if [ -x "${CHECK_PATHS}" ]; then
 		log "checking OpenRC init script paths..."
-		"${CHECK_PATHS}" "${ALPINE_ROOTFS_DIR}" || die "OpenRC path validation failed"
+		_CHECK_ARGS="${ALPINE_ROOTFS_DIR} ${ALPINE_DIR}/board/common/overlay"
+		if [ -d "${BOARD_OVERLAY}" ]; then
+			_CHECK_ARGS="${_CHECK_ARGS} ${BOARD_OVERLAY}"
+		fi
+		${CHECK_PATHS} ${_CHECK_ARGS} || die "OpenRC path validation failed"
 	fi
 
 	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
