@@ -1,0 +1,52 @@
+#!/bin/sh
+# thermal-watchdog: Userspace thermal watchdog for RK3566.
+# Monitors SoC temperature and logs warnings when approaching critical thresholds.
+# Usage: thermal-watchdog {test|run}
+
+set -e
+
+THERMAL_ZONE="/sys/class/thermal/thermal_zone0"
+CRITICAL_TEMP=95000   # 95°C — kernel poweroff threshold
+WARNING_TEMP=85000    # 85°C — start warning
+POLL_INTERVAL=10      # seconds between checks
+
+usage() {
+    printf 'Usage: %s {test|run}\n' "$(basename "$0")" >&2
+    exit 1
+}
+
+do_test() {
+    if [ ! -d "${THERMAL_ZONE}" ]; then
+        printf 'thermal-watchdog: self-test FAILED — %s not found\n' "${THERMAL_ZONE}" >&2
+        exit 1
+    fi
+    if [ ! -r "${THERMAL_ZONE}/temp" ]; then
+        printf 'thermal-watchdog: self-test FAILED — %s/temp not readable\n' "${THERMAL_ZONE}" >&2
+        exit 1
+    fi
+    temp=$(cat "${THERMAL_ZONE}/temp")
+    printf 'thermal-watchdog: self-test OK — current temp %s m°C\n' "${temp}"
+    exit 0
+}
+
+do_run() {
+    printf 'thermal-watchdog: monitoring %s (poll=%ss, warn=%s m°C, crit=%s m°C)\n' \
+        "${THERMAL_ZONE}" "${POLL_INTERVAL}" "${WARNING_TEMP}" "${CRITICAL_TEMP}"
+    while true; do
+        if [ -r "${THERMAL_ZONE}/temp" ]; then
+            temp=$(cat "${THERMAL_ZONE}/temp")
+            if [ "${temp}" -ge "${CRITICAL_TEMP}" ]; then
+                logger -t thermal-watchdog "CRITICAL: ${temp} m°C (>= ${CRITICAL_TEMP})"
+            elif [ "${temp}" -ge "${WARNING_TEMP}" ]; then
+                logger -t thermal-watchdog "WARNING: ${temp} m°C (>= ${WARNING_TEMP})"
+            fi
+        fi
+        sleep "${POLL_INTERVAL}"
+    done
+}
+
+case "${1}" in
+    test) do_test ;;
+    run)  do_run ;;
+    *)    usage ;;
+esac
