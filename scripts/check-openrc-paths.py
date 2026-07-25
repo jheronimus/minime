@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Verify that all binaries referenced by OpenRC init scripts exist in the rootfs.
+"""Verify that all binaries referenced by Minime OpenRC init scripts exist in the rootfs.
 
-Usage: check-openrc-paths.py <rootfs_dir>
+Usage: check-openrc-paths.py <rootfs_dir> [<overlay_src_dir> ...]
+
+Only checks scripts whose names exist in one of the overlay source directories
+so that Alpine's own built-in services (bootmisc, cgroups, devfs, etc.) are
+not validated — they may reference binaries not present in a minimal rootfs.
 
 Checks command=, start-stop-daemon -x, and start-stop-daemon --exec paths.
 Exits 0 if all paths resolve, 1 if any are missing.
@@ -41,9 +45,24 @@ def extract_paths(script: Path) -> list[tuple[int, str]]:
     return paths
 
 
+def collect_owned_names(overlay_dirs: list[Path]) -> set[str]:
+    """Collect init script names that exist in any overlay directory."""
+    names: set[str] = set()
+    for overlay_dir in overlay_dirs:
+        initd = overlay_dir / "etc" / "init.d"
+        if initd.is_dir():
+            for f in initd.iterdir():
+                if f.is_file() and not f.name.startswith("."):
+                    names.add(f.name)
+    return names
+
+
 def main() -> int:
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <rootfs_dir>", file=sys.stderr)
+        print(
+            f"Usage: {sys.argv[0]} <rootfs_dir> [<overlay_src_dir> ...]",
+            file=sys.stderr,
+        )
         return 2
 
     rootfs = Path(sys.argv[1])
@@ -56,10 +75,26 @@ def main() -> int:
         print(f"ERROR: {initd} does not exist", file=sys.stderr)
         return 2
 
-    scripts = sorted(
+    # Collect all init script names from rootfs
+    all_scripts = sorted(
         f for f in initd.iterdir() if f.is_file() and not f.name.startswith(".")
     )
-    print(f"Checking {len(scripts)} OpenRC init script(s) for missing binaries...")
+
+    # Determine which scripts are owned by the overlay (user-provided dirs)
+    owned = set()
+    if len(sys.argv) > 2:
+        overlay_dirs = [Path(arg) for arg in sys.argv[2:]]
+        owned = collect_owned_names(overlay_dirs)
+        scripts = [s for s in all_scripts if s.name in owned]
+        print(
+            f"Checking {len(scripts)} Minime-owned init script(s) "
+            f"(of {len(all_scripts)} total) for missing binaries..."
+        )
+    else:
+        scripts = all_scripts
+        print(
+            f"Checking all {len(scripts)} OpenRC init script(s) for missing binaries..."
+        )
 
     errors = 0
     for script in scripts:
