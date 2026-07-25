@@ -5,7 +5,6 @@
 # after the local Minime package repo is staged at /local-repo.
 #
 # Local packages (built from minime/alpine/aports/*):
-#   - minime-overlay      filesystem layout, OpenRC services, trait payload
 #   - minui / allium      UI frontends (mutually exclusive, fetch-prebuilt)
 #   - preloaded-roms      bundled ROMs
 #   - bootsplash          boot splash binary
@@ -86,7 +85,6 @@ sdl2_ttf
 libpng
 zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
-minime-overlay
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 preloaded-roms
 # bootsplash       boot splash helper

@@ -1,0 +1,114 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# traits: generate /mnt/sdcard/.minime/traits from the immutable
+# /usr/share/minime/traits payload bundled at build time.
+# Self-contained — no external script dependency.
+
+description="Generate Minime device traits"
+
+# --- Configuration ---
+TRAITS_DIR="/usr/share/minime/traits"
+TRAITS_FILE="/mnt/sdcard/.minime/traits"
+
+# --- Helper functions ---
+
+read_match() {
+	sed -n "s/^$1=//p" "$2" | head -n 1
+}
+
+write_section() {
+	section="$1"
+	file="$2"
+
+	printf '[%s]\n' "$section"
+	awk '
+		/^\[match\]$/ { skip = 1; next }
+		/^\[/ { skip = 0; next }
+		!skip && /^[A-Za-z0-9_]+=/ { print }
+	' "$file"
+}
+
+require_key() {
+	key="$1"
+	file="$2"
+	grep -Eq "^${key}=..*" "$file" || {
+		echo "$file: missing $key" >&2
+		exit 1
+	}
+}
+
+find_device() {
+	model="$(tr -d '\000\r\n' < /proc/device-tree/model)"
+	actual_compat="$(tr '\000' '\n' < /proc/device-tree/compatible 2>/dev/null | head -n 1 || true)"
+	match=""
+
+	for file in "${TRAITS_DIR}"/devices/*.ini; do
+		[ -f "$file" ] || continue
+		expected_model="$(read_match model "$file")"
+		expected_compat="$(read_match compatible "$file")"
+		if [ "$expected_model" = "$model" ] &&
+		   { [ -z "$expected_compat" ] || [ "$expected_compat" = "$actual_compat" ]; }; then
+			[ -z "$match" ] || {
+				echo "Multiple Minime trait files match '$model'" >&2
+				return 1
+			}
+			match="$file"
+		fi
+	done
+	[ -n "$match" ] || {
+		echo "Unsupported Minime device: '$model'" >&2
+		return 1
+	}
+	printf '%s\n' "$match"
+}
+
+generate_traits() {
+	device_file="${1:-$(find_device)}"
+	tmp="${TRAITS_FILE}.tmp"
+
+	mkdir -p "${TRAITS_FILE%/*}"
+	{
+		echo "# Minime device traits"
+		write_section platform "$TRAITS_DIR/platform.ini"
+		echo
+		write_section device "$device_file"
+	} > "$tmp"
+	mv "$tmp" "$TRAITS_FILE"
+
+	if [ -d /mnt/sdcard ]; then
+		model="$(tr -d '\000\r\n' < /proc/device-tree/model 2>/dev/null || true)"
+		printf '[TRAITS %s] Model: %s, Device file: %s\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "$model" "${device_file##*/}" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
+
+	echo "Minime traits: ${device_file##*/}"
+}
+
+check_traits() {
+	device_file="$(find_device)" || exit 1
+	expected_id="$(read_match device_id "$device_file")"
+
+	if [ ! -f "$TRAITS_FILE" ]; then
+		generate_traits "$device_file"
+	elif [ "$(read_match device_id "$TRAITS_FILE")" != "$expected_id" ]; then
+		generate_traits "$device_file"
+	elif ! require_key video_device "$TRAITS_FILE" 2>/dev/null || \
+	     ! require_key device_id "$TRAITS_FILE" 2>/dev/null; then
+		generate_traits "$device_file"
+	fi
+}
+
+# --- OpenRC service ---
+
+depend() {
+	need modules
+	before ui
+	after fb-unblank
+}
+
+start() {
+	ebegin "Generating Minime traits"
+	check_traits
+	eend $?
+}

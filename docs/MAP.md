@@ -56,10 +56,9 @@ Source of truth is Alpine tree (`alpine/board/`). Buildroot uses the same files 
 
 ## Shared runtime scripts (`alpine/board/common/scripts/`)
 Canonical home for cross-distro runtime scripts installed into `/usr/share/minime/scripts/`:
-- `traits.sh` — Device traits detection (`start`) and static schema linting (`check`).
-- `ui.sh` — UI lifecycle manager and audio routing daemon.
-- `wifi.sh` — Wi-Fi network configuration daemon.
 - `device.sh` — Device configuration (`device.cfg`) builder (`init-cfg`), reader (`get`), and writer (`set`).
+
+The wifi/ui/traits logic is now inlined into each distro's OpenRC init scripts (Alpine has them natively; Buildroot copies Alpine's via `post-build.sh`).
 
 ## Post-image assembly script (`alpine/board/common/post-image.sh`)
 Canonical image packaging pipeline driver shared between Alpine and Buildroot (`buildroot/external/board/common/post-image.sh` is a forwarder wrapper).
@@ -72,16 +71,15 @@ Executes stage scripts under `alpine/board/common/post-image.d/`:
 # Alpine-specific
 
 ## Init scripts (OpenRC)
-All under `alpine/aports/minime-overlay/files/etc/init.d/`. Uses OpenRC syntax.
+All under `alpine/board/common/overlay/etc/init.d/`. Uses OpenRC syntax.
 
 ## Overlay configs
-All under `alpine/aports/minime-overlay/files/`.
+All under `alpine/board/common/overlay/`.
 
 ## World configs (`alpine/configs/`)
 Alpine package sets (world-common, world-<board>).
 
 ## Validation & probe scripts
-- `alpine/board/common/scripts/traits.sh check` — static trait schema validator.
 - `alpine/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
 
 ## Build infrastructure
@@ -91,8 +89,8 @@ Alpine package sets (world-common, world-<board>).
 
 # Buildroot-specific
 
-## Init scripts (Busybox S##)
-All under `buildroot/external/board/common/overlay/etc/init.d/`.
+## Init scripts (OpenRC)
+All under `buildroot/external/board/common/overlay/etc/init.d/` (Buildroot-only: `gpudriver`) and board-specific overlays (e.g. `rk3566/overlay/etc/init.d/thermal-watchdog`). Common services are copied from Alpine's OpenRC scripts by `post-build.sh`.
 
 ## Overlay configs
 All under `buildroot/external/board/common/overlay/`.
