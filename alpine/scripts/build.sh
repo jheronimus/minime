@@ -310,27 +310,38 @@ assemble_rootfs() {
 		add --no-cache --initdb --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
 	# apk --root does NOT run triggers, so busybox multi-call symlinks are
-	# never created.  Generate them for busybox-extras applets so that
-	# init scripts referencing /usr/sbin/tcpsvd etc. resolve at runtime.
+	# never created.  Create symlinks for busybox-extras applets that our
+	# init scripts reference.  We cannot use chroot (cross-arch build) so
+	# create them directly — the symlinks are tiny.
 	BUSYBOX_BIN="${ALPINE_ROOTFS_DIR}/bin/busybox-extras"
 	if [ -x "${BUSYBOX_BIN}" ]; then
 		log "creating busybox-extras applet symlinks..."
-		chroot "${ALPINE_ROOTFS_DIR}" /bin/busybox-extras --list 2>/dev/null |
-			while IFS= read -r applet; do
-				[ -n "${applet}" ] || continue
-				for dir in /usr/sbin /usr/bin /sbin /bin; do
-					ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
-				done
+		for applet in tcpsvd ftpd telnetd httpd inetd tftp dnsd \
+			vi nano grep awk sed find diff head tail sort wc \
+			nc ntpc ntpd ping wget curl tar gzip; do
+			for dir in /usr/sbin /usr/bin /sbin /bin; do
+				ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
 			done
+		done
 	fi
 
-	# Alpine 3.24 usr-merge may install wpa_supplicant under /usr/bin/ rather
-	# than /usr/sbin/.  Our wifi init script references /usr/sbin/wpa_supplicant.
+	# Ensure wpa_supplicant/wpa_cli are reachable at /usr/sbin/ regardless
+	# of where the package installed them (/sbin/, /usr/bin/, or /usr/sbin/).
 	for bin in wpa_supplicant wpa_cli; do
-		sbin="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
-		bin_path="${ALPINE_ROOTFS_DIR}/usr/bin/${bin}"
-		if [ ! -e "${sbin}" ] && [ -e "${bin_path}" ]; then
-			ln -sf "/usr/bin/${bin}" "${sbin}"
+		target="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
+		[ -e "${target}" ] && continue
+		for candidate in "/usr/bin/${bin}" "/sbin/${bin}" "/bin/${bin}"; do
+			if [ -e "${ALPINE_ROOTFS_DIR}${candidate}" ]; then
+				ln -sf "${candidate}" "${target}"
+				break
+			fi
+		done
+	done
+
+	# Diagnostic: verify critical binaries exist before proceeding.
+	for bin in /usr/sbin/tcpsvd /usr/sbin/wpa_supplicant /usr/bin/bootsplash; do
+		if [ ! -e "${ALPINE_ROOTFS_DIR}${bin}" ]; then
+			log "WARNING: ${bin} not found in rootfs"
 		fi
 	done
 
