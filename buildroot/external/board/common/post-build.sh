@@ -79,6 +79,9 @@ cp "${ALPINE_DIR}/board/common/overlay/etc/modules-load.d/wifi.conf" \
 	"${TARGET_DIR}/etc/modules-load.d/wifi.conf"
 cp "${ALPINE_DIR}/board/common/overlay/etc/modprobe.d/rtw88.conf" \
 	"${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
+mkdir -p "${TARGET_DIR}/etc/sysctl.d"
+cp "${ALPINE_DIR}/board/common/overlay/etc/sysctl.d/00-minime.conf" \
+	"${TARGET_DIR}/etc/sysctl.d/00-minime.conf"
 
 # 4. Ensure proper symlink for DNS
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
