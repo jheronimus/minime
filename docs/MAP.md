@@ -107,17 +107,18 @@ Source of truth is Alpine tree (`alpine/board/`). Buildroot uses the same files 
 Canonical image packaging pipeline driver shared between Alpine and Buildroot (`buildroot/external/board/common/post-image.sh` is a forwarder wrapper).
 Executes stage scripts under `alpine/board/common/post-image.d/`:
 - `01-system-erofs.sh` — extracts rootfs tar and generates `system.erofs`.
-- `02-initramfs.sh` — stages initramfs dependencies and compiles `initramfs` CPIO archive using `initramfs-init.sh`.
+- `02-initramfs.sh` — stages initramfs dependencies, compiles `initramfs` CPIO archive using `initramfs-init.sh`, and copies board-specific `first-boot-probe.sh` if present.
 - `03-userdata-vfat.sh` — initializes `device.cfg`, stages DTBs/overlays/UI, and generates `userdata.vfat`.
 - `04-genimage.sh` — stages bootloaders, runs `genimage`, and compresses the final image with `xz`.
+
+## Board-specific probe scripts (`alpine/board/*/first-boot-probe.sh`)
+Hardware autodetection scripts injected into the shared initramfs by `02-initramfs.sh` and executed at boot by `initramfs-init.sh`. Both Alpine and Buildroot use the same initramfs pipeline.
+- `alpine/board/rk3326/first-boot-probe.sh` — RK3326 hardware probing (SDIO vs USB dongle detection)
 
 # Alpine-specific
 
 ## World configs (`alpine/configs/`)
 Alpine package sets (world-common, world-<board>).
-
-## Validation & probe scripts
-- `alpine/board/rk3326/first-boot-probe.sh` — rk3326 initramfs probe.
 
 ## Build infrastructure
 - `alpine/Makefile` — Alpine build orchestrator
