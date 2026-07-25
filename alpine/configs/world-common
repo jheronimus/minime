@@ -27,6 +27,7 @@ openrc
 eudev
 busybox
 busybox-suid
+busybox-extras
 bash
 mksh
 shadow
