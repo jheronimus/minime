@@ -44,9 +44,9 @@ Minime supports two build targets: Alpine and Buildroot. Any config that has the
 
 For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
 
-For init scripts `alpine/board/common/scripts/` is the canonical home for cross-distro runtime scripts (`wifi.sh`, `ui.sh`, `traits.sh`). Alpine's APKBUILD installs them via `install`; Buildroot's `post-build.sh` copies them into `$TARGET_DIR/usr/share/minime/scripts/`. **Never maintain separate copies in each distro's subtree.**
+For init scripts `alpine/board/common/overlay/etc/init.d/` is the canonical home for cross-distro OpenRC services. Alpine's `build.sh` copies them directly into the rootfs; Buildroot's `post-build.sh` does the same. **Never maintain separate copies in each distro's subtree.** The wifi/ui/traits logic is inlined into each init script; only `device.sh` (in `board/common/scripts/`) remains as a shared build-time and runtime utility.
 
-- **Unshareable Distro-Specific Files**: Files that cannot be shared (such as OpenRC vs. BusyBox init scripts and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually.
+- **Unshareable Distro-Specific Files**: Files that cannot be shared (such as Buildroot-only init services like `gpudriver` and `thermal-watchdog`, and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually. Both distros now use OpenRC; Buildroot copies Alpine's OpenRC scripts verbatim via `post-build.sh`.
 
 - **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
 

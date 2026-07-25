@@ -61,9 +61,9 @@ EXTRA_ENV=""
 
 TMP_BOOT_CMD=$(mktemp)
 sed -e "s|@BOOTARGS@|${BOOTARGS}|g" \
-    -e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" \
-    -e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" \
-    "${BOOT_CMD_TEMPLATE}" > "${TMP_BOOT_CMD}"
+	-e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" \
+	-e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" \
+	"${BOOT_CMD_TEMPLATE}" >"${TMP_BOOT_CMD}"
 
 mkimage -C none -A arm -T script -d "${TMP_BOOT_CMD}" "${BINARIES_DIR}/boot.scr"
 rm -f "${TMP_BOOT_CMD}"
@@ -123,10 +123,41 @@ cp -a "${BOARD_DIR}/traits/." "${TARGET_DIR}/usr/share/minime/traits/"
 scripts_src="${BR2_EXTERNAL_MINIME_PATH}/../../alpine/board/common/scripts"
 scripts_dst="${TARGET_DIR}/usr/share/minime/scripts"
 mkdir -p "${scripts_dst}"
-cp "${scripts_src}/wifi.sh" "${scripts_src}/ui.sh" "${scripts_src}/traits.sh" \
-	"${scripts_src}/device.sh" "${scripts_dst}/"
-chmod +x "${scripts_dst}/wifi.sh" "${scripts_dst}/ui.sh" "${scripts_dst}/traits.sh" \
-	"${scripts_dst}/device.sh"
+cp "${scripts_src}/device.sh" "${scripts_dst}/"
+chmod +x "${scripts_dst}/device.sh"
+
+# Install OpenRC init scripts from Alpine (canonical source) and Buildroot overlay
+ALPINE_INITD="${ALPINE_DIR}/board/common/overlay/etc/init.d"
+TARGET_INITD="${TARGET_DIR}/etc/init.d"
+TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
+
+mkdir -p "${TARGET_INITD}"
+
+# Copy Alpine OpenRC init scripts (all except panfrost — Buildroot uses gpudriver)
+for svc in modules fb-unblank traits wifi ftpd telnetd bootsplash dbus bluetooth bluealsa ui; do
+	cp "${ALPINE_INITD}/${svc}" "${TARGET_INITD}/${svc}"
+	chmod 0755 "${TARGET_INITD}/${svc}"
+done
+
+# Copy Buildroot-specific OpenRC init scripts from overlay
+for svc_file in "${BR2_EXTERNAL_MINIME_PATH}/board/common/overlay/etc/init.d/"*; do
+	[ -f "${svc_file}" ] || continue
+	svc_name="$(basename "${svc_file}")"
+	cp "${svc_file}" "${TARGET_INITD}/${svc_name}"
+	chmod 0755 "${TARGET_INITD}/${svc_name}"
+done
+
+# Create runlevel symlinks
+# boot/ — hardware bringup (must complete before default/)
+mkdir -p "${TARGET_RUNLEVELS}/boot"
+for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver; do
+	ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/boot/${svc}"
+done
+# default/ — daemons that can start in parallel
+mkdir -p "${TARGET_RUNLEVELS}/default"
+for svc in bluealsa bluetooth bootsplash dbus ui; do
+	ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/default/${svc}"
+done
 
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BR_BOARD_DIR}/post-build.sh" ]; then

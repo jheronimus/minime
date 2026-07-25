@@ -1,0 +1,29 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# gpudriver: Load proprietary Mali GPU driver (libmali + mali-kbase).
+# Buildroot-only — Alpine uses Panfrost instead.
+#
+# mali-kbase is built out-of-tree as a kernel module.  Page migration must
+# be disabled at load time: with CONFIG_COMPACTION=y the module enables it
+# by default (when large pages are on) and hangs at load.  The tiny-libmali
+# config fragment disables CONFIG_COMPACTION, but the module parameter
+# provides a safety net.
+
+description="Load Mali GPU driver (libmali + mali-kbase)"
+
+depend() {
+	need modules
+	before ui dbus
+}
+
+start() {
+	ebegin "Loading Mali GPU driver"
+	modprobe mali_kbase kbase_page_migration_enabled=0 2>/dev/null || true
+	eend 0
+}
+
+stop() {
+	ebegin "Unloading Mali GPU driver"
+	rmmod mali_kbase 2>/dev/null || true
+	eend 0
+}

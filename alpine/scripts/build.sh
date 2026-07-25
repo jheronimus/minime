@@ -169,7 +169,7 @@ build_local_apks() {
 	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
 
 	ALPINE_PKGS="bootsplash \
-		fatresize minime-overlay ${UI} preloaded-roms"
+		fatresize ${UI} preloaded-roms"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
@@ -270,7 +270,7 @@ assemble_rootfs() {
 	mkdir -p "${ALPINE_ROOTFS_DIR}"
 	tar -xf "${MINIROOTFS_TAR}" -C "${ALPINE_ROOTFS_DIR}"
 
-	# Build a local aports index so apk can resolve minime-overlay etc. from
+	# Build a local aports index so apk can resolve local packages from
 	# the same repo as the official Alpine packages.
 	ALPINE_REPO_BASE="${ALPINE_MINIROOTFS_BASE_URL%/releases/${ALPINE_ARCH}}"
 	cat >"${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
@@ -287,8 +287,7 @@ assemble_rootfs() {
 		(cd "${ALPINE_ROOTFS_DIR}/local-repo/aarch64" && apk index -o APKINDEX.tar.gz *.apk)
 	fi
 
-	# Resolve the full package list and install it.  --allow-untrusted lets
-	# minime-overlay install without a signature.
+	# Resolve the full package list and install it.
 	WORLD_PKGS="$(cat "${WORLD_COMMON}" "${WORLD_BOARD}" | grep -v '^#' | tr '\n' ' ')"
 	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
 
@@ -316,6 +315,23 @@ assemble_rootfs() {
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	cp -a "${TRAITS_SRC}/." "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/"
+
+	# Install the Minime overlay (OpenRC services, system config, udev rules).
+	# Replaces the former minime-overlay APK — same pattern as traits/modules.
+	OVERLAY_SRC="${ALPINE_DIR}/board/common/overlay"
+	[ -d "${OVERLAY_SRC}" ] || die "missing overlay source: ${OVERLAY_SRC}"
+	cp -a "${OVERLAY_SRC}/." "${ALPINE_ROOTFS_DIR}/"
+
+	# Install board-specific overlay (e.g. thermal-watchdog for rk3566).
+	BOARD_OVERLAY="${ALPINE_DIR}/board/${BOARD}/overlay"
+	if [ -d "${BOARD_OVERLAY}" ]; then
+		cp -a "${BOARD_OVERLAY}/." "${ALPINE_ROOTFS_DIR}/"
+	fi
+
+	# Install shared utility scripts.
+	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts"
+	install -m 0755 "${ALPINE_DIR}/board/common/scripts/device.sh" \
+		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/"
 
 	# Install the tinykernel modules into the immutable EROFS rootfs.
 	# /lib/modules/<kver>/ is read-only on EROFS, but the modules themselves

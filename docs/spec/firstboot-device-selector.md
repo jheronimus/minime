@@ -60,5 +60,5 @@ To support shipping a single unified image for H700 and platforms without automa
 ## Component Integration
 
 - **[device.sh](file:///Users/ilembitov/Projects/minime/alpine/board/common/scripts/device.sh)**: Manages `device.cfg` reads/writes.
-- **[traits.sh](file:///Users/ilembitov/Projects/minime/alpine/board/common/scripts/traits.sh)**: Reads active `/proc/device-tree/model` once DTB is locked.
+- **[traits](file:///Users/ilembitov/Projects/minime/alpine/board/common/overlay/etc/init.d/traits)**: Reads active `/proc/device-tree/model` once DTB is locked.
 - **Target Storage**: Configuration persisted in `/mnt/sdcard/.minime/config/device.cfg`.

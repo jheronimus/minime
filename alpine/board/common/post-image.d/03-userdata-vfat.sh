@@ -19,7 +19,7 @@ mkdir -p "${USERDATA_STAGE}/Saves"
 "${MINIME_SOURCE_ROOT}/board/common/scripts/device.sh" init-cfg "${USERDATA_STAGE}/.minime/config/device.cfg"
 
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
-OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/overlays"
+OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/dts"
 if [ -d "${OVERLAY_SRC_DIR}" ]; then
 	echo "Compiling DT overlays for ${SOC_NAME}..."
 	mkdir -p "${USERDATA_STAGE}/.minime/overlays"

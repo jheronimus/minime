@@ -1,17 +1,16 @@
-#!/bin/sh
-# shellcheck shell=sh
-# ui.sh: launch the installed Minime frontend.
-# Called by both the Alpine OpenRC 'ui' service and the Buildroot S60ui wrapper.
-# Interface: ui.sh {start|stop|restart|reload}
-#
-# Each UI ships its own filesystem layout and boot script.
-# Minime only provides the hardware glue and lifecycle loop.
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# ui: launch the UI (MinUI/Allium) and the headphone-jack watcher.
+# Self-contained — no external script dependency.
 
-set -eu
+description="Minime UI (MinUI/Allium)"
 
+# --- Configuration ---
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
 ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
 UI_ENV_FILE="/mnt/sdcard/.minime/ui.env"
+
+# --- Helper functions ---
 
 get_trait() {
 	key="$1"
@@ -25,22 +24,28 @@ read_ui_env() {
 	grep "^${key}=" "$UI_ENV_FILE" | cut -d= -f2 | tr -d '\r"' || true
 }
 
-UI_NAME=$(read_ui_env UI_NAME)
-UI_BIN=$(read_ui_env UI_BIN)
-UI_PROCESSES=$(read_ui_env UI_PROCESSES)
+# --- OpenRC service ---
+
+depend() {
+	after modules fb-unblank traits panfrost \
+		bootsplash localmount
+}
 
 start() {
-	echo "Starting UI (${UI_NAME:-none})..."
+	ebegin "Starting UI"
+
+	UI_NAME=$(read_ui_env UI_NAME)
+	UI_BIN=$(read_ui_env UI_BIN)
+	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
 	sound_card=$(get_trait sound_card)
 	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
-		printf "pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n" \
+		printf 'pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n' \
 			"$sound_card" "$sound_card" >"$ASOUNDRC_FILE"
 	else
 		rm -f "$ASOUNDRC_FILE"
 	fi
 
-	# Headphone jack routing daemon for sound card
 	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ] && amixer -c "$sound_card" controls >/dev/null 2>&1; then
 		(
 			while true; do
@@ -62,12 +67,10 @@ start() {
 
 	export HOME=/mnt/sdcard
 
-	# Ensure backlight is visible until userspace takes over
 	for bl in /sys/class/backlight/*/brightness; do
 		[ -w "$bl" ] && echo 5 >"$bl" 2>/dev/null || true
 	done
 
-	# Clear GPU failure boot-loop sentinel and stale next commands
 	rm -f /mnt/sdcard/.minime/gpu_fail
 	rm -f /tmp/next
 
@@ -79,10 +82,10 @@ start() {
 			cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
 			sync 2>/dev/null || true
 		fi
+		eend 0
 		return 0
 	fi
 
-	# UI lifecycle loop runs in the background so boot can finish
 	(
 		while true; do
 			if [ -f /tmp/poweroff ]; then
@@ -110,10 +113,16 @@ start() {
 		done
 	) &
 	echo $! >/tmp/ui_loop.pid
+
+	eend 0
 }
 
 stop() {
-	echo "Stopping UI (${UI_NAME:-frontend})..."
+	ebegin "Stopping UI"
+
+	UI_NAME=$(read_ui_env UI_NAME)
+	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
+
 	if [ -f /tmp/watch_jack.pid ]; then
 		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
 		rm -f /tmp/watch_jack.pid
@@ -131,19 +140,6 @@ stop() {
 		# shellcheck disable=SC2086
 		killall -9 $UI_PROCESSES 2>/dev/null || true
 	fi
-}
 
-case "${1:-}" in
-start) start ;;
-stop) stop ;;
-restart | reload)
-	stop
-	sleep 1
-	start
-	;;
-*)
-	echo "Usage: $0 {start|stop|restart|reload}" >&2
-	exit 1
-	;;
-esac
-# Trigger buildroot too
+	eend 0
+}
