@@ -72,26 +72,13 @@ rm -f "${TMP_BOOT_CMD}"
 mkdir -p "${TARGET_DIR}/etc/udev/rules.d"
 echo 'KERNEL=="default_cma_region", SYMLINK+="dma_heap/system-uncached"' >"${TARGET_DIR}/etc/udev/rules.d/99-mali.rules"
 
-# 3. Create modules-load configuration files
+# 3. Copy shared WiFi config from Alpine overlay (canonical source)
 mkdir -p "${TARGET_DIR}/etc/modules-load.d"
-
-# Wifi drivers
-cat <<'EOF' >"${TARGET_DIR}/etc/modules-load.d/wifi.conf"
-cfg80211
-mac80211
-rtw88_core
-rtw88_sdio
-rtw88_8821c
-rtw88_8821cs
-EOF
-
-# 3.5. Create modprobe options files to disable deep low-power saving states
-
 mkdir -p "${TARGET_DIR}/etc/modprobe.d"
-cat <<'EOF' >"${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
-options rtw88_core disable_lps_deep=y
-options rtw88_sdio disable_lps_deep=y
-EOF
+cp "${ALPINE_DIR}/board/common/overlay/etc/modules-load.d/wifi.conf" \
+	"${TARGET_DIR}/etc/modules-load.d/wifi.conf"
+cp "${ALPINE_DIR}/board/common/overlay/etc/modprobe.d/rtw88.conf" \
+	"${TARGET_DIR}/etc/modprobe.d/rtw88.conf"
 
 # 4. Ensure proper symlink for DNS
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
