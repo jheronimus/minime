@@ -297,53 +297,10 @@ assemble_rootfs() {
 	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
 	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
-	# NOTE: --root only relocates apk's install database + dest dir; it does
-	# NOT prefix repository paths.  Repositories starting with '/' are read
-	# verbatim from the host, so the local repo must be passed as its
-	# host-absolute path here even though it physically lives inside the
-	# rootfs (and is exposed as /local-repo to on-device apk via
-	# /etc/apk/repositories).
-	apk --root "${ALPINE_ROOTFS_DIR}" \
-		--repository "${ALPINE_REPO_BASE}/main" \
-		--repository "${ALPINE_REPO_BASE}/community" \
-		--repository "${ALPINE_ROOTFS_DIR}/local-repo" \
-		add --no-cache --initdb --allow-untrusted --force-overwrite ${WORLD_PKGS}
-
-	# apk --root does NOT run triggers, so busybox multi-call symlinks are
-	# never created.  Create symlinks for busybox-extras applets that our
-	# init scripts reference.  We cannot use chroot (cross-arch build) so
-	# create them directly — the symlinks are tiny.
-	BUSYBOX_BIN="${ALPINE_ROOTFS_DIR}/bin/busybox-extras"
-	if [ -x "${BUSYBOX_BIN}" ]; then
-		log "creating busybox-extras applet symlinks..."
-		for applet in tcpsvd ftpd telnetd httpd inetd tftp dnsd \
-			vi nano grep awk sed find diff head tail sort wc \
-			nc ntpc ntpd ping wget curl tar gzip; do
-			for dir in /usr/sbin /usr/bin /sbin /bin; do
-				ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
-			done
-		done
-	fi
-
-	# Ensure wpa_supplicant/wpa_cli are reachable at /usr/sbin/ regardless
-	# of where the package installed them (/sbin/, /usr/bin/, or /usr/sbin/).
-	for bin in wpa_supplicant wpa_cli; do
-		target="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
-		[ -e "${target}" ] && continue
-		for candidate in "/usr/bin/${bin}" "/sbin/${bin}" "/bin/${bin}"; do
-			if [ -e "${ALPINE_ROOTFS_DIR}${candidate}" ]; then
-				ln -sf "${candidate}" "${target}"
-				break
-			fi
-		done
-	done
-
-	# Diagnostic: verify critical binaries exist before proceeding.
-	for bin in /usr/sbin/tcpsvd /usr/sbin/wpa_supplicant /usr/bin/bootsplash; do
-		if [ ! -e "${ALPINE_ROOTFS_DIR}${bin}" ]; then
-			log "WARNING: ${bin} not found in rootfs"
-		fi
-	done
+	# Install packages via chroot so apk runs triggers (busybox symlinks,
+	# font caches, etc.) — apk --root does NOT run triggers.
+	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
+		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
 	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
