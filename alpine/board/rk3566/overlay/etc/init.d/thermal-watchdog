@@ -1,13 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
 # thermal-watchdog: Userspace thermal watchdog for RK3566.
-# Buildroot-only — Alpine does not include this service.
-#
-# Throttles the CPU/GPU devfreq cooling devices when the SoC crosses the DT
-# passive trip points, so the device slows down under load instead of hitting
-# the 95C critical poweroff (already handled by the kernel thermal core via
-# CONFIG_THERMAL).  Kept as a userspace failsafe alongside Panfrost while
-# thermal/devfreq tuning is validated on real devices.
+# Shared location — Alpine and Buildroot both copy from here.
 
 description="RK3566 thermal watchdog"
 
@@ -20,7 +14,6 @@ depend() {
 
 start() {
 	ebegin "Starting thermal watchdog"
-	# Run the self-test first; abort if it fails
 	/usr/share/minime/scripts/thermal-watchdog test || { eend 1 "self-test failed"; return 1; }
 	start-stop-daemon -S -q -b -m \
 		-p "$PIDFILE" -x /usr/share/minime/scripts/thermal-watchdog -- run

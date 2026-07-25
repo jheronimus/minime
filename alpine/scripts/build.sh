@@ -309,6 +309,31 @@ assemble_rootfs() {
 		--repository "${ALPINE_ROOTFS_DIR}/local-repo" \
 		add --no-cache --initdb --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
+	# apk --root does NOT run triggers, so busybox multi-call symlinks are
+	# never created.  Generate them for busybox-extras applets so that
+	# init scripts referencing /usr/sbin/tcpsvd etc. resolve at runtime.
+	BUSYBOX_BIN="${ALPINE_ROOTFS_DIR}/bin/busybox-extras"
+	if [ -x "${BUSYBOX_BIN}" ]; then
+		log "creating busybox-extras applet symlinks..."
+		chroot "${ALPINE_ROOTFS_DIR}" /bin/busybox-extras --list 2>/dev/null |
+			while IFS= read -r applet; do
+				[ -n "${applet}" ] || continue
+				for dir in /usr/sbin /usr/bin /sbin /bin; do
+					ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
+				done
+			done
+	fi
+
+	# Alpine 3.24 usr-merge may install wpa_supplicant under /usr/bin/ rather
+	# than /usr/sbin/.  Our wifi init script references /usr/sbin/wpa_supplicant.
+	for bin in wpa_supplicant wpa_cli; do
+		sbin="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
+		bin_path="${ALPINE_ROOTFS_DIR}/usr/bin/${bin}"
+		if [ ! -e "${sbin}" ] && [ -e "${bin_path}" ]; then
+			ln -sf "/usr/bin/${bin}" "${sbin}"
+		fi
+	done
+
 	# Install the board's immutable trait payload.
 	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
@@ -331,6 +356,8 @@ assemble_rootfs() {
 	# Install shared utility scripts.
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts"
 	install -m 0755 "${ALPINE_DIR}/board/common/scripts/device.sh" \
+		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/"
+	install -m 0755 "${ALPINE_DIR}/board/common/scripts/thermal-watchdog" \
 		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/"
 
 	# Install the tinykernel modules into the immutable EROFS rootfs.
