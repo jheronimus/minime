@@ -345,6 +345,13 @@ assemble_rootfs() {
 			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 	fi
 
+	# Validate that all binaries referenced by init scripts exist in the rootfs.
+	CHECK_PATHS="${ALPINE_DIR}/../scripts/check-openrc-paths.py"
+	if [ -x "${CHECK_PATHS}" ]; then
+		log "checking OpenRC init script paths..."
+		"${CHECK_PATHS}" "${ALPINE_ROOTFS_DIR}" || die "OpenRC path validation failed"
+	fi
+
 	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
 	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
 	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
