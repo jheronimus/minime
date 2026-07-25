@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBRETRO_HEADERS_VERSION = 1a81c98e9ebe4e67ab4420593777df76eba18bcc
+LIBRETRO_HEADERS_VERSION = 52193838ab224f23129b4be5a571d523ca566ac8
 LIBRETRO_HEADERS_SITE = $(call github,libretro,libretro-common,$(LIBRETRO_HEADERS_VERSION))
 LIBRETRO_HEADERS_LICENSE = MIT
 LIBRETRO_HEADERS_LICENSE_FILES = include/libretro.h
