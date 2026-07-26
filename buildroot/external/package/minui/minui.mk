@@ -47,17 +47,7 @@ define MINUI_INSTALL_IMAGES_CMDS
 		cp -a $(@D)/Tools $(BINARIES_DIR)/ui/; \
 	fi
 
-	# Minimal launch.sh wrapper - MinUI hardcodes its own paths internally.
-	# ui.sh calls the minui binary directly; this wrapper exists as a
-	# convenience entry point for debugging or manual use.
-	printf '%s\n' \
-		'#!/bin/sh' \
-		'killall keymon 2>/dev/null || true' \
-		'MINIME_BINDIR=/mnt/sdcard/.system/minime/bin' \
-		'[ ! -x "$$MINIME_BINDIR/keymon" ] || "$$MINIME_BINDIR/keymon" > /tmp/keymon.log 2>&1 &' \
-		'exec "$$MINIME_BINDIR/minui"' \
-		> $(BINARIES_DIR)/ui/.system/minime/launch.sh
-	chmod +x $(BINARIES_DIR)/ui/.system/minime/launch.sh
 endef
+
 
 $(eval $(generic-package))
