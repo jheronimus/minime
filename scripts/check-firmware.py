@@ -5,17 +5,17 @@ from pathlib import Path
 
 # Config pairs to check
 CONFIG_PAIRS = [
-    ("alpine/h700", ["alpine/board/common/tiny-base.config", "alpine/board/h700/linux.config"]),
-    ("alpine/rk3326", ["alpine/board/common/tiny-base.config", "alpine/board/rk3326/linux.config"]),
-    ("alpine/rk3566", ["alpine/board/common/tiny-base.config", "alpine/board/rk3566/linux.config"]),
+    ("h700", ["minime/boards/common/tiny-base.config", "minime/boards/h700/tiny-h700.config"]),
+    ("rk3326", ["minime/boards/common/tiny-base.config", "minime/boards/rk3326/tiny-rk3326.config"]),
+    ("rk3566", ["minime/boards/common/tiny-base.config", "minime/boards/rk3566/tiny-rk3566.config"]),
 ]
 
 # Standard firmware search roots in repo
 FIRMWARE_SEARCH_DIRS = [
-    Path("alpine/board/common/firmware"),
-    Path("alpine/board/h700/firmware"),
-    Path("alpine/board/rk3326/firmware"),
-    Path("alpine/board/rk3566/firmware"),
+    Path("minime/boards/common/firmware"),
+    Path("minime/boards/h700/firmware"),
+    Path("minime/boards/rk3326/firmware"),
+    Path("minime/boards/rk3566/firmware"),
 ]
 
 def find_firmware_file(fw_path):
@@ -60,7 +60,7 @@ def check_dts_firmware():
     """
     dts_fw_map = {}
     root = Path(".")
-    dts_files = list(root.glob("alpine/board/**/*.dts")) + list(root.glob("alpine/board/**/*.dtsi"))
+    dts_files = list(root.glob("minime/boards/**/*.dts")) + list(root.glob("minime/boards/**/*.dtsi"))
     
     fw_regex = re.compile(r'firmware-name\s*=\s*"([^"]+)"')
 

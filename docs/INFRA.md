@@ -6,22 +6,24 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 
 ## 1. GitHub Actions Workflows (`.github/workflows/`)
 
+## 1. GitHub Actions Workflows (`.github/workflows/`)
+
 ### `alpine.yml` — Build Alpine Images
-- **Trigger**: Push to `main` (matching `alpine/**` paths) or `workflow_dispatch`.
+- **Trigger**: Push to `main` (matching `minime/boards/**`, `minime/targets/alpine/**`, `minime/genimage/**`) or `workflow_dispatch`.
 - **Purpose**: Cross-compiles Alpine Linux firmware images using Podman/Docker on `ubuntu-24.04-arm` runners.
 - **Matrix**: Boards (`h700`, `rk3326`, `rk3566`) $\times$ UIs (`minui`, `allium`).
 - **Artifacts**: Uploads `.img.xz` compressed disk images and build logs to the `testing` release.
 
 ### `buildroot.yml` — Build Buildroot Images
-- **Trigger**: Push to `main` (matching `buildroot/**` or `alpine/board/**` paths) or `workflow_dispatch`.
+- **Trigger**: Push to `main` (matching `minime/boards/**`, `minime/targets/buildroot/**`, `minime/genimage/**`) or `workflow_dispatch`.
 - **Purpose**: Compiles minimal Buildroot firmware images on Ubuntu runners using ccache and download caching.
 - **Matrix**: Boards (`rk3326`, `rk3566`, `h700`) $\times$ UIs (`minui`, `allium`).
 - **Artifacts**: Uploads `.img.xz` compressed disk images to the `testing` release.
 
 ### `bootloader.yml` — Build Bootloaders
 - **Trigger**: `workflow_dispatch` (manual or programmatically dispatched).
-- **Purpose**: Clones upstream U-Boot and ARM Trusted Firmware (ATF), applies board patches and `uboot.config` fragments, and builds bootloader binaries (`u-boot-sunxi-with-spl.bin`, `idbloader.img`, `u-boot.itb`).
-- **Automation**: Commits updated prebuilt binaries into `alpine/bootloader/<board>/` and automatically dispatches `alpine.yml` and `buildroot.yml` to trigger firmware image rebuilds.
+- **Purpose**: Clones upstream U-Boot and ARM Trusted Firmware (ATF), applies board patches and `minime/uboot/config/uboot.config` fragments, and builds bootloader binaries (`u-boot-sunxi-with-spl.bin`, `idbloader.img`, `u-boot.itb`).
+- **Automation**: Commits updated prebuilt binaries into `minime/uboot/out/<board>/` and automatically dispatches `alpine.yml` and `buildroot.yml` to trigger firmware image rebuilds.
 
 ### `update-packages.yml` — Automated Package Version Bumps
 - **Trigger**: Scheduled cron job (daily) or `workflow_dispatch`.
@@ -31,21 +33,18 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 
 ## 2. Repository Scripts & Entrypoints
 
-### Orchestration & Build Scripts (`scripts/` and `alpine/scripts/`)
+### Orchestration & Build Scripts (`scripts/` and `minime/genimage/`)
+- **`minime/genimage/build-image.sh`**: Central image builder. Consumes compiled target artifacts (`kernel`, `initramfs.img`, `rootfs.erofs`, `.dtb`, `ui/`) and prebuilt U-Boot binaries, stages `userdata.vfat`, runs `genimage`, and compresses `minime-<target>-<board>.img.xz`.
+- **`minime/genimage/build-update.sh`**: Central update package generator. Packages target artifacts into `minime-update-<target>-<board>.tar.gz` for live updates and distro switching.
 - **`scripts/check-kernel-config.py`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
 - **`scripts/check-firmware.py`**: Dynamically verifies that all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.py`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.py`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
 - **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 - **`scripts/build-bootloader.sh`**: Helper script invoked by `bootloader.yml` to compile ATF and U-Boot for `h700`, `rk3326`, or `rk3566`.
-- **`scripts/uptodate/uptodate.py`**: Self-healing Python script that queries GitHub APIs for new release tags and computes SHA-512 hashes.
-- **`scripts/update_kernel_version.py`**: Developer tool for updating kernel versions across board defconfigs.
-- **`alpine/scripts/build.sh`**: Core Alpine image build engine. Compiles packages, stages rootfs, generates initramfs CPIO archives, and invokes `post-image.sh`.
-
-### Image Assembly & Staging Scripts
-- **`alpine/board/common/post-image.sh`**: Alpine post-image hook. Assembles `initramfs`, generates FAT32 `userdata.vfat` via `mkdosfs`, and runs `genimage`.
-- **`buildroot/external/board/common/post-build.sh`**: Buildroot post-build script for copying runtime assets and init scripts into `$TARGET_DIR`.
-- **`buildroot/external/board/common/post-image.sh`**: Buildroot post-image hook for packaging `minime-<board>.img.xz`.
+- **`minime/targets/alpine/scripts/build.sh`**: Core Alpine image build engine. Compiles packages, stages rootfs, and invokes `build-image.sh`.
+- **`minime/targets/buildroot/scripts/post-build.sh`**: Buildroot post-build script for copying runtime assets and init scripts into `$TARGET_DIR`.
+- **`minime/targets/buildroot/scripts/post-image.sh`**: Buildroot post-image hook for packaging images via `build-image.sh`.
 - **`roms/install.sh`**: Asset installer script that maps and stages preloaded ROMs into the appropriate launcher directory structure (`MinUI` vs `Allium`).
 
 ---
