@@ -84,6 +84,10 @@ Custom device tree source files copied into the kernel tree during `tinykernel/A
 - `alpine/board/h700/dts/` — H700 Allwinner boards (rg35xx, rg40xx, rg28xx, rgcubexx, etc.)
 - `alpine/board/rk3326/dts/` — RK3326 boards (rg351p, rg351mp)
 
+## DT overlay sources (`alpine/board/*/dtbo/`)
+Genuine DT overlay source files compiled by `dtc` during post-image and staged on the boot partition. Applied at runtime by U-Boot via `fdt apply`.
+- `alpine/board/rk3566/dtbo/` — RK3566 CPU undervolt overlays
+
 ## Kernel and U-Boot patches (`alpine/board/*/patches/`)
 Per-board patch series applied during kernel (via `tinykernel/APKBUILD`) and Buildroot (via `BR2_GLOBAL_PATCH_DIR`) builds.
 - `alpine/board/h700/patches/linux/` — H700 kernel patches (panels, GPU, peripherals)
