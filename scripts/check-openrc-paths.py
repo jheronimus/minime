@@ -33,12 +33,14 @@ def _check_path(rootfs: Path, path: str) -> bool:
     if p.exists():
         return True
 
-    # Try usr-merge fallback directories
-    prefix = "/" + path.strip("/").split("/")[0]
-    suffix = "/".join(path.strip("/").split("/")[1:])
-    for fb in _SBIN_TO_BIN.get(prefix, []):
-        if (rootfs / f"{fb.strip('/')}/{suffix}").exists():
-            return True
+    # Try usr-merge fallback directories (e.g., /usr/sbin -> /usr/bin)
+    parts = path.strip("/").split("/")
+    if len(parts) >= 2:
+        prefix = "/" + "/".join(parts[:2])
+        suffix = "/".join(parts[2:])
+        for fb in _SBIN_TO_BIN.get(prefix, []):
+            if (rootfs / f"{fb.strip('/')}/{suffix}").exists():
+                return True
 
     return False
 
