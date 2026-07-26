@@ -283,30 +283,33 @@ assemble_rootfs() {
 		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
 	# Alpine's busybox.trigger only creates symlinks for /bin/busybox, not
-	# /bin/busybox-extras.  Create the missing symlinks manually — the
-	# trigger lists all enabled applets in /etc/busybox-paths.d/busybox-extras.
-	BUSYBOX_EXTRAS_LIST="${ALPINE_ROOTFS_DIR}/etc/busybox-paths.d/busybox-extras"
-	if [ -f "${BUSYBOX_EXTRAS_LIST}" ]; then
-		log "creating busybox-extras applet symlinks..."
-		while IFS= read -r applet_path; do
-			applet="${applet_path##*/}"
-			for dir in /usr/sbin /usr/bin /sbin /bin; do
-				ln -sf /bin/busybox-extras "${ALPINE_ROOTFS_DIR}${dir}/${applet}" 2>/dev/null || true
-			done
-		done <"${BUSYBOX_EXTRAS_LIST}"
-	fi
+	# /bin/busybox-extras.  Create symlinks for the applets our init scripts
+	# reference directly — the paths file may not exist or be incomplete.
+	# Use RELATIVE symlink targets so the check script can follow them into
+	# the rootfs (absolute targets resolve on the host, not in the rootfs).
+	log "creating busybox-extras applet symlinks..."
+	for applet in tcpsvd ftpd telnetd httpd inetd tftp dnsd; do
+		ln -sf "../../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/usr/sbin/${applet}" 2>/dev/null || true
+		ln -sf "../../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/usr/bin/${applet}" 2>/dev/null || true
+		ln -sf "../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/sbin/${applet}" 2>/dev/null || true
+		ln -sf "busybox-extras" "${ALPINE_ROOTFS_DIR}/bin/${applet}" 2>/dev/null || true
+	done
 
 	# Ensure wpa_supplicant/wpa_cli are reachable at /usr/sbin/ — the
 	# package may install to /usr/bin/ or /sbin/ depending on Alpine version.
+	# With Alpine usr-merge (/bin→/usr/bin, /sbin→/usr/sbin), binaries are
+	# physically under /usr/.  Create symlinks with relative targets so the
+	# post-build check can follow them within the rootfs tree.
 	for bin in wpa_supplicant wpa_cli; do
 		target="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
 		[ -e "${target}" ] && continue
-		for candidate in "/usr/bin/${bin}" "/sbin/${bin}" "/bin/${bin}"; do
-			if [ -e "${ALPINE_ROOTFS_DIR}${candidate}" ]; then
-				ln -sf "${candidate}" "${target}"
-				break
-			fi
-		done
+		if [ -e "${ALPINE_ROOTFS_DIR}/usr/bin/${bin}" ]; then
+			ln -sf "../bin/${bin}" "${target}"
+		elif [ -e "${ALPINE_ROOTFS_DIR}/sbin/${bin}" ]; then
+			ln -sf "../../sbin/${bin}" "${target}"
+		elif [ -e "${ALPINE_ROOTFS_DIR}/bin/${bin}" ]; then
+			ln -sf "../../bin/${bin}" "${target}"
+		fi
 	done
 
 	# Install the board's immutable trait payload.
