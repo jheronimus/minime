@@ -124,7 +124,7 @@ TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
 mkdir -p "${TARGET_INITD}"
 
 # Copy Alpine OpenRC init scripts (all except panfrost — Buildroot uses gpudriver)
-for svc in modules fb-unblank traits wifi ftpd telnetd bootsplash dbus bluetooth bluealsa ui; do
+for svc in modules fb-unblank traits wifi ftpd telnetd dbus bluetooth bluealsa ui; do
 	cp "${ALPINE_INITD}/${svc}" "${TARGET_INITD}/${svc}"
 	chmod 0755 "${TARGET_INITD}/${svc}"
 done
@@ -145,7 +145,7 @@ for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver; do
 done
 # default/ — daemons that can start in parallel
 mkdir -p "${TARGET_RUNLEVELS}/default"
-for svc in bluealsa bluetooth bootsplash dbus ui; do
+for svc in bluealsa bluetooth dbus ui; do
 	ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/default/${svc}"
 done
 

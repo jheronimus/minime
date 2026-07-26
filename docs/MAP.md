@@ -19,7 +19,6 @@ Under `alpine/bootloader/`. Built by `.github/workflows/bootloader.yml`. Both Al
 - RK3566: `idbloader.img`, `u-boot.itb`, `rkbin/bl31.elf`, `rkbin/rk3566_ddr_1056MHz_v1.25.bin`
 
 ## Source code (`src/`)
-- `src/bootsplash/` — bootsplash package source
 - `src/libmali/` — Mali GLES userspace driver blobs and headers
 - `src/mali-kbase/` — Mali kernel driver out-of-tree module
 
@@ -30,7 +29,6 @@ All under `alpine/board/common/overlay/etc/init.d/`. **Single source of truth** 
 - `traits` — immutable trait builder
 - `bluealsa` — Bluetooth A2DP audio
 - `bluetooth` — Bluetooth daemon
-- `bootsplash` — animated boot splash
 - `dbus` — D-Bus system bus
 - `fb-unblank` — unblank framebuffer
 - `ftpd` — anonymous FTP to SD card

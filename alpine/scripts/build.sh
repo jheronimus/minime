@@ -167,8 +167,7 @@ build_local_apks() {
 	# the SD payload, so the rootfs list is everything else.
 	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
 
-	ALPINE_PKGS="bootsplash \
-		fatresize ${UI} preloaded-roms"
+	ALPINE_PKGS="fatresize ${UI} preloaded-roms"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"

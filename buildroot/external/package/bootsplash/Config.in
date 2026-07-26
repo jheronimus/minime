@@ -1,6 +1,0 @@
-config BR2_PACKAGE_BOOTSPLASH
-	bool "bootsplash"
-	select BR2_PACKAGE_SDL2
-	help
-	  Animated boot splash for Minime with synthesized audio.
-	  Mimics Game Boy family boots using the minimē wordmark.
