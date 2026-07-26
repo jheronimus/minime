@@ -287,6 +287,7 @@ assemble_rootfs() {
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	cp -a "${TRAITS_SRC}/." "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/"
+	echo "gpu_driver=panfrost" >>"${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/platform.ini"
 
 	# Install the Minime overlay (OpenRC services, system config, udev rules).
 	# Replaces the former minime-overlay APK — same pattern as traits/modules.

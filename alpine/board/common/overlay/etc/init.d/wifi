@@ -15,7 +15,6 @@ udhcpc_logfile="/run/udhcpc.${wifi_interface}.log"
 diagnostic_logfile="/tmp/wifi.diagnostics"
 
 # --- Timeouts ---
-wpa_cli_wait_seconds=30
 station_connect_wait_seconds=40
 ipv4_wait_seconds=20
 wifi_driver_wait_seconds=5
@@ -77,27 +76,13 @@ load_wifi_cfg_profiles() {
 	fi
 }
 
-prepare_wifi_interface() {
+check_wifi_hardware() {
 	i=0
 	if command -v rfkill >/dev/null 2>&1; then
 		rfkill unblock wifi >/dev/null 2>&1 || true
 	fi
 	while [ "${i}" -lt "${wifi_driver_wait_seconds}" ]; do
 		if ip link show "${wifi_interface}" >/dev/null 2>&1; then
-			ip link set "${wifi_interface}" up >/dev/null 2>&1 || true
-			return 0
-		fi
-		i=$((i + 1))
-		sleep 1
-	done
-	return 1
-}
-
-wait_for_wpa_supplicant_ready() {
-	i=0
-	while [ "${i}" -lt "${wpa_cli_wait_seconds}" ]; do
-		if pidof wpa_supplicant >/dev/null 2>&1 &&
-			wpa_cli -i "${wifi_interface}" ping >/dev/null 2>&1; then
 			return 0
 		fi
 		i=$((i + 1))
@@ -191,25 +176,6 @@ start_background() {
 			"$(date -u +'%T' 2>/dev/null || true)" "$has_profiles" >>/mnt/sdcard/boot.log 2>/dev/null || true
 	fi
 
-	if ! prepare_wifi_interface; then
-		log_failure_diagnostics "missing-${wifi_interface}"
-		return 1
-	fi
-
-	mkdir -p /var/run/wpa_supplicant
-	if ! start-stop-daemon -S -q -b -m \
-		-p /var/run/wpa_supplicant.pid \
-		-x /usr/sbin/wpa_supplicant -- \
-		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}" 2>>"${diagnostic_logfile}"; then
-		log_failure_diagnostics "wpa_supplicant-failed-to-start"
-		return 1
-	fi
-
-	if ! wait_for_wpa_supplicant_ready; then
-		log_failure_diagnostics "wpa_supplicant-not-ready"
-		return 1
-	fi
-
 	wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
 
 	if [ "$has_profiles" -eq 0 ]; then
@@ -260,6 +226,14 @@ depend() {
 
 start() {
 	ebegin "Starting Wi-Fi"
+
+	# Quick hardware check — fail immediately if no WiFi interface
+	if ! check_wifi_hardware; then
+		log_failure_diagnostics "missing-${wifi_interface}"
+		eend 1 "no ${wifi_interface} interface found"
+		return 1
+	fi
+
 	init_wpa_supplicant_conf
 	load_wifi_cfg_profiles
 	seed_wpa_profiles
@@ -269,6 +243,18 @@ start() {
 		has_profiles=1
 	fi
 
+	# Start wpa_supplicant synchronously — fail immediately if it can't start
+	mkdir -p /var/run/wpa_supplicant
+	if ! start-stop-daemon -S -q -b -m \
+		-p /var/run/wpa_supplicant.pid \
+		-x /usr/sbin/wpa_supplicant -- \
+		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}" 2>>"${diagnostic_logfile}"; then
+		log_failure_diagnostics "wpa_supplicant-failed-to-start"
+		eend 1 "wpa_supplicant failed to start"
+		return 1
+	fi
+
+	# Background the slow parts (handshake + DHCP)
 	start_background "${has_profiles}" &
 	echo $! >/run/wifi.pid
 	eend 0

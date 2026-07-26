@@ -1,0 +1,43 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# gpudriver: load the GPU driver module declared in the device traits.
+# Replaces the separate panfrost (Alpine) and gpudriver (Buildroot) scripts.
+# The build system writes gpu_driver=<module> to platform.ini at build time.
+
+description="Load GPU driver (from traits)"
+
+TRAITS_FILE="/mnt/sdcard/.minime/traits"
+
+depend() {
+	need modules
+	before ui
+	after fb-unblank
+}
+
+get_trait() {
+	key="$1"
+	[ -f "$TRAITS_FILE" ] || return 0
+	grep "^${key}=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r' || true
+}
+
+start() {
+	gpu_driver=$(get_trait gpu_driver)
+	if [ -z "$gpu_driver" ]; then
+		ebegin "Loading GPU driver"
+		eend 1 "gpu_driver trait not set"
+		return 1
+	fi
+
+	ebegin "Loading GPU driver ($gpu_driver)"
+	modprobe "$gpu_driver" 2>/dev/null || true
+	eend $?
+}
+
+stop() {
+	gpu_driver=$(get_trait gpu_driver)
+	if [ -n "$gpu_driver" ]; then
+		ebegin "Unloading GPU driver ($gpu_driver)"
+		rmmod "$gpu_driver" 2>/dev/null || true
+		eend 0
+	fi
+}
