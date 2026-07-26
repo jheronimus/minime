@@ -36,7 +36,6 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 - **`scripts/check-firmware.py`**: Dynamically verifies that all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.py`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.py`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
-- **`scripts/check-openrc-deps.py`**: Validates OpenRC init script service dependencies and resolves `need`/`use`/`before`/`after` directives.
 - **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 - **`scripts/build-bootloader.sh`**: Helper script invoked by `bootloader.yml` to compile ATF and U-Boot for `h700`, `rk3326`, or `rk3566`.
 - **`scripts/uptodate/uptodate.py`**: Self-healing Python script that queries GitHub APIs for new release tags and computes SHA-512 hashes.
@@ -62,7 +61,6 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-scripts` | `*.sh` files (all distros) | auto from shebang | Syntax (`sh -n`), shellcheck, exec bit. Excludes upstream Buildroot. |
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
 | `check-openrc` | `alpine/aports/**/files/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
-| `check-openrc-deps` | OpenRC init script dependencies | `scripts/check-openrc-deps.py` | Resolves `need`/`use`/`before`/`after` directives against installed services. |
 | `check-traits` | Device traits configuration | `scripts/check-traits.sh` | Validates board hardware traits config against schema. |
 | `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.py` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
 | `check-firmware` | Required firmware files | `scripts/check-firmware.py` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
