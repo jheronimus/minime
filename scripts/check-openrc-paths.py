@@ -17,6 +17,32 @@ import re
 from pathlib import Path
 
 
+# usr-merge: on Alpine 3.24+ with usr-merge, /bin -> /usr/bin and /sbin -> /usr/sbin.
+# busybox --install -s creates symlinks in its own directory (/usr/bin/), so
+# applets like tcpsvd live at /usr/bin/tcpsvd, not /usr/sbin/tcpsvd.
+# When a path doesn't exist, try the usr-merge equivalent directories.
+_SBIN_TO_BIN = {
+    "/usr/sbin": ["/usr/bin", "/sbin", "/bin"],
+    "/sbin": ["/usr/sbin", "/usr/bin", "/bin"],
+}
+
+
+def _check_path(rootfs: Path, path: str) -> bool:
+    """Check if path exists in rootfs, trying usr-merge fallbacks."""
+    p = rootfs / path.lstrip("/")
+    if p.exists():
+        return True
+
+    # Try usr-merge fallback directories
+    prefix = "/" + path.strip("/").split("/")[0]
+    suffix = "/".join(path.strip("/").split("/")[1:])
+    for fb in _SBIN_TO_BIN.get(prefix, []):
+        if (rootfs / f"{fb.strip('/')}/{suffix}").exists():
+            return True
+
+    return False
+
+
 def extract_paths(script: Path) -> list[tuple[int, str]]:
     """Extract binary paths from an OpenRC init script."""
     paths: list[tuple[int, str]] = []
@@ -100,16 +126,7 @@ def main() -> int:
     errors = 0
     for script in scripts:
         for lineno, path in extract_paths(script):
-            resolved = rootfs / path.lstrip("/")
-            # Symlinks in the rootfs may have absolute targets (e.g.,
-            # /bin/busybox-extras) that resolve on the host, not in the
-            # rootfs.  Resolve them relative to rootfs so we check the
-            # right location.
-            if resolved.is_symlink():
-                target = os.readlink(resolved)
-                if os.path.isabs(target):
-                    resolved = rootfs / target.lstrip("/")
-            if not resolved.exists():
+            if not _check_path(rootfs, path):
                 print(f"  [ERROR] {script.name}:{lineno}: {path} — not found in rootfs")
                 errors += 1
 
