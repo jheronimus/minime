@@ -5,10 +5,10 @@ from pathlib import Path
 
 # Directories to scan for patches
 PATCH_SEARCH_DIRS = [
-    "alpine/board",
-    "alpine/aports",
-    "buildroot/external/board",
-    "buildroot/external/package",
+    "minime/boards",
+    "minime/uboot",
+    "minime/targets/alpine/aports",
+    "minime/targets/buildroot/external/package",
 ]
 
 # Files/extensions that can reference patches
@@ -33,7 +33,7 @@ def main():
 
     # Build reference text cache across all manifest files in the repo
     reference_contents = []
-    for search_dir in ["alpine", "buildroot", "scripts", ".github"]:
+    for search_dir in ["minime", "scripts", ".github"]:
         s_path = root_dir / search_dir
         if not s_path.exists():
             continue

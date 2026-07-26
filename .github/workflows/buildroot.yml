@@ -4,12 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'buildroot/external/configs/**'
-      - 'buildroot/external/package/**'
-      - 'buildroot/external/board/**'
-      - 'buildroot/container/**'
-      - 'alpine/board/**'
-      - 'alpine/bootloader/**'
+      - 'minime/boards/**'
+      - 'minime/uboot/**'
+      - 'minime/genimage/**'
+      - 'minime/targets/buildroot/**'
       - '.github/workflows/buildroot.yml'
   workflow_dispatch:
     inputs:
@@ -100,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: buildroot
+        working-directory: minime/targets/buildroot
     env:
       USE_PODMAN: '0'
     steps:
@@ -112,12 +110,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('buildroot/Makefile', 'buildroot/external/configs/common.config') }}
+          key: minime-dl-${{ runner.os }}-${{ hashFiles('minime/targets/buildroot/Makefile', 'minime/targets/buildroot/external/configs/common.config') }}
 
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
-          ../scripts/prepare-linux.sh
+          ../../scripts/prepare-linux.sh
           for board in rk3326 rk3566; do
             echo "Downloading sources for $board..."
             make defconfig BOARD=$board
@@ -133,7 +131,7 @@ jobs:
     timeout-minutes: 360
     defaults:
       run:
-        working-directory: buildroot
+        working-directory: minime/targets/buildroot
     strategy:
       fail-fast: false
       matrix:
@@ -156,7 +154,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('buildroot/Makefile', 'buildroot/external/configs/common.config') }}
+          key: minime-dl-${{ runner.os }}-${{ hashFiles('minime/targets/buildroot/Makefile', 'minime/targets/buildroot/external/configs/common.config') }}
 
       - name: Restore board ccache
         uses: actions/cache@v4
@@ -178,7 +176,7 @@ jobs:
 
       - name: Verify/Install Dependencies
         run: |
-          ../scripts/prepare-linux.sh
+          ../../scripts/prepare-linux.sh
           ccache --max-size=8G || true
 
       - name: Build Image
@@ -186,20 +184,18 @@ jobs:
           echo "Building image for ${{ env.BOARD }} (${{ env.UI }})"
           make image BOARD=${{ env.BOARD }} UI=${{ env.UI }}
 
-
-
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
           name: minime-${{ env.BOARD }}-${{ env.UI }}-${{ github.sha }}
-          path: buildroot/out/${{ env.BOARD }}/**
+          path: minime/targets/buildroot/out/${{ env.BOARD }}/**
           if-no-files-found: error
           retention-days: 14
 
       - name: Rename and Upload to Testing Release
         run: |
-          cp out/${{ matrix.board }}/minime-${{ matrix.board }}.img.xz ../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
-          cd ..
+          cp out/${{ matrix.board }}/minime-${{ matrix.board }}.img.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
+          cd ../../..
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
           gh release upload testing minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
         env:

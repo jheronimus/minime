@@ -52,7 +52,7 @@ check-scripts:
 check-apkbuilds:
     #!/usr/bin/env sh
     set -eu
-    find alpine/aports -name "APKBUILD" -not -path "*/pkg/*" | sort | while read -r f; do
+    find minime/targets/alpine/aports -name "APKBUILD" -not -path "*/pkg/*" | sort | while read -r f; do
         echo "  apkbuild: $f"
         sh -n "$f"
         shellcheck --shell=sh --severity=warning "$f"
@@ -64,7 +64,7 @@ check-apkbuilds:
 check-openrc:
     #!/usr/bin/env sh
     set -eu
-    find alpine/aports -path "*/files/etc/init.d/*" -type f \
+    find minime/boards -path "*/etc/init.d/*" -type f \
         -not -path "*/pkg/*" \
         | sort | while read -r f; do
         echo "  openrc: $f"
@@ -92,16 +92,16 @@ validate-ci: validate check-defconfigs check-packages
 
 # Merge and validate our custom config fragments for all boards
 check-defconfigs:
-    make -C buildroot defconfig BOARD=h700
-    make -C buildroot defconfig BOARD=rk3326
-    make -C buildroot defconfig BOARD=rk3566
+    make -C minime/targets/buildroot defconfig BOARD=h700
+    make -C minime/targets/buildroot defconfig BOARD=rk3326
+    make -C minime/targets/buildroot defconfig BOARD=rk3566
 
 # Lint our custom Buildroot packages using upstream check-package utility
 check-packages:
     #!/usr/bin/env sh
     set -eu
-    if [ -d buildroot/buildroot ]; then
-        python3 buildroot/buildroot/utils/check-package -b buildroot/external/package/*/*
+    if [ -d minime/targets/buildroot/buildroot ]; then
+        python3 minime/targets/buildroot/buildroot/utils/check-package -b minime/targets/buildroot/external/package/*/*
     else
         echo "Buildroot source tree not found — skipping (CI only)."
     fi

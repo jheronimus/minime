@@ -5,9 +5,9 @@ from pathlib import Path
 
 # Board config definitions: (name, list_of_fragment_paths)
 CONFIG_PAIRS = [
-    ("alpine/h700", ["alpine/board/common/tiny-base.config", "alpine/board/h700/tiny-h700.config"]),
-    ("alpine/rk3326", ["alpine/board/common/tiny-base.config", "alpine/board/rk3326/tiny-rk3326.config"]),
-    ("alpine/rk3566", ["alpine/board/common/tiny-base.config", "alpine/board/rk3566/tiny-rk3566.config"]),
+    ("h700", ["minime/boards/common/tiny-base.config", "minime/boards/h700/tiny-h700.config"]),
+    ("rk3326", ["minime/boards/common/tiny-base.config", "minime/boards/rk3326/tiny-rk3326.config"]),
+    ("rk3566", ["minime/boards/common/tiny-base.config", "minime/boards/rk3566/tiny-rk3566.config"]),
 ]
 
 

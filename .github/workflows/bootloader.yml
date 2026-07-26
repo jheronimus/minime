@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bootloader-${{ matrix.board }}
-          path: alpine/bootloader/${{ matrix.board }}/
+          path: minime/uboot/out/${{ matrix.board }}/
           if-no-files-found: error
 
   commit:
@@ -104,14 +104,14 @@ jobs:
           for board in $(echo '${{ needs.resolve-boards.outputs.boards }}' | jq -r '.[]'); do
             if [ -d "temp-artifacts/bootloader-${board}" ]; then
               echo "Restoring bootloader for ${board}..."
-              rm -rf "alpine/bootloader/${board}"
-              mkdir -p "alpine/bootloader/${board}"
-              cp -a "temp-artifacts/bootloader-${board}/." "alpine/bootloader/${board}/"
+              rm -rf "minime/uboot/out/${board}"
+              mkdir -p "minime/uboot/out/${board}"
+              cp -a "temp-artifacts/bootloader-${board}/." "minime/uboot/out/${board}/"
             fi
           done
 
-          if ! git diff --quiet alpine/bootloader/; then
-            git add alpine/bootloader/
+          if ! git diff --quiet minime/uboot/out/; then
+            git add minime/uboot/out/
             git commit -m "bootloaders: rebuild requested boards"
             git push
           else

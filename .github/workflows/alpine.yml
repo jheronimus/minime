@@ -4,13 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'alpine/aports/**'
-      - 'alpine/board/**'
-      - 'alpine/bootloader/**'
-      - 'alpine/configs/**'
-      - 'alpine/container/**'
-      - 'alpine/scripts/**'
-      - 'alpine/Makefile'
+      - 'minime/boards/**'
+      - 'minime/uboot/**'
+      - 'minime/genimage/**'
+      - 'minime/targets/alpine/**'
       - '.github/workflows/alpine.yml'
   workflow_dispatch:
     inputs:
@@ -105,7 +102,7 @@ jobs:
         ui: [minui, allium]
     defaults:
       run:
-        working-directory: alpine
+        working-directory: minime/targets/alpine
     env:
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
@@ -124,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: minime-alpine-${{ matrix.board }}-${{ matrix.ui }}-${{ github.sha }}
-          path: alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz
+          path: minime/targets/alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz
           if-no-files-found: error
           retention-days: 14
 
@@ -133,14 +130,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: minime-alpine-${{ matrix.board }}-log-${{ github.sha }}
-          path: alpine/logs/alpine-image-${{ matrix.board }}.log
+          path: minime/targets/alpine/logs/alpine-image-${{ matrix.board }}.log
           if-no-files-found: warn
           retention-days: 14
 
       - name: Rename and Upload to Testing Release
         run: |
-          cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz ../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
-          cd ..
+          cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz ../../../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
+          cd ../../..
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
           gh release upload testing minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
         env:

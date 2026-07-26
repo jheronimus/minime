@@ -17,47 +17,36 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 
 ## Monorepo Structure
 
-- `alpine/`: Core Alpine build system.
-  - `aports/`: Custom Alpine package ports.
-  - `board/`: Alpine board configurations and scripts.
-  - `bootloader/`: Prebuilt bootloader blobs (canonical location). Built by the [Prebuild Bootloaders workflow](file:///Users/ilembitov/Projects/minime/.github/workflows/bootloader.yml) (manual dispatch). `h700/` has `u-boot-sunxi-with-spl.bin`; `rk3326/`/`rk3566/` have `idbloader.img` + `u-boot.itb`; `rk3566/rkbin/` also has the committed `bl31.elf` (Rockchip proprietary, hybrid mainline U-Boot + rkbin ATF).
-  - `configs/`: Alpine build configuration flags.
-- `buildroot/`: Core Buildroot build system (formerly `minime/`).
-  - `Makefile`: Docker/Colima setups, builds, configs.
-  - `external/`: Custom Buildroot (`BR2_EXTERNAL`).
-    - `configs/`: Defconfigs and config fragments.
-      - `common.config`: Shared Buildroot options (arch, toolchain, packages, rootfs).
-      - `bootloader/`: U-Boot/ATF re-enabling fragments, used ONLY by the [Prebuild Bootloaders workflow](file:///Users/ilembitov/Projects/minime/.github/workflows/bootloader.yml). Firmware defconfigs do NOT build U-Boot.
-    - `board/h700/`: H700 overlays, DTS, patches, config fragments (`linux.config`/`uboot.config`), scripts.
-    - `package/`: Custom packages (Mali, UI, ROMs) pulled at build time.
-  - `buildroot/`: Upstream Buildroot (tarball download at build time).
-  - `out/<board>/` / `logs/`: Bootable images / build logs.
+- `minime/`: Central source of truth for hardware definitions, bootloaders, target software builders, and image packaging.
+  - `boards/`: Board definitions, DTS, kernel patches, traits, and OpenRC overlays.
+    - `common/`: Shared OpenRC services (`overlay/etc/init.d/`), sysctl, wifi config, `device.sh`.
+    - `h700/`, `rk3326/`, `rk3566/`: Per-board DTS, patches, traits, `boot.env`, and `genimage.cfg`.
+  - `uboot/`: U-Boot configs (`config/`), patches (`patches/`), and prebuilt binaries (`out/`).
+  - `targets/`: Target software builders.
+    - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).
+    - `buildroot/`: Core Buildroot target build system (`external/`, `Makefile`).
+  - `genimage/`: Centralized image assembly (`build-image.sh`) and update package generation (`build-update.sh`).
 - `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
 - `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver).
   - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
-  - `libmali/`: ARM Mali userspace driver source + proprietary blobs (blobs/, hook/, shim/, scripts/, include/).
+  - `libmali/`: ARM Mali userspace driver source + proprietary blobs.
 - `roms/`: Preloaded ROMs package.
 
 ## File Locations & Repository Mapping
 
-Minime supports two build targets: Alpine and Buildroot. Any config that has the same syntax, should be reused between the two firmwares. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the `alpine/board/` folder. Buildroot's makefiles and build scripts reference or import them directly from there.
+Minime supports two build targets: Alpine and Buildroot, housed under `minime/targets/`. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the central `minime/boards/` directory. Target build scripts reference or import them directly from there.
 
 For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
 
-For init scripts `alpine/board/common/overlay/etc/init.d/` is the canonical home for cross-distro OpenRC services. Alpine's `build.sh` copies them directly into the rootfs; Buildroot's `post-build.sh` does the same. **Never maintain separate copies in each distro's subtree.** The wifi/ui/traits logic is inlined into each init script; only `device.sh` (in `board/common/scripts/`) remains as a shared build-time and runtime utility.
-
-- **Unshareable Distro-Specific Files**: Files that cannot be shared (such as Buildroot-only init services like `gpudriver` and `thermal-watchdog`, and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually. Both distros now use OpenRC; Buildroot copies Alpine's OpenRC scripts verbatim via `post-build.sh`.
+For init scripts, `minime/boards/common/overlay/etc/init.d/` is the single source of truth for cross-distro OpenRC services. At build time, target builders copy these init scripts into their rootfs before building `system.erofs`.
 
 - **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `libmali` and `mali-kbase`).
 
-## Local Alpine Builds (Containerized)
+## Local Target Builds
 
-Ideally, Github should be used for builds. However, for debugging Alpine can be built locally using Podman or Docker (with `--platform linux/arm64` cross-compilation support).
-
-Commands are run within the `alpine/` subdirectory:
-- **Build Container**: `make prepare` compiles the `minime-builder-alpine` docker image.
-- **Build Image**: `make image BOARD=<board>` (e.g. `BOARD=rk3566`) compiles the final bootable firmware image.
-- **Interactive Shell**: `make shell` logs into the build environment for manual debugging/packaging.
+Alpine and Buildroot targets are built from their respective directories in `minime/targets/`:
+- **Alpine**: `make -C minime/targets/alpine image BOARD=<board>`
+- **Buildroot**: `make -C minime/targets/buildroot image BOARD=<board>`
 
 ## Agent Directives (Buildroot Quirks)
 

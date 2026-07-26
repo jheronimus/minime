@@ -14,8 +14,8 @@ WORK_DIR="$(pwd)/build-bootloader-tmp"
 mkdir -p "$WORK_DIR"
 
 # Paths
-ALPINE_DIR="$(pwd)/alpine"
-OUT_BL_DIR="${ALPINE_DIR}/bootloader/${BOARD}"
+MINIME_UBOOT_DIR="$(pwd)/minime/uboot"
+OUT_BL_DIR="${MINIME_UBOOT_DIR}/out/${BOARD}"
 mkdir -p "$OUT_BL_DIR"
 
 echo "Building bootloader for ${BOARD} (U-Boot ${UBOOT_VERSION}, ATF ${ATF_VERSION})..."
@@ -35,7 +35,7 @@ h700)
 	# and swapped in by initramfs on first boot if DCDC3=1200mV.
 	UBOOT_DEFCONFIG="anbernic_rg35xx_h700_defconfig"
 	ATF_PLAT="sun50i_h616"
-	H700_DDR3_DEFCONFIG="${ALPINE_DIR}/board/h700/ddr3.defconfig"
+	H700_DDR3_DEFCONFIG="${MINIME_UBOOT_DIR}/config/ddr3.defconfig"
 	;;
 *)
 	echo "Unsupported board: ${BOARD}" >&2
@@ -59,8 +59,8 @@ export ARCH=arm
 BL31_PATH=""
 if [ "$BOARD" = "rk3566" ]; then
 	echo "Using prebuilt BL31 and DDR init TPL for RK3566..."
-	BL31_PATH="${ALPINE_DIR}/bootloader/rk3566/rkbin/bl31.elf"
-	export ROCKCHIP_TPL="${ALPINE_DIR}/bootloader/rk3566/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
+	BL31_PATH="${MINIME_UBOOT_DIR}/out/rk3566/rkbin/bl31.elf"
+	export ROCKCHIP_TPL="${MINIME_UBOOT_DIR}/out/rk3566/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
 else
 	echo "Cloning and building ATF ${ATF_VERSION} for ${ATF_PLAT}..."
 	if [ ! -d "${WORK_DIR}/atf" ]; then
@@ -103,7 +103,7 @@ fi
 
 	# Apply our config fragment
 	echo "Applying config fragment..."
-	./scripts/kconfig/merge_config.sh -m .config "${ALPINE_DIR}/board/common/uboot.config"
+	./scripts/kconfig/merge_config.sh -m .config "${MINIME_UBOOT_DIR}/config/uboot.config"
 	make olddefconfig
 
 	# Compile
@@ -123,7 +123,7 @@ if [ "$BOARD" = "h700" ]; then
 			make mrproper
 			cp -f "${H700_DDR3_DEFCONFIG}" configs/anbernic_rg35xx_h700_lpddr3_defconfig
 			make anbernic_rg35xx_h700_lpddr3_defconfig
-			./scripts/kconfig/merge_config.sh -m .config "${ALPINE_DIR}/board/common/uboot.config"
+			./scripts/kconfig/merge_config.sh -m .config "${MINIME_UBOOT_DIR}/config/uboot.config"
 			make olddefconfig
 			make -j"$(nproc)"
 		)

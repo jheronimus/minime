@@ -6,10 +6,17 @@ local.mk
 **/._*
 
 # Alpine abuild artifacts
+minime/targets/alpine/aports/*/src
+minime/targets/alpine/aports/*/pkg
 alpine/aports/*/src
 alpine/aports/*/pkg
 
 # Folder-specific outputs and dependencies
+minime/targets/alpine/out/
+minime/targets/alpine/logs/
+minime/targets/buildroot/out/
+minime/targets/buildroot/buildroot/
+minime/targets/buildroot/logs/
 alpine/out/
 alpine/buildroot/
 alpine/logs/

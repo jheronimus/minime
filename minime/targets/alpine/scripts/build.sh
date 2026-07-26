@@ -1,0 +1,414 @@
+#!/bin/sh
+# shellcheck shell=sh disable=SC3043,SC3045
+# Minime Alpine image builder.
+#
+# Pipeline:
+#   1. Resolve the newest v3.24.x aarch64 minirootfs + verify its published
+#      checksum against the official CDN.
+#   2. Build local Minime APKs (cross-compiled to aarch64-linux-musl) and
+#      tinykernel against the same musl libc.
+#   3. Build a local aports repo, install the official Alpine base plus the
+#      Minime package set, copy in the Minime SD-card UI payload.
+#   4. Run Alpine's post-image.sh to produce `minime-alpine-<board>.img`.
+#
+# Environment overrides:
+#   BOARD               Target board (rk3566). Required.
+#   ALPINE_JOBS         Parallel build jobs (default: $(nproc)).
+#   ALPINE_DIR          Path inside the container to the alpine/ source tree.
+
+set -eu
+
+ulimit -n 65536 2>/dev/null || true
+
+# Wrapper to allow abuild to run as root within container
+abuild() {
+	/usr/bin/abuild -F "$@"
+}
+
+ALPINE_BRANCH="v3.24"
+ALPINE_ARCH="aarch64"
+ALPINE_MINIROOTFS_BASE_URL="https://dl-cdn.alpinelinux.org/alpine/${ALPINE_BRANCH}/releases/${ALPINE_ARCH}"
+
+# Output directories (the container maps these to host-bind volumes).
+ALPINE_OUTPUT_DIR="${ALPINE_OUTPUT_DIR:-/alpine-output}"
+ALPINE_BUILD_DIR="${ALPINE_BUILD_DIR:-${ALPINE_OUTPUT_DIR}/build}"
+ALPINE_PACKAGES_DIR="${ALPINE_PACKAGES_DIR:-${ALPINE_OUTPUT_DIR}/packages/main}"
+ALPINE_REPO_DIR="${ALPINE_REPO_DIR:-${ALPINE_OUTPUT_DIR}/repo}"
+ALPINE_ROOTFS_DIR="${ALPINE_ROOTFS_DIR:-${ALPINE_OUTPUT_DIR}/rootfs}"
+ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
+
+# Source tree roots inside the container.
+ALPINE_DIR="${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+MINIME_ROOT="$(cd "${ALPINE_DIR}/../.." && pwd)"
+ALPINE_BOARD_DIR="${MINIME_ROOT}/boards"
+
+BOARD="${BOARD:-rk3566}"
+ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
+UI="${UI:-minui}"
+
+log() { printf '[alpine] %s\n' "$*" >&2; }
+die() {
+	log "ERROR: $*"
+	exit 1
+}
+
+case "${BOARD}" in
+rk3566 | rk3326 | h700) ;;
+*) die "unsupported BOARD=${BOARD} (supported: rk3566, rk3326, h700)" ;;
+esac
+export DTB_BOARD="${BOARD}"
+
+# macOS Docker Desktop inherits the host kernel's per-process fd limit
+# (kern.maxfilesperproc, default 61440).  The Linux kernel build opens
+# thousands of files and will fail with "No file descriptors available"
+# once that ceiling is hit.  Warn early so the user can raise it:
+#   sudo sysctl kern.maxfilesperproc=1048576 kern.maxfiles=1048576
+if [ "$(uname)" = "Linux" ] && grep -qi docker /proc/1/cgroup 2>/dev/null; then
+	fd_limit=$(ulimit -n 2>/dev/null || echo 0)
+	if [ "$fd_limit" -lt 100000 ] 2>/dev/null; then
+		log "WARNING: per-process fd limit is ${fd_limit} — kernel build may fail."
+		log "  On macOS host, run: sudo sysctl kern.maxfilesperproc=1048576 kern.maxfiles=1048576"
+	fi
+fi
+
+#──────────────────────────────────────────────────────────────────────────────
+# 1. Resolve + verify minirootfs
+#──────────────────────────────────────────────────────────────────────────────
+
+resolve_minirootfs() {
+	mkdir -p "${ALPINE_DL_DIR}"
+	mm_index="${ALPINE_DL_DIR}/.latest-releases"
+	curl -fsSL --retry 3 "${ALPINE_MINIROOTFS_BASE_URL}/latest-releases.yaml" \
+		-o "${mm_index}" || die "could not fetch latest-releases.yaml"
+
+	# latest-releases.yaml is a list of release entries; the minirootfs
+	# entry has flavor: alpine-minirootfs.  Each entry begins with a
+	# `-` on its own line.  Inside each entry, `version:` is listed
+	# before `flavor:` (so we cannot "look forward" from the flavor to
+	# find the version), and `sha256:` is listed after `flavor:`.  Use
+	# the `-` separator to clear per-entry state, capture the version
+	# as it appears, then print the captured version when the matching
+	# flavor is encountered.
+	mm_version=$(awk '
+		/^-[[:space:]]*$/ { in_mini = 0; mm_version = "" }
+		!in_mini && /version:/ {
+			sub(/^[[:space:]]*version:[[:space:]]*/, "")
+			mm_version = $0
+		}
+		/flavor:[[:space:]]*alpine-minirootfs/ {
+			if (mm_version != "") { print mm_version; exit }
+		}
+	' "${mm_index}") || die "no minirootfs version in latest-releases.yaml"
+	mm_sha=$(awk '
+		/^-[[:space:]]*$/ { in_mini = 0 }
+		/flavor:[[:space:]]*alpine-minirootfs/ { in_mini = 1 }
+		in_mini && /sha256:/ {
+			sub(/^[[:space:]]*sha256:[[:space:]]*/, "")
+			print
+			exit
+		}
+	' "${mm_index}") || die "no minirootfs sha256 in latest-releases.yaml"
+
+	case "${mm_version}" in
+	${ALPINE_BRANCH#v}.*) ;;
+	*) die "minime is locked to ${ALPINE_BRANCH}; got ${mm_version}" ;;
+	esac
+
+	mm_tar="alpine-minirootfs-${mm_version}-${ALPINE_ARCH}.tar.gz"
+	mm_path="${ALPINE_DL_DIR}/${mm_tar}"
+	mm_url="${ALPINE_MINIROOTFS_BASE_URL}/${mm_tar}"
+
+	if [ ! -f "${mm_path}" ]; then
+		log "downloading ${mm_url}"
+		curl -fL --retry 3 -o "${mm_path}" "${mm_url}" ||
+			die "download failed: ${mm_url}"
+	fi
+
+	mm_got=$(sha256sum "${mm_path}" | awk '{print $1}')
+	[ "${mm_got}" = "${mm_sha}" ] ||
+		die "minirootfs sha256 mismatch (want ${mm_sha}, got ${mm_got})"
+
+	log "minirootfs: ${mm_version} (sha256 $(printf '%s' "${mm_got}" | cut -c1-12)…)"
+	MINIROOTFS_TAR="${mm_path}"
+}
+
+#──────────────────────────────────────────────────────────────────────────────
+# 2. Build local Minime APKs
+#──────────────────────────────────────────────────────────────────────────────
+
+build_local_apks() {
+	# abuild's CBUILD = host (x86_64), CHOST = aarch64-linux-musl so the
+	# package's build() is invoked with the cross toolchain.  Each APKBUILD
+	# opts in by setting `carch="aarch64"` and declaring `makedepends` of
+	# `gcc-aarch64 binutils-aarch64 musl-dev`.
+	CBUILD="$(uname -m)-alpine-linux-musl"
+	CHOST="aarch64-alpine-linux-musl"
+	CARCH="aarch64"
+	REPODEST="${ALPINE_PACKAGES_DIR}"
+	export CBUILD CHOST CARCH REPODEST
+
+	mkdir -p "${ALPINE_PACKAGES_DIR}" "${ALPINE_BUILD_DIR}"
+
+	# Update apk repositories index so we can resolve build dependencies at runtime
+	log "updating apk repositories index..."
+	sudo apk update
+
+	# tinykernel is built separately because it drives the host kernel
+	# toolchain (not the cross-compiler) and is staged into the SD image
+	# directly, not installed as a rootfs package.
+	build_tinykernel
+
+	case "${UI}" in
+	minui | allium) ;;
+	*) die "unsupported UI=${UI} (supported: minui, allium)" ;;
+	esac
+
+	# All other local packages share one abuild run: each APKBUILD produces
+	# an APK that lands in REPODEST.  Order matters: tinykernel only feeds
+	# the SD payload, so the rootfs list is everything else.
+	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
+
+	ALPINE_PKGS="fatresize ${UI} preloaded-roms"
+
+	for ALPINE_PKG in ${ALPINE_PKGS}; do
+		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
+		cd "${ALPINE_DIR}/aports/${ALPINE_PKG}"
+		log "abuild: ${ALPINE_PKG}"
+		sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g' APKBUILD
+		# abuild does not have its own -j flag; pass MAKEFLAGS so the
+		# inner make runs in parallel.  Use -f to force a full rebuild
+		# even if the per-package stamp looks up to date (defends
+		# against stale unpack/ pkgdir state from interrupted runs).
+		MAKEFLAGS="-j${ALPINE_JOBS}" \
+			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}" -c
+	done
+}
+
+build_tinykernel() {
+	TK_APKB="${ALPINE_DIR}/aports/tinykernel/APKBUILD"
+	[ -f "${TK_APKB}" ] || die "missing aports/tinykernel/APKBUILD"
+
+	local tk_ver tk_rel apk_file
+	tk_ver=$(sed -n 's/^pkgver=//p' "${TK_APKB}")
+	tk_rel=$(sed -n 's/^pkgrel=//p' "${TK_APKB}")
+
+	# tinykernel uses the host kernel toolchain (the aarch64 target needs
+	# the cross gcc but aports' linux-stable recipe drives it via
+	# kernel.org sources; we run the same source + patch stack).
+	# Wipe the build dir first: an interrupted `rootpkg` run leaves
+	# fakeroot-owned files in src/ and pkg/ that the agent user cannot
+	# delete; abuild's up-to-date cache will then skip the unpack step
+	# and the package stage fails with "can't cd to src/<name>".
+	rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null ||
+		die "could not clear ${ALPINE_BUILD_DIR}/tinykernel; rm as root first"
+	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
+	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
+	cd "${ALPINE_BUILD_DIR}/tinykernel"
+	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g; s/CROSS_COMPILE=aarch64-alpine-linux-musl-/CROSS_COMPILE=/g' APKBUILD
+
+	# abuild without an explicit subcommand runs the full default chain
+	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
+	# `rootpkg` subcommand on its own skips fetch/unpack/build and goes
+	# straight to the package stage in fakeroot, which then fails
+	# because the source was never unpacked.
+	log "abuild: tinykernel"
+	JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
+		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
+
+	# Stage the kernel artifacts for post-image.sh to consume.
+	# abuild -P appends the parent-dir name of the APKBUILD as a repo
+	# subdirectory: APKBUILD lives in build/tinykernel/, so parent=build.
+	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
+	if [ -f "${apk_file}" ]; then
+		log "Staging tinykernel from newly built APK: ${apk_file}"
+		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
+		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot" var/lib/minime
+		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/tinykernel.Image" "${ALPINE_OUTPUT_DIR}/boot/Image"
+		rm -rf "${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/dtbs" "${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		rm -rf "${ALPINE_OUTPUT_DIR}/boot/var"
+		log "tinykernel staged: ${ALPINE_OUTPUT_DIR}/boot/Image and DTBs"
+	else
+		die "tinykernel did not produce APK at ${apk_file}"
+	fi
+}
+
+#──────────────────────────────────────────────────────────────────────────────
+# 3. Assemble Alpine rootfs (minirootfs + world packages + overlay)
+#──────────────────────────────────────────────────────────────────────────────
+
+assemble_rootfs() {
+	WORLD_COMMON="${ALPINE_DIR}/configs/world-common"
+	WORLD_BOARD="${ALPINE_DIR}/configs/world-${BOARD}"
+	[ -f "${WORLD_COMMON}" ] || die "missing ${WORLD_COMMON}"
+	[ -f "${WORLD_BOARD}" ] || die "missing ${WORLD_BOARD}"
+
+	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	chmod -R +w "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
+	rm -rf "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
+	mkdir -p "${ALPINE_ROOTFS_DIR}"
+	tar -xf "${MINIROOTFS_TAR}" -C "${ALPINE_ROOTFS_DIR}"
+
+	# Build a local aports index so apk can resolve local packages from
+	# the same repo as the official Alpine packages.
+	ALPINE_REPO_BASE="${ALPINE_MINIROOTFS_BASE_URL%/releases/${ALPINE_ARCH}}"
+	cat >"${ALPINE_ROOTFS_DIR}/etc/apk/repositories" <<-EOF
+		${ALPINE_REPO_BASE}/main
+		${ALPINE_REPO_BASE}/community
+		/local-repo
+	EOF
+
+	# Stage the local repo inside the rootfs so `apk add` inside chroot can resolve minime packages.
+	mkdir -p "${ALPINE_ROOTFS_DIR}/local-repo/aarch64"
+	find "${ALPINE_PACKAGES_DIR}" -name '*.apk' -exec cp -f {} "${ALPINE_ROOTFS_DIR}/local-repo/aarch64/" \;
+	# Only build the index if there are actual APKs; an empty glob would error.
+	if ls "${ALPINE_ROOTFS_DIR}/local-repo/aarch64/"*.apk >/dev/null 2>&1; then
+		(cd "${ALPINE_ROOTFS_DIR}/local-repo/aarch64" && apk index -o APKINDEX.tar.gz *.apk)
+	fi
+
+	# Resolve the full package list and install it.
+	WORLD_PKGS="$(cat "${WORLD_COMMON}" "${WORLD_BOARD}" | grep -v '^#' | tr '\n' ' ')"
+	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
+
+	cp /etc/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf" 2>/dev/null || true
+	mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
+	mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"
+	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
+	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
+
+	# Install packages via chroot so apk runs triggers (font caches, etc.).
+	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
+		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
+
+	# Install the board's immutable trait payload.
+	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
+	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
+	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
+	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
+	cp -a "${TRAITS_SRC}/." "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/"
+	echo "gpu_driver=panfrost" >>"${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/platform.ini"
+
+	# Install the Minime overlay (OpenRC services, system config, udev rules).
+	OVERLAY_SRC="${ALPINE_BOARD_DIR}/common/overlay"
+	[ -d "${OVERLAY_SRC}" ] || die "missing overlay source: ${OVERLAY_SRC}"
+	cp -a "${OVERLAY_SRC}/." "${ALPINE_ROOTFS_DIR}/"
+
+	# Install board-specific overlay if present.
+	BOARD_OVERLAY="${ALPINE_BOARD_DIR}/${BOARD}/overlay"
+	if [ -d "${BOARD_OVERLAY}" ]; then
+		cp -a "${BOARD_OVERLAY}/." "${ALPINE_ROOTFS_DIR}/"
+	fi
+
+	# Install shared utility scripts.
+	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts"
+	[ -f "${ALPINE_BOARD_DIR}/common/scripts/device.sh" ] && install -m 0755 "${ALPINE_BOARD_DIR}/common/scripts/device.sh" \
+		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/" || true
+	[ -f "${ALPINE_BOARD_DIR}/common/scripts/thermal-watchdog" ] && install -m 0755 "${ALPINE_BOARD_DIR}/common/scripts/thermal-watchdog" \
+		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/" || true
+
+	# Install the tinykernel modules into the immutable EROFS rootfs.
+	if [ -d "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules" ]; then
+		cp -a "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules/." \
+			"${ALPINE_ROOTFS_DIR}/lib/modules/"
+		TK_KVER=$(ls "${ALPINE_ROOTFS_DIR}/lib/modules" | head -1)
+		[ -n "${TK_KVER}" ] && chroot "${ALPINE_ROOTFS_DIR}" \
+			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
+	fi
+
+	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	trap - EXIT
+}
+
+#──────────────────────────────────────────────────────────────────────────────
+# 4. Run the shared image assembly path
+#──────────────────────────────────────────────────────────────────────────────
+
+assemble_image() {
+	TARGET_OUT="${ALPINE_OUTPUT_DIR}/out/${BOARD}"
+	mkdir -p "${TARGET_OUT}"
+
+	cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${TARGET_OUT}/Image"
+	[ -f "${TARGET_OUT}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
+
+	# Copy DTBs
+	[ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ] || die "kernel DTBs missing in ${ALPINE_OUTPUT_DIR}/boot/dtbs"
+	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
+		-exec cp -f {} "${TARGET_OUT}/" \;
+
+	# Stage UI payload
+	if [ -d "${ALPINE_OUTPUT_DIR}/boot/ui" ]; then
+		mkdir -p "${TARGET_OUT}/ui"
+		cp -rp "${ALPINE_OUTPUT_DIR}/boot/ui/." "${TARGET_OUT}/ui/"
+	fi
+
+	# Generate system.erofs rootfs
+	echo "Building system.erofs..."
+	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${ALPINE_ROOTFS_DIR}"
+
+	# Assemble custom boot-stage initramfs
+	echo "Assembling initramfs..."
+	INITRD_STAGE=$(mktemp -d)
+	mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
+		"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
+		"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+
+	cp -f "${ALPINE_ROOTFS_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
+	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync; do
+		ln -sf busybox "${INITRD_STAGE}/bin/${app}"
+	done
+	ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
+
+	if [ -f "${ALPINE_BOARD_DIR}/common/initramfs-init.sh" ]; then
+		cp -f "${ALPINE_BOARD_DIR}/common/initramfs-init.sh" "${INITRD_STAGE}/init"
+		chmod +x "${INITRD_STAGE}/init"
+	fi
+
+	(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${TARGET_OUT}/initramfs.img")
+	rm -rf "${INITRD_STAGE}"
+
+	# Call central genimage scripts
+	echo "Calling central image packager..."
+	"${MINIME_ROOT}/genimage/build-image.sh" \
+		--target alpine \
+		--board "${BOARD}" \
+		--input-dir "${TARGET_OUT}" \
+		--output-dir "${ALPINE_OUTPUT_DIR}/images"
+
+	"${MINIME_ROOT}/genimage/build-update.sh" \
+		--target alpine \
+		--board "${BOARD}" \
+		--input-dir "${TARGET_OUT}" \
+		--output-dir "${ALPINE_OUTPUT_DIR}/images"
+
+	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.xz"
+	[ -f "${FINAL_IMG}" ] || die "genimage did not produce ${FINAL_IMG}"
+	log "image: ${FINAL_IMG}"
+}
+
+#──────────────────────────────────────────────────────────────────────────────
+# Entrypoint
+#──────────────────────────────────────────────────────────────────────────────
+
+CMD="${1:-all}"
+case "${CMD}" in
+all)
+	resolve_minirootfs
+	build_local_apks
+	assemble_rootfs
+	assemble_image
+	;;
+minirootfs) resolve_minirootfs ;;
+apks) build_local_apks ;;
+rootfs) assemble_rootfs ;;
+image) assemble_image ;;
+shell)
+	exec /bin/sh
+	;;
+*)
+	die "unknown subcommand: ${CMD} (use all|minirootfs|apks|rootfs|image|shell)"
+	;;
+esac

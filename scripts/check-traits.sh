@@ -4,7 +4,7 @@
 
 set -eu
 
-TRAITS_ROOT="${1:-$(cd "$(dirname "$0")/../alpine/board" && pwd)}"
+TRAITS_ROOT="${1:-$(cd "$(dirname "$0")/../minime/boards" && pwd)}"
 
 require_key() {
 	key="$1"
