@@ -19,9 +19,9 @@ mkdir -p "${USERDATA_STAGE}/Saves"
 "${MINIME_SOURCE_ROOT}/board/common/scripts/device.sh" init-cfg "${USERDATA_STAGE}/.minime/config/device.cfg"
 
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs).
-# Only board/<soc>/overlays/ is scanned — full board DTS files live in
+# Only board/<soc>/dtbo/ is scanned — full board DTS files live in
 # board/<soc>/dts/ and are compiled into DTBs by the kernel build.
-OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/overlays"
+OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/dtbo"
 if [ -d "${OVERLAY_SRC_DIR}" ]; then
 	echo "Compiling DT overlays for ${SOC_NAME}..."
 	mkdir -p "${USERDATA_STAGE}/.minime/overlays"
