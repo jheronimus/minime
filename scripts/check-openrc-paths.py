@@ -12,6 +12,7 @@ Exits 0 if all paths resolve, 1 if any are missing.
 """
 
 import sys
+import os
 import re
 from pathlib import Path
 
@@ -100,6 +101,14 @@ def main() -> int:
     for script in scripts:
         for lineno, path in extract_paths(script):
             resolved = rootfs / path.lstrip("/")
+            # Symlinks in the rootfs may have absolute targets (e.g.,
+            # /bin/busybox-extras) that resolve on the host, not in the
+            # rootfs.  Resolve them relative to rootfs so we check the
+            # right location.
+            if resolved.is_symlink():
+                target = os.readlink(resolved)
+                if os.path.isabs(target):
+                    resolved = rootfs / target.lstrip("/")
             if not resolved.exists():
                 print(f"  [ERROR] {script.name}:{lineno}: {path} — not found in rootfs")
                 errors += 1
