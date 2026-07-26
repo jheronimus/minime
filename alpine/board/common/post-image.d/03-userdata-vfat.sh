@@ -21,14 +21,22 @@ mkdir -p "${USERDATA_STAGE}/Saves"
 # Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
 OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/dts"
 if [ -d "${OVERLAY_SRC_DIR}" ]; then
-	echo "Compiling DT overlays for ${SOC_NAME}..."
 	mkdir -p "${USERDATA_STAGE}/.minime/overlays"
+	overlay_count=0
 	for dts_file in "${OVERLAY_SRC_DIR}"/*.dts; do
 		[ -f "${dts_file}" ] || continue
+		# Only compile genuine DT overlays (files using /plugin/ syntax).
+		# Full board DTS files (h700, rk3326) are already compiled into
+		# DTBs by the kernel build and must not be processed here.
+		grep -q '/plugin/' "${dts_file}" || continue
 		dtbo_name="$(basename "${dts_file}" .dts).dtbo"
 		"${HOST_DIR}/bin/dtc" -@ -I dts -O dtb -o \
 			"${USERDATA_STAGE}/.minime/overlays/${dtbo_name}" "${dts_file}"
+		overlay_count=$((overlay_count + 1))
 	done
+	if [ "${overlay_count}" -gt 0 ]; then
+		echo "Compiled ${overlay_count} DT overlay(s) for ${SOC_NAME}"
+	fi
 fi
 
 # Create the first boot trigger files
