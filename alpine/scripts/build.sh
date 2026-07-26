@@ -282,36 +282,6 @@ assemble_rootfs() {
 	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
 		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
-	# Alpine's busybox.trigger only creates symlinks for /bin/busybox, not
-	# /bin/busybox-extras.  Create symlinks for the applets our init scripts
-	# reference directly — the paths file may not exist or be incomplete.
-	# Use RELATIVE symlink targets so the check script can follow them into
-	# the rootfs (absolute targets resolve on the host, not in the rootfs).
-	log "creating busybox-extras applet symlinks..."
-	for applet in tcpsvd ftpd telnetd httpd inetd tftp dnsd; do
-		ln -sf "../../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/usr/sbin/${applet}" 2>/dev/null || true
-		ln -sf "../../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/usr/bin/${applet}" 2>/dev/null || true
-		ln -sf "../bin/busybox-extras" "${ALPINE_ROOTFS_DIR}/sbin/${applet}" 2>/dev/null || true
-		ln -sf "busybox-extras" "${ALPINE_ROOTFS_DIR}/bin/${applet}" 2>/dev/null || true
-	done
-
-	# Ensure wpa_supplicant/wpa_cli are reachable at /usr/sbin/ — the
-	# package may install to /usr/bin/ or /sbin/ depending on Alpine version.
-	# With Alpine usr-merge (/bin→/usr/bin, /sbin→/usr/sbin), binaries are
-	# physically under /usr/.  Create symlinks with relative targets so the
-	# post-build check can follow them within the rootfs tree.
-	for bin in wpa_supplicant wpa_cli; do
-		target="${ALPINE_ROOTFS_DIR}/usr/sbin/${bin}"
-		[ -e "${target}" ] && continue
-		if [ -e "${ALPINE_ROOTFS_DIR}/usr/bin/${bin}" ]; then
-			ln -sf "../bin/${bin}" "${target}"
-		elif [ -e "${ALPINE_ROOTFS_DIR}/sbin/${bin}" ]; then
-			ln -sf "../../sbin/${bin}" "${target}"
-		elif [ -e "${ALPINE_ROOTFS_DIR}/bin/${bin}" ]; then
-			ln -sf "../../bin/${bin}" "${target}"
-		fi
-	done
-
 	# Install the board's immutable trait payload.
 	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
