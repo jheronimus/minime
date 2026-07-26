@@ -31,6 +31,7 @@ check-scripts:
     failed=0
     find . -type f -name "*.sh" \
         -not -path "*/buildroot/buildroot/*" \
+        -not -path "*/ui/*" \
         -not -path "*/.git/*" \
         -not -path "*/pkg/*" \
         | sort | while read -r f; do

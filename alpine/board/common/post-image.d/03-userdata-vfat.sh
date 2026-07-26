@@ -8,12 +8,6 @@ echo "Preparing single FAT32 partition filesystem staging..."
 USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${USERDATA_STAGE}/.minime/config"
 mkdir -p "${USERDATA_STAGE}/.minime/devices"
-mkdir -p "${USERDATA_STAGE}/.system" "${USERDATA_STAGE}/.userdata"
-
-# Create standard roms, bios, and saves folders on SD card root.
-mkdir -p "${USERDATA_STAGE}/Roms"
-mkdir -p "${USERDATA_STAGE}/Bios"
-mkdir -p "${USERDATA_STAGE}/Saves"
 
 # Prepopulate self-documenting device.cfg via shared device.sh script
 "${MINIME_SOURCE_ROOT}/board/common/scripts/device.sh" init-cfg "${USERDATA_STAGE}/.minime/config/device.cfg"
@@ -102,7 +96,7 @@ mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat" 536870912
 
 # Populate userdata.vfat recursively using mtools.
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
-for item in .minime .system .userdata .ui .tmp_update; do
+for item in .minime .system .ui .tmp_update; do
 	if [ -d "${USERDATA_STAGE}/${item}" ] || [ -f "${USERDATA_STAGE}/${item}" ]; then
 		MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" \
 			-s "${USERDATA_STAGE}/${item}" ::

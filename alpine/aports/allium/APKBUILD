@@ -27,12 +27,10 @@ package() {
 	mkdir -p /alpine-output/boot/ui/.ui
 	cp -a "$srcdir"/.ui/. /alpine-output/boot/ui/.ui/
 
-	mkdir -p /alpine-output/boot/ui/.minime
-	cat > /alpine-output/boot/ui/.minime/ui.env <<EOF
-UI_NAME="Allium"
-UI_BIN="/mnt/sdcard/.ui/bin/alliumd"
-UI_PROCESSES="alliumd allium-launcher syncthing"
-EOF
+	if [ -d "$srcdir"/.minime ]; then
+		mkdir -p /alpine-output/boot/ui/.minime
+		cp -a "$srcdir"/.minime/. /alpine-output/boot/ui/.minime/
+	fi
 
 	# Apps directory
 	if [ -d "$srcdir"/apps ]; then
