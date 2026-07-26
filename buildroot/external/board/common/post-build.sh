@@ -137,6 +137,10 @@ for svc_file in "${BR2_EXTERNAL_MINIME_PATH}/board/common/overlay/etc/init.d/"*;
 	chmod 0755 "${TARGET_INITD}/${svc_name}"
 done
 
+# Clean up legacy Buildroot SysV init scripts (S??*) and sysv-rcs wrapper
+rm -f "${TARGET_INITD}/S"*
+rm -f "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs"
+
 # Write gpu_driver trait to platform.ini (Buildroot always uses libmali)
 echo "gpu_driver=mali_kbase" >>"${TARGET_DIR}/usr/share/minime/traits/platform.ini"
 

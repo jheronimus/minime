@@ -90,6 +90,11 @@ start() {
 		sync 2>/dev/null || true
 	fi
 
+	UI_DIR="$(dirname "$(dirname "$UI_BIN")")"
+	if [ -d "${UI_DIR}/lib" ]; then
+		export LD_LIBRARY_PATH="${UI_DIR}/lib:${LD_LIBRARY_PATH:-}"
+	fi
+
 	start-stop-daemon -S -q -b -m \
 		-p /tmp/ui.pid \
 		-x "$UI_BIN"
