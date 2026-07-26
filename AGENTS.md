@@ -33,7 +33,7 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
   - `buildroot/`: Upstream Buildroot (tarball download at build time).
   - `out/<board>/` / `logs/`: Bootable images / build logs.
 - `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
-- `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver, bootsplash).
+- `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver).
   - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
   - `libmali/`: ARM Mali userspace driver source + proprietary blobs (blobs/, hook/, shim/, scripts/, include/).
 - `roms/`: Preloaded ROMs package.
@@ -48,7 +48,7 @@ For init scripts `alpine/board/common/overlay/etc/init.d/` is the canonical home
 
 - **Unshareable Distro-Specific Files**: Files that cannot be shared (such as Buildroot-only init services like `gpudriver` and `thermal-watchdog`, and platform-specific packaging recipes/scaffolding) live in their respective distro subdirectories and must be kept in sync manually. Both distros now use OpenRC; Buildroot copies Alpine's OpenRC scripts verbatim via `post-build.sh`.
 
-- **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `bootsplash`, `libmali`, and `mali-kbase`).
+- **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `libmali` and `mali-kbase`).
 
 ## Local Alpine Builds (Containerized)
 

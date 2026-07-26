@@ -27,8 +27,7 @@ read_ui_env() {
 # --- OpenRC service ---
 
 depend() {
-	after modules fb-unblank traits panfrost \
-		bootsplash localmount
+	after modules fb-unblank traits panfrost localmount
 }
 
 start() {

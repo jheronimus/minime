@@ -7,7 +7,6 @@
 # Local packages (built from minime/alpine/aports/*):
 #   - minui / allium      UI frontends (mutually exclusive, fetch-prebuilt)
 #   - preloaded-roms      bundled ROMs
-#   - bootsplash          boot splash binary
 #   - fatresize           FAT32 resizer for first-boot expansion
 #
 # Notes:
@@ -87,6 +86,5 @@ zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 preloaded-roms
-bootsplash
 # fatresize        FAT32 expansion
 # libretro-headers  libretro.h
