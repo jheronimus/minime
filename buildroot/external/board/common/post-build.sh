@@ -123,8 +123,8 @@ TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
 
 mkdir -p "${TARGET_INITD}"
 
-# Copy Alpine OpenRC init scripts (all except panfrost — Buildroot uses gpudriver)
-for svc in modules fb-unblank traits wifi ftpd telnetd dbus bluetooth bluealsa ui; do
+# Copy Alpine OpenRC init scripts (canonical source for all services)
+for svc in modules fb-unblank traits wifi ftpd telnetd bluetooth gpudriver ui; do
 	cp "${ALPINE_INITD}/${svc}" "${TARGET_INITD}/${svc}"
 	chmod 0755 "${TARGET_INITD}/${svc}"
 done
@@ -137,17 +137,19 @@ for svc_file in "${BR2_EXTERNAL_MINIME_PATH}/board/common/overlay/etc/init.d/"*;
 	chmod 0755 "${TARGET_INITD}/${svc_name}"
 done
 
+# Write gpu_driver trait to platform.ini (Buildroot always uses libmali)
+echo "gpu_driver=mali_kbase" >>"${TARGET_DIR}/usr/share/minime/traits/platform.ini"
+
 # Create runlevel symlinks
 # boot/ — hardware bringup (must complete before default/)
 mkdir -p "${TARGET_RUNLEVELS}/boot"
-for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver; do
+for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver bluetooth; do
 	ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/boot/${svc}"
 done
 # default/ — daemons that can start in parallel
 mkdir -p "${TARGET_RUNLEVELS}/default"
-for svc in bluealsa bluetooth dbus ui; do
-	ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/default/${svc}"
-done
+ln -sf "../../init.d/ui" "${TARGET_RUNLEVELS}/default/ui"
+
 
 # 6. Run optional board-specific post-build hook if it exists
 if [ -f "${BR_BOARD_DIR}/post-build.sh" ]; then

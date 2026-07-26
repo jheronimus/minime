@@ -1,34 +1,63 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# bluetooth: on-demand bluetoothd.
-# (which short-circuits on /mnt/sdcard/.minime/config/bluetooth/enabled).
+# bluetooth: unified Bluetooth stack (dbus + bluetoothd + bluealsa).
+# Only started when the user has enabled Bluetooth under
+# /mnt/sdcard/.minime/config/bluetooth/enabled.
 
-description="Bluetooth daemon (on demand)"
-
-command="/usr/lib/bluetooth/bluetoothd"
-command_args="-n"
-pidfile="/run/bluetoothd.pid"
+description="Bluetooth stack (dbus + bluetoothd + bluealsa)"
 
 depend() {
-	need dbus
-	after modules
+	need modules
+	before ui
+	after fb-unblank
 }
 
 start_pre() {
 	[ -f /mnt/sdcard/.minime/config/bluetooth/enabled ] || return 1
-	mkdir -p /var/lib/bluetooth
-	chmod 700 /var/lib/bluetooth 2>/dev/null || true
 }
 
 start() {
-	ebegin "Starting bluetoothd"
-	start-stop-daemon --start --background --make-pidfile \
-		--pidfile "$pidfile" --exec "$command" -- $command_args
-	eend $?
+	ebegin "Starting Bluetooth stack"
+
+	# 1. D-Bus
+	mkdir -p /run/dbus
+	dbus-uuidgen --ensure
+	dbus-daemon --system --fork
+	if [ $? -ne 0 ]; then
+		eend 1 "dbus-daemon failed to start"
+		return 1
+	fi
+
+	# 2. bluetoothd
+	mkdir -p /var/lib/bluetooth
+	chmod 700 /var/lib/bluetooth 2>/dev/null || true
+	start-stop-daemon -S -q -b -m \
+		-p /run/bluetoothd.pid \
+		-x /usr/lib/bluetooth/bluetoothd -- -n
+	if [ $? -ne 0 ]; then
+		eend 1 "bluetoothd failed to start"
+		return 1
+	fi
+
+	# 3. BlueALSA
+	start-stop-daemon -S -q -b -m \
+		-p /run/bluealsa.pid \
+		-x /usr/bin/bluealsa -- -p a2dp-sink -p a2dp-source
+	# BlueALSA failure is non-fatal (audio routing only)
+	eend 0
 }
 
 stop() {
-	ebegin "Stopping bluetoothd"
-	start-stop-daemon --stop --pidfile "$pidfile" --exec "$command"
-	eend $?
+	ebegin "Stopping Bluetooth stack"
+
+	start-stop-daemon -k -q -p /run/bluealsa.pid 2>/dev/null || true
+	rm -f /run/bluealsa.pid
+
+	start-stop-daemon -k -q -p /run/bluetoothd.pid 2>/dev/null || true
+	rm -f /run/bluetoothd.pid
+
+	start-stop-daemon -k -q -p /run/dbus/pid 2>/dev/null || true
+	rm -f /run/dbus/pid
+
+	eend 0
 }

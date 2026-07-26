@@ -33,7 +33,7 @@ require_key() {
 	file="$2"
 	grep -Eq "^${key}=..*" "$file" || {
 		echo "$file: missing $key" >&2
-		exit 1
+		return 1
 	}
 }
 

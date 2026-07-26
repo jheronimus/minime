@@ -1,7 +1,9 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# ui: launch the UI (MinUI/Allium) and the headphone-jack watcher.
-# Self-contained — no external script dependency.
+# ui: launch the UI binary (MinUI/Allium) and the headphone-jack watcher.
+# UI-agnostic — no IPC conventions, no relaunch loops.
+# UI-specific behavior (relaunch, /tmp/next, /tmp/poweroff) belongs in
+# the UI's own launch.sh, not here.
 
 description="Minime UI (MinUI/Allium)"
 
@@ -27,7 +29,7 @@ read_ui_env() {
 # --- OpenRC service ---
 
 depend() {
-	after modules fb-unblank traits panfrost localmount
+	after modules fb-unblank traits gpudriver localmount
 }
 
 start() {
@@ -70,9 +72,6 @@ start() {
 		[ -w "$bl" ] && echo 5 >"$bl" 2>/dev/null || true
 	done
 
-	rm -f /mnt/sdcard/.minime/gpu_fail
-	rm -f /tmp/next
-
 	if [ -z "$UI_BIN" ] || ! [ -x "$UI_BIN" ]; then
 		echo "No UI binary found" >/tmp/ui.log
 		if [ -d /mnt/sdcard ]; then
@@ -85,52 +84,32 @@ start() {
 		return 0
 	fi
 
-	(
-		while true; do
-			if [ -f /tmp/poweroff ]; then
-				rm -f /tmp/poweroff
-				poweroff
-				exit 0
-			fi
+	if [ -d /mnt/sdcard ]; then
+		printf '[UI %s] Executing %s (%s)\n' \
+			"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		sync 2>/dev/null || true
+	fi
 
-			if [ -d /mnt/sdcard ]; then
-				printf '[UI %s] Executing %s (%s)\n' \
-					"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
-				sync 2>/dev/null || true
-			fi
-			"$UI_BIN" </dev/console >/tmp/ui.log 2>&1
-			[ -d /mnt/sdcard ] && cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
-
-			if [ -f /tmp/next ]; then
-				CMD=$(cat /tmp/next)
-				rm -f /tmp/next
-				eval "$CMD" </dev/console >/dev/console 2>&1
-			else
-				sleep 3600
-				exit 0
-			fi
-		done
-	) &
-	echo $! >/tmp/ui_loop.pid
-
-	eend 0
+	start-stop-daemon -S -q -b -m \
+		-p /tmp/ui.pid \
+		-x "$UI_BIN"
+	eend $?
 }
 
 stop() {
 	ebegin "Stopping UI"
 
-	UI_NAME=$(read_ui_env UI_NAME)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
 	if [ -f /tmp/watch_jack.pid ]; then
 		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
 		rm -f /tmp/watch_jack.pid
 	fi
-	if [ -f /tmp/ui_loop.pid ]; then
-		loop_pid="$(cat /tmp/ui_loop.pid)"
+	if [ -f /tmp/ui.pid ]; then
+		loop_pid="$(cat /tmp/ui.pid)"
 		pkill -P "$loop_pid" 2>/dev/null || true
 		kill "$loop_pid" 2>/dev/null || true
-		rm -f /tmp/ui_loop.pid
+		rm -f /tmp/ui.pid
 	fi
 	if [ -n "${UI_PROCESSES:-}" ]; then
 		# shellcheck disable=SC2086

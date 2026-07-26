@@ -11,6 +11,7 @@ pidfile="/run/ftpd.pid"
 
 depend() {
 	need modules
+	need localmount
 }
 
 start() {
