@@ -18,25 +18,19 @@ mkdir -p "${USERDATA_STAGE}/Saves"
 # Prepopulate self-documenting device.cfg via shared device.sh script
 "${MINIME_SOURCE_ROOT}/board/common/scripts/device.sh" init-cfg "${USERDATA_STAGE}/.minime/config/device.cfg"
 
-# Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs)
-OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/dts"
+# Compile and stage device-tree overlays (e.g. RK3566 CPU undervolt DTBOs).
+# Only board/<soc>/overlays/ is scanned — full board DTS files live in
+# board/<soc>/dts/ and are compiled into DTBs by the kernel build.
+OVERLAY_SRC_DIR="${MINIME_SOURCE_ROOT}/board/${SOC_NAME}/overlays"
 if [ -d "${OVERLAY_SRC_DIR}" ]; then
+	echo "Compiling DT overlays for ${SOC_NAME}..."
 	mkdir -p "${USERDATA_STAGE}/.minime/overlays"
-	overlay_count=0
 	for dts_file in "${OVERLAY_SRC_DIR}"/*.dts; do
 		[ -f "${dts_file}" ] || continue
-		# Only compile genuine DT overlays (files using /plugin/ syntax).
-		# Full board DTS files (h700, rk3326) are already compiled into
-		# DTBs by the kernel build and must not be processed here.
-		grep -q '/plugin/' "${dts_file}" || continue
 		dtbo_name="$(basename "${dts_file}" .dts).dtbo"
 		"${HOST_DIR}/bin/dtc" -@ -I dts -O dtb -o \
 			"${USERDATA_STAGE}/.minime/overlays/${dtbo_name}" "${dts_file}"
-		overlay_count=$((overlay_count + 1))
 	done
-	if [ "${overlay_count}" -gt 0 ]; then
-		echo "Compiled ${overlay_count} DT overlay(s) for ${SOC_NAME}"
-	fi
 fi
 
 # Create the first boot trigger files
