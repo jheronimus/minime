@@ -68,7 +68,7 @@ at `l1` and only increase if stable under a sustained load test.
 
 ## How it works
 
-- `alpine/board/rk3566/dts/rk3566-undervolt-cpu-l{1,2,3}.dts`
+- `alpine/board/rk3566/overlays/rk3566-undervolt-cpu-l{1,2,3}.dts`
   are compiled to `.dtbo` by `post-image.sh` and staged under
   `.minime/overlays/` on the boot partition.
 - `boot.cmd` reads `undervolt` from `.minime/config/device.cfg` and, if set to
