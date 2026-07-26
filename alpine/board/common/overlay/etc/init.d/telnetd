@@ -4,8 +4,8 @@
 
 description="Minime telnet daemon"
 
-command="/usr/sbin/tcpsvd"
-command_args="-vE 0.0.0.0 23 /usr/sbin/telnetd -i -l /usr/bin/autologin"
+command="/usr/sbin/telnetd"
+command_args="-F -l /usr/bin/autologin -p 23"
 pidfile="/run/telnetd.pid"
 
 depend() {
