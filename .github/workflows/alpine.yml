@@ -130,17 +130,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/alpine-ccache
-          key: alpine-ccache-${{ matrix.board }}-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            alpine-ccache-${{ matrix.board }}-${{ runner.os }}-
+          key: minime-alpine-ccache-${{ matrix.board }}
 
       - name: Restore Alpine dl cache
         uses: actions/cache@v4
         with:
           path: ~/alpine-dl
-          key: alpine-dl-${{ runner.os }}-${{ hashFiles('minime/targets/alpine/aports/**') }}
-          restore-keys: |
-            alpine-dl-${{ runner.os }}-
+          key: minime-alpine-dl
 
       - name: Prepare cache directories
         run: |

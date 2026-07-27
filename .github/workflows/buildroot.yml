@@ -118,7 +118,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('minime/targets/buildroot/Makefile', 'minime/targets/buildroot/external/configs/common.config') }}
+          key: minime-buildroot-dl
 
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
@@ -162,15 +162,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-dl
-          key: minime-dl-${{ runner.os }}-${{ hashFiles('minime/targets/buildroot/Makefile', 'minime/targets/buildroot/external/configs/common.config') }}
+          key: minime-buildroot-dl
 
       - name: Restore board ccache
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
-          key: minime-${{ env.BOARD }}-ccache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            minime-${{ env.BOARD }}-ccache-${{ runner.os }}-
+          key: minime-buildroot-ccache-${{ env.BOARD }}
 
       - name: Prepare cache directories
         run: |
