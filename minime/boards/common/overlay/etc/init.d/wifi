@@ -213,6 +213,13 @@ start_background() {
 			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
+
+	# Start NTP daemon to sync time and fix clock skew
+	if command -v ntpd >/dev/null 2>&1; then
+		killall ntpd 2>/dev/null || true
+		ntpd -p pool.ntp.org
+	fi
+
 	return 0
 }
 
