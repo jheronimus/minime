@@ -72,7 +72,7 @@ jobs:
           echo "boards=${boards}" >> "$GITHUB_OUTPUT"
 
   shared-sources:
-    name: Download Shared Sources
+    name: Download sources
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/jheronimus/minime-builder-buildroot:latest
@@ -81,7 +81,7 @@ jobs:
       run:
         working-directory: minime/targets/buildroot
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Manage cache
@@ -123,7 +123,7 @@ jobs:
       FORCE_UNSAFE_CONFIGURE: '1'
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Check for updates
