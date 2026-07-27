@@ -3,7 +3,7 @@
 # Minime Update Package Generator
 #
 # Usage:
-#   build-update.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
+#   genupdate.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
 #                   --input-dir <dir> --output-dir <dir>
 
 set -eu
@@ -64,7 +64,10 @@ for k in Image zImage; do
 		break
 	fi
 done
-[ -f "${KERNEL_SRC}" ] || { echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${KERNEL_SRC}" ] || {
+	echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 INITRAMFS_SRC=""
 for i in initramfs.img initramfs; do
@@ -73,7 +76,10 @@ for i in initramfs.img initramfs; do
 		break
 	fi
 done
-[ -f "${INITRAMFS_SRC}" ] || { echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${INITRAMFS_SRC}" ] || {
+	echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 SYSTEM_SRC=""
 for s in system.erofs rootfs.erofs; do
@@ -82,7 +88,10 @@ for s in system.erofs rootfs.erofs; do
 		break
 	fi
 done
-[ -f "${SYSTEM_SRC}" ] || { echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${SYSTEM_SRC}" ] || {
+	echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 cp -f "${KERNEL_SRC}" "${STAGE_DIR}/kernel"
 cp -f "${INITRAMFS_SRC}" "${STAGE_DIR}/initramfs"

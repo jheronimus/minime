@@ -70,13 +70,13 @@ fi
 
 # Call central packager scripts
 echo "Invoking central image builder for Buildroot ${BOARD_NAME}..."
-"${MINIME_ROOT}/minime/genimage/build-image.sh" \
+"${MINIME_ROOT}/minime/genimage/genimage.sh" \
 	--target buildroot \
 	--board "${BOARD_NAME}" \
 	--input-dir "${BINARIES_DIR}" \
 	--output-dir "${BINARIES_DIR}"
 
-"${MINIME_ROOT}/minime/genimage/build-update.sh" \
+"${MINIME_ROOT}/minime/genimage/genupdate.sh" \
 	--target buildroot \
 	--board "${BOARD_NAME}" \
 	--input-dir "${BINARIES_DIR}" \

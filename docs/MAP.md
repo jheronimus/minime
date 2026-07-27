@@ -23,8 +23,8 @@ minime/
 │   ├── alpine/         # Alpine target builder (aports, Makefile, container, configs, scripts)
 │   └── buildroot/      # Buildroot target builder (external packages, Makefile, defconfigs, scripts)
 └── genimage/           # Central Image & Update Packaging Pipeline
-    ├── build-image.sh  # SD card bootable image builder (.img.xz)
-    └── build-update.sh # Cross-distro update archive generator (.tar.gz)
+    ├── genimage.sh     # SD card bootable image builder (.img.xz)
+    └── genupdate.sh    # Cross-distro update archive generator (.tar.gz)
 
 src/                    # Shared Source Code Vaults
 ├── libmali/            # ARM Mali Bifrost/Utgard userspace libraries & shims
@@ -142,7 +142,7 @@ Building Alpine Linux firmware for Minime:
   4. Terminates chroot background processes, cleans bind mounts, and verifies empty mountpoints.
   5. Packages `${TARGET_OUT}/system.erofs` using `mkfs.erofs -z lz4hc`.
   6. Assembles the custom initramfs (`initramfs.img`).
-  7. Invokes `${MINIME_ROOT}/minime/genimage/build-image.sh` and `build-update.sh`.
+  7. Invokes `${MINIME_ROOT}/minime/genimage/genimage.sh` and `genupdate.sh`.
 - **`container/Dockerfile`**: Build environment container specification for Alpine (`arm64`, `abuild`, `squashfs-tools`, `erofs-utils`, `genimage`).
 - **`configs/`**: Build configuration settings and target board overrides.
 - **`out/<board>/`**: Staging directory for compiled `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and the final `minime-alpine-<board>.img.xz`.
@@ -163,12 +163,12 @@ Building Buildroot firmware for Minime:
   - `allium.config`: Allium UI launcher config fragment.
   - `minui.config`: MinUI UI launcher config fragment.
 - **`scripts/post-build.sh`**: Buildroot post-build script that copies OpenRC services from `${MINIME_ROOT}/minime/boards/common/overlay` into Buildroot target rootfs.
-- **`scripts/post-image.sh`**: Buildroot post-image script that constructs custom initramfs and invokes `${MINIME_ROOT}/minime/genimage/build-image.sh` and `build-update.sh`.
+- **`scripts/post-image.sh`**: Buildroot post-image script that constructs custom initramfs and invokes `${MINIME_ROOT}/minime/genimage/genimage.sh` and `genupdate.sh`.
 - **`out/<board>/`**: Target output directory.
 
 ---
 
 # Central Packager (`minime/genimage/`)
 
-- **`build-image.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
-- **`build-update.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.
+- **`genimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
+- **`genupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.

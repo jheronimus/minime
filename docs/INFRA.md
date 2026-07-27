@@ -34,17 +34,17 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 ## 2. Repository Scripts & Entrypoints
 
 ### Orchestration & Build Scripts (`scripts/` and `minime/genimage/`)
-- **`minime/genimage/build-image.sh`**: Central image builder. Consumes compiled target artifacts (`kernel`, `initramfs.img`, `rootfs.erofs`, `.dtb`, `ui/`) and prebuilt U-Boot binaries, stages `userdata.vfat`, runs `genimage`, and compresses `minime-<target>-<board>.img.xz`.
-- **`minime/genimage/build-update.sh`**: Central update package generator. Packages target artifacts into `minime-update-<target>-<board>.tar.gz` for live updates and distro switching.
+- **`minime/genimage/genimage.sh`**: Central image builder. Consumes compiled target artifacts (`kernel`, `initramfs.img`, `rootfs.erofs`, `.dtb`, `ui/`) and prebuilt U-Boot binaries, stages `userdata.vfat`, runs `genimage`, and compresses `minime-<target>-<board>.img.xz`.
+- **`minime/genimage/genupdate.sh`**: Central update package generator. Packages target artifacts into `minime-update-<target>-<board>.tar.gz` for live updates and distro switching.
 - **`scripts/check-kernel-config.py`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
 - **`scripts/check-firmware.py`**: Dynamically verifies that all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.py`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.py`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
 - **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 - **`scripts/build-bootloader.sh`**: Helper script invoked by `bootloader.yml` to compile ATF and U-Boot for `h700`, `rk3326`, or `rk3566`.
-- **`minime/targets/alpine/scripts/build.sh`**: Core Alpine image build engine. Compiles packages, stages rootfs, and invokes `build-image.sh`.
+- **`minime/targets/alpine/scripts/build.sh`**: Core Alpine image build engine. Compiles packages, stages rootfs, and invokes `genimage.sh`.
 - **`minime/targets/buildroot/scripts/post-build.sh`**: Buildroot post-build script for copying runtime assets and init scripts into `$TARGET_DIR`.
-- **`minime/targets/buildroot/scripts/post-image.sh`**: Buildroot post-image hook for packaging images via `build-image.sh`.
+- **`minime/targets/buildroot/scripts/post-image.sh`**: Buildroot post-image hook for packaging images via `genimage.sh`.
 - **`roms/install.sh`**: Asset installer script that maps and stages preloaded ROMs into the appropriate launcher directory structure (`MinUI` vs `Allium`).
 
 ---
