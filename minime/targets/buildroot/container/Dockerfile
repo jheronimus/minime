@@ -44,5 +44,5 @@ RUN groupadd -g ${BUILDER_GID} builder 2>/dev/null || true \
 	&& echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder \
 	&& chmod 0440 /etc/sudoers.d/builder
 
-USER builder
+ENV FORCE_UNSAFE_CONFIGURE=1
 WORKDIR /workspace
