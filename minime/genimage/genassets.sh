@@ -30,18 +30,18 @@ mkdir -p "${DEST_DIR}"
 
 fetch_and_verify() {
 	url="$1"
-	expected_sha256="$2"
+	expected_sha512="$2"
 	filename=$(basename "$url")
 	filepath="${WORK_TMP}/${filename}"
 
-	echo "Downloading ${filename}..."
+	echo "Downloading ${filename}..." >&2
 	curl -sL --retry 3 "${url}" -o "${filepath}"
 
-	actual_sha256=$(shasum -a 256 "${filepath}" | cut -d' ' -f1)
-	if [ "$actual_sha256" != "$expected_sha256" ]; then
-		echo "ERROR: SHA256 mismatch for ${filename}" >&2
-		echo "Expected: ${expected_sha256}" >&2
-		echo "Actual:   ${actual_sha256}" >&2
+	actual_sha512=$(shasum -a 512 "${filepath}" | cut -d' ' -f1)
+	if [ "$actual_sha512" != "$expected_sha512" ]; then
+		echo "ERROR: SHA512 mismatch for ${filename}" >&2
+		echo "Expected: ${expected_sha512}" >&2
+		echo "Actual:   ${actual_sha512}" >&2
 		exit 1
 	fi
 	echo "${filepath}"
