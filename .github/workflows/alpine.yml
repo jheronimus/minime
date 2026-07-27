@@ -50,7 +50,9 @@ jobs:
             echo "${repo} latest tag:  ${LATEST_TAG}"
 
             if [ "${LATEST_TAG}" != "none" ]; then
-              TAG_SHA=$(gh api "repos/${repo}/git/ref/tags/${LATEST_TAG}" -q '.object.sha' 2>/dev/null || echo "none")
+              # Use commits API — resolves annotated tags to their commit SHA,
+              # unlike git/ref/tags which returns the tag object SHA.
+              TAG_SHA=$(gh api "repos/${repo}/commits/${LATEST_TAG}" -q '.sha' 2>/dev/null || echo "none")
             else
               TAG_SHA="none"
             fi
