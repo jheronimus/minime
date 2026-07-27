@@ -245,9 +245,10 @@ start() {
 
 	# Start wpa_supplicant synchronously — fail immediately if it can't start
 	mkdir -p /var/run/wpa_supplicant
+	wpa_bin="$(command -v wpa_supplicant)"
 	if ! start-stop-daemon -S -q -b -m \
 		-p /var/run/wpa_supplicant.pid \
-		-x /usr/sbin/wpa_supplicant -- \
+		-x "${wpa_bin}" -- \
 		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}" 2>>"${diagnostic_logfile}"; then
 		log_failure_diagnostics "wpa_supplicant-failed-to-start"
 		eend 1 "wpa_supplicant failed to start"
