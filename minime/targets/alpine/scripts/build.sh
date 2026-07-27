@@ -410,6 +410,11 @@ all)
 	assemble_rootfs
 	assemble_image
 	;;
+components)
+	resolve_minirootfs
+	build_local_apks
+	assemble_rootfs
+	;;
 minirootfs) resolve_minirootfs ;;
 apks) build_local_apks ;;
 rootfs) assemble_rootfs ;;
@@ -418,6 +423,6 @@ shell)
 	exec /bin/sh
 	;;
 *)
-	die "unknown subcommand: ${CMD} (use all|minirootfs|apks|rootfs|image|shell)"
+	die "unknown subcommand: ${CMD} (use all|components|minirootfs|apks|rootfs|image|shell)"
 	;;
 esac
