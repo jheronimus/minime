@@ -99,16 +99,29 @@ fi
 # Grow partition 1 and FAT32 without reformatting.
 if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	log_card "[INITRAMFS] Expanding SD card on $CARD_DEV..."
-	umount /mnt/card 2>/dev/null || true
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
 
-	PARTED_OUT="$(parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100% 2>&1)"
-	PARTED_RC=$?
-
-	if command -v partprobe >/dev/null 2>&1; then
-		partprobe "$DISK_DEV" 2>/dev/null || true
+	# parted is no longer in the initramfs to avoid dynamic linking complexity.
+	# We temporarily mount the EROFS system image and use its parted via chroot.
+	mkdir -p /mnt/system
+	if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system 2>/dev/null; then
+		log_card "ERROR: failed to mount /mnt/system for partition expansion"
+		exec sh
 	fi
+	mount --bind /dev /mnt/system/dev
+	mount --bind /proc /mnt/system/proc
+	mount --bind /sys /mnt/system/sys
+
+	PARTED_OUT="$(chroot /mnt/system parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100% 2>&1)"
+	PARTED_RC=$?
+	chroot /mnt/system partprobe "$DISK_DEV" 2>/dev/null || true
+
+	umount /mnt/system/sys
+	umount /mnt/system/proc
+	umount /mnt/system/dev
+	umount /mnt/system
+
 	sleep 1
 
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
@@ -118,11 +131,13 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	# header (4 bytes at offset 0x20) to match the actual partition sector count.
 	log_card "[INITRAMFS] Patching FAT32 BPB_TotSec32 to $PART_SECTORS sectors..."
 	
+	# Unmount the FAT partition to safely patch the BPB
+	umount /mnt/card 2>/dev/null || true
+
 	HEX="$(printf "%08x" "$PART_SECTORS")"
 	# shellcheck disable=SC3057
 	printf "\\x${HEX:6:2}\\x${HEX:4:2}\\x${HEX:2:2}\\x${HEX:0:2}" |
 		dd of="$CARD_DEV" bs=1 seek=32 count=4 conv=notrunc 2>/dev/null
-	
 	FATRESIZE_RC=$?
 
 	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
@@ -139,7 +154,6 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 		log_card "ERROR: failed to expand $CARD_DEV"
 		exec sh
 	fi
-	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 	log_card "[INITRAMFS] Partition expansion successful. Removing first_boot_expand..."
 	rm -f /mnt/card/.minime/config/first_boot_expand
 	sync
