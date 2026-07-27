@@ -357,6 +357,10 @@ assemble_image() {
 
 	# Generate system.erofs rootfs
 	echo "Building system.erofs..."
+	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	rm -rf "${ALPINE_ROOTFS_DIR:?}/proc"/* "${ALPINE_ROOTFS_DIR:?}/sys"/* "${ALPINE_ROOTFS_DIR:?}/dev"/* 2>/dev/null || true
 	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${ALPINE_ROOTFS_DIR}"
 
 	# Assemble custom boot-stage initramfs
