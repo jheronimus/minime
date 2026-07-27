@@ -26,7 +26,7 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
     - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).
     - `buildroot/`: Core Buildroot target build system (`external/`, `Makefile`).
   - `genimage/`: Centralized image assembly (`build-image.sh`) and update package generation (`build-update.sh`).
-- `docs/`: Specs and documentation (adr/ for ADRs, spec/ for specifications).
+- docs/: Documentation, ADRs (adr/), and specs/research (research/).
 - `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver).
   - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
   - `libmali/`: ARM Mali userspace driver source + proprietary blobs.
