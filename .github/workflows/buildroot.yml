@@ -115,7 +115,7 @@ jobs:
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
-          ../../scripts/prepare-linux.sh
+          ../../../scripts/prepare-linux.sh
           for board in rk3326 rk3566; do
             echo "Downloading sources for $board..."
             make defconfig BOARD=$board
@@ -147,7 +147,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run uptodate.py (self-healing)
-        run: python3 scripts/uptodate/uptodate.py
+        run: python3 ../../../scripts/uptodate/uptodate.py
         working-directory: .
 
       - name: Restore dl cache
@@ -176,7 +176,7 @@ jobs:
 
       - name: Verify/Install Dependencies
         run: |
-          ../../scripts/prepare-linux.sh
+          ../../../scripts/prepare-linux.sh
           ccache --max-size=8G || true
 
       - name: Build Image
