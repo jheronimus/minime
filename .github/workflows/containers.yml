@@ -37,7 +37,7 @@ jobs:
       - name: Build and push Alpine container
         uses: docker/build-push-action@v5
         with:
-          context: minime/targets/alpine
+          context: minime/targets/alpine/container
           file: minime/targets/alpine/container/Dockerfile
           platforms: linux/arm64
           push: true
