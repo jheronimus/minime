@@ -125,7 +125,7 @@ jobs:
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
           ../../../scripts/prepare-linux.sh
-          for board in rk3326 rk3566; do
+          for board in rk3326 rk3566 h700; do
             echo "Downloading sources for $board..."
             make defconfig BOARD=$board
             make source BOARD=$board
