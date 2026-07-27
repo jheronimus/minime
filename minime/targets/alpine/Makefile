@@ -56,7 +56,18 @@ components: prepare
 image: prepare
 	@mkdir -p $(LOG_DIR)
 	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
-		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh all"
+		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh system-image"
+	@echo "Running genimage for Alpine $(BOARD)..."
+	$(MINIME_ROOT)/minime/genimage/genimage.sh \
+		--target alpine \
+		--board $(BOARD) \
+		--input-dir $(CURDIR)/out/$(BOARD) \
+		--output-dir $(CURDIR)/out/$(BOARD)
+	$(MINIME_ROOT)/minime/genimage/genupdate.sh \
+		--target alpine \
+		--board $(BOARD) \
+		--input-dir $(CURDIR)/out/$(BOARD) \
+		--output-dir $(CURDIR)/out/$(BOARD)
 	@if [ -f $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz ]; then \
 		echo "Alpine image build complete: $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz"; \
 	fi

@@ -117,10 +117,23 @@ defconfig_internal:
 		external/configs/$(UI).config 2>&1 | tee "$$LOG_FILE" && \
 	$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"
 
-image: $(BUILDROOT_STAMP) defconfig
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/image-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
+components: $(BUILDROOT_STAMP) defconfig
+	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/components-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
 	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
 	@$(MAKE) copy_images
+
+image: components
+	@echo "Running genimage for Buildroot $(BOARD)..."
+	$(MINIME_ROOT)/minime/genimage/genimage.sh \
+		--target buildroot \
+		--board $(BOARD) \
+		--input-dir $(CURDIR)/out/$(BOARD) \
+		--output-dir $(CURDIR)/out/$(BOARD)
+	$(MINIME_ROOT)/minime/genimage/genupdate.sh \
+		--target buildroot \
+		--board $(BOARD) \
+		--input-dir $(CURDIR)/out/$(BOARD) \
+		--output-dir $(CURDIR)/out/$(BOARD)
 
 copy_images:
 	@mkdir -p $(CURDIR)/out/$(BOARD)

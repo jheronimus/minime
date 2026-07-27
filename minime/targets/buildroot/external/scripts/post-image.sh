@@ -8,14 +8,12 @@ usage() {
 	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_NAME" >&2
 }
 
-GENIMAGE_CFG=""
 BOARD_NAME=""
 opts="$(getopt -n "${0##*/}" -o c:b: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
 	-c)
-		export GENIMAGE_CFG="$2"
 		shift 2
 		;;
 	-b)
@@ -39,7 +37,6 @@ if [ -z "$BOARD_NAME" ]; then
 fi
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${BR2_EXTERNAL_MINIME_PATH}/../../../.." && pwd)}"
-BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
 # Stage system.erofs rootfs
 echo "Building system.erofs for Buildroot..."
@@ -67,19 +64,5 @@ if [ ! -f "${BINARIES_DIR}/initramfs.img" ]; then
 	(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs.img")
 	rm -rf "${INITRD_STAGE}"
 fi
-
-# Call central packager scripts
-echo "Invoking central image builder for Buildroot ${BOARD_NAME}..."
-"${MINIME_ROOT}/minime/genimage/genimage.sh" \
-	--target buildroot \
-	--board "${BOARD_NAME}" \
-	--input-dir "${BINARIES_DIR}" \
-	--output-dir "${BINARIES_DIR}"
-
-"${MINIME_ROOT}/minime/genimage/genupdate.sh" \
-	--target buildroot \
-	--board "${BOARD_NAME}" \
-	--input-dir "${BINARIES_DIR}" \
-	--output-dir "${BINARIES_DIR}"
 
 echo "Buildroot post-image stage complete."
