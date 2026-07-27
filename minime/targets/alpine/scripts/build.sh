@@ -315,10 +315,21 @@ assemble_rootfs() {
 			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 	fi
 
-	umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
-	umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
-	umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
+	# Kill any lingering background processes spawned by chroot triggers (e.g. eudev/dbus)
+	fuser -k -9 "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
+
+	# Perform recursive unmount of bind-mounted pseudo filesystems
+	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
+	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
+	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
 	trap - EXIT
+
+	# Ensure /sys, /proc, /dev inside the rootfs directory are empty mountpoints
+	rm -rf "${ALPINE_ROOTFS_DIR:?}"/sys/* "${ALPINE_ROOTFS_DIR:?}"/proc/* "${ALPINE_ROOTFS_DIR:?}"/dev/* 2>/dev/null || true
+
+	# Remove transient build staging directories and local apk repo
+	rm -rf "${ALPINE_ROOTFS_DIR}/local-repo"
+	sed -i '\|/local-repo|d' "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" 2>/dev/null || true
 }
 
 #──────────────────────────────────────────────────────────────────────────────
