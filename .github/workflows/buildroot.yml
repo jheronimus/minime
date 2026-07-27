@@ -18,7 +18,7 @@ on:
       build_h700:
         description: 'Build H700'
         required: false
-        default: true
+        default: false
         type: boolean
       build_rk3326:
         description: 'Build RK3326'
@@ -58,11 +58,11 @@ jobs:
       - name: Select boards
         id: set
         run: |
-          boards='["rk3566","rk3326","h700"]'
+          boards='["rk3566","rk3326"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
-                  --argjson h700   '${{ inputs.build_h700   || true }}' \
+                  --argjson h700   '${{ inputs.build_h700   || false }}' \
                   --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
                   --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
                   'if $h700   then . + ["h700"]   else . end |
@@ -154,6 +154,7 @@ jobs:
 
       - name: Upload image
         run: |
+          apt-get update && apt-get install -y --no-install-recommends gh 2>/dev/null || true
           cp out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}.img.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
           cd ../../..
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
