@@ -16,9 +16,9 @@ on:
   workflow_dispatch:
     inputs:
       build_h700:
-        description: 'Build H700 (experimental)'
+        description: 'Build H700'
         required: false
-        default: false
+        default: true
         type: boolean
       build_rk3326:
         description: 'Build RK3326'
@@ -41,45 +41,12 @@ jobs:
     name: Check & Sync UI Releases
     runs-on: ubuntu-latest
     steps:
-      - name: Check and Sync UI Release Payloads
-        env:
-          GH_TOKEN: ${{ secrets.UI_TRIGGER_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          set -eu
-
-          sync_ui() {
-            repo="$1"
-
-            echo "=== Checking UI staleness for ${repo} ==="
-            MAIN_SHA=$(gh api "repos/${repo}/commits/main" -q '.sha' 2>/dev/null || echo "error")
-            LATEST_TAG=$(gh api "repos/${repo}/releases/latest" -q '.tag_name' 2>/dev/null || echo "none")
-
-            echo "${repo} main HEAD:   ${MAIN_SHA}"
-            echo "${repo} latest tag:  ${LATEST_TAG}"
-
-            if [ "${LATEST_TAG}" != "none" ]; then
-              TAG_SHA=$(gh api "repos/${repo}/commits/${LATEST_TAG}" -q '.sha' 2>/dev/null || echo "none")
-            else
-              TAG_SHA="none"
-            fi
-
-            echo "${repo} latest SHA:  ${TAG_SHA}"
-
-            if [ "${MAIN_SHA}" != "error" ] && [ "${MAIN_SHA}" = "${TAG_SHA}" ]; then
-              echo "==> ${repo} release ${LATEST_TAG} is UP TO DATE."
-            else
-              NEW_TAG="v$(date -u +%Y%m%d)"
-              echo "==> ${repo} is STALE! Triggering build with tag ${NEW_TAG}..."
-              gh workflow run build.yml -R "${repo}" -f "version=${NEW_TAG}"
-              sleep 10
-              RUN_ID=$(gh run list -R "${repo}" -L 1 --json databaseId -q '.[0].databaseId')
-              echo "==> Watching remote build run ${RUN_ID}..."
-              gh run watch "${RUN_ID}" -R "${repo}" --exit-status
-            fi
-          }
-
-          sync_ui "jheronimus/Allium"
-          sync_ui "jheronimus/MinUI"
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Sync UI Releases
+        uses: ./.github/actions/sync-uis
+        with:
+          github_token: ${{ secrets.UI_TRIGGER_TOKEN || secrets.GITHUB_TOKEN }}
 
   compute-matrix:
     name: Compute board matrix
@@ -91,11 +58,11 @@ jobs:
       - name: Select boards
         id: set
         run: |
-          boards='["rk3326","rk3566"]'
+          boards='["rk3566","rk3326","h700"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
-                  --argjson h700   '${{ inputs.build_h700   || false }}' \
+                  --argjson h700   '${{ inputs.build_h700   || true }}' \
                   --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
                   --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
                   'if $h700   then . + ["h700"]   else . end |
