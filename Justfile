@@ -174,9 +174,9 @@ install-hooks:
 
 # ── Image Management ──────────────────────────────────────────────────────────
 
-# Fetch testing images. Use * or "all" for any slot to match all options.
-# Examples: just fetch alpine rk3566 \*    just fetch all    just fetch \* \* minui
-fetch os="*" board="*" ui="*":
+# Fetch testing images. Use "all" for any slot to match all options.
+# Examples: just fetch alpine rk3566 all    just fetch all    just fetch all all minui
+fetch os="all" board="all" ui="all":
     #!/usr/bin/env sh
     set -eu
 
@@ -184,31 +184,25 @@ fetch os="*" board="*" ui="*":
     board_val="{{board}}"
     ui_val="{{ui}}"
 
-    if [ "$os_val" = "all" ]; then
-        os_val="*"
-        board_val="*"
-        ui_val="*"
-    fi
-
     # Expand OS
     case "$os_val" in
-        "*") os_list="alpine buildroot" ;;
+        "all") os_list="alpine buildroot" ;;
         alpine|buildroot) os_list="$os_val" ;;
-        *) echo "ERROR: OS must be 'alpine', 'buildroot', or '*'" >&2; exit 1 ;;
+        *) echo "ERROR: OS must be 'alpine', 'buildroot', or 'all'" >&2; exit 1 ;;
     esac
 
     # Expand board
     case "$board_val" in
-        "*") board_list="h700 rk3326 rk3566" ;;
+        "all") board_list="h700 rk3326 rk3566" ;;
         h700|rk3326|rk3566) board_list="$board_val" ;;
-        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or '*'" >&2; exit 1 ;;
+        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or 'all'" >&2; exit 1 ;;
     esac
 
     # Expand UI
     case "$ui_val" in
-        "*") ui_list="minui allium" ;;
+        "all") ui_list="minui allium" ;;
         minui|allium) ui_list="$ui_val" ;;
-        *) echo "ERROR: UI must be 'minui', 'allium', or '*'" >&2; exit 1 ;;
+        *) echo "ERROR: UI must be 'minui', 'allium', or 'all'" >&2; exit 1 ;;
     esac
 
     # Build image list
