@@ -55,6 +55,12 @@ for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep 
 done
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
+if [ -d "${TARGET_DIR}/lib" ]; then
+	cp -d "${TARGET_DIR}/lib/ld-"*.so* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+	cp -d "${TARGET_DIR}/lib/libc.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+	cp -d "${TARGET_DIR}/lib/libm.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+	cp -d "${TARGET_DIR}/lib/libresolv.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+fi
 if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
 	cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
 	chmod +x "${INITRD_STAGE}/init"
