@@ -113,8 +113,7 @@ defconfig_internal:
 		-O $(BUILDROOT_OUTPUT_DIR) \
 		-m \
 		external/configs/common.config \
-		external/configs/$(BOARD).config \
-		external/configs/$(UI).config 2>&1 | tee "$$LOG_FILE" && \
+		external/configs/$(BOARD).config 2>&1 | tee "$$LOG_FILE" && \
 	$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"
 
 components: $(BUILDROOT_STAMP) defconfig
@@ -123,6 +122,8 @@ components: $(BUILDROOT_STAMP) defconfig
 	@$(MAKE) copy_images
 
 image: components
+	@echo "Fetching FAT32 payloads for Buildroot $(BOARD) ($(UI))..."
+	$(MINIME_ROOT)/minime/genimage/genassets.sh "$(UI)" "$(CURDIR)/out/$(BOARD)/ui"
 	@echo "Running genimage for Buildroot $(BOARD)..."
 	$(MINIME_ROOT)/minime/genimage/genimage.sh \
 		--target buildroot \
