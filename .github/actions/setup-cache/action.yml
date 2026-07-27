@@ -37,7 +37,7 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.target }}" = "alpine" ]; then
-          mkdir -p ~/alpine-output/packages ~/alpine-ccache ~/alpine-dl
+          mkdir -p ~/alpine-output/${{ inputs.board }} ~/alpine-output/packages ~/alpine-ccache ~/alpine-dl
         else
           mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
           ccache --max-size=8G || true
