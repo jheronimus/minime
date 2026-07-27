@@ -123,26 +123,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup & Restore Build Cache
+      - name: Manage cache
         uses: ./.github/actions/setup-cache
         with:
           target: alpine
           board: ${{ matrix.board }}
 
-      - name: Build Image
+      - name: Build system components
+        run: |
+          echo "Building Alpine system components for ${{ matrix.board }} (${{ matrix.ui }})"
+          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh components
+
+      - name: Build image
         run: |
           echo "Building Alpine image for ${{ matrix.board }} (${{ matrix.ui }})"
-          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh all
+          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh image
 
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: minime-alpine-${{ matrix.board }}-${{ matrix.ui }}-${{ github.sha }}
-          path: minime/targets/alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Rename and Upload to Testing Release
+      - name: Upload image
         run: |
           cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz ../../../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
           cd ../../..
