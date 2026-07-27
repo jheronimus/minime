@@ -76,6 +76,8 @@ RUN apk add --no-cache --no-progress \
 		erofs-utils \
 		u-boot-tools \
 		patchelf \
+		psmisc \
+		procps \
 		wget \
 	&& true
 

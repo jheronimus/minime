@@ -271,10 +271,10 @@ assemble_rootfs() {
 	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
 
 	cp /etc/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf" 2>/dev/null || true
-	mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
-	mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"
-	mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
-	trap 'umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
+	mount -t proc proc "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
+	mount -t sysfs sysfs "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"
+	mount -t tmpfs tmpfs "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
+	trap 'fuser -k -9 "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true; pkill -9 -f "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
 	# Install packages via chroot so apk runs triggers (font caches, etc.).
 	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \

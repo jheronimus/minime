@@ -30,7 +30,7 @@ src/                    # Shared Source Code Vaults
 ├── libmali/            # ARM Mali Bifrost/Utgard userspace libraries & shims
 └── mali-kbase/         # ARM Mali Bifrost kernel module source (out-of-tree)
 
-roms/                   # Preloaded open-source ROMs package
+roms/                   # Preloaded public domain ROMs package
 docs/                   # ADRs (adr/) and Research Specs (research/)
 .github/workflows/      # CI Workflows (alpine.yml, buildroot.yml, bootloader.yml, container.yml)
 ```
