@@ -324,6 +324,9 @@ assemble_rootfs() {
 	# Remove transient build staging directories and local apk repo
 	rm -rf "${ALPINE_ROOTFS_DIR}/local-repo"
 	sed -i '\|/local-repo|d' "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" 2>/dev/null || true
+
+	# Replace build-time resolv.conf with symlink to allow runtime DHCP DNS updates
+	ln -sf /tmp/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf"
 }
 
 #──────────────────────────────────────────────────────────────────────────────
