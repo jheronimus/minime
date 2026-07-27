@@ -39,7 +39,7 @@ if [ -z "$BOARD_NAME" ]; then
 fi
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${BR2_EXTERNAL_MINIME_PATH}/../../../.." && pwd)}"
-BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
 # Stage system.erofs rootfs
 echo "Building system.erofs for Buildroot..."
