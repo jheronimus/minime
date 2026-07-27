@@ -93,15 +93,18 @@ build() {
 		done
 	fi
 
-	# 2. Copy custom DTS files.
-	if [ "${DTB_BOARD}" = "h700" ]; then
-		cp /workspace/minime/boards/h700/dts/*.dts arch/arm64/boot/dts/allwinner/
-	elif [ "${DTB_BOARD}" = "rk3326" ]; then
-		cp /workspace/minime/boards/rk3326/dts/*.dts arch/arm64/boot/dts/rockchip/
-		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
-		echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
-	elif [ "${DTB_BOARD}" = "rk3566" ]; then
-		cp /workspace/minime/boards/rk3566/dts/*.dts arch/arm64/boot/dts/rockchip/
+	# 2. Copy custom DTS files (only when the board's dts/ dir is non-empty).
+	local dts_src="/workspace/minime/boards/${DTB_BOARD}/dts"
+	if [ -n "$(ls "${dts_src}"/*.dts 2>/dev/null)" ]; then
+		if [ "${DTB_BOARD}" = "h700" ]; then
+			cp "${dts_src}"/*.dts arch/arm64/boot/dts/allwinner/
+		else
+			cp "${dts_src}"/*.dts arch/arm64/boot/dts/rockchip/
+			if [ "${DTB_BOARD}" = "rk3326" ]; then
+				echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
+				echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
+			fi
+		fi
 	fi
 
 	# 3. Merge kernel config:
