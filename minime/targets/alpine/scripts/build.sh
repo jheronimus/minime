@@ -281,7 +281,7 @@ assemble_rootfs() {
 		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
 	# Install the board's immutable trait payload.
-	TRAITS_SRC="${ALPINE_DIR}/board/${BOARD}/traits"
+	TRAITS_SRC="${ALPINE_BOARD_DIR}/${BOARD}/traits"
 	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
 	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
 	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
