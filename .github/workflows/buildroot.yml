@@ -8,6 +8,9 @@ on:
       - 'minime/uboot/**'
       - 'minime/genimage/**'
       - 'minime/targets/buildroot/**'
+      - 'src/**'
+      - 'roms/**'
+      - 'scripts/**'
       - '.github/workflows/buildroot.yml'
   workflow_dispatch:
     inputs:
