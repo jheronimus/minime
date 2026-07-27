@@ -36,7 +36,7 @@ jobs:
     name: Check & Sync UI Releases
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
       - name: Sync UI Releases
         uses: ./.github/actions/sync-uis
@@ -84,7 +84,7 @@ jobs:
     env:
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Manage cache
