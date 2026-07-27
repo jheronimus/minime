@@ -274,7 +274,7 @@ assemble_rootfs() {
 	mount -t proc proc "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
 	mount -t sysfs sysfs "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"
 	mount -t tmpfs tmpfs "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || mount --bind /dev "${ALPINE_ROOTFS_DIR}/dev"
-	trap 'fuser -k -9 "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true; pkill -9 -f "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
+	trap 'umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true; umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true' EXIT
 
 	# Install packages via chroot so apk runs triggers (font caches, etc.).
 	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
@@ -315,17 +315,11 @@ assemble_rootfs() {
 			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 	fi
 
-	# Kill any lingering background processes spawned by chroot triggers (e.g. eudev/dbus)
-	fuser -k -9 "${ALPINE_ROOTFS_DIR}" 2>/dev/null || true
-
-	# Perform recursive unmount of bind-mounted pseudo filesystems
+	# Unmount bind-mounted pseudo filesystems
 	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
 	trap - EXIT
-
-	# Ensure /sys, /proc, /dev inside the rootfs directory are empty mountpoints
-	rm -rf "${ALPINE_ROOTFS_DIR:?}"/sys/* "${ALPINE_ROOTFS_DIR:?}"/proc/* "${ALPINE_ROOTFS_DIR:?}"/dev/* 2>/dev/null || true
 
 	# Remove transient build staging directories and local apk repo
 	rm -rf "${ALPINE_ROOTFS_DIR}/local-repo"
@@ -355,12 +349,12 @@ assemble_image() {
 		cp -rp "${ALPINE_OUTPUT_DIR}/boot/ui/." "${TARGET_OUT}/ui/"
 	fi
 
-	# Generate system.erofs rootfs
+	# Generate system.erofs rootfs — unmount pseudo-fs first in case
+	# make components and make image ran as separate steps (mounts survive process exit)
 	echo "Building system.erofs..."
 	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
-	rm -rf "${ALPINE_ROOTFS_DIR:?}/proc"/* "${ALPINE_ROOTFS_DIR:?}/sys"/* "${ALPINE_ROOTFS_DIR:?}/dev"/* 2>/dev/null || true
 	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${ALPINE_ROOTFS_DIR}"
 
 	# Assemble custom boot-stage initramfs
