@@ -63,8 +63,9 @@ jobs:
             fi
           }
 
-          sync_ui "jheronimus/Allium" "v20260720" "Build Allium (minime)"
-          sync_ui "jheronimus/MinUI" "v20260722" "Build MinUI for Minime"
+          TODAY_TAG="v$(date -u +%Y%m%d)"
+          sync_ui "jheronimus/Allium" "${TODAY_TAG}" "Build Allium for Minime"
+          sync_ui "jheronimus/MinUI" "${TODAY_TAG}" "Build MinUI for Minime"
 
   compute-matrix:
     name: Compute board matrix
