@@ -3,7 +3,7 @@ default: validate
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
 # Run all fast quality gates (shell validation, traits, git hygiene, kernel config, firmware, patches, hashes)
-validate: check-scripts check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git
+validate: check-scripts check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
@@ -84,6 +84,61 @@ check-traits:
 # Check git diff for whitespace errors and merge conflict markers
 check-git:
     git diff --check
+
+# Validate build flow convention: build.sh + genimage.sh + Makefile pattern
+check-build-flow:
+    #!/usr/bin/env sh
+    set -eu
+    failed=0
+
+    # 1. build.sh exists for each target
+    for target in alpine buildroot; do
+        script="minime/targets/${target}/scripts/build.sh"
+        if [ ! -f "$script" ]; then
+            echo "ERROR: $script missing" >&2
+            failed=1
+        fi
+    done
+
+    # 2. build.sh has 'components' subcommand
+    for target in alpine buildroot; do
+        script="minime/targets/${target}/scripts/build.sh"
+        if [ -f "$script" ] && ! grep -q 'components' "$script"; then
+            echo "ERROR: $script missing 'components' subcommand" >&2
+            failed=1
+        fi
+    done
+
+    # 3. genimage.sh exists and doesn't contain compilation logic
+    genimage="minime/genimage/genimage.sh"
+    if [ ! -f "$genimage" ]; then
+        echo "ERROR: $genimage missing" >&2
+        failed=1
+    elif grep -qE '^\s*(make |gcc |g\+\+ |configure |cmake |abuild |apk add)' "$genimage"; then
+        echo "ERROR: $genimage contains compilation logic" >&2
+        failed=1
+    fi
+
+    # 4. Makefile has both 'components' and 'image' targets
+    for target in alpine buildroot; do
+        mk="minime/targets/${target}/Makefile"
+        if [ -f "$mk" ]; then
+            if ! grep -q '^components:' "$mk" && ! grep -q '^components ' "$mk"; then
+                echo "ERROR: $mk missing 'components' target" >&2
+                failed=1
+            fi
+            if ! grep -q '^image:' "$mk" && ! grep -q '^image ' "$mk"; then
+                echo "ERROR: $mk missing 'image' target" >&2
+                failed=1
+            fi
+        fi
+    done
+
+    if [ "$failed" -eq 0 ]; then
+        echo "Build flow convention check passed."
+    else
+        exit 1
+    fi
 
 # ── CI-only gates (require upstream Buildroot tree) ───────────────────────────
 

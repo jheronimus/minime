@@ -134,36 +134,37 @@ Contains U-Boot configurations, patches, and prebuilt binaries:
 
 Building Alpine Linux firmware for Minime:
 
-- **`Makefile`**: Main entrypoint for Alpine builds (`make image BOARD=<board> UI=<ui>`). Handles container orchestration, volume mounts, and invocation of `build.sh`.
-- **`scripts/build.sh`**: Core orchestration script that:
-  1. Fetches and validates the official Alpine minirootfs tarball.
-  2. Compiles `tinykernel` APK (kernel `Image`, modules, and DTBs).
-  3. Prepares chroot environment, bind-mounts pseudo filesystems (`proc`, `sys`, `dev`), installs package dependencies (`aports/`), and installs board traits and OpenRC overlays.
-  4. Terminates chroot background processes, cleans bind mounts, and verifies empty mountpoints.
-  5. Packages `${TARGET_OUT}/system.erofs` using `mkfs.erofs -z lz4hc`.
-  6. Assembles the custom initramfs (`initramfs.img`).
-  7. Invokes `${MINIME_ROOT}/minime/genimage/genimage.sh` and `genupdate.sh`.
-- **`container/Dockerfile`**: Build environment container specification for Alpine (`arm64`, `abuild`, `squashfs-tools`, `erofs-utils`, `genimage`).
-- **`configs/`**: Build configuration settings and target board overrides.
-- **`out/<board>/`**: Staging directory for compiled `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and the final `minime-alpine-<board>.img.xz`.
+- **`Makefile`**: Entrypoint for Alpine builds. Two-step build convention:
+  - `make components BOARD=<board> UI=<ui>` — compilation in container (minirootfs, APKs, rootfs, erofs, initramfs).
+  - `make image BOARD=<board> UI=<ui>` — runs `genimage.sh` + `genupdate.sh` on host.
+- **`scripts/build.sh`**: Core build script with subcommands:
+  - `components` (default): resolve_minirootfs → build_local_apks → assemble_rootfs → build_system_image
+  - `system-image`: erofs + initramfs only (called by `make image` in container)
+  - `minirootfs`, `apks`, `rootfs`: individual steps for development
+- **`container/Dockerfile`**: Build environment container (`arm64`, `abuild`, `erofs-utils`, `genimage`, `mtools`).
+- **`configs/`**: Build configuration and world package lists per board.
+- **`aports/`**: Local APK build recipes (fatresize, minui, allium, tinykernel, preloaded-roms).
+- **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>.img.xz`.
 
 ## Buildroot Target Builder (`minime/targets/buildroot/`)
 
 Building Buildroot firmware for Minime:
 
-- **`Makefile`**: Main entrypoint for Buildroot builds (`make image BOARD=<board> UI=<ui>`). Handles container orchestration, ccache mounting, and execution of Buildroot `make`.
-- **`external/Config.in`**: Buildroot external tree package menu declarations.
-- **`external/external.mk`**: Buildroot external tree Makefile rules. Hooks Linux kernel compilation, copies custom DTS files from `${MINIME_ROOT}/minime/boards/<board>/dts/`, and stages firmware blobs.
-- **`external/external.desc`**: External tree metadata descriptor (`name: MINIME`).
-- **`external/configs/`**: Target configuration fragments:
-  - `common.config`: Base Buildroot configuration (musl/glibc, OpenRC, busybox, alsa, wpa_supplicant, bluez).
-  - `h700.config`: H700 SoC buildroot config fragment.
-  - `rk3326.config`: RK3326 SoC buildroot config fragment.
-  - `rk3566.config`: RK3566 SoC buildroot config fragment.
-  - `allium.config`: Allium UI launcher config fragment.
-  - `minui.config`: MinUI UI launcher config fragment.
-- **`scripts/post-build.sh`**: Buildroot post-build script that copies OpenRC services from `${MINIME_ROOT}/minime/boards/common/overlay` into Buildroot target rootfs.
-- **`scripts/post-image.sh`**: Buildroot post-image script that constructs custom initramfs and invokes `${MINIME_ROOT}/minime/genimage/genimage.sh` and `genupdate.sh`.
+- **`Makefile`**: Entrypoint for Buildroot builds. Two-step build convention:
+  - `make components BOARD=<board> UI=<ui>` — compilation in container (defconfig, full Buildroot build).
+  - `make image BOARD=<board> UI=<ui>` — runs `genimage.sh` + `genupdate.sh` on host.
+- **`scripts/build.sh`**: Build wrapper with subcommands:
+  - `components` (default): defconfig → make → copy_images
+  - `defconfig`: merge config fragments only
+- **`external/`**: Buildroot external tree:
+  - `external/Config.in`: Package menu declarations.
+  - `external/external.mk`: Makefile rules. Hooks kernel compilation, copies DTS, stages firmware.
+  - `external/external.desc`: External tree metadata (`name: MINIME`).
+  - `external/configs/`: Config fragments: `common.config`, `<board>.config`, `<ui>.config`.
+  - `external/scripts/post-build.sh`: Copies OpenRC services, traits, firmware into rootfs.
+  - `external/scripts/post-image.sh`: Builds system.erofs and initramfs.
+  - `external/package/`: Custom packages (allium, minui, fatresize, libmali, mali-kbase, retroarch, etc.).
+- **`container/Dockerfile`**: Build environment container (`debian:bookworm-slim`, `genimage`, `mtools`, `erofs-utils`).
 - **`out/<board>/`**: Target output directory.
 
 ---
@@ -172,3 +173,63 @@ Building Buildroot firmware for Minime:
 
 - **`genimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
 - **`genupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.
+
+---
+
+# Build Convention
+
+Both Alpine and Buildroot follow a two-step build convention:
+
+```
+make components  →  build.sh  (compilation in container)
+make image       →  genimage.sh + genupdate.sh  (packaging on host)
+```
+
+| Step | Alpine | Buildroot | Runs |
+|------|--------|-----------|------|
+| `make components` | `build.sh components` | `build.sh components` | In container |
+| `make image` | `genimage.sh` + `genupdate.sh` | `genimage.sh` + `genupdate.sh` | On host |
+
+**Rules:**
+- `build.sh` does compilation only. No image packaging.
+- `genimage.sh` does image packaging only. No compilation.
+- `genupdate.sh` does update archive generation. No compilation.
+- The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
+
+---
+
+# Modification Guide
+
+## Adding a new board
+
+1. Create `minime/boards/<board>/` directory with:
+   - `boot.env` — U-Boot boot arguments
+   - `dts/` — Device Tree Source files
+   - `patches/linux/` — Kernel patches (if needed)
+   - `traits/` — Hardware trait files (`platform.ini`, `display.ini`, etc.)
+2. Add board config fragments:
+   - `minime/boards/<board>/tiny-<board>.config` — kernel config fragment
+   - `minime/targets/alpine/configs/world-<board>` — Alpine package list
+   - `minime/targets/buildroot/external/configs/<board>.config` — Buildroot config fragment
+3. Add bootloader binaries to `minime/uboot/out/<board>/`
+4. Update `SUPPORTED_BOARDS` in both `minime/targets/alpine/Makefile` and `minime/targets/buildroot/Makefile`
+5. Update CI matrix in `.github/workflows/alpine.yml` and `.github/workflows/buildroot.yml`
+
+## Adding a new kernel option
+
+1. Add to `minime/boards/common/tiny-base.config` (if shared) or `minime/boards/<board>/tiny-<board>.config` (if board-specific)
+2. For Buildroot: also add to `minime/targets/buildroot/external/configs/common.config` or `<board>.config`
+3. Run `just validate` to verify config fragments are valid
+
+## Adding a new OpenRC service
+
+1. Create the script in `minime/boards/common/overlay/etc/init.d/<service>`
+2. Add the service to the `for svc in ...` loop in `minime/targets/buildroot/external/scripts/post-build.sh`
+3. Add runlevel symlinks as needed (boot vs default)
+4. Alpine automatically picks up everything from the common overlay
+
+## Adding a new package
+
+**Alpine**: Create `minime/targets/alpine/aports/<package>/APKBUILD` and add to `ALPINE_PKGS` in `build.sh`.
+
+**Buildroot**: Create `minime/targets/buildroot/external/package/<package>/` with `Config.in`, `<package>.mk`, and add to `external/Config.in`.

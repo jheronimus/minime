@@ -44,9 +44,25 @@ For init scripts, `minime/boards/common/overlay/etc/init.d/` is the single sourc
 
 ## Local Target Builds
 
-Alpine and Buildroot targets are built from their respective directories in `minime/targets/`:
-- **Alpine**: `make -C minime/targets/alpine image BOARD=<board>`
-- **Buildroot**: `make -C minime/targets/buildroot image BOARD=<board>`
+Alpine and Buildroot targets are built from their respective directories in `minime/targets/` using the two-step build convention:
+- **Alpine**: `make -C minime/targets/alpine components BOARD=<board>` then `make -C minime/targets/alpine image BOARD=<board>`
+- **Buildroot**: `make -C minime/targets/buildroot components BOARD=<board>` then `make -C minime/targets/buildroot image BOARD=<board>`
+
+### Build Convention
+
+Both targets follow the same pattern:
+```
+make components  →  build.sh  (compilation in container)
+make image       →  genimage.sh + genupdate.sh  (packaging on host)
+```
+
+**Rules:**
+- `build.sh` does compilation only. No image packaging (no genimage, no mcopy, no mkdosfs).
+- `genimage.sh` does image packaging only. No compilation (no make, no gcc, no kernel build).
+- `genupdate.sh` does update archive generation only.
+- The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
+- Never add compilation logic to `genimage.sh` or `genupdate.sh`.
+- Never add packaging logic to `build.sh`.
 
 ## Agent Directives (Buildroot Quirks)
 
