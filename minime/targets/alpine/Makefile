@@ -1,4 +1,3 @@
-SHELL := /bin/bash
 MINIME_ROOT := $(abspath $(CURDIR)/../../..)
 ALPINE_ROOT := $(CURDIR)
 HOST_UID := $(shell id -u)
@@ -34,45 +33,30 @@ RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 --platform linux/arm64 --
 
 help:
 	@printf '%s\n' \
-		"Minime Alpine Firmware Builder" \
-		"==============================" \
-		"Commands:" \
-		"  make image       - Build complete Alpine firmware image for BOARD" \
-		"  make shell       - Open an interactive shell inside the Alpine build container" \
-		"  make prepare     - Build the Alpine builder container image" \
-		"  make clean       - Remove Alpine output for BOARD" \
-		"  make clean-vm    - Delete the Alpine builder container image" \
-		"" \
-		"Options:" \
-		"  BOARD            - Target hardware (default: rk3566, supported: $(SUPPORTED_BOARDS))" \
-		"  ALPINE_JOBS      - Number of parallel build jobs (default: auto-detected CPU cores)"
-
-GHCR_IMAGE ?= ghcr.io/jheronimus/minime-builder-alpine:latest
+		"Minime Alpine targets:" \
+		"  make image BOARD=rk3566 UI=minui   Build full release SD image (default: rk3566)" \
+		"  make prepare                        Build the local docker image ($(ALPINE_IMAGE_NAME))" \
+		"  make shell BOARD=rk3566             Launch interactive container shell" \
+		"  make clean                          Remove built outputs"
 
 prepare:
-	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
-	@mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPOS_DIR) $(ALPINE_CCACHE_DIR) $(ALPINE_DL_DIR)
-	@$(PODMAN_CMD) image inspect $(ALPINE_IMAGE_NAME) >/dev/null 2>&1 || \
-		($(PODMAN_CMD) pull $(GHCR_IMAGE) && $(PODMAN_CMD) tag $(GHCR_IMAGE) $(ALPINE_IMAGE_NAME)) >/dev/null 2>&1 || \
-		$(PODMAN_CMD) build --platform linux/arm64 \
-			--build-arg BUILDER_UID=$(HOST_UID) \
-			--build-arg BUILDER_GID=$(HOST_GID) \
-			-t $(ALPINE_IMAGE_NAME) -f container/Dockerfile .
+	@if ! $(PODMAN_CMD) image inspect $(ALPINE_IMAGE_NAME) >/dev/null 2>&1; then \
+		echo "Building $(ALPINE_IMAGE_NAME) image..."; \
+		$(PODMAN_CMD) build --platform linux/arm64 -t $(ALPINE_IMAGE_NAME) container; \
+	fi
 
 shell: prepare
-	@$(PODMAN_CMD) run -it $(RUN_ARGS) $(ALPINE_IMAGE_NAME) /bin/sh
+	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) /bin/sh
 
 components: prepare
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
-	set -o pipefail; $(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
-		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components" \
-		2>&1 | tee "$$LOG_FILE"
+	@mkdir -p $(LOG_DIR)
+	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
+		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"
 
 image: prepare
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
-	set -o pipefail; $(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
-		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh all" \
-		2>&1 | tee "$$LOG_FILE"
+	@mkdir -p $(LOG_DIR)
+	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
+		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh all"
 	@if [ -f $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz ]; then \
 		echo "Alpine image build complete: $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz"; \
 	fi
@@ -80,6 +64,5 @@ image: prepare
 clean:
 	@rm -rf $(LOG_DIR) $(CURDIR)/out/$(BOARD) $(ALPINE_OUTPUT_DIR)
 
-clean-vm:
-	@$(PODMAN_CMD) rmi $(ALPINE_IMAGE_NAME) 2>/dev/null || true
-# Trigger build
+clean-vm: clean
+	$(PODMAN_CMD) rmi -f $(ALPINE_IMAGE_NAME) 2>/dev/null || true
