@@ -107,4 +107,7 @@ for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver bluetooth; do
 done
 [ -f "${TARGET_INITD}/ui" ] && ln -sf "../../init.d/ui" "${TARGET_RUNLEVELS}/default/ui" || true
 
+# Touch a marker file to represent the absolute latest timestamp in the rootfs.
+touch "${TARGET_DIR}/.build_time"
+
 echo "Buildroot post-build stage complete."
