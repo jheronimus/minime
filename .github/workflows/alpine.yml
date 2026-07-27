@@ -118,9 +118,33 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run uptodate.py (self-healing)
-        run: python3 scripts/uptodate/uptodate.py
-        working-directory: .
+      - name: Restore Alpine kernel & package cache
+        uses: actions/cache@v4
+        with:
+          path: ~/alpine-output/packages
+          key: alpine-pkgs-${{ matrix.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
+          restore-keys: |
+            alpine-pkgs-${{ matrix.board }}-
+
+      - name: Restore Alpine ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/alpine-ccache
+          key: alpine-ccache-${{ matrix.board }}-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            alpine-ccache-${{ matrix.board }}-${{ runner.os }}-
+
+      - name: Restore Alpine dl cache
+        uses: actions/cache@v4
+        with:
+          path: ~/alpine-dl
+          key: alpine-dl-${{ runner.os }}-${{ hashFiles('minime/targets/alpine/aports/**') }}
+          restore-keys: |
+            alpine-dl-${{ runner.os }}-
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p ~/alpine-output/packages ~/alpine-ccache ~/alpine-dl
 
       - name: Build Alpine builder container & image
         run: |

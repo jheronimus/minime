@@ -206,19 +206,17 @@ build_tinykernel() {
 	cd "${ALPINE_BUILD_DIR}/tinykernel"
 	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g; s/CROSS_COMPILE=aarch64-alpine-linux-musl-/CROSS_COMPILE=/g' APKBUILD
 
-	# abuild without an explicit subcommand runs the full default chain
-	# (fetch -> unpack -> prepare -> build -> package -> rootpkg).  The
-	# `rootpkg` subcommand on its own skips fetch/unpack/build and goes
-	# straight to the package stage in fakeroot, which then fails
-	# because the source was never unpacked.
-	log "abuild: tinykernel"
-	JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
-		abuild -f -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
+	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
+
+	if [ -f "${apk_file}" ]; then
+		log "Found pre-built tinykernel APK in cache: ${apk_file}"
+	else
+		log "abuild: tinykernel"
+		JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
+			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
+	fi
 
 	# Stage the kernel artifacts for post-image.sh to consume.
-	# abuild -P appends the parent-dir name of the APKBUILD as a repo
-	# subdirectory: APKBUILD lives in build/tinykernel/, so parent=build.
-	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
 	if [ -f "${apk_file}" ]; then
 		log "Staging tinykernel from newly built APK: ${apk_file}"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
