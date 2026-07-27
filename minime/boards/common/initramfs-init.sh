@@ -170,7 +170,7 @@ log_card "[INITRAMFS] EROFS system image mounted successfully."
 # Pre-emptively fix clock skew by advancing the system time to the rootfs build time
 # if the RTC woke up in the past (e.g. 2017). This prevents OpenRC from printing
 # "WARNING: clock skew detected!" during boot before NTP syncs.
-BUILD_TIME=$(date -r /mnt/system/bin/busybox +%s 2>/dev/null || echo 0)
+BUILD_TIME=$(date -r /mnt/system/.build_time +%s 2>/dev/null || date -r /mnt/system/bin/busybox +%s 2>/dev/null || echo 0)
 CUR_TIME=$(date +%s 2>/dev/null || echo 0)
 if [ "$BUILD_TIME" -gt "$CUR_TIME" ]; then
 	log_card "[INITRAMFS] Advancing system time to $BUILD_TIME to prevent clock skew"

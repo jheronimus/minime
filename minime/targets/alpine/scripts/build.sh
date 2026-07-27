@@ -327,6 +327,10 @@ assemble_rootfs() {
 
 	# Replace build-time resolv.conf with symlink to allow runtime DHCP DNS updates
 	ln -sf /tmp/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf"
+
+	# Touch a marker file to represent the absolute latest timestamp in the rootfs.
+	# The initramfs will use this to fast-forward the hardware clock and prevent OpenRC clock skew.
+	touch "${ALPINE_ROOTFS_DIR}/.build_time"
 }
 
 #──────────────────────────────────────────────────────────────────────────────
