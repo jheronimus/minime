@@ -8,14 +8,12 @@ usage() {
 	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_NAME" >&2
 }
 
-GENIMAGE_CFG=""
 BOARD_NAME=""
 opts="$(getopt -n "${0##*/}" -o c:b: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
 	-c)
-		export GENIMAGE_CFG="$2"
 		shift 2
 		;;
 	-b)
@@ -39,7 +37,6 @@ if [ -z "$BOARD_NAME" ]; then
 fi
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${BR2_EXTERNAL_MINIME_PATH}/../../../.." && pwd)}"
-BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BOARDS_DIR="${MINIME_ROOT}/minime/boards"
 BOARD_DIR="${BOARDS_DIR}/${BOARD_NAME}"
 COMMON_DIR="${BOARDS_DIR}/common"

@@ -144,8 +144,8 @@ jobs:
 
       - name: Build system components
         run: |
-          echo "Configuring Buildroot for ${{ matrix.board }} (${{ matrix.ui }})"
-          make defconfig BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
+          echo "Building Buildroot system components for ${{ matrix.board }} (${{ matrix.ui }})"
+          make components BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
       - name: Build image
         run: |

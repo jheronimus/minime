@@ -327,10 +327,10 @@ assemble_rootfs() {
 }
 
 #──────────────────────────────────────────────────────────────────────────────
-# 4. Run the shared image assembly path
+# 4. Build system image (erofs + initramfs)
 #──────────────────────────────────────────────────────────────────────────────
 
-assemble_image() {
+build_system_image() {
 	[ -d "${ALPINE_ROOTFS_DIR}" ] || assemble_rootfs
 	TARGET_OUT="${ALPINE_ROOT}/out/${BOARD}"
 	mkdir -p "${TARGET_OUT}"
@@ -386,50 +386,29 @@ assemble_image() {
 	(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${TARGET_OUT}/initramfs.img")
 	rm -rf "${INITRD_STAGE}"
 
-	# Call central genimage scripts
-	echo "Calling central image packager..."
-	"${MINIME_ROOT}/minime/genimage/genimage.sh" \
-		--target alpine \
-		--board "${BOARD}" \
-		--input-dir "${TARGET_OUT}" \
-		--output-dir "${TARGET_OUT}"
-
-	"${MINIME_ROOT}/minime/genimage/genupdate.sh" \
-		--target alpine \
-		--board "${BOARD}" \
-		--input-dir "${TARGET_OUT}" \
-		--output-dir "${TARGET_OUT}"
-
-	FINAL_IMG="${TARGET_OUT}/minime-alpine-${BOARD}.img.xz"
-	[ -f "${FINAL_IMG}" ] || die "genimage did not produce ${FINAL_IMG}"
-	log "image: ${FINAL_IMG}"
+	log "system image: ${TARGET_OUT}"
 }
 
 #──────────────────────────────────────────────────────────────────────────────
 # Entrypoint
 #──────────────────────────────────────────────────────────────────────────────
 
-CMD="${1:-all}"
+CMD="${1:-components}"
 case "${CMD}" in
-all)
-	resolve_minirootfs
-	build_local_apks
-	assemble_rootfs
-	assemble_image
-	;;
 components)
 	resolve_minirootfs
 	build_local_apks
 	assemble_rootfs
+	build_system_image
 	;;
 minirootfs) resolve_minirootfs ;;
 apks) build_local_apks ;;
 rootfs) assemble_rootfs ;;
-image) assemble_image ;;
+system-image) build_system_image ;;
 shell)
 	exec /bin/sh
 	;;
 *)
-	die "unknown subcommand: ${CMD} (use all|components|minirootfs|apks|rootfs|image|shell)"
+	die "unknown subcommand: ${CMD} (use components|minirootfs|apks|rootfs|system-image|shell)"
 	;;
 esac
