@@ -1,6 +1,6 @@
-# 4. Unified Updates and OS Switching via FAT32
+# 3. Dual-Distro Architecture & Path Resolution Contract
 
-Date: 2026-07-24
+Date: 2026-07-27
 
 ## Status
 
