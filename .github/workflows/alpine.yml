@@ -134,14 +134,6 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: minime-alpine-${{ matrix.board }}-log-${{ github.sha }}
-          path: minime/targets/alpine/logs/alpine-image-${{ matrix.board }}.log
-          if-no-files-found: warn
-          retention-days: 14
 
       - name: Rename and Upload to Testing Release
         run: |
