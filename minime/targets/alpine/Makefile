@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 MINIME_ROOT := $(abspath $(CURDIR)/../../..)
 ALPINE_ROOT := $(CURDIR)
 HOST_UID := $(shell id -u)
