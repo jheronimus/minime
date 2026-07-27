@@ -28,7 +28,7 @@ runs:
       if: inputs.target == 'alpine'
       uses: actions/cache@v4
       with:
-        path: ~/alpine-output/packages
+        path: ~/alpine-output/${{ inputs.board }}/packages
         key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
         restore-keys: |
           minime-alpine-pkgs-${{ inputs.board }}-
