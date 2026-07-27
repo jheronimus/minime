@@ -12,6 +12,7 @@ on:
       - 'roms/**'
       - 'scripts/**'
       - '.github/workflows/alpine.yml'
+      - '.github/actions/**'
   workflow_dispatch:
     inputs:
       build_h700:
@@ -122,32 +123,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Restore dl cache
-        uses: actions/cache@v4
+      - name: Setup & Restore Build Cache
+        uses: ./.github/actions/setup-cache
         with:
-          path: /alpine-dl
-          key: minime-alpine-dl
-          save-always: true
-
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: /alpine-ccache
-          key: minime-alpine-ccache-${{ matrix.board }}
-          save-always: true
-
-      - name: Restore package cache
-        uses: actions/cache@v4
-        with:
-          path: /alpine-output/packages
-          key: minime-alpine-pkgs-${{ matrix.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
-          restore-keys: |
-            minime-alpine-pkgs-${{ matrix.board }}-
-          save-always: true
-
-      - name: Prepare cache directories
-        run: |
-          mkdir -p /alpine-output/packages /alpine-ccache /alpine-dl
+          target: alpine
+          board: ${{ matrix.board }}
 
       - name: Build Image
         run: |

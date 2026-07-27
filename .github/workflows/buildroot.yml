@@ -12,6 +12,7 @@ on:
       - 'roms/**'
       - 'scripts/**'
       - '.github/workflows/buildroot.yml'
+      - '.github/actions/**'
   workflow_dispatch:
     inputs:
       build_h700:
@@ -162,24 +163,11 @@ jobs:
         run: python3 scripts/uptodate/uptodate.py
         working-directory: .
 
-      - name: Restore dl cache
-        uses: actions/cache@v4
+      - name: Setup & Restore Build Cache
+        uses: ./.github/actions/setup-cache
         with:
-          path: ~/.buildroot-dl
-          key: minime-buildroot-dl
-          save-always: true
-
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildroot-ccache
-          key: minime-buildroot-ccache-${{ matrix.board }}
-          save-always: true
-
-      - name: Prepare cache directories
-        run: |
-          mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
-          ccache --max-size=8G || true
+          target: buildroot
+          board: ${{ matrix.board }}
 
       - name: Clean output
         if: ${{ inputs.clean_output }}
