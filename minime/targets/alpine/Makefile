@@ -57,6 +57,8 @@ image: prepare
 	@mkdir -p $(LOG_DIR)
 	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh system-image"
+	@echo "Fetching FAT32 payloads for Alpine $(BOARD) ($(UI))..."
+	$(MINIME_ROOT)/minime/genimage/genassets.sh "$(UI)" "$(CURDIR)/out/$(BOARD)/ui"
 	@echo "Running genimage for Alpine $(BOARD)..."
 	$(MINIME_ROOT)/minime/genimage/genimage.sh \
 		--target alpine \

@@ -168,7 +168,7 @@ build_local_apks() {
 	# the SD payload, so the rootfs list is everything else.
 	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
 
-	ALPINE_PKGS="fatresize ${UI} preloaded-roms"
+	ALPINE_PKGS="fatresize"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"
@@ -343,11 +343,7 @@ build_system_image() {
 	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
 		-exec cp -f {} "${TARGET_OUT}/" \;
 
-	# Stage UI payload
-	if [ -d "${ALPINE_OUTPUT_DIR}/boot/ui" ]; then
-		mkdir -p "${TARGET_OUT}/ui"
-		cp -rp "${ALPINE_OUTPUT_DIR}/boot/ui/." "${TARGET_OUT}/ui/"
-	fi
+
 
 	# Generate system.erofs rootfs.
 	# Tar the rootfs excluding proc/sys/dev (which may still contain
