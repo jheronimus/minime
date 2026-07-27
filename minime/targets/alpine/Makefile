@@ -66,11 +66,8 @@ image: prepare
 	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh all" \
 		2>&1 | tee "$$LOG_FILE"
-	@mkdir -p $(CURDIR)/out/$(BOARD)
-	@if [ -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.xz ]; then \
-		cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img.xz $(CURDIR)/out/$(BOARD)/; \
-	elif [ -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img ]; then \
-		cp -f $(ALPINE_OUTPUT_DIR)/images/minime-alpine-$(BOARD).img $(CURDIR)/out/$(BOARD)/; \
+	@if [ -f $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz ]; then \
+		echo "Alpine image build complete: $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz"; \
 	fi
 
 clean:

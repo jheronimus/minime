@@ -30,7 +30,6 @@ on:
         default: true
         type: boolean
 
-
 jobs:
   sync-uis:
     name: Check & Sync UI Releases
@@ -53,8 +52,6 @@ jobs:
             echo "${repo} latest tag:  ${LATEST_TAG}"
 
             if [ "${LATEST_TAG}" != "none" ]; then
-              # Use commits API — resolves annotated tags to their commit SHA,
-              # unlike git/ref/tags which returns the tag object SHA.
               TAG_SHA=$(gh api "repos/${repo}/commits/${LATEST_TAG}" -q '.sha' 2>/dev/null || echo "none")
             else
               TAG_SHA="none"
@@ -104,50 +101,58 @@ jobs:
   build:
     name: Build Alpine ${{ matrix.board }} (${{ matrix.ui }})
     needs: compute-matrix
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/jheronimus/minime-builder-alpine:latest
+      options: --user root
     permissions:
       contents: write
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: minime/targets/alpine
     strategy:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
         ui: [minui, allium]
-    defaults:
-      run:
-        working-directory: minime/targets/alpine
     env:
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Restore Alpine kernel & package cache
+      - name: Restore dl cache
         uses: actions/cache@v4
         with:
-          path: ~/alpine-output/packages
-          key: alpine-pkgs-${{ matrix.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
-          restore-keys: |
-            alpine-pkgs-${{ matrix.board }}-
-
-      - name: Restore Alpine ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/alpine-ccache
-          key: minime-alpine-ccache-${{ matrix.board }}
-
-      - name: Restore Alpine dl cache
-        uses: actions/cache@v4
-        with:
-          path: ~/alpine-dl
+          path: /alpine-dl
           key: minime-alpine-dl
+          save-always: true
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: /alpine-ccache
+          key: minime-alpine-ccache-${{ matrix.board }}
+          save-always: true
+
+      - name: Restore package cache
+        uses: actions/cache@v4
+        with:
+          path: /alpine-output/packages
+          key: minime-alpine-pkgs-${{ matrix.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
+          restore-keys: |
+            minime-alpine-pkgs-${{ matrix.board }}-
+          save-always: true
 
       - name: Prepare cache directories
         run: |
-          mkdir -p ~/alpine-output/packages ~/alpine-ccache ~/alpine-dl
+          mkdir -p /alpine-output/packages /alpine-ccache /alpine-dl
 
-      - name: Build Alpine builder container & image
+      - name: Build Image
         run: |
-          make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
+          echo "Building Alpine image for ${{ matrix.board }} (${{ matrix.ui }})"
+          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh all
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
@@ -156,7 +161,6 @@ jobs:
           path: minime/targets/alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz
           if-no-files-found: error
           retention-days: 14
-
 
       - name: Rename and Upload to Testing Release
         run: |

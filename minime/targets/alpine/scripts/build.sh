@@ -385,15 +385,15 @@ assemble_image() {
 		--target alpine \
 		--board "${BOARD}" \
 		--input-dir "${TARGET_OUT}" \
-		--output-dir "${ALPINE_OUTPUT_DIR}/images"
+		--output-dir "${TARGET_OUT}"
 
 	"${MINIME_ROOT}/minime/genimage/build-update.sh" \
 		--target alpine \
 		--board "${BOARD}" \
 		--input-dir "${TARGET_OUT}" \
-		--output-dir "${ALPINE_OUTPUT_DIR}/images"
+		--output-dir "${TARGET_OUT}"
 
-	FINAL_IMG="${ALPINE_OUTPUT_DIR}/images/minime-alpine-${BOARD}.img.xz"
+	FINAL_IMG="${TARGET_OUT}/minime-alpine-${BOARD}.img.xz"
 	[ -f "${FINAL_IMG}" ] || die "genimage did not produce ${FINAL_IMG}"
 	log "image: ${FINAL_IMG}"
 }
