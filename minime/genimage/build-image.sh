@@ -46,19 +46,10 @@ if [ -z "$TARGET" ] || [ -z "$BOARD" ] || [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_D
 	usage
 fi
 
-MINIME_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+MINIME_ROOT="${MINIME_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BOARD_DIR="${MINIME_ROOT}/minime/boards/${BOARD}"
 COMMON_DIR="${MINIME_ROOT}/minime/boards/common"
 UBOOT_OUT_DIR="${MINIME_ROOT}/minime/uboot/out/${BOARD}"
-
-if [ ! -f "${BOARD_DIR}/board.env" ]; then
-	echo "ERROR: ${BOARD_DIR}/board.env missing" >&2
-	exit 1
-fi
-
-# Load board environment
-# shellcheck source=/dev/null
-. "${BOARD_DIR}/board.env"
 
 mkdir -p "${OUTPUT_DIR}"
 
@@ -82,7 +73,10 @@ for k in Image zImage; do
 		break
 	fi
 done
-[ -f "${KERNEL_SRC}" ] || { echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${KERNEL_SRC}" ] || {
+	echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 INITRAMFS_SRC=""
 for i in initramfs.img initramfs; do
@@ -91,7 +85,10 @@ for i in initramfs.img initramfs; do
 		break
 	fi
 done
-[ -f "${INITRAMFS_SRC}" ] || { echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${INITRAMFS_SRC}" ] || {
+	echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 SYSTEM_SRC=""
 for s in system.erofs rootfs.erofs; do
@@ -100,7 +97,10 @@ for s in system.erofs rootfs.erofs; do
 		break
 	fi
 done
-[ -f "${SYSTEM_SRC}" ] || { echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2; exit 1; }
+[ -f "${SYSTEM_SRC}" ] || {
+	echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2
+	exit 1
+}
 
 cp -f "${KERNEL_SRC}" "${USERDATA_STAGE}/.minime/kernel"
 cp -f "${INITRAMFS_SRC}" "${USERDATA_STAGE}/.minime/initramfs"

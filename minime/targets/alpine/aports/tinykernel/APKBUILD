@@ -84,7 +84,7 @@ build() {
 	cd "$src" || return 1
 
 	# 1. Apply Minime's kernel patch series.
-	local patch_dir="/workspace/minime/boards/${DTB_BOARD}/patches/linux"
+	local patch_dir="${MINIME_ROOT:-/workspace}/minime/boards/${DTB_BOARD}/patches/linux"
 	if [ -d "$patch_dir" ]; then
 		for p in "$patch_dir"/*.patch; do
 			[ -f "$p" ] || continue
@@ -121,12 +121,12 @@ build() {
 	# 4. Resolve new options and surface any unresolved ones.
 	local fw_stage="$srcdir/firmware"
 	mkdir -p "$fw_stage"
-	cp -rL /workspace/minime/boards/common/firmware/* "$fw_stage/"
-	if [ -d "/workspace/minime/boards/${DTB_BOARD}/firmware" ]; then
-		cp -rL /workspace/minime/boards/${DTB_BOARD}/firmware/* "$fw_stage/"
+	cp -rL "${MINIME_ROOT:-/workspace}/minime/boards/common/firmware/"* "$fw_stage/"
+	if [ -d "${MINIME_ROOT:-/workspace}/minime/boards/${DTB_BOARD}/firmware" ]; then
+		cp -rL "${MINIME_ROOT:-/workspace}/minime/boards/${DTB_BOARD}/firmware/"* "$fw_stage/"
 	fi
 	sed -i "s|__MINIME_BOARD_FIRMWARE_DIR__|$fw_stage|g" .config
-	sed -i 's|__MINIME_COMMON_FIRMWARE_DIR__|/workspace/minime/boards/common/firmware|g' .config
+	sed -i "s|__MINIME_COMMON_FIRMWARE_DIR__|${MINIME_ROOT:-/workspace}/minime/boards/common/firmware|g" .config
 	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- olddefconfig
 
 	# 5. Hard guard: CONFIG_DRM_PANFROST must be present, CONFIG_MALI_KBASE
