@@ -37,9 +37,9 @@ ALPINE_REPO_DIR="${ALPINE_REPO_DIR:-${ALPINE_OUTPUT_DIR}/repo}"
 ALPINE_ROOTFS_DIR="${ALPINE_ROOTFS_DIR:-${ALPINE_OUTPUT_DIR}/rootfs}"
 ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
 
-# Source tree roots inside the container.
-ALPINE_DIR="${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-MINIME_ROOT="$(cd "${ALPINE_DIR}/../../.." && pwd)"
+ALPINE_ROOT="${ALPINE_ROOT:-${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}}"
+MINIME_ROOT="${MINIME_ROOT:-$(cd "${ALPINE_ROOT}/../../.." && pwd)}"
+ALPINE_DIR="${ALPINE_ROOT}"
 ALPINE_BOARD_DIR="${MINIME_ROOT}/boards"
 
 BOARD="${BOARD:-rk3566}"

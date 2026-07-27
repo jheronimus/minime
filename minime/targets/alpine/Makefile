@@ -1,5 +1,5 @@
-SHELL := /bin/bash
-ROOT_DIR := $(abspath $(CURDIR)/../../..)
+MINIME_ROOT := $(abspath $(CURDIR)/../../..)
+ALPINE_ROOT := $(CURDIR)
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
@@ -23,7 +23,7 @@ endif
 
 RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 --platform linux/arm64 --ulimit nofile=65536:65536 \
 	-e HOME=/home/builder \
-	-v $(ROOT_DIR):/workspace \
+	-v $(MINIME_ROOT):/workspace \
 	-v $(ALPINE_OUTPUT_DIR):/alpine-output \
 	-v $(ALPINE_REPOS_DIR):/alpine-repos \
 	-v $(ALPINE_CCACHE_DIR):/alpine-ccache \
