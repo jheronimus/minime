@@ -40,7 +40,7 @@ ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
 ALPINE_ROOT="${ALPINE_ROOT:-${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}}"
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${ALPINE_ROOT}/../../.." && pwd)}"
 ALPINE_DIR="${ALPINE_ROOT}"
-ALPINE_BOARD_DIR="${MINIME_ROOT}/boards"
+ALPINE_BOARD_DIR="${MINIME_ROOT}/minime/boards"
 
 BOARD="${BOARD:-rk3566}"
 ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"

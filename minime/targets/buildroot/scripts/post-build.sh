@@ -40,7 +40,7 @@ fi
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${BR2_EXTERNAL_MINIME_PATH}/../../.." && pwd)}"
 BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-BOARDS_DIR="${MINIME_ROOT}/boards"
+BOARDS_DIR="${MINIME_ROOT}/minime/boards"
 BOARD_DIR="${BOARDS_DIR}/${BOARD_NAME}"
 COMMON_DIR="${BOARDS_DIR}/common"
 
