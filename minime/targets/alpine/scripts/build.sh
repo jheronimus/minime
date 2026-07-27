@@ -337,6 +337,7 @@ assemble_rootfs() {
 #──────────────────────────────────────────────────────────────────────────────
 
 assemble_image() {
+	[ -d "${ALPINE_ROOTFS_DIR}" ] || assemble_rootfs
 	TARGET_OUT="${ALPINE_OUTPUT_DIR}/out/${BOARD}"
 	mkdir -p "${TARGET_OUT}"
 
