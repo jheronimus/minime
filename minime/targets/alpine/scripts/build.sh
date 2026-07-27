@@ -39,7 +39,7 @@ ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
 
 # Source tree roots inside the container.
 ALPINE_DIR="${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-MINIME_ROOT="$(cd "${ALPINE_DIR}/../.." && pwd)"
+MINIME_ROOT="$(cd "${ALPINE_DIR}/../../.." && pwd)"
 ALPINE_BOARD_DIR="${MINIME_ROOT}/boards"
 
 BOARD="${BOARD:-rk3566}"
