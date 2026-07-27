@@ -63,13 +63,13 @@ shell: prepare
 
 components: prepare
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
-	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
+	set -o pipefail; $(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components" \
 		2>&1 | tee "$$LOG_FILE"
 
 image: prepare
 	@mkdir -p $(LOG_DIR); LOG_FILE="$(ALPINE_BUILD_LOG)"; echo "LOG=$$LOG_FILE"; \
-	$(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
+	set -o pipefail; $(PODMAN_CMD) run $(RUN_ARGS) $(ALPINE_IMAGE_NAME) \
 		sh -c "BOARD=$(BOARD) ALPINE_JOBS=$(ALPINE_JOBS) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh all" \
 		2>&1 | tee "$$LOG_FILE"
 	@if [ -f $(CURDIR)/out/$(BOARD)/minime-alpine-$(BOARD).img.xz ]; then \
