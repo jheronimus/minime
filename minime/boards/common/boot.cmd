@@ -44,7 +44,7 @@ else
 	reset
 fi
 
-if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/dtb; then
+if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/devices/${device}; then
 	echo "Loaded .minime/dtb"
 	mw.b 0x4ff00001 0x46
 else
