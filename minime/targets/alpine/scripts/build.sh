@@ -349,13 +349,21 @@ assemble_image() {
 		cp -rp "${ALPINE_OUTPUT_DIR}/boot/ui/." "${TARGET_OUT}/ui/"
 	fi
 
-	# Generate system.erofs rootfs — unmount pseudo-fs first in case
-	# make components and make image ran as separate steps (mounts survive process exit)
+	# Generate system.erofs rootfs.
+	# Tar the rootfs excluding proc/sys/dev (which may still contain
+	# mount artifacts from assemble_rootfs), then extract to a clean
+	# staging directory.  This mirrors the old post-image pipeline
+	# and guarantees mkfs.erofs sees only real files.
 	echo "Building system.erofs..."
+	EROF_STAGE=$(mktemp -d)
 	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
 	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
-	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${ALPINE_ROOTFS_DIR}"
+	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf - --exclude='./proc/*' --exclude='./sys/*' --exclude='./dev/*' .) |
+		(cd "${EROF_STAGE}" && tar -xf -)
+	mkdir -p "${EROF_STAGE}/mnt/sdcard"
+	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${EROF_STAGE}"
+	rm -rf "${EROF_STAGE}"
 
 	# Assemble custom boot-stage initramfs
 	echo "Assembling initramfs..."
