@@ -27,9 +27,17 @@ We will enforce a unified `genimage` architecture and a shared boot payload stru
    - `system.erofs`: The immutable, compressed root filesystem.
    - `boot/`: A directory containing the kernel (`Image`), device trees (`.dtb`), and the initramfs (`initramfs.cpio.gz`).
 
+## Path Architecture Contract
+
+To ensure dual-distro co-equality and prevent path drift across Alpine and Buildroot target builders:
+
+1. **`MINIME_ROOT`**: Absolute path to the monorepo root directory (`/workspace` inside container, or repository root on host). All shared assets (`boards/`, `uboot/`, `genimage/`, `src/`, `roms/`) resolve relative to `MINIME_ROOT`.
+2. **Target Roots (`ALPINE_ROOT` / `BUILDROOT_ROOT`)**: Absolute path to the target distro directory (`${MINIME_ROOT}/minime/targets/alpine` and `${MINIME_ROOT}/minime/targets/buildroot`). Target-local assets (`aports/`, `external/`, `configs/`, target scripts) resolve relative to their target root.
+
 ## Consequences
 
 * **Trivial Drag-and-Drop Updates**: Because the active OS resides entirely inside standard files on a universally readable FAT32 partition, users can update their firmware by simply plugging their SD card into any PC (Windows, macOS, Linux) and overwriting `system.erofs` and the `boot/` folder.
 * **On-Device Updates**: Implementing an on-device OTA updater becomes extremely simple. A script only needs to download a `.zip` payload containing the new kernel/erofs, extract it directly over `/mnt/sdcard/`, and reboot the system.
 * **Seamless Distro Switching**: A user running the Alpine build can swap to the Buildroot build (or vice versa) simply by replacing the OS payload files on the FAT32 partition. The underlying U-Boot bootloader blobs outside the partition table do not need to be touched or flashed.
 * **Guaranteed Data Preservation**: Since the update process is restricted to overwriting the specific system files, all user configurations, ROMs, and saves existing on the single FAT32 partition remain completely undisturbed.
+* **Deterministic Path Resolution**: Resolving shared assets relative to `MINIME_ROOT` and target assets relative to `ALPINE_ROOT`/`BUILDROOT_ROOT` eliminates fragile relative depth ascents (`../../../`), hardcoded container assumptions, and path string replacements.
