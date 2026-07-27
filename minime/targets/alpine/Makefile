@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-ROOT_DIR := $(abspath $(CURDIR)/../..)
+ROOT_DIR := $(abspath $(CURDIR)/../../..)
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
