@@ -379,7 +379,7 @@ build_system_image() {
 		die "busybox.static not found at ${BUSYBOX_STATIC} — add busybox-static to world-common"
 	fi
 	cp -f "${BUSYBOX_STATIC}" "${INITRD_STAGE}/bin/busybox"
-	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync chroot; do
+	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync chroot date; do
 		ln -sf busybox "${INITRD_STAGE}/bin/${app}"
 	done
 	ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"

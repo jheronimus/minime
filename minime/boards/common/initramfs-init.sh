@@ -167,6 +167,16 @@ if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system; then
 fi
 log_card "[INITRAMFS] EROFS system image mounted successfully."
 
+# Pre-emptively fix clock skew by advancing the system time to the rootfs build time
+# if the RTC woke up in the past (e.g. 2017). This prevents OpenRC from printing
+# "WARNING: clock skew detected!" during boot before NTP syncs.
+BUILD_TIME=$(date -r /mnt/system/bin/busybox +%s 2>/dev/null || echo 0)
+CUR_TIME=$(date +%s 2>/dev/null || echo 0)
+if [ "$BUILD_TIME" -gt "$CUR_TIME" ]; then
+	log_card "[INITRAMFS] Advancing system time to $BUILD_TIME to prevent clock skew"
+	date -s "@$BUILD_TIME" >/dev/null 2>&1 || true
+fi
+
 # Also ensure backlight is at a visible level.  minui later reads
 # msettings.bin, but having backlight off at boot makes the display
 # invisible until userspace takes over.
