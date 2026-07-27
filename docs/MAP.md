@@ -20,7 +20,7 @@ minime/
 │   ├── patches/        # U-Boot & ATF patches
 │   └── out/            # Prebuilt bootloader binaries (h700, rk3326, rk3566, rkbin)
 ├── targets/            # Target Software Builders
-│   ├── alpine/         # Alpine target builder (aports, Makefile, container, scripts)
+│   ├── alpine/         # Alpine target builder (aports, Makefile, container, configs, scripts)
 │   └── buildroot/      # Buildroot target builder (external packages, Makefile, defconfigs, scripts)
 └── genimage/           # Central Image & Update Packaging Pipeline
     ├── build-image.sh  # SD card bootable image builder (.img.xz)
@@ -53,50 +53,122 @@ To ensure dual-distro co-equality and prevent path drift across Alpine and Build
 
 ---
 
-# Key Shared Assets
+# Shared Assets (`minime/boards/`)
 
-## Board Firmware Blobs
-- `minime/boards/common/firmware/` — Common Realtek Wi-Fi/BT (rtl_bt, rtw88)
-- `minime/boards/h700/firmware/panels/` — H700 MIPI DPI panel init
-- `minime/boards/rk3326/firmware/` — RK3326 USB dongle Wi-Fi/BT drivers
+The `minime/boards/` directory is the single source of truth for all hardware definition files shared between Alpine and Buildroot target builders.
 
-## Bootloaders (`minime/uboot/`)
-- Prebuilt binaries in `minime/uboot/out/<board>/`. Rebuilt via `scripts/build-bootloader.sh` and `.github/workflows/bootloader.yml`.
-- `h700/`: `u-boot-sunxi-with-spl.bin`, `u-boot-sunxi-with-spl-ddr3.bin`
-- `rk3326/`: `idbloader.img`, `u-boot.itb`
-- `rk3566/`: `idbloader.img`, `u-boot.itb`, `rkbin/bl31.elf`, `rkbin/rk3566_ddr_1056MHz_v1.25.bin`
+## 1. OpenRC Init Services (`minime/boards/common/overlay/etc/init.d/`)
+Cross-distro OpenRC init scripts copied into the rootfs of both targets at build time:
+- `bluetooth`: Dual-stack BlueZ daemon and Bluetooth manager.
+- `fb-unblank`: Unblanks DRM/FB console and initializes display power.
+- `ftpd`: Lightweight FTP server service.
+- `gpudriver`: Dynamically loads Mali GPU kernel modules and sets device permissions.
+- `modules`: Loads kernel modules specified in `/etc/modules`.
+- `telnetd`: Remote debug shell daemon.
+- `traits`: Parses hardware `platform.ini` and sets environment variables.
+- `ui`: Launches the configured user interface launcher (`allium` or `minui`).
+- `wifi`: WPA Supplicant and Wi-Fi interface initialization.
+- `thermal-watchdog`: Board-specific CPU/GPU thermal watchdog daemon (in `minime/boards/rk3566/overlay/etc/init.d/`).
 
-## OpenRC Init Services
-All under `minime/boards/common/overlay/etc/init.d/`:
-- `wifi`, `ui`, `traits`, `bluetooth`, `fb-unblank`, `ftpd`, `modules`, `telnetd`, `gpudriver`.
+## 2. Shared Scripts & Boot Inits (`minime/boards/common/`)
+- `initramfs-init.sh`: Early boot initramfs entrypoint script that mounts FAT32, loads `system.erofs`, and performs `switch_root`.
+- `scripts/device.sh`: On-device hardware detection and DTB resolution script.
+- `scripts/thermal-watchdog`: Temperature monitoring and throttling background script.
+- `overlay/etc/sysctl.conf`: Kernel sysctl tuning (virtual memory, network buffers).
+- `overlay/etc/wpa_supplicant.conf`: Default wireless network configuration template.
 
-## DTS Source Files
-- `minime/boards/h700/dts/` — H700 Allwinner boards
-- `minime/boards/rk3326/dts/` — RK3326 boards
-- `minime/boards/rk3566/dts/` — RK3566 boards
+## 3. Kernel Configurations & Fragments (`minime/boards/`)
+- `common/tiny-base.config`: Monorepo base Linux kernel configuration (common drivers, filesystems, EROFS, FAT32, ALSA).
+- `common/tiny-libmali.config`: ARM Mali GPU kernel driver configuration fragment.
+- `h700/tiny-h700.config`: Allwinner H700 SoC kernel configuration fragment (sunxi clock trees, AXP717 PMIC, DRM panel drivers).
+- `rk3326/tiny-rk3326.config`: Rockchip RK3326 SoC kernel configuration fragment.
+- `rk3566/tiny-rk3566.config`: Rockchip RK3566 SoC kernel configuration fragment.
 
-## Kernel & U-Boot Patches
-- `minime/boards/h700/patches/linux/`
-- `minime/boards/rk3326/patches/linux/`
-- `minime/boards/rk3566/patches/linux/`
-- `minime/boards/rk3566/patches/uboot/`
+## 4. Device Tree Sources (DTS) (`minime/boards/<board>/dts/`)
+- `h700/dts/`: Device Trees for H700 devices (RG35XX SP, Plus, H, 28XX, 40XX).
+- `rk3326/dts/`: Device Trees for RK3326 devices (`rk3326-anbernic-rg351p.dts`, `rk3326-anbernic-rg351mp.dts`).
+- `rk3566/dts/`: Device Trees for RK3566 devices (RG353P, RG353V, RG353M, RG ARC).
 
-## Traits (`platform.ini` + device `.inis`)
-- `minime/boards/<board>/traits/`
+## 5. Kernel & U-Boot Patches (`minime/boards/<board>/patches/`)
+- `h700/patches/linux/`: H700 Linux kernel patches (AXP717, DRM panel, power management).
+- `rk3326/patches/linux/`: RK3326 Linux kernel patches.
+- `rk3566/patches/linux/`: RK3566 Linux kernel patches (panfrost, HDMI).
+- `rk3566/patches/uboot/`: RK3566 U-Boot bootloader patches.
+
+## 6. Partition & Bootloader Configurations
+- `common/genimage.cfg`: Shared genimage specification for the FAT32 partition table.
+- `h700/genimage.cfg`: H700-specific genimage specification detailing raw U-Boot SPL offsets.
+- `h700/boot.env`: H700 U-Boot boot environment script (`bootargs`, kernel load address).
+- `rk3326/boot.env`: RK3326 U-Boot boot environment script.
+- `rk3566/boot.env`: RK3566 U-Boot boot environment script.
+
+## 7. Board Firmware Blobs
+- `common/firmware/`: Realtek Wi-Fi and Bluetooth firmware blobs (`rtl_bt/`, `rtw88/`).
+- `h700/firmware/panels/`: Display panel initialization sequences for H700 devices.
+- `rk3326/firmware/`: Wi-Fi USB dongle firmware blobs.
+
+## 8. Hardware Traits (`minime/boards/<board>/traits/`)
+Immutable hardware capability profiles copied to `/usr/share/minime/traits/`:
+- `platform.ini`: General system traits (SoC architecture, GPU driver flavor).
+- `audio.ini`: Audio card and mixer definitions.
+- `display.ini`: Display resolution, refresh rates, and brightness control paths.
+- `controls.ini`: Input device mapping and button definitions.
+
+---
+
+# Bootloaders (`minime/uboot/`)
+
+Contains U-Boot configurations, patches, and prebuilt binaries:
+- `config/`: U-Boot defconfigs (`uboot.config`, `ddr3.defconfig`, `bootloader-*.config`).
+- `patches/`: U-Boot and ARM Trusted Firmware (ATF) source patches.
+- `out/`: Prebuilt bootloader binaries:
+  - `h700/`: `u-boot-sunxi-with-spl.bin`, `u-boot-sunxi-with-spl-ddr3.bin`
+  - `rk3326/`: `idbloader.img`, `u-boot.itb`
+  - `rk3566/`: `idbloader.img`, `u-boot.itb`, `rkbin/bl31.elf`, `rkbin/rk3566_ddr_1056MHz_v1.25.bin`
 
 ---
 
 # Target Software Builders
 
-## Alpine Target (`minime/targets/alpine/`)
-- Cross-compiles musl-based packages (`aports/`), builds tinykernel, installs OpenRC services from `minime/boards/common/overlay/`, cleans bind-mounted pseudo filesystems (`proc`, `sys`, `dev`), and outputs `Image`, `initramfs.img`, `system.erofs`, `.dtb`, and `ui/` to `minime/targets/alpine/out/<board>/`.
+## Alpine Target Builder (`minime/targets/alpine/`)
 
-## Buildroot Target (`minime/targets/buildroot/`)
-- Cross-compiles glibc-based packages (`external/package/`), builds kernel, installs OpenRC services from `minime/boards/common/overlay/`, and outputs `Image`, `initramfs.img`, `system.erofs`, `.dtb`, and `ui/` to `minime/targets/buildroot/out/<board>/`.
+Building Alpine Linux firmware for Minime:
+
+- **`Makefile`**: Main entrypoint for Alpine builds (`make image BOARD=<board> UI=<ui>`). Handles container orchestration, volume mounts, and invocation of `build.sh`.
+- **`scripts/build.sh`**: Core orchestration script that:
+  1. Fetches and validates the official Alpine minirootfs tarball.
+  2. Compiles `tinykernel` APK (kernel `Image`, modules, and DTBs).
+  3. Prepares chroot environment, bind-mounts pseudo filesystems (`proc`, `sys`, `dev`), installs package dependencies (`aports/`), and installs board traits and OpenRC overlays.
+  4. Terminates chroot background processes, cleans bind mounts, and verifies empty mountpoints.
+  5. Packages `${TARGET_OUT}/system.erofs` using `mkfs.erofs -z lz4hc`.
+  6. Assembles the custom initramfs (`initramfs.img`).
+  7. Invokes `${MINIME_ROOT}/minime/genimage/build-image.sh` and `build-update.sh`.
+- **`container/Dockerfile`**: Build environment container specification for Alpine (`arm64`, `abuild`, `squashfs-tools`, `erofs-utils`, `genimage`).
+- **`configs/`**: Build configuration settings and target board overrides.
+- **`out/<board>/`**: Staging directory for compiled `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and the final `minime-alpine-<board>.img.xz`.
+
+## Buildroot Target Builder (`minime/targets/buildroot/`)
+
+Building Buildroot firmware for Minime:
+
+- **`Makefile`**: Main entrypoint for Buildroot builds (`make image BOARD=<board> UI=<ui>`). Handles container orchestration, ccache mounting, and execution of Buildroot `make`.
+- **`external/Config.in`**: Buildroot external tree package menu declarations.
+- **`external/external.mk`**: Buildroot external tree Makefile rules. Hooks Linux kernel compilation, copies custom DTS files from `${MINIME_ROOT}/minime/boards/<board>/dts/`, and stages firmware blobs.
+- **`external/external.desc`**: External tree metadata descriptor (`name: MINIME`).
+- **`external/configs/`**: Target configuration fragments:
+  - `common.config`: Base Buildroot configuration (musl/glibc, OpenRC, busybox, alsa, wpa_supplicant, bluez).
+  - `h700.config`: H700 SoC buildroot config fragment.
+  - `rk3326.config`: RK3326 SoC buildroot config fragment.
+  - `rk3566.config`: RK3566 SoC buildroot config fragment.
+  - `allium.config`: Allium UI launcher config fragment.
+  - `minui.config`: MinUI UI launcher config fragment.
+- **`scripts/post-build.sh`**: Buildroot post-build script that copies OpenRC services from `${MINIME_ROOT}/minime/boards/common/overlay` into Buildroot target rootfs.
+- **`scripts/post-image.sh`**: Buildroot post-image script that constructs custom initramfs and invokes `${MINIME_ROOT}/minime/genimage/build-image.sh` and `build-update.sh`.
+- **`out/<board>/`**: Target output directory.
 
 ---
 
 # Central Packager (`minime/genimage/`)
 
-- **`build-image.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
+- **`build-image.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
 - **`build-update.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.
