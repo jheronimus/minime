@@ -84,6 +84,20 @@ $(BUILDROOT_STAMP):
 buildroot: $(BUILDROOT_STAMP)
 	@echo "Buildroot $(BUILDROOT_VERSION) is ready in $(BUILDROOT_DIR)"
 
+BUILDROOT_IMAGE_NAME := minime-builder-buildroot
+GHCR_BUILDROOT_IMAGE ?= ghcr.io/jheronimus/minime-builder-buildroot:latest
+PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
+
+prepare-container:
+	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
+	@mkdir -p $(BASE_OUTPUT_DIR) $(BUILDROOT_CCACHE_DIR) $(BUILDROOT_DL_DIR)
+	@$(PODMAN_CMD) image inspect $(BUILDROOT_IMAGE_NAME) >/dev/null 2>&1 || \
+		($(PODMAN_CMD) pull $(GHCR_BUILDROOT_IMAGE) && $(PODMAN_CMD) tag $(GHCR_BUILDROOT_IMAGE) $(BUILDROOT_IMAGE_NAME)) >/dev/null 2>&1 || \
+		$(PODMAN_CMD) build --platform linux/amd64 \
+			--build-arg BUILDER_UID=$$(id -u) \
+			--build-arg BUILDER_GID=$$(id -g) \
+			-t $(BUILDROOT_IMAGE_NAME) -f container/Dockerfile .
+
 prepare:
 	@../scripts/prepare-linux.sh
 

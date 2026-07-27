@@ -105,11 +105,10 @@ jobs:
   shared-sources:
     name: Download Shared Sources
     runs-on: ubuntu-latest
+    container: ghcr.io/jheronimus/minime-builder-buildroot:latest
     defaults:
       run:
         working-directory: minime/targets/buildroot
-    env:
-      USE_PODMAN: '0'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -124,7 +123,6 @@ jobs:
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
-          ../../../scripts/prepare-linux.sh
           for board in rk3326 rk3566 h700; do
             echo "Downloading sources for $board..."
             make defconfig BOARD=$board
@@ -135,6 +133,7 @@ jobs:
     name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }})
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
+    container: ghcr.io/jheronimus/minime-builder-buildroot:latest
     permissions:
       contents: write
     timeout-minutes: 360
@@ -147,7 +146,6 @@ jobs:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
         ui: [minui, allium]
     env:
-      USE_PODMAN: '0'
       BOARD: ${{ matrix.board }}
       UI: ${{ matrix.ui }}
       PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -176,17 +174,13 @@ jobs:
       - name: Prepare cache directories
         run: |
           mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
+          ccache --max-size=8G || true
 
       - name: Clean output
         if: ${{ inputs.clean_output }}
         run: |
           echo "Cleaning output for ${{ env.BOARD }}"
           make clean BOARD=${{ env.BOARD }}
-
-      - name: Verify/Install Dependencies
-        run: |
-          ../../../scripts/prepare-linux.sh
-          ccache --max-size=8G || true
 
       - name: Build Image
         run: |

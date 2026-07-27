@@ -46,10 +46,13 @@ help:
 		"  BOARD            - Target hardware (default: rk3566, supported: $(SUPPORTED_BOARDS))" \
 		"  ALPINE_JOBS      - Number of parallel build jobs (default: auto-detected CPU cores)"
 
+GHCR_IMAGE ?= ghcr.io/jheronimus/minime-builder-alpine:latest
+
 prepare:
 	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
 	@mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPOS_DIR) $(ALPINE_CCACHE_DIR) $(ALPINE_DL_DIR)
 	@$(PODMAN_CMD) image inspect $(ALPINE_IMAGE_NAME) >/dev/null 2>&1 || \
+		($(PODMAN_CMD) pull $(GHCR_IMAGE) && $(PODMAN_CMD) tag $(GHCR_IMAGE) $(ALPINE_IMAGE_NAME)) >/dev/null 2>&1 || \
 		$(PODMAN_CMD) build --platform linux/arm64 \
 			--build-arg BUILDER_UID=$(HOST_UID) \
 			--build-arg BUILDER_GID=$(HOST_GID) \
