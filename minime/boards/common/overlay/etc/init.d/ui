@@ -95,10 +95,9 @@ start() {
 		export LD_LIBRARY_PATH="${UI_DIR}/lib:${LD_LIBRARY_PATH:-}"
 	fi
 
-	start-stop-daemon -S -q -b -m \
-		-p /tmp/ui.pid \
-		-x "$UI_BIN"
-	eend $?
+	( "$UI_BIN" </dev/console >/tmp/ui.log 2>&1 ) &
+	echo $! >/tmp/ui.pid
+	eend 0
 }
 
 stop() {

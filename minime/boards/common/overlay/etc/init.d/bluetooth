@@ -12,11 +12,11 @@ depend() {
 	after fb-unblank
 }
 
-start_pre() {
-	[ -f /mnt/sdcard/.minime/config/bluetooth/enabled ] || return 1
-}
-
 start() {
+	if [ ! -f /mnt/sdcard/.minime/config/bluetooth/enabled ]; then
+		einfo "Bluetooth disabled by user"
+		return 0
+	fi
 	ebegin "Starting Bluetooth stack"
 
 	# 1. D-Bus

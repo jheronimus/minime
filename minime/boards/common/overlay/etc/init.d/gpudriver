@@ -9,7 +9,7 @@ description="Load GPU driver (from traits)"
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
 
 depend() {
-	need modules
+	need modules traits
 	before ui
 	after fb-unblank
 }
