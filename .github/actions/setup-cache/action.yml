@@ -15,14 +15,14 @@ runs:
     - name: Restore dl cache
       uses: actions/cache@v4
       with:
-        path: ${{ inputs.target == 'alpine' && '/alpine-dl' || '~/.buildroot-dl' }}
+        path: ${{ inputs.target == 'alpine' && '~/alpine-dl' || '~/.buildroot-dl' }}
         key: minime-${{ inputs.target }}-dl
         save-always: true
 
     - name: Restore ccache
       uses: actions/cache@v4
       with:
-        path: ${{ inputs.target == 'alpine' && '/alpine-ccache' || '~/.buildroot-ccache' }}
+        path: ${{ inputs.target == 'alpine' && '~/alpine-ccache' || '~/.buildroot-ccache' }}
         key: minime-${{ inputs.target }}-ccache-${{ inputs.board }}
         save-always: true
 
@@ -30,7 +30,7 @@ runs:
       if: inputs.target == 'alpine'
       uses: actions/cache@v4
       with:
-        path: /alpine-output/packages
+        path: ~/alpine-output/packages
         key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}
         restore-keys: |
           minime-alpine-pkgs-${{ inputs.board }}-
@@ -40,7 +40,7 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.target }}" = "alpine" ]; then
-          mkdir -p /alpine-output/packages /alpine-ccache /alpine-dl
+          mkdir -p ~/alpine-output/packages ~/alpine-ccache ~/alpine-dl
         else
           mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
           ccache --max-size=8G || true

@@ -103,9 +103,6 @@ jobs:
     name: Build Alpine ${{ matrix.board }} (${{ matrix.ui }})
     needs: compute-matrix
     runs-on: ubuntu-24.04-arm
-    container:
-      image: ghcr.io/jheronimus/minime-builder-alpine:latest
-      options: --user root
     permissions:
       contents: write
     timeout-minutes: 120
@@ -132,12 +129,12 @@ jobs:
       - name: Build system components
         run: |
           echo "Building Alpine system components for ${{ matrix.board }} (${{ matrix.ui }})"
-          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh components
+          make components BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
       - name: Build image
         run: |
           echo "Building Alpine image for ${{ matrix.board }} (${{ matrix.ui }})"
-          BOARD=${{ matrix.board }} UI=${{ matrix.ui }} ./scripts/build.sh image
+          make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
       - name: Upload image
         run: |
