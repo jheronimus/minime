@@ -338,7 +338,7 @@ assemble_rootfs() {
 
 assemble_image() {
 	[ -d "${ALPINE_ROOTFS_DIR}" ] || assemble_rootfs
-	TARGET_OUT="${ALPINE_OUTPUT_DIR}/out/${BOARD}"
+	TARGET_OUT="${ALPINE_ROOT}/out/${BOARD}"
 	mkdir -p "${TARGET_OUT}"
 
 	cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${TARGET_OUT}/Image"
