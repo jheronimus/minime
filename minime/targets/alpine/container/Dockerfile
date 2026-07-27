@@ -98,9 +98,9 @@ RUN addgroup -g ${BUILDER_GID} builder 2>/dev/null || true \
 # abuild-keygen -a writes a fresh key pair non-interactively and
 # registers it with abuild.conf in the same -a pass.
 # Copy static abuild signing keys into the container image.
-COPY container/minime-builder.rsa /home/builder/.abuild/minime-builder.rsa
-COPY container/minime-builder.rsa.pub /home/builder/.abuild/minime-builder.rsa.pub
-COPY container/minime-builder.rsa.pub /etc/apk/keys/minime-builder.rsa.pub
+COPY minime-builder.rsa /home/builder/.abuild/minime-builder.rsa
+COPY minime-builder.rsa.pub /home/builder/.abuild/minime-builder.rsa.pub
+COPY minime-builder.rsa.pub /etc/apk/keys/minime-builder.rsa.pub
 
 RUN chmod 600 /home/builder/.abuild/minime-builder.rsa \
 	&& chmod 644 /home/builder/.abuild/minime-builder.rsa.pub /etc/apk/keys/minime-builder.rsa.pub \

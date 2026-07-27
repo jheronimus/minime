@@ -4,7 +4,7 @@
 # list is installed in the Alpine rootfs by `alpine/scripts/build.sh`
 # after the local Minime package repo is staged at /local-repo.
 #
-# Local packages (built from minime/alpine/aports/*):
+# Local packages (built from minime/targets/alpine/aports/*):
 #   - minui / allium      UI frontends (mutually exclusive, fetch-prebuilt)
 #   - preloaded-roms      bundled ROMs
 #   - fatresize           FAT32 resizer for first-boot expansion
