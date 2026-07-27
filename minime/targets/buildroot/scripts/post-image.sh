@@ -59,8 +59,8 @@ if [ ! -f "${BINARIES_DIR}/initramfs.img" ]; then
 	done
 	ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
-	if [ -f "${MINIME_ROOT}/boards/common/initramfs-init.sh" ]; then
-		cp -f "${MINIME_ROOT}/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
+	if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
+		cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
 		chmod +x "${INITRD_STAGE}/init"
 	fi
 
@@ -70,13 +70,13 @@ fi
 
 # Call central packager scripts
 echo "Invoking central image builder for Buildroot ${BOARD_NAME}..."
-"${MINIME_ROOT}/genimage/build-image.sh" \
+"${MINIME_ROOT}/minime/genimage/build-image.sh" \
 	--target buildroot \
 	--board "${BOARD_NAME}" \
 	--input-dir "${BINARIES_DIR}" \
 	--output-dir "${BINARIES_DIR}"
 
-"${MINIME_ROOT}/genimage/build-update.sh" \
+"${MINIME_ROOT}/minime/genimage/build-update.sh" \
 	--target buildroot \
 	--board "${BOARD_NAME}" \
 	--input-dir "${BINARIES_DIR}" \
