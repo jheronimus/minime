@@ -50,7 +50,7 @@ mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
 	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
 
 cp -f "${TARGET_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
-for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync; do
+for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync chroot; do
 	ln -sf busybox "${INITRD_STAGE}/bin/${app}"
 done
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
