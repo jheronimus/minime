@@ -42,27 +42,25 @@ MINIME_ROOT="${MINIME_ROOT:-$(cd "${BR2_EXTERNAL_MINIME_PATH}/../../../.." && pw
 echo "Building system.erofs for Buildroot..."
 mkfs.erofs -z lz4hc "${BINARIES_DIR}/system.erofs" "${TARGET_DIR}"
 
-# Assemble initramfs if missing
-if [ ! -f "${BINARIES_DIR}/initramfs.img" ]; then
-	echo "Assembling initramfs.img..."
-	INITRD_STAGE=$(mktemp -d)
-	mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
-		"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
-		"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+# Always reassemble the initramfs so stale cached copies never survive.
+echo "Assembling initramfs.img..."
+INITRD_STAGE=$(mktemp -d)
+mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
+	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
+	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
 
-	cp -f "${TARGET_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
-	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync; do
-		ln -sf busybox "${INITRD_STAGE}/bin/${app}"
-	done
-	ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
+cp -f "${TARGET_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
+for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync; do
+	ln -sf busybox "${INITRD_STAGE}/bin/${app}"
+done
+ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
-	if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
-		cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
-		chmod +x "${INITRD_STAGE}/init"
-	fi
-
-	(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs.img")
-	rm -rf "${INITRD_STAGE}"
+if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
+	cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
+	chmod +x "${INITRD_STAGE}/init"
 fi
+
+(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs.img")
+rm -rf "${INITRD_STAGE}"
 
 echo "Buildroot post-image stage complete."

@@ -26,6 +26,7 @@ eudev
 busybox
 busybox-suid
 busybox-extras
+busybox-static
 mksh
 shadow
 sudo

@@ -368,7 +368,14 @@ build_system_image() {
 		"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
 		"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
 
-	cp -f "${ALPINE_ROOTFS_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
+	# Alpine's standard busybox is dynamically linked against musl; the
+	# initramfs runs before any dynamic linker is available on /mnt/system.
+	# Use busybox-static instead (installs to /bin/busybox.static).
+	BUSYBOX_STATIC="${ALPINE_ROOTFS_DIR}/bin/busybox.static"
+	if [ ! -f "${BUSYBOX_STATIC}" ]; then
+		die "busybox.static not found at ${BUSYBOX_STATIC} — add busybox-static to world-common"
+	fi
+	cp -f "${BUSYBOX_STATIC}" "${INITRD_STAGE}/bin/busybox"
 	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync; do
 		ln -sf busybox "${INITRD_STAGE}/bin/${app}"
 	done
