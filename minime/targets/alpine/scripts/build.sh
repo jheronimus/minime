@@ -381,13 +381,13 @@ assemble_image() {
 
 	# Call central genimage scripts
 	echo "Calling central image packager..."
-	"${MINIME_ROOT}/genimage/build-image.sh" \
+	"${MINIME_ROOT}/minime/genimage/build-image.sh" \
 		--target alpine \
 		--board "${BOARD}" \
 		--input-dir "${TARGET_OUT}" \
 		--output-dir "${ALPINE_OUTPUT_DIR}/images"
 
-	"${MINIME_ROOT}/genimage/build-update.sh" \
+	"${MINIME_ROOT}/minime/genimage/build-update.sh" \
 		--target alpine \
 		--board "${BOARD}" \
 		--input-dir "${TARGET_OUT}" \

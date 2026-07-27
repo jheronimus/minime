@@ -47,9 +47,9 @@ if [ -z "$TARGET" ] || [ -z "$BOARD" ] || [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_D
 fi
 
 MINIME_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BOARD_DIR="${MINIME_ROOT}/boards/${BOARD}"
-COMMON_DIR="${MINIME_ROOT}/boards/common"
-UBOOT_OUT_DIR="${MINIME_ROOT}/uboot/out/${BOARD}"
+BOARD_DIR="${MINIME_ROOT}/minime/boards/${BOARD}"
+COMMON_DIR="${MINIME_ROOT}/minime/boards/common"
+UBOOT_OUT_DIR="${MINIME_ROOT}/minime/uboot/out/${BOARD}"
 
 if [ ! -f "${BOARD_DIR}/board.env" ]; then
 	echo "ERROR: ${BOARD_DIR}/board.env missing" >&2
