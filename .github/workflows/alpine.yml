@@ -98,6 +98,11 @@ jobs:
           echo "Building Alpine system components for ${{ matrix.board }} (${{ matrix.ui }})"
           make components BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
+      - name: Install host image tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends \
+            mtools genimage u-boot-tools device-tree-compiler dosfstools
+
       - name: Build image
         run: |
           echo "Building Alpine image for ${{ matrix.board }} (${{ matrix.ui }})"
