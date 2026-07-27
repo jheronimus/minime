@@ -41,21 +41,28 @@ jobs:
 
           sync_ui() {
             repo="$1"
-            tag="$2"
-            workflow_pattern="$3"
 
-            echo "=== Checking UI staleness for ${repo} (${tag}) ==="
+            echo "=== Checking UI staleness for ${repo} ==="
             MAIN_SHA=$(gh api "repos/${repo}/commits/main" -q '.sha' 2>/dev/null || echo "error")
-            TAG_SHA=$(gh api "repos/${repo}/git/ref/tags/${tag}" -q '.object.sha' 2>/dev/null || echo "none")
+            LATEST_TAG=$(gh api "repos/${repo}/releases/latest" -q '.tag_name' 2>/dev/null || echo "none")
 
-            echo "${repo} main HEAD: ${MAIN_SHA}"
-            echo "${repo} tag ${tag}: ${TAG_SHA}"
+            echo "${repo} main HEAD:   ${MAIN_SHA}"
+            echo "${repo} latest tag:  ${LATEST_TAG}"
+
+            if [ "${LATEST_TAG}" != "none" ]; then
+              TAG_SHA=$(gh api "repos/${repo}/git/ref/tags/${LATEST_TAG}" -q '.object.sha' 2>/dev/null || echo "none")
+            else
+              TAG_SHA="none"
+            fi
+
+            echo "${repo} latest SHA:  ${TAG_SHA}"
 
             if [ "${MAIN_SHA}" != "error" ] && [ "${MAIN_SHA}" = "${TAG_SHA}" ]; then
-              echo "==> ${repo} release ${tag} is UP TO DATE."
+              echo "==> ${repo} release ${LATEST_TAG} is UP TO DATE."
             else
-              echo "==> ${repo} release ${tag} is STALE! Triggering build..."
-              gh workflow run build.yml -R "${repo}" -f "version=${tag}"
+              NEW_TAG="v$(date -u +%Y%m%d)"
+              echo "==> ${repo} is STALE! Triggering build with tag ${NEW_TAG}..."
+              gh workflow run build.yml -R "${repo}" -f "version=${NEW_TAG}"
               sleep 10
               RUN_ID=$(gh run list -R "${repo}" -L 1 --json databaseId -q '.[0].databaseId')
               echo "==> Watching remote build run ${RUN_ID}..."
@@ -63,9 +70,8 @@ jobs:
             fi
           }
 
-          TODAY_TAG="v$(date -u +%Y%m%d)"
-          sync_ui "jheronimus/Allium" "${TODAY_TAG}" "Build Allium for Minime"
-          sync_ui "jheronimus/MinUI" "${TODAY_TAG}" "Build MinUI for Minime"
+          sync_ui "jheronimus/Allium"
+          sync_ui "jheronimus/MinUI"
 
   compute-matrix:
     name: Compute board matrix
