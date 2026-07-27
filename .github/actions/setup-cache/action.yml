@@ -18,11 +18,14 @@ runs:
         path: ${{ inputs.target == 'alpine' && '~/alpine-dl' || '~/.buildroot-dl' }}
         key: minime-${{ inputs.target }}-dl
 
-    - name: Restore & Save ccache
+    - name: Restore & Save ccache (Buildroot)
+      if: inputs.target == 'buildroot'
       uses: actions/cache@v4
       with:
-        path: ${{ inputs.target == 'alpine' && '~/alpine-ccache' || '~/.buildroot-ccache' }}
-        key: minime-${{ inputs.target }}-ccache-${{ inputs.board }}
+        path: ~/.buildroot-ccache
+        key: minime-buildroot-ccache-${{ inputs.board }}-${{ hashFiles('minime/boards/*/tiny-*.config', 'minime/targets/buildroot/external/configs/*.config', 'minime/targets/buildroot/external/package/**/*.mk', 'minime/boards/*/patches/**') }}
+        restore-keys: |
+          minime-buildroot-ccache-${{ inputs.board }}-
 
     - name: Restore & Save package cache (Alpine)
       if: inputs.target == 'alpine'
@@ -40,5 +43,5 @@ runs:
           mkdir -p ~/alpine-output/${{ inputs.board }} ~/alpine-output/packages ~/alpine-repos ~/alpine-ccache ~/alpine-dl
         else
           mkdir -p ~/.buildroot-ccache ~/.buildroot-dl
-          ccache --max-size=8G || true
+          ccache --max-size=4G || true
         fi
