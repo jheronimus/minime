@@ -57,8 +57,6 @@ jobs:
             echo "${repo} latest tag:  ${LATEST_TAG}"
 
             if [ "${LATEST_TAG}" != "none" ]; then
-              # Use commits API — resolves annotated tags to their commit SHA,
-              # unlike git/ref/tags which returns the tag object SHA.
               TAG_SHA=$(gh api "repos/${repo}/commits/${LATEST_TAG}" -q '.sha' 2>/dev/null || echo "none")
             else
               TAG_SHA="none"
@@ -108,7 +106,9 @@ jobs:
   shared-sources:
     name: Download Shared Sources
     runs-on: ubuntu-latest
-    container: ghcr.io/jheronimus/minime-builder-buildroot:latest
+    container:
+      image: ghcr.io/jheronimus/minime-builder-buildroot:latest
+      options: --user root
     defaults:
       run:
         working-directory: minime/targets/buildroot
@@ -122,6 +122,7 @@ jobs:
         with:
           path: ~/.buildroot-dl
           key: minime-buildroot-dl
+          save-always: true
 
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
@@ -136,7 +137,9 @@ jobs:
     name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }})
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
-    container: ghcr.io/jheronimus/minime-builder-buildroot:latest
+    container:
+      image: ghcr.io/jheronimus/minime-builder-buildroot:latest
+      options: --user root
     permissions:
       contents: write
     timeout-minutes: 360
@@ -164,12 +167,14 @@ jobs:
         with:
           path: ~/.buildroot-dl
           key: minime-buildroot-dl
+          save-always: true
 
-      - name: Restore board ccache
+      - name: Restore ccache
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
           key: minime-buildroot-ccache-${{ matrix.board }}
+          save-always: true
 
       - name: Prepare cache directories
         run: |
@@ -187,11 +192,11 @@ jobs:
           echo "Building image for ${{ matrix.board }} (${{ matrix.ui }})"
           make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
-      - name: Upload firmware artifacts
+      - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
           name: minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}-${{ github.sha }}
-          path: minime/targets/buildroot/out/${{ matrix.board }}/**
+          path: minime/targets/buildroot/out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}.img.xz
           if-no-files-found: error
           retention-days: 14
 
