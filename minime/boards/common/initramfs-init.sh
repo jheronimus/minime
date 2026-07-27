@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck shell=sh
-export PATH=/bin:/sbin
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
