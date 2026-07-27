@@ -1,5 +1,5 @@
 name: 'Setup & Restore Build Cache'
-description: 'Restores and configures dl, ccache, and package caches with robust post-build save'
+description: 'Restores and configures dl, ccache, and package caches with post-build save'
 
 inputs:
   target:
@@ -12,21 +12,21 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Restore dl cache
-      uses: actions/cache/restore@v4
+    - name: Restore & Save dl cache
+      uses: actions/cache@v4
       with:
         path: ${{ inputs.target == 'alpine' && '~/alpine-dl' || '~/.buildroot-dl' }}
         key: minime-${{ inputs.target }}-dl
 
-    - name: Restore ccache
-      uses: actions/cache/restore@v4
+    - name: Restore & Save ccache
+      uses: actions/cache@v4
       with:
         path: ${{ inputs.target == 'alpine' && '~/alpine-ccache' || '~/.buildroot-ccache' }}
         key: minime-${{ inputs.target }}-ccache-${{ inputs.board }}
 
-    - name: Restore package cache (Alpine)
+    - name: Restore & Save package cache (Alpine)
       if: inputs.target == 'alpine'
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v4
       with:
         path: ~/alpine-output/packages
         key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/targets/alpine/aports/**') }}

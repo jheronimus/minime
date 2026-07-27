@@ -14,7 +14,7 @@ depends="!minui"
 provides="minime-ui"
 
 source="https://github.com/jheronimus/Allium/releases/download/v${pkgver}/allium-minime-aarch64.zip"
-sha512sums="6cb1dd724c96aa91efc5625ffaa85fb62eb9911e3b5caeec09e7efdbbc9bd2cfb9cfa5febe8e1a1b1bdc0a1e0ebff3a58d41ed602a8bfeb0458dfae7d678d21c  allium-minime-aarch64.zip"
+sha512sums="579a51cad525fc04d024c1474532267a4a28b15f232b3305d1b495007ff6bd8558eb2ba4e1f4e154d1a511ca0ff1da7d0eae1660b6dc6409dfa647300147f79a  allium-minime-aarch64.zip"
 
 build() {
 	cd "$srcdir" || return 1
