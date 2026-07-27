@@ -3,7 +3,7 @@
 # Minime Central Image Builder (genimage)
 #
 # Usage:
-#   build-image.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
+#   genimage.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
 #                  --input-dir <dir> --output-dir <dir>
 
 set -eu
