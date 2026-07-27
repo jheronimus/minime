@@ -168,7 +168,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
-          key: minime-buildroot-ccache-${{ env.BOARD }}
+          key: minime-buildroot-ccache-${{ matrix.board }}
 
       - name: Prepare cache directories
         run: |
