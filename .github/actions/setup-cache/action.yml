@@ -32,7 +32,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/alpine-output/${{ inputs.board }}/packages
-        key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/overlay/**', 'minime/boards/${{ inputs.board }}/tiny-*.config', 'minime/boards/${{ inputs.board }}/firmware/**', 'minime/targets/alpine/aports/**') }}
+        key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-panfrost.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/firmware/**', 'minime/boards/common/overlay/**', 'minime/boards/${{ inputs.board }}/tiny-*.config', 'minime/boards/${{ inputs.board }}/patches/**', 'minime/boards/${{ inputs.board }}/dts/**', 'minime/boards/${{ inputs.board }}/firmware/**', 'minime/targets/alpine/aports/**') }}
         restore-keys: |
           minime-alpine-pkgs-${{ inputs.board }}-
 
