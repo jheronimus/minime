@@ -126,9 +126,8 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
 	
-	# The FAT tables were pre-allocated at build time for 512GB to avoid
-	# fatresize geometry collisions. We just need to patch the BPB_TotSec32
-	# header (4 bytes at offset 0x20) to match the actual partition sector count.
+	# Patch the FAT32 BPB_TotSec32 header (4 bytes at offset 0x20)
+	# to match the actual partition sector count after resize.
 	log_card "[INITRAMFS] Patching FAT32 BPB_TotSec32 to $PART_SECTORS sectors..."
 	
 	# Unmount the FAT partition to safely patch the BPB

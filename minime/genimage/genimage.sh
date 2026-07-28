@@ -192,7 +192,7 @@ STAGE_MB="$(du -sm "${USERDATA_STAGE}" | cut -f1)"
 VFAT_MB=$((STAGE_MB + 256))
 [ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}" status=none
-mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat" 536870912
+mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 
 MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${USERDATA_STAGE}/boot.scr" ::boot.scr
 for item in .minime .system .ui .tmp_update; do
