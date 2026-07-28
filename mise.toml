@@ -1,0 +1,11 @@
+[tools]
+bat = "latest"
+cheat = "latest"
+clang-format = "latest"
+gum = "latest"
+helix = "latest"
+hugo = "latest"
+jq = "latest"
+make = "latest"
+yt-dlp = { version = "latest", rename_exe = "yt-dlp" }
+zoxide = "latest"
