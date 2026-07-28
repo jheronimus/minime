@@ -6,7 +6,7 @@
 description="Minime FTP daemon"
 
 command="tcpsvd"
-command_args="-vE 0.0.0.0 21 /usr/sbin/ftpd -w /mnt/sdcard"
+command_args="-vE 0.0.0.0 21 /usr/sbin/ftpd -a -w /mnt/sdcard"
 pidfile="/run/ftpd.pid"
 
 depend() {
