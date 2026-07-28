@@ -116,6 +116,9 @@ build() {
 	EOF
 	cat "${cfg_src}/common/tiny-base.config" >> .config
 	cat "${cfg_src}/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
+	if [ -f "${cfg_src}/${DTB_BOARD}/tiny-dongles.config" ]; then
+		cat "${cfg_src}/${DTB_BOARD}/tiny-dongles.config" >> .config
+	fi
 	cat "${cfg_src}/common/tiny-panfrost.config" >> .config
 
 	# 4. Resolve new options and surface any unresolved ones.
