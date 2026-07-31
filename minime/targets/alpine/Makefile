@@ -7,7 +7,7 @@ BOARD ?= rk3566
 UI ?= minui
 
 HOST_ARCH := $(shell uname -m)
-PACKAGER_PLATFORM := $(if $(filter aarch64 arm64,$(HOST_ARCH)),linux/arm64,linux/amd64)
+PACKAGER_PLATFORM := linux/arm64
 
 BUILDER_IMAGE := ghcr.io/jheronimus/minime-builder-alpine:latest
 PACKAGER_IMAGE := ghcr.io/jheronimus/minime-packager:latest

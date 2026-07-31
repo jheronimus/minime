@@ -99,12 +99,10 @@ jobs:
             BOARD=$board ./scripts/build.sh source
           done
 
-  build:
-    name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }})
+  build-components:
+    name: Build Buildroot ${{ matrix.board }} components
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     timeout-minutes: 360
     defaults:
       run:
@@ -113,7 +111,6 @@ jobs:
       fail-fast: false
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
-        ui: [minui, allium]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -138,8 +135,42 @@ jobs:
 
       - name: Build system components
         run: |
-          echo "Building Buildroot system components for ${{ matrix.board }} (${{ matrix.ui }})"
-          make components BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
+          echo "Building Buildroot system components for ${{ matrix.board }}"
+          make components BOARD=${{ matrix.board }}
+
+      - name: Upload components artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildroot-components-${{ matrix.board }}-${{ github.sha }}
+          path: minime/targets/buildroot/out/${{ matrix.board }}
+          retention-days: 1
+
+  build-image:
+    name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }}) image
+    needs: [build-components, compute-matrix]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: minime/targets/buildroot
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
+        ui: [minui, allium]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Download components artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: buildroot-components-${{ matrix.board }}-${{ github.sha }}
+          path: minime/targets/buildroot/out/${{ matrix.board }}
 
       - name: Build image
         run: |
