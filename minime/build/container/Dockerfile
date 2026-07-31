@@ -6,7 +6,7 @@
 # Used by both Alpine and Buildroot targets for the `make image` step:
 #   genassets.sh, mkimage.sh, mkupdate.sh
 
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24.1
+FROM docker.io/library/alpine:3.24.1
 
 RUN apk add --no-cache --no-progress \
 	bash \
