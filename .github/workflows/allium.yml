@@ -1,0 +1,134 @@
+name: Build Allium UI assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'minime/ui/allium/**'
+      - '.github/workflows/allium.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-allium:
+    name: Build Allium (${{ matrix.libc }})
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libc: musl
+            target: aarch64-unknown-linux-musl
+          - libc: glibc
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential pkg-config \
+            libsdl2-dev cmake musl-tools musl-dev
+
+      - name: Build Allium binaries
+        run: |
+          cd minime/ui/allium
+          cargo build --release --target ${{ matrix.target }} --features minime \
+            --bin alliumd \
+            --bin allium-launcher \
+            --bin allium-menu \
+            --bin activity-tracker \
+            --bin screenshot \
+            --bin screenshot-viewer \
+            --bin say \
+            --bin show
+
+      - name: Assemble & Package Archive
+        run: |
+          BUILD=minime/ui/allium/target/${{ matrix.target }}/release
+          STATIC=minime/ui/allium/static
+          STAGE_DIR=$(mktemp -d)
+
+          mkdir -p "$STAGE_DIR/.ui/bin"
+          mkdir -p "$STAGE_DIR/.ui/config"
+          mkdir -p "$STAGE_DIR/.ui/state"
+          mkdir -p "$STAGE_DIR/.ui/themes"
+          mkdir -p "$STAGE_DIR/.ui/fonts"
+          mkdir -p "$STAGE_DIR/.tmp_update/bin"
+          mkdir -p "$STAGE_DIR/apps"
+          mkdir -p "$STAGE_DIR/RetroArch"
+          mkdir -p "$STAGE_DIR/Roms"
+          mkdir -p "$STAGE_DIR/Saves"
+          mkdir -p "$STAGE_DIR/BIOS"
+
+          cp $BUILD/alliumd "$STAGE_DIR/.ui/bin/"
+          cp $BUILD/allium-launcher "$STAGE_DIR/.ui/bin/"
+          cp $BUILD/allium-menu "$STAGE_DIR/.ui/bin/"
+          cp $BUILD/screenshot "$STAGE_DIR/.tmp_update/bin/"
+          cp $BUILD/say "$STAGE_DIR/.tmp_update/bin/"
+          cp $BUILD/show "$STAGE_DIR/.tmp_update/bin/"
+
+          cp $BUILD/activity-tracker "$STAGE_DIR/apps/Activity Tracker.pak/" || true
+          cp $BUILD/screenshot-viewer "$STAGE_DIR/apps/Screenshot Viewer.pak/" || true
+
+          cp -r "$STATIC/Apps/Activity Tracker.pak/." "$STAGE_DIR/apps/Activity Tracker.pak/" || true
+          cp -r "$STATIC/Apps/Screenshot Viewer.pak/." "$STAGE_DIR/apps/Screenshot Viewer.pak/" || true
+          cp -r "$STATIC/Apps/"*.pak "$STAGE_DIR/apps/" 2>/dev/null || true
+
+          cp -r "$STATIC/RetroArch/." "$STAGE_DIR/RetroArch/" || true
+          [ -d "$STATIC/.minime" ] && cp -r "$STATIC/.minime" "$STAGE_DIR/" || true
+
+          mkdir -p minime/ui/out
+          OUT_TAR="minime/ui/out/allium-${{ matrix.libc }}-aarch64.tar.xz"
+          tar -cJf "$OUT_TAR" -C "$STAGE_DIR" .
+          echo "Created $OUT_TAR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allium-${{ matrix.libc }}-aarch64
+          path: minime/ui/out/allium-${{ matrix.libc }}-aarch64.tar.xz
+          retention-days: 7
+
+  commit-assets:
+    name: Commit prebuilt Allium assets
+    needs: build-allium
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download musl artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allium-musl-aarch64
+          path: minime/ui/out
+
+      - name: Download glibc artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allium-glibc-aarch64
+          path: minime/ui/out
+
+      - name: Commit and push updated UI assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add minime/ui/out/allium-*.tar.xz
+          if git diff --staged --quiet; then
+            echo "No changes to Allium assets."
+          else
+            git commit -m "chore(ui): update prebuilt Allium UI assets"
+            git push origin main
+          fi
