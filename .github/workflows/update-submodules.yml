@@ -1,0 +1,35 @@
+name: Update UI submodules
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [update-submodules]
+
+permissions:
+  contents: write
+
+jobs:
+  update-submodules:
+    name: Update Submodules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Update submodules to latest main
+        run: |
+          git submodule update --remote --merge
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add minime/ui/allium minime/ui/minui
+          if git diff --staged --quiet; then
+            echo "Submodules are up-to-date."
+          else
+            git commit -m "chore(submodules): update UI submodules to latest main"
+            git push origin main
+          fi
