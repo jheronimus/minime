@@ -46,6 +46,16 @@ jobs:
             build-essential pkg-config \
             libsdl2-dev cmake musl-tools musl-dev
 
+      - name: Configure Rust musl linker
+        if: matrix.libc == 'musl'
+        run: |
+          rustup target add aarch64-unknown-linux-musl
+          mkdir -p ~/.cargo
+          cat >> ~/.cargo/config.toml << 'EOF'
+          [target.aarch64-unknown-linux-musl]
+          linker = "musl-gcc"
+          EOF
+
       - name: Build Allium binaries
         run: |
           cd minime/ui/allium
