@@ -32,6 +32,10 @@ on:
         default: true
         type: boolean
 
+concurrency:
+  group: build-alpine
+  cancel-in-progress: true
+
 jobs:
   compute-matrix:
     name: Compute board matrix

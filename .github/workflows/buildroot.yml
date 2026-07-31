@@ -37,6 +37,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: build-buildroot
+  cancel-in-progress: true
+
 jobs:
   compute-matrix:
     name: Compute board matrix

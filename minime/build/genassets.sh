@@ -35,27 +35,6 @@ trap cleanup EXIT
 
 mkdir -p "${DEST_DIR}"
 
-fetch_and_verify() {
-	url="$1"
-	expected_sha512="${2:-}"
-	filename=$(basename "$url")
-	filepath="${WORK_TMP}/${filename}"
-
-	echo "Downloading ${filename}..." >&2
-	curl -sL --retry 3 "${url}" -o "${filepath}"
-
-	if [ -n "${expected_sha512}" ]; then
-		actual_sha512=$(sha512sum "${filepath}" | cut -d' ' -f1)
-		if [ "$actual_sha512" != "$expected_sha512" ]; then
-			echo "ERROR: SHA512 mismatch for ${filename}" >&2
-			echo "Expected: ${expected_sha512}" >&2
-			echo "Actual:   ${actual_sha512}" >&2
-			exit 1
-		fi
-	fi
-	echo "${filepath}"
-}
-
 echo "=== Staging Payloads to ${DEST_DIR} (${LIBC}) ==="
 
 # 1. Stage UI
@@ -73,9 +52,9 @@ if [ "$UI" = "minui" ]; then
 		mkdir -p "${WORK_TMP}/minui"
 		tar -xf "${local_tar}" -C "${WORK_TMP}/minui"
 	else
-		MINUI_VER="20260722"
-		minui_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/minui-${MINUI_VER}-${LIBC}-aarch64.zip" | tail -n 1)
-		unzip -q -o "${minui_zip}" -d "${WORK_TMP}/minui"
+		echo "ERROR: MinUI artifact not found in ${UI_ART_DIR}/" >&2
+		echo "Run the minui.yml workflow or 'just build-minui' to generate it." >&2
+		exit 1
 	fi
 
 	[ -f "${WORK_TMP}/minui/MinUI.zip" ] && unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
@@ -103,9 +82,9 @@ elif [ "$UI" = "allium" ]; then
 		mkdir -p "${WORK_TMP}/allium"
 		tar -xf "${local_tar}" -C "${WORK_TMP}/allium"
 	else
-		ALLIUM_VER="20260720"
-		allium_zip=$(fetch_and_verify "https://github.com/jheronimus/Allium/releases/download/v${ALLIUM_VER}/allium-${ALLIUM_VER}-${LIBC}-aarch64.zip" | tail -n 1)
-		unzip -q -o "${allium_zip}" -d "${WORK_TMP}/allium"
+		echo "ERROR: Allium artifact not found in ${UI_ART_DIR}/" >&2
+		echo "Run the allium.yml workflow or 'just build-allium' to generate it." >&2
+		exit 1
 	fi
 
 	[ -d "${WORK_TMP}/allium/.ui" ] && cp -a "${WORK_TMP}/allium/.ui" "${DEST_DIR}/"
