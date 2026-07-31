@@ -80,12 +80,14 @@ ensure_buildroot() {
 defconfig() {
 	log "merging config fragments for ${BOARD} (${UI})..."
 	mkdir -p "${BUILDROOT_OUTPUT_DIR}"
+	configs="${BR2_EXTERNAL}/configs/common.config ${BR2_EXTERNAL}/configs/${BOARD}.config"
+	if [ -n "${UI}" ] && [ -f "${BR2_EXTERNAL}/configs/${UI}.config" ]; then
+		configs="${configs} ${BR2_EXTERNAL}/configs/${UI}.config"
+	fi
 	"${BUILDROOT_DIR}/support/kconfig/merge_config.sh" \
 		-O "${BUILDROOT_OUTPUT_DIR}" \
 		-m \
-		"${BR2_EXTERNAL}/configs/common.config" \
-		"${BR2_EXTERNAL}/configs/${BOARD}.config" \
-		"${BR2_EXTERNAL}/configs/${UI}.config"
+		${configs}
 	make -C "${BUILDROOT_DIR}" ${BUILDROOT_MAKE_ARGS} olddefconfig
 }
 
