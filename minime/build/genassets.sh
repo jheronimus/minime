@@ -59,17 +59,30 @@ fetch_and_verify() {
 echo "=== Staging Payloads to ${DEST_DIR} (${LIBC}) ==="
 
 # 1. Stage UI
-if [ "$UI" = "minui" ]; then
-	MINUI_VER="20260722"
-	
-	minui_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/minui-${MINUI_VER}-${LIBC}-aarch64.zip" | tail -n 1)
+UI_ART_DIR="${MINIME_ROOT}/minime/ui/out"
 
-	unzip -q -o "${minui_zip}" -d "${WORK_TMP}/minui"
+if [ "$UI" = "minui" ]; then
+	local_zip="${UI_ART_DIR}/minui-${LIBC}-aarch64.zip"
+	local_tar="${UI_ART_DIR}/minui-${LIBC}-aarch64.tar.xz"
+
+	if [ -f "${local_zip}" ]; then
+		echo "Using local UI artifact: ${local_zip}" >&2
+		unzip -q -o "${local_zip}" -d "${WORK_TMP}/minui"
+	elif [ -f "${local_tar}" ]; then
+		echo "Using local UI artifact: ${local_tar}" >&2
+		mkdir -p "${WORK_TMP}/minui"
+		tar -xf "${local_tar}" -C "${WORK_TMP}/minui"
+	else
+		MINUI_VER="20260722"
+		minui_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/minui-${MINUI_VER}-${LIBC}-aarch64.zip" | tail -n 1)
+		unzip -q -o "${minui_zip}" -d "${WORK_TMP}/minui"
+	fi
+
 	[ -f "${WORK_TMP}/minui/MinUI.zip" ] && unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
 
 	[ -d "${WORK_TMP}/minui/.system" ] && cp -a "${WORK_TMP}/minui/.system" "${DEST_DIR}/"
 	[ -d "${WORK_TMP}/minui/.minime" ] && cp -a "${WORK_TMP}/minui/.minime" "${DEST_DIR}/"
-	
+
 	# Strip .elf extensions (MinUI convention; Minime expects bare names)
 	for f in "${DEST_DIR}/.system/minime/bin/"*.elf; do
 		[ -f "$f" ] && mv -f "$f" "${f%.elf}"
@@ -79,10 +92,21 @@ if [ "$UI" = "minui" ]; then
 	[ -d "${WORK_TMP}/minui/Tools" ] && cp -a "${WORK_TMP}/minui/Tools" "${DEST_DIR}/"
 
 elif [ "$UI" = "allium" ]; then
-	ALLIUM_VER="20260720"
-	
-	allium_zip=$(fetch_and_verify "https://github.com/jheronimus/Allium/releases/download/v${ALLIUM_VER}/allium-${ALLIUM_VER}-${LIBC}-aarch64.zip" | tail -n 1)
-	unzip -q -o "${allium_zip}" -d "${WORK_TMP}/allium"
+	local_zip="${UI_ART_DIR}/allium-${LIBC}-aarch64.zip"
+	local_tar="${UI_ART_DIR}/allium-${LIBC}-aarch64.tar.xz"
+
+	if [ -f "${local_zip}" ]; then
+		echo "Using local UI artifact: ${local_zip}" >&2
+		unzip -q -o "${local_zip}" -d "${WORK_TMP}/allium"
+	elif [ -f "${local_tar}" ]; then
+		echo "Using local UI artifact: ${local_tar}" >&2
+		mkdir -p "${WORK_TMP}/allium"
+		tar -xf "${local_tar}" -C "${WORK_TMP}/allium"
+	else
+		ALLIUM_VER="20260720"
+		allium_zip=$(fetch_and_verify "https://github.com/jheronimus/Allium/releases/download/v${ALLIUM_VER}/allium-${ALLIUM_VER}-${LIBC}-aarch64.zip" | tail -n 1)
+		unzip -q -o "${allium_zip}" -d "${WORK_TMP}/allium"
+	fi
 
 	[ -d "${WORK_TMP}/allium/.ui" ] && cp -a "${WORK_TMP}/allium/.ui" "${DEST_DIR}/"
 	[ -d "${WORK_TMP}/allium/.minime" ] && cp -a "${WORK_TMP}/allium/.minime" "${DEST_DIR}/"

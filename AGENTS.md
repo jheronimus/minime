@@ -73,12 +73,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
-- **UI Submodules & Release Workflow**: `minime/ui/allium` and `minime/ui/minui` are git submodules. When a UI change is needed, agents MUST follow this exact sequence:
-  1. Make edits inside `minime/ui/<ui-name>/`.
-  2. Commit and push changes inside `minime/ui/<ui-name>/` to its remote origin (`cd minime/ui/<ui-name> && git commit -am "..." && git push origin main`). This triggers the remote release build in the UI repository (`jheronimus/Allium` / `jheronimus/MinUI`).
-  3. Update submodule pointer in `minime` (`git commit -am "chore(submodules): update <ui-name>"`).
-  4. Push changes in `minime` (`git push origin main`). This triggers `alpine.yml` and `buildroot.yml` in `minime`.
-  5. The `sync-uis` dependency check in `minime` automatically detects the active or queued remote UI build, waits via `gh run watch` for it to complete and publish release archives, and then proceeds to `make image`.
+- **UI Submodules & Central Prebuilt Artifacts**: `minime/ui/allium` and `minime/ui/minui` are git submodules. Prebuilt UI binary archives live centrally in `minime/ui/out/` (`allium-musl-aarch64.tar.xz`, `allium-glibc-aarch64.tar.xz`, `minui-musl-aarch64.tar.xz`, `minui-glibc-aarch64.tar.xz`). OS image workflows (`alpine.yml` and `buildroot.yml`) trigger automatically on `paths: 'minime/ui/out/**'` when UI artifacts update. No cross-repo API calls, remote watching, or HTTP release zip downloads are used.
 
 ## Infrastructure & Scripts
 
