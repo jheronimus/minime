@@ -161,6 +161,30 @@ check-packages:
         echo "Buildroot source tree not found — skipping (CI only)."
     fi
 
+# ── UI Management ─────────────────────────────────────────────────────────────
+
+# Build Allium UI binaries locally for target C library (musl or glibc)
+build-allium target="musl":
+    #!/usr/bin/env sh
+    set -eu
+    echo "Building Allium for target {{target}}..."
+    cd minime/ui/allium
+    if [ "{{target}}" = "musl" ]; then
+        cargo build --release --target aarch64-unknown-linux-musl --features minime
+    else
+        cargo build --release --target aarch64-unknown-linux-gnu --features minime
+    fi
+
+# Build MinUI binaries locally for target C library (musl or glibc)
+build-minui target="musl":
+    #!/usr/bin/env sh
+    set -eu
+    echo "Building MinUI for target {{target}}..."
+    cd minime/ui/minui
+    make system PLATFORM=minime
+    make cores PLATFORM=minime
+    make package
+
 # ── Developer setup ───────────────────────────────────────────────────────────
 
 # Install git pre-commit hook that runs `just validate` before every commit
