@@ -32,14 +32,13 @@ help:
 		"  make clean                      Remove built outputs"
 
 components:
-	@mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl
+	@mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl $(CURDIR)/out/$(BOARD)
 	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
 		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"
-
-image:
-	@mkdir -p $(CURDIR)/out/$(BOARD)
 	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
 		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh system-image"
+
+image:
 	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
 		-v $(MINIME_ROOT):/workspace \
 		$(PACKAGER_IMAGE) \
