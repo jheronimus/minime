@@ -18,7 +18,7 @@
 
 set -eu
 
-MINIME_ROOT="${MINIME_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}"
+MINIME_ROOT="${MINIME_ROOT:-$(cd "$(dirname "$0")/../../../.." && pwd)}"
 BUILDROOT_ROOT="${BUILDROOT_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 
 BOARD="${BOARD:-rk3566}"
