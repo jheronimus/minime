@@ -35,7 +35,7 @@ image:
 	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
 		-v $(MINIME_ROOT):/workspace \
 		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/buildroot/out/$(BOARD)/ui && /workspace/minime/build/mkimage.sh --target buildroot --board $(BOARD) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target buildroot --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD)"
+		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/buildroot/out/$(BOARD)/ui buildroot && /workspace/minime/build/mkimage.sh --target buildroot --board $(BOARD) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target buildroot --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD)"
 
 update:
 	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \

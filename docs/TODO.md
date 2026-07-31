@@ -10,6 +10,8 @@
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
   - [THEORY] Atomic profile application for governor, frequency bounds, and core limits via key combinations or minimal UI.
+- [ ] Investigate how performance can be improved in Alpine with musl
+  - [THEORY] jemmalloc/mimalloc3?
 
 ## Power Management & Suspend
 

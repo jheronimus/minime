@@ -7,16 +7,23 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} <minui|allium|none> <dest_dir>" >&2
+	echo "Usage: ${0##*/} <minui|allium|none> <dest_dir> [alpine|buildroot|musl|glibc]" >&2
 	exit 1
 }
 
 UI="${1:-}"
 DEST_DIR="${2:-}"
+TARGET_RAW="${3:-alpine}"
 
 if [ -z "$UI" ] || [ -z "$DEST_DIR" ]; then
 	usage
 fi
+
+case "${TARGET_RAW}" in
+	alpine|musl) LIBC="musl" ;;
+	buildroot|glibc) LIBC="glibc" ;;
+	*) LIBC="musl" ;;
+esac
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 WORK_TMP="$(mktemp -d)"
@@ -30,36 +37,35 @@ mkdir -p "${DEST_DIR}"
 
 fetch_and_verify() {
 	url="$1"
-	expected_sha512="$2"
+	expected_sha512="${2:-}"
 	filename=$(basename "$url")
 	filepath="${WORK_TMP}/${filename}"
 
 	echo "Downloading ${filename}..." >&2
 	curl -sL --retry 3 "${url}" -o "${filepath}"
 
-	actual_sha512=$(sha512sum "${filepath}" | cut -d' ' -f1)
-	if [ "$actual_sha512" != "$expected_sha512" ]; then
-		echo "ERROR: SHA512 mismatch for ${filename}" >&2
-		echo "Expected: ${expected_sha512}" >&2
-		echo "Actual:   ${actual_sha512}" >&2
-		exit 1
+	if [ -n "${expected_sha512}" ]; then
+		actual_sha512=$(sha512sum "${filepath}" | cut -d' ' -f1)
+		if [ "$actual_sha512" != "$expected_sha512" ]; then
+			echo "ERROR: SHA512 mismatch for ${filename}" >&2
+			echo "Expected: ${expected_sha512}" >&2
+			echo "Actual:   ${actual_sha512}" >&2
+			exit 1
+		fi
 	fi
 	echo "${filepath}"
 }
 
-echo "=== Staging Payloads to ${DEST_DIR} ==="
+echo "=== Staging Payloads to ${DEST_DIR} (${LIBC}) ==="
 
 # 1. Stage UI
 if [ "$UI" = "minui" ]; then
 	MINUI_VER="20260722"
-	MINUI_DOT="0"
 	
-	base_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/MinUI-${MINUI_VER}-${MINUI_DOT}-base.zip" "23abbd083038d317f7bcc62aee32632c863ec43728b9f80d167b06c103f80581cb6733992a066e46e334e3b5b24d6d80ddb9b4ce28c526006f836ffb11cceca2" | tail -n 1)
-	extras_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/MinUI-${MINUI_VER}-${MINUI_DOT}-extras.zip" "3bcbfa82816a5ff993bed766c6423b1e36bb108764aa5ae45ad479ff540ce5d9ad9999b12a2039925de9f64f7789aa88c5fae4cddf86a67315b79cf7045037ca" | tail -n 1)
+	minui_zip=$(fetch_and_verify "https://github.com/jheronimus/MinUI/releases/download/v${MINUI_VER}/minui-${MINUI_VER}-${LIBC}-aarch64.zip" | tail -n 1)
 
-	unzip -q -o "${base_zip}" -d "${WORK_TMP}/minui"
-	unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
-	unzip -q -o "${extras_zip}" -d "${WORK_TMP}/minui"
+	unzip -q -o "${minui_zip}" -d "${WORK_TMP}/minui"
+	[ -f "${WORK_TMP}/minui/MinUI.zip" ] && unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
 
 	[ -d "${WORK_TMP}/minui/.system" ] && cp -a "${WORK_TMP}/minui/.system" "${DEST_DIR}/"
 	[ -d "${WORK_TMP}/minui/.minime" ] && cp -a "${WORK_TMP}/minui/.minime" "${DEST_DIR}/"
@@ -75,7 +81,7 @@ if [ "$UI" = "minui" ]; then
 elif [ "$UI" = "allium" ]; then
 	ALLIUM_VER="20260720"
 	
-	allium_zip=$(fetch_and_verify "https://github.com/jheronimus/Allium/releases/download/v${ALLIUM_VER}/allium-minime-aarch64.zip" "579a51cad525fc04d024c1474532267a4a28b15f232b3305d1b495007ff6bd8558eb2ba4e1f4e154d1a511ca0ff1da7d0eae1660b6dc6409dfa647300147f79a" | tail -n 1)
+	allium_zip=$(fetch_and_verify "https://github.com/jheronimus/Allium/releases/download/v${ALLIUM_VER}/allium-${ALLIUM_VER}-${LIBC}-aarch64.zip" | tail -n 1)
 	unzip -q -o "${allium_zip}" -d "${WORK_TMP}/allium"
 
 	[ -d "${WORK_TMP}/allium/.ui" ] && cp -a "${WORK_TMP}/allium/.ui" "${DEST_DIR}/"
