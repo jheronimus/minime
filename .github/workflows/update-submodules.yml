@@ -20,7 +20,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.UI_UPDATE || secrets.GITHUB_TOKEN }}
 
       - name: Update submodules to latest main
         run: |
