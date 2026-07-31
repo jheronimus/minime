@@ -42,7 +42,7 @@ jobs:
         board: ${{ fromJSON(needs.resolve-boards.outputs.boards) }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Resolve latest U-Boot version
         id: uboot
@@ -87,7 +87,7 @@ jobs:
       actions: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
