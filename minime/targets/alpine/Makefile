@@ -42,7 +42,7 @@ image:
 	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
 		-v $(MINIME_ROOT):/workspace \
 		$(PACKAGER_IMAGE) \
-		sh -c "UI=$(UI) BOARD=$(BOARD) /workspace/minime/build/genassets.sh /workspace/minime/targets/alpine/out/$(BOARD)/ui && /workspace/minime/build/mkimage.sh --target alpine --board $(BOARD) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target alpine --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD)"
+		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/alpine/out/$(BOARD)/ui && /workspace/minime/build/mkimage.sh --target alpine --board $(BOARD) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target alpine --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD)"
 
 update:
 	@mkdir -p $(CURDIR)/out/$(BOARD)
