@@ -6,7 +6,7 @@ on:
     paths:
       - 'minime/boards/**'
       - 'minime/uboot/**'
-      - 'minime/genimage/**'
+      - 'minime/build/**'
       - 'minime/targets/alpine/**'
       - 'src/**'
       - 'roms/**'
@@ -53,12 +53,12 @@ jobs:
       - name: Select boards
         id: set
         run: |
-          boards='["rk3566","rk3326","h700"]'
+          boards='["rk3566","h700"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
                   --argjson h700   '${{ inputs.build_h700   || true }}' \
-                  --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
+                  --argjson rk3326 '${{ inputs.build_rk3326 || false }}' \
                   --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
                   'if $h700   then . + ["h700"]   else . end |
                    if $rk3326 then . + ["rk3326"] else . end |
@@ -86,6 +86,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Manage cache
         uses: ./.github/actions/setup-cache
@@ -98,21 +100,17 @@ jobs:
           echo "Building Alpine system components for ${{ matrix.board }} (${{ matrix.ui }})"
           make components BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
-      - name: Install host image tools
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends \
-            mtools genimage u-boot-tools device-tree-compiler dosfstools
-
       - name: Build image
         run: |
           echo "Building Alpine image for ${{ matrix.board }} (${{ matrix.ui }})"
           make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
-      - name: Upload image
+      - name: Upload image and update archive
         run: |
           cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz ../../../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
+          cp out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.tar.xz ../../../minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.tar.xz
           cd ../../..
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
-          gh release upload testing minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
+          gh release upload testing minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.tar.xz --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

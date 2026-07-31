@@ -3,8 +3,8 @@
 # Minime Update Package Generator
 #
 # Usage:
-#   genupdate.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
-#                   --input-dir <dir> --output-dir <dir>
+#   mkupdate.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
+#                 --input-dir <dir> --output-dir <dir>
 
 set -eu
 
@@ -18,6 +18,8 @@ BOARD=""
 INPUT_DIR=""
 OUTPUT_DIR=""
 
+UI=""
+
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--target)
@@ -26,6 +28,10 @@ while [ $# -gt 0 ]; do
 		;;
 	--board)
 		BOARD="$2"
+		shift 2
+		;;
+	--ui)
+		UI="$2"
 		shift 2
 		;;
 	--input-dir)
@@ -107,11 +113,16 @@ cat <<EOF >"${STAGE_DIR}/manifest.json"
 {
   "target": "${TARGET}",
   "board": "${BOARD}",
+  "ui": "${UI}",
   "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 }
 EOF
 
-UPDATE_PKG="${OUTPUT_DIR}/minime-update-${TARGET}-${BOARD}.tar.gz"
-(cd "${STAGE_DIR}" && tar -czf "${UPDATE_PKG}" .)
+if [ -n "${UI}" ]; then
+	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.xz"
+else
+	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}.tar.xz"
+fi
+(cd "${STAGE_DIR}" && tar -cf - . | xz -T0 -9 > "${UPDATE_PKG}")
 
 echo "Update package created: ${UPDATE_PKG}"

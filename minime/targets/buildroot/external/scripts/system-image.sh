@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck shell=sh
-# Minime Buildroot post-image script.
+# Minime Buildroot system-image script.
 
 set -eu
 
@@ -32,7 +32,7 @@ while true; do
 done
 
 if [ -z "$BOARD_NAME" ]; then
-	echo "ERROR: -b option is required for post-image script." >&2
+	echo "ERROR: -b option is required for system-image script." >&2
 	exit 1
 fi
 
@@ -69,4 +69,4 @@ fi
 (cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${BINARIES_DIR}/initramfs.img")
 rm -rf "${INITRD_STAGE}"
 
-echo "Buildroot post-image stage complete."
+echo "Buildroot system-image stage complete."

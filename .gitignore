@@ -40,4 +40,6 @@ scripts/update_kernel_version.py
 deploy.cfg
 wifi.cfg
 downloads/
-ui/
+/ui/
+!minime/ui/
+!minime/ui/*

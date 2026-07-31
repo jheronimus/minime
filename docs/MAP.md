@@ -22,9 +22,11 @@ minime/
 ├── targets/            # Target Software Builders
 │   ├── alpine/         # Alpine target builder (aports, Makefile, container, configs, scripts)
 │   └── buildroot/      # Buildroot target builder (external packages, Makefile, defconfigs, scripts)
-└── genimage/           # Central Image & Update Packaging Pipeline
-    ├── genimage.sh     # SD card bootable image builder (.img.xz)
-    └── genupdate.sh    # Cross-distro update archive generator (.tar.gz)
+├── build/              # Central Packaging Pipeline
+│   ├── mkimage.sh      # SD card bootable image builder (.img.xz)
+│   ├── mkupdate.sh     # Cross-distro update archive generator (.tar.gz)
+│   ├── genassets.sh    # UI payload downloader
+│   └── container/      # Multi-arch shared packager container (genimage + mtools)
 
 src/                    # Shared Source Code Vaults
 ├── libmali/            # ARM Mali Bifrost/Utgard userspace libraries & shims
@@ -43,7 +45,7 @@ To ensure dual-distro co-equality and prevent path drift across Alpine and Build
 
 1. **`MINIME_ROOT`**: Absolute path to the monorepo root directory (`/workspace` inside containers, or repository root on host).
    - **Shared Board Assets**: `${MINIME_ROOT}/minime/boards/`
-   - **Shared Image Packagers**: `${MINIME_ROOT}/minime/genimage/`
+   - **Shared Image Packagers**: `${MINIME_ROOT}/minime/build/`
    - **Prebuilt Bootloaders**: `${MINIME_ROOT}/minime/uboot/`
    - **Shared Local Sources**: `${MINIME_ROOT}/src/` and `${MINIME_ROOT}/roms/`
 2. **Target Roots (`ALPINE_ROOT` / `BUILDROOT_ROOT`)**:
@@ -136,7 +138,7 @@ Building Alpine Linux firmware for Minime:
 
 - **`Makefile`**: Entrypoint for Alpine builds. Two-step build convention:
   - `make components BOARD=<board> UI=<ui>` — compilation in container (minirootfs, APKs, rootfs, erofs, initramfs).
-  - `make image BOARD=<board> UI=<ui>` — runs `genimage.sh` + `genupdate.sh` on host.
+  - `make image BOARD=<board> UI=<ui>` — runs `genassets.sh` + `mkimage.sh` + `mkupdate.sh` in packager container.
 - **`scripts/build.sh`**: Core build script with subcommands:
   - `components` (default): resolve_minirootfs → build_local_apks → assemble_rootfs → build_system_image
   - `system-image`: erofs + initramfs only (called by `make image` in container)
@@ -152,7 +154,7 @@ Building Buildroot firmware for Minime:
 
 - **`Makefile`**: Entrypoint for Buildroot builds. Two-step build convention:
   - `make components BOARD=<board> UI=<ui>` — compilation in container (defconfig, full Buildroot build).
-  - `make image BOARD=<board> UI=<ui>` — runs `genimage.sh` + `genupdate.sh` on host.
+  - `make image BOARD=<board> UI=<ui>` — runs `genassets.sh` + `mkimage.sh` + `mkupdate.sh` in packager container.
 - **`scripts/build.sh`**: Build wrapper with subcommands:
   - `components` (default): defconfig → make → copy_images
   - `defconfig`: merge config fragments only
@@ -162,17 +164,17 @@ Building Buildroot firmware for Minime:
   - `external/external.desc`: External tree metadata (`name: MINIME`).
   - `external/configs/`: Config fragments: `common.config`, `<board>.config`, `<ui>.config`.
   - `external/scripts/post-build.sh`: Copies OpenRC services, traits, firmware into rootfs.
-  - `external/scripts/post-image.sh`: Builds system.erofs and initramfs.
+   - `external/scripts/system-image.sh`: Builds system.erofs and initramfs.
   - `external/package/`: Custom packages (allium, minui, fatresize, libmali, mali-kbase, retroarch, etc.).
 - **`container/Dockerfile`**: Build environment container (`debian:bookworm-slim`, `genimage`, `mtools`, `erofs-utils`).
 - **`out/<board>/`**: Target output directory.
 
 ---
 
-# Central Packager (`minime/genimage/`)
+# Central Packager (`minime/build/`)
 
-- **`genimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
-- **`genupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.
+- **`mkimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
+- **`mkupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-update-<target>-<board>.tar.gz` for cross-distro updates and live target switching.
 
 ---
 
@@ -181,19 +183,19 @@ Building Buildroot firmware for Minime:
 Both Alpine and Buildroot follow a two-step build convention:
 
 ```
-make components  →  build.sh  (compilation in container)
-make image       →  genimage.sh + genupdate.sh  (packaging on host)
+make components  →  build.sh  (compilation in builder container)
+make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in shared packager container)
 ```
 
 | Step | Alpine | Buildroot | Runs |
 |------|--------|-----------|------|
-| `make components` | `build.sh components` | `build.sh components` | In container |
-| `make image` | `genimage.sh` + `genupdate.sh` | `genimage.sh` + `genupdate.sh` | On host |
+| `make components` | `build.sh components` | `build.sh components` | In builder container |
+| `make image` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | In shared packager container |
 
 **Rules:**
 - `build.sh` does compilation only. No image packaging.
-- `genimage.sh` does image packaging only. No compilation.
-- `genupdate.sh` does update archive generation. No compilation.
+- `mkimage.sh` does image packaging only. No compilation.
+- `mkupdate.sh` does update archive generation. No compilation.
 - The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
 
 ---

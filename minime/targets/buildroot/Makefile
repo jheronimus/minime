@@ -1,170 +1,52 @@
-SHELL := /bin/bash
-ROOT_DIR := $(CURDIR)
-OS := $(shell uname -s)
-
-ifeq ($(OS),Darwin)
-    HOMEBREW_PREFIX ?= $(shell brew --prefix 2>/dev/null || echo /opt/homebrew)
-    COREUTILS_GNUBIN := $(HOMEBREW_PREFIX)/opt/coreutils/libexec/gnubin
-    ifneq ($(wildcard $(COREUTILS_GNUBIN)),)
-        export PATH := $(COREUTILS_GNUBIN):$(PATH)
-    endif
-endif
-
-BUILDROOT_VERSION := 2026.05.1
-BUILDROOT_ARCHIVE := buildroot-$(BUILDROOT_VERSION).tar.gz
-BUILDROOT_URL := https://buildroot.org/downloads/$(BUILDROOT_ARCHIVE)
-BUILDROOT_DIR := buildroot
-BUILDROOT_STAMP := $(BUILDROOT_DIR)/.minime-buildroot-$(BUILDROOT_VERSION).stamp
-SUPPORTED_BOARDS := h700 rk3326 rk3566
-BOARD ?= rk3566
-
-ifeq ($(filter $(BOARD),$(SUPPORTED_BOARDS)),)
-    $(error Invalid BOARD="$(BOARD)". Supported boards: $(SUPPORTED_BOARDS))
-endif
-
 MINIME_ROOT := $(abspath $(CURDIR)/../../..)
-BUILDROOT_ROOT := $(CURDIR)
-LINUX_ROOT := $(BUILDROOT_ROOT)
-BASE_OUTPUT_DIR := $(HOME)/buildroot-output
-BUILDROOT_CCACHE_DIR := $(HOME)/.buildroot-ccache
-BUILDROOT_DL_DIR := $(HOME)/.buildroot-dl
+PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
+PODMAN_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
-BUILDROOT_OUTPUT_DIR := $(BASE_OUTPUT_DIR)/$(BOARD)
-BR2_EXTERNAL := $(BUILDROOT_ROOT)/external
-MINIME_DEFCONFIG := $(BOARD).config
+SUPPORTED_BOARDS := rk3566 h700
+BOARD ?= rk3566
 UI ?= minui
 
-TOPLEVEL_JLEVEL ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-LOG_DIR := $(CURDIR)/logs
+HOST_ARCH := $(shell uname -m)
+PACKAGER_PLATFORM := $(if $(filter aarch64 arm64,$(HOST_ARCH)),linux/arm64,linux/amd64)
 
-BUILDROOT_MAKE_ARGS := BR2_EXTERNAL=$(BR2_EXTERNAL) O=$(BUILDROOT_OUTPUT_DIR) BR2_CCACHE_DIR=$(BUILDROOT_CCACHE_DIR) BR2_DL_DIR=$(BUILDROOT_DL_DIR) MINIME_ROOT=$(MINIME_ROOT) BUILDROOT_ROOT=$(BUILDROOT_ROOT)
+BUILDER_IMAGE := ghcr.io/jheronimus/minime-builder-buildroot:latest
+PACKAGER_IMAGE := ghcr.io/jheronimus/minime-packager:latest
 
-RUN_CMD = $(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) $(1)
-
-export MINIME_ROOT BUILDROOT_ROOT LINUX_ROOT BUILDROOT_DIR BASE_OUTPUT_DIR BUILDROOT_OUTPUT_DIR BUILDROOT_MAKE_ARGS BOARD
-
-.PHONY: help prepare buildroot defconfig image clean clean-all copy_images check-package FORCE
+.PHONY: help components image update clean
 
 help:
 	@printf '%s\n' \
-		"Minime Firmware Build Orchestrator" \
-		"==================================" \
-		"Commands:" \
-		"  make defconfig     - Merge config fragments for BOARD (default: rk3566)" \
-		"  make image         - Build complete bootable firmware image for BOARD" \
-		"  make prepare       - Install host tools on Linux" \
-		"  make check-rebuild - Scan packages for out-of-date build stamps" \
-		"  make check-package CHECK_PACKAGE_FILES='path ...'" \
-		"                       Run Buildroot's package linter on specified files" \
-		"  make clean         - Remove compilation output for active BOARD" \
-		"  make clean-all     - Remove ALL compilation outputs and delete Buildroot source tree" \
-		"  make <target>      - Pass arbitrary command directly to Buildroot (e.g., make menuconfig)" \
-		"" \
-		"Options (override with VAR=value):" \
-		"  BOARD              - Target hardware (default: rk3566, supported: $(SUPPORTED_BOARDS))" \
-		"  TOPLEVEL_JLEVEL    - Number of parallel build jobs (default: auto-detected CPU cores)"
+		"Minime Buildroot targets:" \
+		"  make components BOARD=rk3566    Build system components (kernel, rootfs, packages)" \
+		"  make image BOARD=rk3566 UI=minui Build full release SD image" \
+		"  make update BOARD=rk3566 UI=minui Build update tarball package" \
+		"  make clean                      Remove built outputs"
 
-$(BUILDROOT_STAMP):
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/buildroot-fetch-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; set -o pipefail; { \
-		set -e; \
-		echo "Downloading Buildroot $(BUILDROOT_VERSION)..."; \
-		if command -v wget >/dev/null 2>&1; then wget -q --show-progress "$(BUILDROOT_URL)"; \
-		else curl -fL -o "$(BUILDROOT_ARCHIVE)" "$(BUILDROOT_URL)"; fi; \
-		rm -rf $(BUILDROOT_DIR); mkdir -p $(BUILDROOT_DIR); \
-		tar xf $(BUILDROOT_ARCHIVE) --strip-components=1 -C $(BUILDROOT_DIR); \
-		if [ -d support/buildroot-patches ]; then \
-			echo "Applying patches to Buildroot..."; \
-			for p in support/buildroot-patches/*.patch; do \
-				[ -e "$$p" ] || continue; \
-				echo "Applying $$p..."; \
-				patch -p1 -d $(BUILDROOT_DIR) < "$$p"; \
-			done; \
-		fi; \
-		touch $(BUILDROOT_STAMP); rm -f $(BUILDROOT_ARCHIVE); \
-	} 2>&1 | tee "$$LOG_FILE"
+components:
+	@mkdir -p $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl
+	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform linux/amd64 \
+		-v $(MINIME_ROOT):/workspace \
+		-v $(HOME)/.buildroot-ccache:/root/.buildroot-ccache \
+		-v $(HOME)/.buildroot-dl:/root/.buildroot-dl \
+		$(BUILDER_IMAGE) \
+		sh -c "BOARD=$(BOARD) UI=$(UI) /workspace/minime/targets/buildroot/scripts/build.sh components"
 
-buildroot: $(BUILDROOT_STAMP)
-	@echo "Buildroot $(BUILDROOT_VERSION) is ready in $(BUILDROOT_DIR)"
+image:
+	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
+		-v $(MINIME_ROOT):/workspace \
+		$(PACKAGER_IMAGE) \
+		sh -c "UI=$(UI) BOARD=$(BOARD) /workspace/minime/build/genassets.sh /workspace/minime/targets/buildroot/out/$(BOARD)/ui && /workspace/minime/build/mkimage.sh --target buildroot --board $(BOARD) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target buildroot --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD)"
 
-BUILDROOT_IMAGE_NAME := minime-builder-buildroot
-GHCR_BUILDROOT_IMAGE ?= ghcr.io/jheronimus/minime-builder-buildroot:latest
-PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
-
-prepare-container:
-	@$(PODMAN_CMD) info >/dev/null 2>&1 || (echo "ERROR: $(PODMAN_CMD) daemon is not running or not accessible." >&2 && exit 1)
-	@mkdir -p $(BASE_OUTPUT_DIR) $(BUILDROOT_CCACHE_DIR) $(BUILDROOT_DL_DIR)
-	@$(PODMAN_CMD) image inspect $(BUILDROOT_IMAGE_NAME) >/dev/null 2>&1 || \
-		($(PODMAN_CMD) pull $(GHCR_BUILDROOT_IMAGE) && $(PODMAN_CMD) tag $(GHCR_BUILDROOT_IMAGE) $(BUILDROOT_IMAGE_NAME)) >/dev/null 2>&1 || \
-		$(PODMAN_CMD) build --platform linux/amd64 \
-			--build-arg BUILDER_UID=$$(id -u) \
-			--build-arg BUILDER_GID=$$(id -g) \
-			-t $(BUILDROOT_IMAGE_NAME) -f container/Dockerfile .
-
-prepare:
-	@../scripts/prepare-linux.sh
-
-defconfig: $(BUILDROOT_STAMP) defconfig_internal
-
-defconfig_internal:
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/defconfig-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	set -o pipefail; \
-	mkdir -p $(BUILDROOT_OUTPUT_DIR) && \
-	$(BUILDROOT_DIR)/support/kconfig/merge_config.sh \
-		-O $(BUILDROOT_OUTPUT_DIR) \
-		-m \
-		external/configs/common.config \
-		external/configs/$(BOARD).config 2>&1 | tee "$$LOG_FILE" && \
-	$(MAKE) -C $(BUILDROOT_DIR) $(BUILDROOT_MAKE_ARGS) olddefconfig 2>&1 | tee -a "$$LOG_FILE"
-
-components: $(BUILDROOT_STAMP) defconfig
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/components-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	set -o pipefail; $(call RUN_CMD,-j$(TOPLEVEL_JLEVEL)) 2>&1 | tee "$$LOG_FILE"
-	@$(MAKE) copy_images
-
-image: components
-	@echo "Fetching FAT32 payloads for Buildroot $(BOARD) ($(UI))..."
-	$(MINIME_ROOT)/minime/genimage/genassets.sh "$(UI)" "$(CURDIR)/out/$(BOARD)/ui"
-	@echo "Running genimage for Buildroot $(BOARD)..."
-	$(MINIME_ROOT)/minime/genimage/genimage.sh \
-		--target buildroot \
-		--board $(BOARD) \
-		--input-dir $(CURDIR)/out/$(BOARD) \
-		--output-dir $(CURDIR)/out/$(BOARD)
-	$(MINIME_ROOT)/minime/genimage/genupdate.sh \
-		--target buildroot \
-		--board $(BOARD) \
-		--input-dir $(CURDIR)/out/$(BOARD) \
-		--output-dir $(CURDIR)/out/$(BOARD)
-
-copy_images:
-	@mkdir -p $(CURDIR)/out/$(BOARD)
-	@echo "Copying built firmware images to out/$(BOARD)/..."
-	@mkdir -p $(BUILDROOT_OUTPUT_DIR)/images
-	@cp -r $(BUILDROOT_OUTPUT_DIR)/images/* out/$(BOARD)/ 2>/dev/null || true
-
-check-package:
-	@if [ -z "$(CHECK_PACKAGE_FILES)" ]; then \
-		echo "ERROR: set CHECK_PACKAGE_FILES='path ...'" >&2; \
-		exit 1; \
-	fi
-	@python3 buildroot/utils/check-package $(CHECK_PACKAGE_FILES)
+update:
+	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
+		-v $(MINIME_ROOT):/workspace \
+		$(PACKAGER_IMAGE) \
+		sh -c "/workspace/minime/build/mkupdate.sh --target buildroot --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/buildroot/out/$(BOARD) --output-dir /workspace/minime/targets/buildroot/out/$(BOARD)"
 
 clean:
-	@rm -rf $(LOG_DIR) out/$(BOARD)/
-	@rm -rf $(BUILDROOT_OUTPUT_DIR)
+	@rm -rf $(CURDIR)/out/$(BOARD)
 
-clean-all:
-	@rm -rf $(BUILDROOT_DIR) $(LOG_DIR) $(CURDIR)/out/
-	@rm -rf $(BASE_OUTPUT_DIR)
-
-Makefile: ;
-
-%: $(BUILDROOT_STAMP) FORCE
-	@mkdir -p $(LOG_DIR); LOG_FILE="$(LOG_DIR)/$@-$$(date +%F-%H%M%S).log"; echo "LOG=$$LOG_FILE"; \
-	if [[ "$@" == *menuconfig || "$@" == *nconfig || "$@" == *xconfig || "$@" == *gconfig ]]; then \
-		$(call RUN_CMD,$@); \
-	else \
-		set -o pipefail; $(call RUN_CMD,$@) 2>&1 | tee "$$LOG_FILE"; \
-	fi
-
-FORCE: ;
+# Catch-all: forward unknown targets (defconfig, source, shell) to build.sh
+%:
+	@if [ -z "$(BOARD)" ]; then echo "ERROR: BOARD= is required" >&2; exit 1; fi; \
+	BOARD=$(BOARD) ./scripts/build.sh "$@"

@@ -1,0 +1,6 @@
+[submodule "minime/ui/allium"]
+	path = minime/ui/allium
+	url = https://github.com/jheronimus/Allium
+[submodule "minime/ui/minui"]
+	path = minime/ui/minui
+	url = https://github.com/jheronimus/MinUI

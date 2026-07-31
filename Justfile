@@ -109,13 +109,13 @@ check-build-flow:
         fi
     done
 
-    # 3. genimage.sh exists and doesn't contain compilation logic
-    genimage="minime/genimage/genimage.sh"
-    if [ ! -f "$genimage" ]; then
-        echo "ERROR: $genimage missing" >&2
+    # 3. mkimage.sh exists and doesn't contain compilation logic
+    mkimage="minime/build/mkimage.sh"
+    if [ ! -f "$mkimage" ]; then
+        echo "ERROR: $mkimage missing" >&2
         failed=1
-    elif grep -qE '^\s*(make |gcc |g\+\+ |configure |cmake |abuild |apk add)' "$genimage"; then
-        echo "ERROR: $genimage contains compilation logic" >&2
+    elif grep -qE '^\s*(make |gcc |g\+\+ |configure |cmake |abuild |apk add)' "$mkimage"; then
+        echo "ERROR: $mkimage contains compilation logic" >&2
         failed=1
     fi
 
@@ -193,7 +193,7 @@ fetch os="all" board="all" ui="all":
 
     # Expand board
     case "$board_val" in
-        "all") board_list="h700 rk3326 rk3566" ;;
+        "all") board_list="h700 rk3566" ;;
         h700|rk3326|rk3566) board_list="$board_val" ;;
         *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or 'all'" >&2; exit 1 ;;
     esac
@@ -295,6 +295,79 @@ fetch os="all" board="all" ui="all":
             done
         fi
     fi
+
+# Fetch testing update packages (.tar.xz). Use "all" for any slot to match all options.
+# Examples: just fetch-update alpine rk3566 all
+fetch-update os="all" board="all" ui="all":
+    #!/usr/bin/env sh
+    set -eu
+
+    os_val="{{os}}"
+    board_val="{{board}}"
+    ui_val="{{ui}}"
+
+    # Expand OS
+    case "$os_val" in
+        "all") os_list="alpine buildroot" ;;
+        alpine|buildroot) os_list="$os_val" ;;
+        *) echo "ERROR: OS must be 'alpine', 'buildroot', or 'all'" >&2; exit 1 ;;
+    esac
+
+    # Expand board
+    case "$board_val" in
+        "all") board_list="h700 rk3566" ;;
+        h700|rk3326|rk3566) board_list="$board_val" ;;
+        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or 'all'" >&2; exit 1 ;;
+    esac
+
+    # Expand UI
+    case "$ui_val" in
+        "all") ui_list="minui allium" ;;
+        minui|allium) ui_list="$ui_val" ;;
+        *) echo "ERROR: UI must be 'minui', 'allium', or 'all'" >&2; exit 1 ;;
+    esac
+
+    updates=""
+    for o in $os_list; do
+        for b in $board_list; do
+            for u in $ui_list; do
+                updates="${updates:+$updates }minime-${o}-${b}-${u}.tar.xz"
+            done
+        done
+    done
+
+    echo "Update packages to fetch:"
+    for pkg in $updates; do
+        echo "  ${pkg}"
+    done
+    echo ""
+
+    mkdir -p downloads
+    downloaded=""
+    for pkg in $updates; do
+        url="https://github.com/jheronimus/minime/releases/download/testing/${pkg}"
+        dest="downloads/${pkg}"
+
+        rm -f "${dest}"
+
+        if command -v aria2c >/dev/null 2>&1; then
+            echo "Fetching ${pkg} using aria2..."
+            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 --allow-overwrite=true -d downloads -o "${pkg}" "${url}"
+        else
+            echo "Fetching ${pkg}..."
+            curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
+        fi
+
+        echo "Success! Update package saved to ${dest}"
+        downloaded="${downloaded:+$downloaded }${dest}"
+    done
+
+    echo ""
+    echo "Downloaded update archives:"
+    for d in $downloaded; do
+        echo "  $d"
+    done
+
 
 # Deploy a firmware image to a target disk device
 deploy image disk_device="":

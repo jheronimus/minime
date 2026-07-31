@@ -69,7 +69,7 @@ at `l1` and only increase if stable under a sustained load test.
 ## How it works
 
 - `alpine/board/rk3566/dtbo/rk3566-undervolt-cpu-l{1,2,3}.dts`
-  are compiled to `.dtbo` by `post-image.sh` and staged under
+  are compiled to `.dtbo` by `system-image.sh` and staged under
   `.minime/overlays/` on the boot partition.
 - `boot.cmd` reads `undervolt` from `.minime/config/device.cfg` and, if set to
   `l1`/`l2`/`l3`, loads and applies the matching overlay with `fdt apply`

@@ -1,10 +1,10 @@
 #!/bin/sh
 # shellcheck shell=sh
-# Minime Central Image Builder (genimage)
+# Minime Central Image Builder (mkimage)
 #
 # Usage:
-#   genimage.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
-#                  --input-dir <dir> --output-dir <dir>
+#   mkimage.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
+#                --input-dir <dir> --output-dir <dir>
 
 set -eu
 
@@ -235,5 +235,5 @@ if [ ! -f "${FINAL_IMG}" ]; then
 fi
 
 echo "Compressing ${FINAL_IMG}..."
-xz -f -T2 "${FINAL_IMG}"
+xz -f -T0 "${FINAL_IMG}"
 echo "Build complete: ${FINAL_IMG_XZ}"

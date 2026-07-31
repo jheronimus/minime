@@ -6,7 +6,7 @@ on:
     paths:
       - 'minime/boards/**'
       - 'minime/uboot/**'
-      - 'minime/genimage/**'
+      - 'minime/build/**'
       - 'minime/targets/buildroot/**'
       - 'src/**'
       - 'roms/**'
@@ -58,12 +58,12 @@ jobs:
       - name: Select boards
         id: set
         run: |
-          boards='["rk3566","rk3326"]'
+          boards='["rk3566"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             boards=$(echo '[]' \
               | jq -c \
                   --argjson h700   '${{ inputs.build_h700   || false }}' \
-                  --argjson rk3326 '${{ inputs.build_rk3326 || true }}' \
+                  --argjson rk3326 '${{ inputs.build_rk3326 || false }}' \
                   --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
                   'if $h700   then . + ["h700"]   else . end |
                    if $rk3326 then . + ["rk3326"] else . end |
@@ -74,15 +74,14 @@ jobs:
   shared-sources:
     name: Download sources
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/jheronimus/minime-builder-buildroot:latest
-      options: --user root
     defaults:
       run:
         working-directory: minime/targets/buildroot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Manage cache
         id: cache-dl
@@ -95,19 +94,15 @@ jobs:
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'
         run: |
-          for board in rk3326 rk3566 h700; do
+          for board in rk3566; do
             echo "Downloading sources for $board..."
-            make defconfig BOARD=$board
-            make source BOARD=$board
+            BOARD=$board ./scripts/build.sh source
           done
 
   build:
     name: Build Buildroot ${{ matrix.board }} (${{ matrix.ui }})
     needs: [compute-matrix, shared-sources]
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/jheronimus/minime-builder-buildroot:latest
-      options: --user root
     permissions:
       contents: write
     timeout-minutes: 360
@@ -119,12 +114,11 @@ jobs:
       matrix:
         board: ${{ fromJSON(needs.compute-matrix.outputs.boards) }}
         ui: [minui, allium]
-    env:
-      FORCE_UNSAFE_CONFIGURE: '1'
-      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Check for updates
         run: python3 scripts/uptodate/uptodate.py
@@ -152,13 +146,13 @@ jobs:
           echo "Building Buildroot image for ${{ matrix.board }} (${{ matrix.ui }})"
           make image BOARD=${{ matrix.board }} UI=${{ matrix.ui }}
 
-      - name: Upload image
+      - name: Upload image and update archive
         run: |
-          apt-get update && apt-get install -y --no-install-recommends gh 2>/dev/null || true
           git config --global --add safe.directory /__w/minime/minime
           cp out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}.img.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
+          cp out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz
           cd ../../..
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
-          gh release upload testing minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz --clobber
+          gh release upload testing minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

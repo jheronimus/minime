@@ -24,7 +24,7 @@ Because $65,503 < 65,525$, all OS filesystem drivers (macOS `msdos`, Linux `fs/f
 
 ## Decision
 1. **Cluster Size**: Fixed to 16 KB (`mkdosfs -F 32 -s 32` -> 32 sectors per cluster @ 512B/sector).
-2. **Minimum Volume Floor (`VFAT_MB`)**: Hardcoded to **1040 MB** in `post-image.sh` for both Alpine and Buildroot image builders.
+2. **Minimum Volume Floor (`VFAT_MB`)**: Hardcoded to **1040 MB** in `minime/build/mkimage.sh` for both Alpine and Buildroot image builders.
 
 At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clusters}} \ge 65,525$, producing a perfectly valid FAT32 volume.
 

@@ -9,7 +9,7 @@
 #      tinykernel against the same musl libc.
 #   3. Build a local aports repo, install the official Alpine base plus the
 #      Minime package set, copy in the Minime SD-card UI payload.
-#   4. Run Alpine's post-image.sh to produce `minime-alpine-<board>.img`.
+#   4. Produce system.erofs and initramfs for the packager container.
 #
 # Environment overrides:
 #   BOARD               Target board (rk3566). Required.
@@ -216,7 +216,7 @@ build_tinykernel() {
 			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 	fi
 
-	# Stage the kernel artifacts for post-image.sh to consume.
+	# Stage the kernel artifacts for the packager to consume.
 	if [ -f "${apk_file}" ]; then
 		log "Staging tinykernel from newly built APK: ${apk_file}"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
@@ -349,8 +349,6 @@ build_system_image() {
 	[ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ] || die "kernel DTBs missing in ${ALPINE_OUTPUT_DIR}/boot/dtbs"
 	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
 		-exec cp -f {} "${TARGET_OUT}/" \;
-
-
 
 	# Generate system.erofs rootfs.
 	# Tar the rootfs excluding proc/sys/dev (which may still contain

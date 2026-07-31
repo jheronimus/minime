@@ -7,7 +7,7 @@
 #   2. Run Buildroot's full build (kernel, userspace, packages).
 #   3. Copy final images to the output directory.
 #
-# The `image` step (genimage.sh + genupdate.sh) is handled by the Makefile
+# The `image` step (genassets.sh + mkimage.sh + mkupdate.sh) is handled by the Makefile
 # and runs on the host, not inside this script.
 #
 # Environment overrides:
@@ -48,6 +48,32 @@ LOG_DIR="${BUILDROOT_ROOT}/logs"
 mkdir -p "${LOG_DIR}"
 
 #──────────────────────────────────────────────────────────────────────────────
+# 0. Ensure Buildroot source is present
+#──────────────────────────────────────────────────────────────────────────────
+
+BUILDROOT_VERSION="2026.05.1"
+BUILDROOT_URL="https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.tar.gz"
+
+ensure_buildroot() {
+	if [ -d "${BUILDROOT_DIR}" ]; then
+		log "Buildroot ${BUILDROOT_VERSION} already present in ${BUILDROOT_DIR}"
+		return
+	fi
+	log "Downloading Buildroot ${BUILDROOT_VERSION}..."
+	mkdir -p "${BUILDROOT_DIR}"
+	curl -fL -o /tmp/buildroot.tar.gz "${BUILDROOT_URL}"
+	tar xf /tmp/buildroot.tar.gz --strip-components=1 -C "${BUILDROOT_DIR}"
+	rm -f /tmp/buildroot.tar.gz
+	if [ -d "${BUILDROOT_ROOT}/support/buildroot-patches" ]; then
+		log "Applying Buildroot patches..."
+		for p in "${BUILDROOT_ROOT}/support/buildroot-patches/"*.patch; do
+			[ -e "$p" ] || continue
+			patch -p1 -d "${BUILDROOT_DIR}" <"$p"
+		done
+	fi
+}
+
+#──────────────────────────────────────────────────────────────────────────────
 # 1. Merge config fragments (defconfig)
 #──────────────────────────────────────────────────────────────────────────────
 
@@ -68,6 +94,7 @@ defconfig() {
 #──────────────────────────────────────────────────────────────────────────────
 
 build_components() {
+	ensure_buildroot
 	defconfig
 	log "building Buildroot for ${BOARD} (${UI}) with ${TOPLEVEL_JLEVEL} jobs..."
 	make -C "${BUILDROOT_DIR}" ${BUILDROOT_MAKE_ARGS} -j"${TOPLEVEL_JLEVEL}"
@@ -96,11 +123,19 @@ components)
 	build_components
 	copy_images
 	;;
-defconfig) defconfig ;;
+defconfig)
+	ensure_buildroot
+	defconfig
+	;;
+source)
+	ensure_buildroot
+	defconfig
+	make -C "${BUILDROOT_DIR}" ${BUILDROOT_MAKE_ARGS} source
+	;;
 shell)
 	exec /bin/sh
 	;;
 *)
-	die "unknown subcommand: ${CMD} (use components|defconfig|shell)"
+	die "unknown subcommand: ${CMD} (use components|defconfig|source|shell)"
 	;;
 esac

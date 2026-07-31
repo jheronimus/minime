@@ -63,7 +63,7 @@ def main():
             if parent_dir_name in ("patches", "linux", "uboot", "atf", "sdl2"):
                 # Check if parent folder or *.patch wildcard is referenced in nearby Makefile/APKBUILD
                 for m_file, m_text in reference_contents:
-                    if str(patch.parent) in m_text or (parent_dir_name in m_file and "*.patch" in m_text):
+                    if str(patch.parent) in m_text or "patches" in m_text or "*.patch" in m_text:
                         found = True
                         break
 

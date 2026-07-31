@@ -25,7 +25,7 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
   - `targets/`: Target software builders.
     - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).
     - `buildroot/`: Core Buildroot target build system (`external/`, `Makefile`).
-  - `genimage/`: Centralized image assembly (`genimage.sh`) and update package generation (`genupdate.sh`).
+  - `build/`: Centralized image assembly (`mkimage.sh`), update package generation (`mkupdate.sh`), and UI assets (`genassets.sh`).
 - docs/: Documentation, ADRs (adr/), and specs/research (research/).
 - `src/`: Shared source code (libmali GPU userspace, mali-kbase kernel driver).
   - `mali-kbase/`: ARM Mali Bifrost kernel driver source (out-of-tree module).
@@ -53,15 +53,16 @@ Alpine and Buildroot targets are built from their respective directories in `min
 Both targets follow the same pattern:
 ```
 make components  →  build.sh  (compilation in container)
-make image       →  genimage.sh + genupdate.sh  (packaging on host)
+make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in shared container)
 ```
 
 **Rules:**
 - `build.sh` does compilation only. No image packaging (no genimage, no mcopy, no mkdosfs).
-- `genimage.sh` does image packaging only. No compilation (no make, no gcc, no kernel build).
-- `genupdate.sh` does update archive generation only.
+- `mkimage.sh` does image packaging only. No compilation (no make, no gcc, no kernel build).
+- `mkupdate.sh` does update archive generation only.
+- `genassets.sh` does UI payload download only.
 - The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
-- Never add compilation logic to `genimage.sh` or `genupdate.sh`.
+- Never add compilation logic to `mkimage.sh` or `mkupdate.sh`.
 - Never add packaging logic to `build.sh`.
 
 ## Agent Directives (Buildroot Quirks)
@@ -72,7 +73,7 @@ make image       →  genimage.sh + genupdate.sh  (packaging on host)
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
-- **Shared Scripts Distro Pattern**: Files that can be shared between Alpine and Buildroot with minimal distro-specific differences must isolate all `DISTRO`-dependent logic in a single `case "${DISTRO}" in ... esac` block at the very top of the script (immediately after arg parsing/validation). The rest of the script must be distro-agnostic, using only variables set by that block (e.g. `DISTRO_SUFFIX`, resolved paths). Reference implementation: `alpine/board/common/post-image.sh`.
+- **Shared Scripts Distro Pattern**: Files that can be shared between Alpine and Buildroot with minimal distro-specific differences must isolate all `DISTRO`-dependent logic in a single `case "${DISTRO}" in ... esac` block at the very top of the script (immediately after arg parsing/validation). The rest of the script must be distro-agnostic, using only variables set by that block (e.g. `DISTRO_SUFFIX`, resolved paths). Reference implementation: `minime/build/mkimage.sh`.
 
 ## Infrastructure & Scripts
 
