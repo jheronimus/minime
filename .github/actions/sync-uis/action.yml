@@ -19,7 +19,20 @@ runs:
         sync_ui() {
           repo="$1"
 
-          echo "=== Checking UI staleness for ${repo} ==="
+          echo "=== Checking UI staleness and active builds for ${repo} ==="
+
+          # 1. Wait for any active (in_progress or queued) build runs in remote UI repo
+          ACTIVE_RUN_ID=$(gh run list -R "${repo}" --status in_progress --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+          if [ -z "${ACTIVE_RUN_ID}" ]; then
+            ACTIVE_RUN_ID=$(gh run list -R "${repo}" --status queued --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+          fi
+
+          if [ -n "${ACTIVE_RUN_ID}" ]; then
+            echo "==> Active build ${ACTIVE_RUN_ID} detected in ${repo}. Waiting for completion..."
+            gh run watch "${ACTIVE_RUN_ID}" -R "${repo}" --exit-status
+          fi
+
+          # 2. Check commit SHA staleness
           MAIN_SHA=$(gh api "repos/${repo}/commits/main" -q '.sha' 2>/dev/null || echo "error")
           LATEST_TAG=$(gh api "repos/${repo}/releases/latest" -q '.tag_name' 2>/dev/null || echo "none")
 
