@@ -37,7 +37,7 @@ fetch_and_verify() {
 	echo "Downloading ${filename}..." >&2
 	curl -sL --retry 3 "${url}" -o "${filepath}"
 
-	actual_sha512=$(shasum -a 512 "${filepath}" | cut -d' ' -f1)
+	actual_sha512=$(sha512sum "${filepath}" | cut -d' ' -f1)
 	if [ "$actual_sha512" != "$expected_sha512" ]; then
 		echo "ERROR: SHA512 mismatch for ${filename}" >&2
 		echo "Expected: ${expected_sha512}" >&2
