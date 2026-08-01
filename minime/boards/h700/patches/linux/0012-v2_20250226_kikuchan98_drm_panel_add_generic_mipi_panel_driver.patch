@@ -226,7 +226,7 @@ diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
 index d7469c565d1..46eea1974a0 100644
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -408,6 +408,16 @@ config DRM_PANEL_MANTIX_MLAF057WE51
+@@ -502,6 +502,16 @@ config DRM_PANEL_MANTIX_MLAF057WE51
  	  has a resolution of 720x1440 pixels, a built in backlight and touch
  	  controller.
  
@@ -240,9 +240,9 @@ index d7469c565d1..46eea1974a0 100644
 +	  Say Y here if you want to enable support for Generic MIPI-DSI /
 +	  MIPI-DPI(+SPI) panels.
 +
- config DRM_PANEL_NEC_NL8048HL11
- 	tristate "NEC NL8048HL11 RGB panel"
- 	depends on GPIOLIB && OF && SPI
+ config DRM_PANEL_MOTOROLA_MOT
+ 	tristate "Atrix 4G and Droid X2 540x960 DSI video mode panel"
+ 	depends on OF
 diff --git a/drivers/gpu/drm/panel/Makefile b/drivers/gpu/drm/panel/Makefile
 index 7dcf72646ca..22276255a7b 100644
 --- a/drivers/gpu/drm/panel/Makefile
