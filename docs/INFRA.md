@@ -25,9 +25,9 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 - **Purpose**: Clones upstream U-Boot and ARM Trusted Firmware (ATF), applies board patches and `minime/uboot/config/uboot.config` fragments, and builds bootloader binaries (`u-boot-sunxi-with-spl.bin`, `idbloader.img`, `u-boot.itb`).
 - **Automation**: Commits updated prebuilt binaries into `minime/uboot/out/<board>/` and automatically dispatches `alpine.yml` and `buildroot.yml` to trigger firmware image rebuilds.
 
-### `update-packages.yml` — Automated Package Version Bumps
-- **Trigger**: Scheduled cron job (daily) or `workflow_dispatch`.
-- **Purpose**: Runs `scripts/uptodate/uptodate.py` to check for upstream releases of `retroarch`, `minui`, `allium`, `fatresize`, etc. Updates `APKBUILD`s, hash files, and defconfigs.
+### `synckernel.yml` — Automated Kernel Version Sync
+- **Trigger**: Schedule (Daily), Workflow Dispatch
+- **Purpose**: Runs `scripts/synckernel/synckernel.py` to keep the kernel version synced between Alpine's `tinykernel` APKBUILD and Buildroot's custom kernel config.
 
 ---
 
