@@ -41,7 +41,7 @@ done
 
 if [ -z "$CARD_DEV" ]; then
 	log_console "ERROR: failed to mount a MINIME FAT partition"
-	poweroff -f
+	exec sh
 fi
 
 log_card "[INITRAMFS] Initialized persistent logging on $CARD_DEV"
@@ -98,7 +98,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	mkdir -p /mnt/system
 	if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system 2>/dev/null; then
 		log_card "ERROR: failed to mount /mnt/system for partition expansion"
-		poweroff -f
+		exec sh
 	fi
 	mount --bind /dev /mnt/system/dev
 	mount --bind /proc /mnt/system/proc
@@ -137,12 +137,12 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 
 	if [ "$PARTED_RC" -ne 0 ]; then
 		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
-		poweroff -f
+		exec sh
 	fi
 
 	if [ "$FATRESIZE_RC" -ne 0 ]; then
 		log_card "ERROR: failed to expand $CARD_DEV"
-		poweroff -f
+		exec sh
 	fi
 	log_card "[INITRAMFS] Partition expansion successful. Removing first_boot_expand..."
 	rm -f /mnt/card/.minime/config/first_boot_expand
@@ -153,7 +153,7 @@ log_card "[INITRAMFS] Mounting EROFS system image..."
 mkdir -p /mnt/system
 if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system; then
 	log_card "ERROR: failed to mount /mnt/card/.minime/system"
-	poweroff -f
+	exec sh
 fi
 log_card "[INITRAMFS] EROFS system image mounted successfully."
 
@@ -181,7 +181,7 @@ done
 if [ ! -x /mnt/system/sbin/init ]; then
 	log_card "ERROR: /mnt/system/sbin/init is missing or not executable"
 	ls -la /mnt/system/sbin/init 2>&1 || true
-	poweroff -f
+	exec sh
 fi
 
 log_card "[INITRAMFS] Moving mounts and switching root to /mnt/system..."
