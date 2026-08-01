@@ -9,12 +9,13 @@ if [ -z "$UI" ] || [ -z "$LIBC" ]; then
 	exit 1
 fi
 
-mkdir -p minime/ui/out
+ROOT_DIR="$(pwd)"
+mkdir -p "$ROOT_DIR/minime/ui/out"
 OWNER="${GITHUB_REPOSITORY_OWNER:-jheronimus}"
 
 if [ "$UI" = "minui" ]; then
     echo "Building MinUI binaries for ${LIBC}..."
-    cd minime/ui/minui
+    cd "$ROOT_DIR/minime/ui/minui"
     make setup
     
     if [ "$LIBC" = "musl" ]; then
@@ -37,8 +38,8 @@ if [ "$UI" = "minui" ]; then
         [ -f "$zipfile" ] || continue
         unzip -q -o "$zipfile" -d "$STAGE_DIR"
     done
-    cd ../../../
-    tar -cJf minime/ui/out/minui-${LIBC}-aarch64.tar.xz -C "$STAGE_DIR" .
+    cd "$ROOT_DIR"
+    tar -cJf "$ROOT_DIR/minime/ui/out/minui-${LIBC}-aarch64.tar.xz" -C "$STAGE_DIR" .
 
 elif [ "$UI" = "allium" ]; then
     echo "Building Allium binaries for ${LIBC}..."
@@ -103,7 +104,7 @@ elif [ "$UI" = "allium" ]; then
     cp -r "$STATIC/RetroArch/." "$STAGE_DIR/RetroArch/" || true
     [ -d "$STATIC/.minime" ] && cp -r "$STATIC/.minime" "$STAGE_DIR/" || true
 
-    OUT_TAR="$(pwd)/minime/ui/out/allium-${LIBC}-aarch64.tar.xz"
+    OUT_TAR="$ROOT_DIR/minime/ui/out/allium-${LIBC}-aarch64.tar.xz"
     tar -cJf "$OUT_TAR" -C "$STAGE_DIR" .
     echo "Created $OUT_TAR"
 else
@@ -111,4 +112,4 @@ else
     exit 1
 fi
 
-sudo chown -R $USER:$USER "$(pwd)/minime/ui/out"
+sudo chown -R $USER:$USER "$ROOT_DIR/minime/ui/out"
