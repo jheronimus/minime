@@ -1,0 +1,193 @@
+name: Build Minime
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-bootloader:
+    name: Build Bootloader
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore Bootloader Cache
+        id: cache-bootloader-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: minime/uboot/out
+          key: bootloader-${{ hashFiles('minime/uboot/**', 'scripts/build-bootloader.sh') }}
+
+      - name: Compile Bootloader
+        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true'
+        run: |
+          scripts/build-bootloader.sh rk3326
+          scripts/build-bootloader.sh rk3566
+          scripts/build-bootloader.sh h700
+
+      - name: Save Bootloader Cache
+        if: always() && steps.cache-bootloader-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: minime/uboot/out
+          key: bootloader-${{ hashFiles('minime/uboot/**', 'scripts/build-bootloader.sh') }}
+
+      - name: Upload Bootloader Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+  build-ui:
+    name: Build UI (${{ matrix.libc }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libc: musl
+            runner: ubuntu-24.04-arm
+            container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
+          - libc: glibc
+            runner: ubuntu-latest
+            container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore UI Cache
+        id: cache-ui-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: minime/ui/out
+          key: ui-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/**', 'minime/ui/minui/**') }}
+
+      - name: Compile MinUI
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true'
+        run: |
+          make -C minime/ui/minui package LIBC=${{ matrix.libc }}
+
+      - name: Compile Allium
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true'
+        run: |
+          make -C minime/ui/allium package LIBC=${{ matrix.libc }}
+
+      - name: Save UI Cache
+        if: always() && steps.cache-ui-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: minime/ui/out
+          key: ui-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/**', 'minime/ui/minui/**') }}
+
+      - name: Upload UI Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-${{ matrix.libc }}
+          path: minime/ui/out
+
+  build-os:
+    name: Build OS (${{ matrix.os }} / ${{ matrix.board }})
+    needs: [build-bootloader, build-ui]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [alpine, buildroot]
+        board: [h700, rk3326, rk3566]
+        include:
+          - os: alpine
+            libc: musl
+            runner: ubuntu-24.04-arm
+          - os: buildroot
+            libc: glibc
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Download Bootloader
+        uses: actions/download-artifact@v4
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+      - name: Download UI
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-${{ matrix.libc }}
+          path: minime/ui/out
+
+      - name: Restore CCache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/.buildroot-ccache
+          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ matrix.board }}-
+
+      - name: Restore DL Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/alpine-dl
+            ~/.buildroot-dl
+          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            dl-${{ matrix.os }}-${{ matrix.board }}-
+
+      - name: Build Components
+        run: make -C minime/targets/${{ matrix.os }} components BOARD=${{ matrix.board }}
+
+      - name: Build Image for MinUI
+        run: make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=minui
+
+      - name: Build Image for Allium
+        run: make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
+
+      - name: Save CCache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/.buildroot-ccache
+          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Save DL Cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/alpine-dl
+            ~/.buildroot-dl
+          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.img.xz --clobber || true
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.tar.xz --clobber || true

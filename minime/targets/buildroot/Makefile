@@ -9,8 +9,7 @@ UI ?= minui
 HOST_ARCH := $(shell uname -m)
 PACKAGER_PLATFORM := linux/arm64
 
-BUILDER_IMAGE := ghcr.io/jheronimus/minime-builder-buildroot:latest
-PACKAGER_IMAGE := ghcr.io/jheronimus/minime-packager:latest
+BUILDER_IMAGE := ghcr.io/jheronimus/minime-glibc:latest
 
 .PHONY: help components image update clean
 

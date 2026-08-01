@@ -9,8 +9,7 @@ UI ?= minui
 HOST_ARCH := $(shell uname -m)
 PACKAGER_PLATFORM := linux/arm64
 
-BUILDER_IMAGE := ghcr.io/jheronimus/minime-builder-alpine:latest
-PACKAGER_IMAGE := ghcr.io/jheronimus/minime-packager:latest
+BUILDER_IMAGE := ghcr.io/jheronimus/minime-musl:latest
 
 RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 --platform linux/arm64 \
 	--ulimit nofile=65536:65536 \

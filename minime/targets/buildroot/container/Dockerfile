@@ -14,6 +14,8 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		ccache \
 		cmake \
 		crossbuild-essential-arm64 \
+		crossbuild-essential-armhf \
+		swig \
 		libsdl2-dev:arm64 \
 		libsdl2-image-dev:arm64 \
 		libsdl2-ttf-dev:arm64 \
