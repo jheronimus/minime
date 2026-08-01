@@ -82,7 +82,6 @@ jobs:
         with:
           path: ~/.buildroot-dl
           key: minime-buildroot-dl
-          save-always: true
 
       - name: Download sources for all boards
         if: steps.cache-dl.outputs.cache-hit != 'true'

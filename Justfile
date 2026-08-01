@@ -2,8 +2,12 @@ default: validate
 
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
-# Run all fast quality gates (shell validation, traits, git hygiene, kernel config, firmware, patches, hashes)
-validate: check-scripts check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow
+# Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes)
+validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow
+
+# Validate GitHub Actions workflow files with actionlint
+check-workflows:
+    mise exec -- actionlint
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
