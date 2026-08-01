@@ -851,7 +851,7 @@ eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config, void *native_wi
       EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
       if (!int_attribs == !attrib_list) {
          EGLSurface surface =
-            _eglCreateWindowSurface(dpy, config, native_window, int_attribs);
+            _eglCreateWindowSurface(dpy, config, (EGLNativeWindowType)(uintptr_t)native_window, int_attribs);
          free(int_attribs);
          return surface;
       }
@@ -871,7 +871,7 @@ eglCreatePlatformPixmapSurface(EGLDisplay dpy, EGLConfig config, void *native_pi
       EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
       if (!int_attribs == !attrib_list) {
          EGLSurface surface =
-            _eglCreatePixmapSurface(dpy, config, native_pixmap, int_attribs);
+            _eglCreatePixmapSurface(dpy, config, (EGLNativePixmapType)(uintptr_t)native_pixmap, int_attribs);
          free(int_attribs);
          return surface;
       }
