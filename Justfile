@@ -11,19 +11,19 @@ check-workflows:
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
-    ./scripts/check-kernel-config.py
+    ./scripts/check-kernel-config.sh
 
 # Verify all required firmware files (CONFIG_EXTRA_FIRMWARE and DTS declarations) exist on disk
 check-firmware:
-    ./scripts/check-firmware.py
+    ./scripts/check-firmware.sh
 
 # Verify all patch files are referenced in build manifests
 check-patches:
-    ./scripts/check-patches.py
+    ./scripts/check-patches.sh
 
 # Validate SHA-256 and SHA-512 hash formats in package manifests
 check-hashes:
-    ./scripts/check-hashes.py
+    ./scripts/check-hashes.sh
 
 # ── Shell script validation ───────────────────────────────────────────────────
 
