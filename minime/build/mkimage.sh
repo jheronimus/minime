@@ -141,11 +141,19 @@ fi
 
 # 7. Stage Bootloaders
 if [ "${BOARD}" = "h700" ]; then
-	[ -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" ] && cp -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" "${BINARIES_DIR}/"
+	if [ ! -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" ]; then
+		echo "ERROR: Bootloader binary missing: ${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" >&2
+		exit 1
+	fi
+	cp -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" "${BINARIES_DIR}/"
 	[ -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl-ddr3.bin" ] && cp -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl-ddr3.bin" "${USERDATA_STAGE}/.minime/u-boot-ddr3.bin"
 else
-	[ -f "${UBOOT_OUT_DIR}/idbloader.img" ] && cp -f "${UBOOT_OUT_DIR}/idbloader.img" "${BINARIES_DIR}/"
-	[ -f "${UBOOT_OUT_DIR}/u-boot.itb" ] && cp -f "${UBOOT_OUT_DIR}/u-boot.itb" "${BINARIES_DIR}/"
+	if [ ! -f "${UBOOT_OUT_DIR}/idbloader.img" ] || [ ! -f "${UBOOT_OUT_DIR}/u-boot.itb" ]; then
+		echo "ERROR: Bootloader binaries missing in ${UBOOT_OUT_DIR}" >&2
+		exit 1
+	fi
+	cp -f "${UBOOT_OUT_DIR}/idbloader.img" "${BINARIES_DIR}/"
+	cp -f "${UBOOT_OUT_DIR}/u-boot.itb" "${BINARIES_DIR}/"
 fi
 
 # 8. Create FAT32 Partition Image (userdata.vfat)

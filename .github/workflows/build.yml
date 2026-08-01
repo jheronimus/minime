@@ -34,17 +34,17 @@ jobs:
           key: bootloader-${{ hashFiles('minime/uboot/**', 'scripts/build-bootloader.sh') }}
 
       - name: Compile Bootloader
-        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true'
+        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == ''
         run: |
           docker run --rm -u root \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace \
             "ghcr.io/${{ github.repository_owner }}/minime-glibc:latest" \
-            /bin/bash -c "scripts/build-bootloader.sh rk3326 2024.10 && scripts/build-bootloader.sh rk3566 2024.10 && scripts/build-bootloader.sh h700 2024.10 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/uboot/out"
+            /bin/bash -c "scripts/build-bootloader.sh rk3326 2026.07 && scripts/build-bootloader.sh rk3566 2026.07 && scripts/build-bootloader.sh h700 2026.07 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/uboot/out"
           sudo chown -R "$USER:$USER" minime/uboot/out
 
       - name: Save Bootloader Cache
-        if: always() && steps.cache-bootloader-restore.outputs.cache-hit != 'true'
+        if: always() && (steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == '')
         uses: actions/cache/save@v4
         with:
           path: minime/uboot/out
