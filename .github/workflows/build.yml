@@ -83,6 +83,8 @@ jobs:
         with:
           path: minime/ui/out
           key: ui-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/**', 'minime/ui/minui/**') }}
+          restore-keys: |
+            ui-${{ matrix.libc }}-
 
       - name: Compile MinUI
         if: steps.cache-ui-restore.outputs.cache-hit != 'true'
