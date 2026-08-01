@@ -5,17 +5,9 @@ on:
     branches: [main]
     paths:
       - 'minime/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'roms/**'
-      - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'minime/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'roms/**'
-      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:
