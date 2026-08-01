@@ -98,7 +98,7 @@ jobs:
           submodules: recursive
 
       - name: Check for updates
-        run: ./scripts/synckernel.sh
+        run: ./scripts/sync-kernel.sh
         working-directory: .
 
       - name: Manage cache

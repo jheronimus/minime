@@ -1,4 +1,4 @@
-name: Sync kernel versions
+name: Sync Kernel Versions
 
 on:
   schedule:
@@ -17,8 +17,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run synckernel.sh
-        run: ./scripts/synckernel.sh
+      - name: Run sync-kernel.sh
+        run: ./scripts/sync-kernel.sh
 
       - name: Commit and push changes
         run: |
@@ -26,7 +26,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "kernel: sync versions between alpine and buildroot via synckernel.sh"
+            git commit -m "kernel: sync versions between alpine and buildroot via sync-kernel.sh"
             git push
           else
             echo "No changes to commit"
