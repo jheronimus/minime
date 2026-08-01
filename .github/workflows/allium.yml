@@ -118,7 +118,16 @@ jobs:
           retention-days: 7
 
   upload-assets:
-    uses: ./.github/workflows/upload-ui-assets.yml
+    name: Upload prebuilt Allium assets to Release
+    runs-on: ubuntu-latest
     needs: build-allium
-    with:
-      artifact_prefix: allium
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Upload UI assets
+        uses: ./.github/actions/upload-ui-assets
+        with:
+          artifact_prefix: allium
+          github_token: ${{ secrets.GITHUB_TOKEN }}

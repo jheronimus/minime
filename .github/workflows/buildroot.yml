@@ -46,11 +46,20 @@ concurrency:
 
 jobs:
   compute-matrix:
-    uses: ./.github/workflows/compute-matrix.yml
-    with:
-      build_h700: ${{ inputs.build_h700 || false }}
-      build_rk3326: ${{ inputs.build_rk3326 || false }}
-      build_rk3566: ${{ inputs.build_rk3566 || true }}
+    name: Compute board matrix
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.matrix.outputs.boards }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Select boards
+        id: matrix
+        uses: ./.github/actions/compute-matrix
+        with:
+          build_h700: ${{ inputs.build_h700 || false }}
+          build_rk3326: ${{ inputs.build_rk3326 || false }}
+          build_rk3566: ${{ inputs.build_rk3566 || true }}
 
   shared-sources:
     name: Download sources
