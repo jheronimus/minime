@@ -13,7 +13,6 @@ jobs:
   build-bootloader:
     name: Build Bootloader
     runs-on: ubuntu-latest
-    container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
@@ -33,9 +32,12 @@ jobs:
       - name: Compile Bootloader
         if: steps.cache-bootloader-restore.outputs.cache-hit != 'true'
         run: |
-          scripts/build-bootloader.sh rk3326
-          scripts/build-bootloader.sh rk3566
-          scripts/build-bootloader.sh h700
+          docker run --rm -u root \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            "ghcr.io/${{ github.repository_owner }}/minime-glibc:latest" \
+            /bin/bash -c "scripts/build-bootloader.sh rk3326 2024.10 && scripts/build-bootloader.sh rk3566 2024.10 && scripts/build-bootloader.sh h700 2024.10 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/uboot/out"
+          sudo chown -R "$USER:$USER" minime/uboot/out
 
       - name: Save Bootloader Cache
         if: always() && steps.cache-bootloader-restore.outputs.cache-hit != 'true'
@@ -61,9 +63,7 @@ jobs:
             container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
           - libc: glibc
             runner: ubuntu-latest
-            container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
     runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.container }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
@@ -83,12 +83,12 @@ jobs:
       - name: Compile MinUI
         if: steps.cache-ui-restore.outputs.cache-hit != 'true'
         run: |
-          make -C minime/ui/minui package LIBC=${{ matrix.libc }}
+          scripts/build-ui.sh minui ${{ matrix.libc }}
 
       - name: Compile Allium
         if: steps.cache-ui-restore.outputs.cache-hit != 'true'
         run: |
-          make -C minime/ui/allium package LIBC=${{ matrix.libc }}
+          scripts/build-ui.sh allium ${{ matrix.libc }}
 
       - name: Save UI Cache
         if: always() && steps.cache-ui-restore.outputs.cache-hit != 'true'
