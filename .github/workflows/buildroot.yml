@@ -160,10 +160,8 @@ jobs:
       - name: Upload image and update archive
         run: |
           git config --global --add safe.directory /__w/minime/minime
-          cp out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}.img.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
-          cp out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz ../../../minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz
-          cd ../../..
+          mv out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}.img.xz out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz
           gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
-          gh release upload testing minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz --clobber
+          gh release upload testing out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.img.xz out/${{ matrix.board }}/minime-buildroot-${{ matrix.board }}-${{ matrix.ui }}.tar.xz --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
