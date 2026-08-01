@@ -33,9 +33,6 @@ buildroot/logs/
 **/__pycache__/
 **/*.pyc
 
-# Local scripts
-scripts/update_kernel_version.py
-
 # Local deployment, Wi-Fi configuration and downloaded images
 deploy.cfg
 wifi.cfg
