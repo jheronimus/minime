@@ -40,3 +40,6 @@ downloads/
 /ui/
 !minime/ui/
 !minime/ui/*
+linux-7.1.5/
+minime/uboot/out/
+minime/ui/out/
