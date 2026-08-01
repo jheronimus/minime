@@ -41,5 +41,8 @@ downloads/
 !minime/ui/
 !minime/ui/*
 linux-7.1.5/
-minime/uboot/out/
+minime/uboot/out/*
+!minime/uboot/out/rk3566/
+minime/uboot/out/rk3566/*
+!minime/uboot/out/rk3566/rkbin/
 minime/ui/out/
