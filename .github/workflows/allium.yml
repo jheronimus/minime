@@ -55,7 +55,8 @@ jobs:
               /bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --features minime \
                 --bin alliumd --bin allium-launcher --bin allium-menu \
                 --bin activity-tracker --bin screenshot --bin screenshot-viewer \
-                --bin say --bin show"
+                --bin say --bin show; \
+                chown -R \$$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target"
             
             # Create a symlink to match the target path expectations
             mkdir -p minime/ui/allium/target/${{ matrix.target }}
@@ -70,7 +71,8 @@ jobs:
               /bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --target ${{ matrix.target }} --features minime \
                 --bin alliumd --bin allium-launcher --bin allium-menu \
                 --bin activity-tracker --bin screenshot --bin screenshot-viewer \
-                --bin say --bin show"
+                --bin say --bin show; \
+                chown -R \$$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target"
           fi
 
       - name: Assemble & Package Archive
