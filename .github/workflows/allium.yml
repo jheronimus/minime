@@ -57,6 +57,12 @@ jobs:
           linker = "musl-gcc"
           EOF
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "minime/ui/allium"
+          key: ${{ matrix.target }}
+
       - name: Build Allium binaries
         run: |
           cd minime/ui/allium
