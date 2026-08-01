@@ -521,7 +521,8 @@ index 5de68cbb6060..dc275d77546d 100644
  	struct drm_plane_state *plane_state;
  	struct drm_plane *plane;
  	u32 route = 0, pipe_en = 0;
-@@ -293,16 +294,16 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
+@@ -293,17 +294,17 @@ static void sun8i_mixer_commit(struct sunxi_engine *engine,
+ 		/* Route layer to pipe based on zpos */
  		route |= layer->index << SUN8I_MIXER_BLEND_ROUTE_PIPE_SHIFT(zpos);
  		pipe_en |= SUN8I_MIXER_BLEND_PIPE_CTL_EN(zpos);
  
