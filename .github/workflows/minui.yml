@@ -29,8 +29,20 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Cache C/C++ compilation (MinUI)
+        uses: actions/cache@v4
+        with:
+          path: ~/.minui-ccache
+          key: minui-ccache-${{ hashFiles('minime/ui/minui/**') }}
+          restore-keys: |
+            minui-ccache-
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Inject ccache into toolchain Dockerfile
+        run: |
+          sed -i 's/crossbuild-essential-arm64 \\/crossbuild-essential-arm64 \\\n        ccache \\/g' minime/ui/minui/toolchains/minime-toolchain/Dockerfile
 
       - name: Build toolchain image
         uses: docker/build-push-action@v5
@@ -45,10 +57,13 @@ jobs:
         run: |
           cd minime/ui/minui
           make setup
+          mkdir -p ~/.minui-ccache
           docker run --rm \
+            -v ~/.minui-ccache:/root/.ccache \
+            -e CCACHE_DIR=/root/.ccache \
             -v ${{ github.workspace }}/minime/ui/minui/workspace:/root/workspace \
             minime-toolchain \
-            /bin/bash -c '. ~/.bashrc && make'
+            /bin/bash -c '. ~/.bashrc && make CC="ccache aarch64-linux-gnu-gcc" CXX="ccache aarch64-linux-gnu-g++"'
           make system PLATFORM=minime
           make cores PLATFORM=minime
           make package
