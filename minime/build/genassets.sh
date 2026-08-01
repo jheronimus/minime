@@ -52,9 +52,16 @@ if [ "$UI" = "minui" ]; then
 		mkdir -p "${WORK_TMP}/minui"
 		tar -xf "${local_tar}" -C "${WORK_TMP}/minui"
 	else
-		echo "ERROR: MinUI artifact not found in ${UI_ART_DIR}/" >&2
-		echo "Run the minui.yml workflow or 'just build-minui' to generate it." >&2
-		exit 1
+		echo "Local MinUI artifact not found in ${UI_ART_DIR}/, attempting download from latest-ui release..." >&2
+		dl_tar="${WORK_TMP}/minui-${LIBC}-aarch64.tar.xz"
+		if curl -fL --retry 3 -o "${dl_tar}" "https://github.com/jheronimus/minime/releases/download/latest-ui/minui-${LIBC}-aarch64.tar.xz"; then
+			mkdir -p "${WORK_TMP}/minui"
+			tar -xf "${dl_tar}" -C "${WORK_TMP}/minui"
+		else
+			echo "ERROR: MinUI artifact not found locally and download failed." >&2
+			echo "Run the minui.yml workflow or 'just build-minui' to generate it." >&2
+			exit 1
+		fi
 	fi
 
 	[ -f "${WORK_TMP}/minui/MinUI.zip" ] && unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
@@ -82,9 +89,16 @@ elif [ "$UI" = "allium" ]; then
 		mkdir -p "${WORK_TMP}/allium"
 		tar -xf "${local_tar}" -C "${WORK_TMP}/allium"
 	else
-		echo "ERROR: Allium artifact not found in ${UI_ART_DIR}/" >&2
-		echo "Run the allium.yml workflow or 'just build-allium' to generate it." >&2
-		exit 1
+		echo "Local Allium artifact not found in ${UI_ART_DIR}/, attempting download from latest-ui release..." >&2
+		dl_tar="${WORK_TMP}/allium-${LIBC}-aarch64.tar.xz"
+		if curl -fL --retry 3 -o "${dl_tar}" "https://github.com/jheronimus/minime/releases/download/latest-ui/allium-${LIBC}-aarch64.tar.xz"; then
+			mkdir -p "${WORK_TMP}/allium"
+			tar -xf "${dl_tar}" -C "${WORK_TMP}/allium"
+		else
+			echo "ERROR: Allium artifact not found locally and download failed." >&2
+			echo "Run the allium.yml workflow or 'just build-allium' to generate it." >&2
+			exit 1
+		fi
 	fi
 
 	[ -d "${WORK_TMP}/allium/.ui" ] && cp -a "${WORK_TMP}/allium/.ui" "${DEST_DIR}/"

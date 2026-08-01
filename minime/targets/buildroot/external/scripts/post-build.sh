@@ -50,11 +50,10 @@ fi
 mkdir -p "${TARGET_DIR}/etc/udev/rules.d"
 echo 'KERNEL=="default_cma_region", SYMLINK+="dma_heap/system-uncached"' >"${TARGET_DIR}/etc/udev/rules.d/99-mali.rules"
 
-# 2. Shared WiFi & Sysctl Config
-mkdir -p "${TARGET_DIR}/etc/modules-load.d" "${TARGET_DIR}/etc/modprobe.d" "${TARGET_DIR}/etc/sysctl.d"
-[ -f "${COMMON_DIR}/overlay/etc/modules-load.d/wifi.conf" ] && cp -f "${COMMON_DIR}/overlay/etc/modules-load.d/wifi.conf" "${TARGET_DIR}/etc/modules-load.d/" || true
-[ -f "${COMMON_DIR}/overlay/etc/modprobe.d/rtw88.conf" ] && cp -f "${COMMON_DIR}/overlay/etc/modprobe.d/rtw88.conf" "${TARGET_DIR}/etc/modprobe.d/" || true
-[ -f "${COMMON_DIR}/overlay/etc/sysctl.d/00-minime.conf" ] && cp -f "${COMMON_DIR}/overlay/etc/sysctl.d/00-minime.conf" "${TARGET_DIR}/etc/sysctl.d/" || true
+# 2. Board-specific overlay
+if [ -d "${BOARD_DIR}/overlay" ]; then
+	cp -a "${BOARD_DIR}/overlay/." "${TARGET_DIR}/"
+fi
 
 # 3. DNS symlink & SD card mount point
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
@@ -84,28 +83,11 @@ if [ -f "${COMMON_DIR}/scripts/device.sh" ]; then
 	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/device.sh"
 fi
 
-# 7. OpenRC Init Services
+# 7. OpenRC SysV Cleanup
+# Clean up legacy SysV scripts created by some packages, as we use pure OpenRC
 TARGET_INITD="${TARGET_DIR}/etc/init.d"
 TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
-mkdir -p "${TARGET_INITD}" "${TARGET_RUNLEVELS}/boot" "${TARGET_RUNLEVELS}/default"
-
-if [ -d "${COMMON_DIR}/overlay/etc/init.d" ]; then
-	for svc in modules fb-unblank traits wifi ftpd telnetd bluetooth gpudriver ui; do
-		if [ -f "${COMMON_DIR}/overlay/etc/init.d/${svc}" ]; then
-			cp -f "${COMMON_DIR}/overlay/etc/init.d/${svc}" "${TARGET_INITD}/${svc}"
-			chmod 0755 "${TARGET_INITD}/${svc}"
-		fi
-	done
-fi
-
-# Clean up legacy SysV scripts
-rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs"
-
-# Runlevel symlinks
-for svc in modules fb-unblank traits wifi ftpd telnetd gpudriver bluetooth; do
-	[ -f "${TARGET_INITD}/${svc}" ] && ln -sf "../../init.d/${svc}" "${TARGET_RUNLEVELS}/boot/${svc}" || true
-done
-[ -f "${TARGET_INITD}/ui" ] && ln -sf "../../init.d/ui" "${TARGET_RUNLEVELS}/default/ui" || true
+rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs" 2>/dev/null || true
 
 # Touch a marker file to represent the absolute latest timestamp in the rootfs.
 touch "${TARGET_DIR}/.build_time"

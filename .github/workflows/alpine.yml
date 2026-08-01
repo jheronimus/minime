@@ -1,6 +1,10 @@
 name: Build Alpine images
 
 on:
+  workflow_run:
+    workflows: ["Build Allium UI assets", "Build MinUI UI assets"]
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -8,7 +12,6 @@ on:
       - 'minime/uboot/**'
       - 'minime/build/**'
       - 'minime/targets/alpine/**'
-      - 'minime/ui/out/**'
       - 'src/**'
       - 'roms/**'
       - 'scripts/**'
@@ -38,26 +41,11 @@ concurrency:
 
 jobs:
   compute-matrix:
-    name: Compute board matrix
-    runs-on: ubuntu-latest
-    outputs:
-      boards: ${{ steps.set.outputs.boards }}
-    steps:
-      - name: Select boards
-        id: set
-        run: |
-          boards='["rk3566","h700"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            boards=$(echo '[]' \
-              | jq -c \
-                  --argjson h700   '${{ inputs.build_h700   || true }}' \
-                  --argjson rk3326 '${{ inputs.build_rk3326 || false }}' \
-                  --argjson rk3566 '${{ inputs.build_rk3566 || true }}' \
-                  'if $h700   then . + ["h700"]   else . end |
-                   if $rk3326 then . + ["rk3326"] else . end |
-                   if $rk3566 then . + ["rk3566"] else . end')
-          fi
-          echo "boards=${boards}" >> "$GITHUB_OUTPUT"
+    uses: ./.github/workflows/compute-matrix.yml
+    with:
+      build_h700: ${{ inputs.build_h700 || true }}
+      build_rk3326: ${{ inputs.build_rk3326 || false }}
+      build_rk3566: ${{ inputs.build_rk3566 || true }}
 
   build:
     name: Build Alpine ${{ matrix.board }} (${{ matrix.ui }})

@@ -71,15 +71,13 @@ jobs:
           path: minime/ui/out/minui-*.tar.xz
           retention-days: 7
 
-  commit-assets:
-    name: Commit prebuilt MinUI assets
+  upload-assets:
+    name: Upload prebuilt MinUI assets to Release
     needs: build-minui
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.UI_UPDATE || secrets.GITHUB_TOKEN }}
 
       - name: Download MinUI artifacts
         uses: actions/download-artifact@v4
@@ -87,18 +85,9 @@ jobs:
           name: minui-assets
           path: minime/ui/out
 
-      - name: Commit and push updated UI assets
+      - name: Upload to UI rolling release
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add minime/ui/out/minui-*.tar.xz
-          if git diff --staged --quiet; then
-            echo "No changes to MinUI assets."
-          else
-            git commit -m "chore(ui): update prebuilt MinUI UI assets"
-            for i in 1 2 3 4 5; do
-              git push origin main && break
-              echo "Push failed (attempt $i/5), rebasing and retrying..."
-              git pull --rebase origin main
-            done
-          fi
+          gh release create latest-ui --title "Latest UI Assets" --notes "Rolling release for UI prebuilts" || true
+          gh release upload latest-ui minime/ui/out/minui-*.tar.xz --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
