@@ -7,7 +7,7 @@ BOARD ?= rk3566
 UI ?= minui
 
 HOST_ARCH := $(shell uname -m)
-PACKAGER_PLATFORM := linux/arm64
+PACKAGER_PLATFORM := linux/amd64
 
 BUILDER_IMAGE := ghcr.io/jheronimus/minime-glibc:latest
 
