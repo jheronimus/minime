@@ -1,4 +1,4 @@
-MINIME_BOARD_NAME = $(notdir $(patsubst %/patches,%,$(qstrip $(BR2_GLOBAL_PATCH_DIR))))
+MINIME_BOARD_NAME = $(notdir $(patsubst %/patches,%,$(call qstrip,$(BR2_GLOBAL_PATCH_DIR))))
 
 include $(sort $(wildcard $(BR2_EXTERNAL_MINIME_PATH)/package/*/*.mk))
 
