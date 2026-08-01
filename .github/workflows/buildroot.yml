@@ -98,7 +98,7 @@ jobs:
           submodules: recursive
 
       - name: Check for updates
-        run: python3 scripts/synckernel/synckernel.py
+        run: ./scripts/synckernel.sh
         working-directory: .
 
       - name: Manage cache

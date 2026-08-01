@@ -27,7 +27,7 @@ This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, 
 
 ### `synckernel.yml` — Automated Kernel Version Sync
 - **Trigger**: Schedule (Daily), Workflow Dispatch
-- **Purpose**: Runs `scripts/synckernel/synckernel.py` to keep the kernel version synced between Alpine's `tinykernel` APKBUILD and Buildroot's custom kernel config.
+- **Purpose**: Runs `scripts/synckernel.sh` to keep the kernel version synced between Alpine's `tinykernel` APKBUILD and Buildroot's custom kernel config.
 
 ---
 
