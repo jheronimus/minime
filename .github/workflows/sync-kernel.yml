@@ -1,4 +1,4 @@
-name: Sync Kernel Versions
+name: Sync kernel versions
 
 on:
   schedule:
