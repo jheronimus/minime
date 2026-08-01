@@ -2,7 +2,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=tinykernel
-pkgver=7.1.4
+pkgver=7.1.5
 pkgrel=3
 pkgdesc="Minime minimal Linux kernel + DTBs for Alpine"
 url="https://github.com/gregkh/linux"
@@ -28,7 +28,7 @@ makedepends="
 source="
 	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-${pkgver}.tar.xz
 "
-sha512sums="753b53b3f9a240b5838fe1156ad61f2356e2042941e571450492b5c8c46fd32140aede34fd4b074705650bac503deccec20ad9b8caee9d4c5fdc575401c76cc4  linux-7.1.4.tar.xz"
+sha512sums="17f95307b6e86a0794df146d97256ba4783b7a494f5eb43aafc14d64367541874cec7f6e8c2ea724eca149db18e4bd5880bf28a8c5e47ae8a769776bbd955af8  linux-7.1.5.tar.xz"
 
 : "${DTB_BOARD:=rk3566}"
 case "$DTB_BOARD" in
