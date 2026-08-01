@@ -35,8 +35,6 @@ components:
 	@mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl $(CURDIR)/out/$(BOARD)
 	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
 		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"
-	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
-		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh system-image"
 
 TARGET_NAME := alpine
 

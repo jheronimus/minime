@@ -5,17 +5,14 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} -c GENIMAGE_CONFIG_FILE -b BOARD_NAME" >&2
+	echo "Usage: ${0##*/} -b BOARD_NAME" >&2
 }
 
 BOARD_NAME=""
-opts="$(getopt -n "${0##*/}" -o c:b: -- "$@")" || exit $?
+opts="$(getopt -n "${0##*/}" -o b: -- "$@")" || exit $?
 eval set -- "$opts"
 while true; do
 	case "$1" in
-	-c)
-		shift 2
-		;;
 	-b)
 		BOARD_NAME="$2"
 		shift 2
