@@ -21,34 +21,25 @@ log_card() {
 
 mkdir -p /mnt/card
 
-# Wait for Linux to enumerate SD/eMMC devices.
+# Wait for Linux to enumerate SD/eMMC devices and mount the partition.
 log_console "Waiting for block devices..."
 for _i in 1 2 3 4 5 6 7 8 9 10; do
 	for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
-		[ -b "$dev" ] && CARD_DEV="$dev" && break
+		[ -b "$dev" ] || continue
+		if mount -t vfat "$dev" /mnt/card 2>/dev/null; then
+			if [ -f /mnt/card/.minime/system ]; then
+				CARD_DEV="$dev"
+				log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
+				break
+			fi
+			umount /mnt/card 2>/dev/null || true
+		fi
 	done
 	[ -n "$CARD_DEV" ] && break
 	sleep 1
 done
 
 if [ -z "$CARD_DEV" ]; then
-	log_console "ERROR: no /dev/mmcblk*p1, /dev/vd*1, or /dev/sd*1 block devices found"
-	exec sh
-fi
-
-for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
-	[ -b "$dev" ] || continue
-	if mount -t vfat "$dev" /mnt/card 2>/dev/null; then
-		if [ -f /mnt/card/.minime/system ]; then
-			CARD_DEV="$dev"
-			log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
-			break
-		fi
-		umount /mnt/card 2>/dev/null || true
-	fi
-done
-
-if ! mountpoint -q /mnt/card 2>/dev/null && ! grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
 	log_console "ERROR: failed to mount a MINIME FAT partition"
 	exec sh
 fi

@@ -66,60 +66,21 @@ USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${BINARIES_DIR}" "${USERDATA_STAGE}/.minime/config" "${USERDATA_STAGE}/.minime/devices"
 
 # 1. Stage Kernel, Initramfs, EROFS System RootFS
-KERNEL_SRC=""
-for k in Image zImage; do
-	if [ -f "${INPUT_DIR}/${k}" ]; then
-		KERNEL_SRC="${INPUT_DIR}/${k}"
-		break
-	fi
-done
-[ -f "${KERNEL_SRC}" ] || {
-	echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2
-	exit 1
-}
+[ -f "${INPUT_DIR}/Image" ] || { echo "ERROR: Image missing" >&2; exit 1; }
+[ -f "${INPUT_DIR}/initramfs.img" ] || { echo "ERROR: initramfs.img missing" >&2; exit 1; }
+[ -f "${INPUT_DIR}/system.erofs" ] || { echo "ERROR: system.erofs missing" >&2; exit 1; }
 
-INITRAMFS_SRC=""
-for i in initramfs.img initramfs; do
-	if [ -f "${INPUT_DIR}/${i}" ]; then
-		INITRAMFS_SRC="${INPUT_DIR}/${i}"
-		break
-	fi
-done
-[ -f "${INITRAMFS_SRC}" ] || {
-	echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2
-	exit 1
-}
+cp -f "${INPUT_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
+cp -f "${INPUT_DIR}/initramfs.img" "${USERDATA_STAGE}/.minime/initramfs"
+cp -f "${INPUT_DIR}/system.erofs" "${USERDATA_STAGE}/.minime/system"
 
-SYSTEM_SRC=""
-for s in system.erofs rootfs.erofs; do
-	if [ -f "${INPUT_DIR}/${s}" ]; then
-		SYSTEM_SRC="${INPUT_DIR}/${s}"
-		break
-	fi
-done
-[ -f "${SYSTEM_SRC}" ] || {
-	echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2
-	exit 1
-}
 
-cp -f "${KERNEL_SRC}" "${USERDATA_STAGE}/.minime/kernel"
-cp -f "${INITRAMFS_SRC}" "${USERDATA_STAGE}/.minime/initramfs"
-cp -f "${SYSTEM_SRC}" "${USERDATA_STAGE}/.minime/system"
 
 # 2. Stage Platform Device Trees (DTBs)
-DTB_COUNT=0
 if [ -d "${INPUT_DIR}/devices" ]; then
 	cp -f "${INPUT_DIR}/devices/"*.dtb "${USERDATA_STAGE}/.minime/devices/" 2>/dev/null || true
 fi
 cp -f "${INPUT_DIR}"/*.dtb "${USERDATA_STAGE}/.minime/devices/" 2>/dev/null || true
-
-for dtb_file in "${USERDATA_STAGE}/.minime/devices/"*.dtb; do
-	[ -f "${dtb_file}" ] && DTB_COUNT=$((DTB_COUNT + 1))
-done
-
-if [ "$DTB_COUNT" -eq 0 ]; then
-	echo "WARNING: No DTBs found in ${INPUT_DIR}" >&2
-fi
 
 # Stage default DTB link
 DEFAULT_DEVICE="${DEFAULT_DEVICE:-}"

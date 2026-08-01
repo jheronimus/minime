@@ -63,45 +63,13 @@ trap cleanup EXIT
 STAGE_DIR="${WORK_TMP}/update"
 mkdir -p "${STAGE_DIR}/devices"
 
-KERNEL_SRC=""
-for k in Image zImage; do
-	if [ -f "${INPUT_DIR}/${k}" ]; then
-		KERNEL_SRC="${INPUT_DIR}/${k}"
-		break
-	fi
-done
-[ -f "${KERNEL_SRC}" ] || {
-	echo "ERROR: Kernel binary (Image) missing in ${INPUT_DIR}" >&2
-	exit 1
-}
+[ -f "${INPUT_DIR}/Image" ] || { echo "ERROR: Image missing" >&2; exit 1; }
+[ -f "${INPUT_DIR}/initramfs.img" ] || { echo "ERROR: initramfs.img missing" >&2; exit 1; }
+[ -f "${INPUT_DIR}/system.erofs" ] || { echo "ERROR: system.erofs missing" >&2; exit 1; }
 
-INITRAMFS_SRC=""
-for i in initramfs.img initramfs; do
-	if [ -f "${INPUT_DIR}/${i}" ]; then
-		INITRAMFS_SRC="${INPUT_DIR}/${i}"
-		break
-	fi
-done
-[ -f "${INITRAMFS_SRC}" ] || {
-	echo "ERROR: initramfs missing in ${INPUT_DIR}" >&2
-	exit 1
-}
-
-SYSTEM_SRC=""
-for s in system.erofs rootfs.erofs; do
-	if [ -f "${INPUT_DIR}/${s}" ]; then
-		SYSTEM_SRC="${INPUT_DIR}/${s}"
-		break
-	fi
-done
-[ -f "${SYSTEM_SRC}" ] || {
-	echo "ERROR: EROFS system rootfs missing in ${INPUT_DIR}" >&2
-	exit 1
-}
-
-cp -f "${KERNEL_SRC}" "${STAGE_DIR}/kernel"
-cp -f "${INITRAMFS_SRC}" "${STAGE_DIR}/initramfs"
-cp -f "${SYSTEM_SRC}" "${STAGE_DIR}/system"
+cp -f "${INPUT_DIR}/Image" "${STAGE_DIR}/kernel"
+cp -f "${INPUT_DIR}/initramfs.img" "${STAGE_DIR}/initramfs"
+cp -f "${INPUT_DIR}/system.erofs" "${STAGE_DIR}/system"
 
 if [ -d "${INPUT_DIR}/devices" ]; then
 	cp -f "${INPUT_DIR}/devices/"*.dtb "${STAGE_DIR}/devices/" 2>/dev/null || true
