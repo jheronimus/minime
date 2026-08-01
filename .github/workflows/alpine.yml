@@ -98,7 +98,7 @@ jobs:
       - name: Upload image and update archive
         run: |
           mv out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.xz out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz
-          gh release create testing --title "Testing Builds" --notes "Automatically updated on each push" || true
+          gh release create testing --title "Latest images and update packages" --notes "Rolling release for testing on device" || true
           gh release upload testing out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.img.xz out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}-${{ matrix.ui }}.tar.xz --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
