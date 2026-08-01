@@ -55,13 +55,13 @@ jobs:
               -v ~/.minui-ccache-${{ matrix.libc }}:/alpine-ccache \
               -v ${{ github.workspace }}:/workspace \
               ${{ matrix.container }} \
-              /bin/bash -c "cd /workspace/minime/ui/minui && make CC=\"ccache gcc\" CXX=\"ccache g++\" system cores PLATFORM=minime"
+              /bin/bash -c "cd /workspace/minime/ui/minui/workspace && make CC=\"ccache gcc\" CXX=\"ccache g++\" PLATFORM=minime && cd .. && make system cores PLATFORM=minime"
           else
             docker run --rm --user root \
               -v ~/.minui-ccache-${{ matrix.libc }}:/alpine-ccache \
               -v ${{ github.workspace }}:/workspace \
               ${{ matrix.container }} \
-              /bin/bash -c "cd /workspace/minime/ui/minui && make CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" system cores PLATFORM=minime"
+              /bin/bash -c "cd /workspace/minime/ui/minui/workspace && make CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" PLATFORM=minime && cd .. && make system cores PLATFORM=minime"
           fi
           
           make package
