@@ -1,6 +1,8 @@
 # Shared Makefile targets for Alpine and Buildroot packaging.
 # Expects MINIME_ROOT, TARGET_NAME, BOARD, UI, PODMAN_CMD, PODMAN_TTY, PACKAGER_PLATFORM, PACKAGER_IMAGE to be defined.
 
+PACKAGER_IMAGE ?= $(BUILDER_IMAGE)
+
 .PHONY: image update clean
 
 image:
