@@ -38,18 +38,6 @@ components:
 	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
 		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh system-image"
 
-image:
-	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
-		-v $(MINIME_ROOT):/workspace \
-		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/alpine/out/$(BOARD)/ui alpine && /workspace/minime/build/mkimage.sh --target alpine --board $(BOARD) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target alpine --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD)"
+TARGET_NAME := alpine
 
-update:
-	@mkdir -p $(CURDIR)/out/$(BOARD)
-	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform $(PACKAGER_PLATFORM) \
-		-v $(MINIME_ROOT):/workspace \
-		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/mkupdate.sh --target alpine --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/alpine/out/$(BOARD) --output-dir /workspace/minime/targets/alpine/out/$(BOARD)"
-
-clean:
-	@rm -rf $(CURDIR)/out/$(BOARD) $(HOME)/alpine-output/$(BOARD)
+include ../common.mk

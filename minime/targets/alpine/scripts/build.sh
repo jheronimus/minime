@@ -40,7 +40,6 @@ ALPINE_DL_DIR="${ALPINE_DL_DIR:-/alpine-dl/src}"
 ALPINE_ROOT="${ALPINE_ROOT:-${ALPINE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}}"
 MINIME_ROOT="${MINIME_ROOT:-$(cd "${ALPINE_ROOT}/../../.." && pwd)}"
 ALPINE_DIR="${ALPINE_ROOT}"
-ALPINE_BOARD_DIR="${MINIME_ROOT}/minime/boards"
 
 BOARD="${BOARD:-rk3566}"
 ALPINE_JOBS="${ALPINE_JOBS:-$(nproc 2>/dev/null || echo 4)}"
@@ -280,31 +279,8 @@ assemble_rootfs() {
 	chroot "${ALPINE_ROOTFS_DIR}" /sbin/apk add \
 		--no-cache --allow-untrusted --force-overwrite ${WORLD_PKGS}
 
-	# Install the board's immutable trait payload.
-	TRAITS_SRC="${ALPINE_BOARD_DIR}/${BOARD}/traits"
-	[ -d "${TRAITS_SRC}" ] || die "missing traits source: ${TRAITS_SRC}"
-	rm -rf "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
-	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits"
-	cp -a "${TRAITS_SRC}/." "${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/"
-	echo "gpu_driver=panfrost" >>"${ALPINE_ROOTFS_DIR}/usr/share/minime/traits/platform.ini"
-
-	# Install the Minime overlay (OpenRC services, system config, udev rules).
-	OVERLAY_SRC="${ALPINE_BOARD_DIR}/common/overlay"
-	[ -d "${OVERLAY_SRC}" ] || die "missing overlay source: ${OVERLAY_SRC}"
-	cp -a "${OVERLAY_SRC}/." "${ALPINE_ROOTFS_DIR}/"
-
-	# Install board-specific overlay if present.
-	BOARD_OVERLAY="${ALPINE_BOARD_DIR}/${BOARD}/overlay"
-	if [ -d "${BOARD_OVERLAY}" ]; then
-		cp -a "${BOARD_OVERLAY}/." "${ALPINE_ROOTFS_DIR}/"
-	fi
-
-	# Install shared utility scripts.
-	mkdir -p "${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts"
-	[ -f "${ALPINE_BOARD_DIR}/common/scripts/device.sh" ] && install -m 0755 "${ALPINE_BOARD_DIR}/common/scripts/device.sh" \
-		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/" || true
-	[ -f "${ALPINE_BOARD_DIR}/common/scripts/thermal-watchdog" ] && install -m 0755 "${ALPINE_BOARD_DIR}/common/scripts/thermal-watchdog" \
-		"${ALPINE_ROOTFS_DIR}/usr/share/minime/scripts/" || true
+	# Run post-build script (mimicking Buildroot's structure)
+	TARGET_DIR="${ALPINE_ROOTFS_DIR}" "${ALPINE_DIR}/scripts/post-build.sh" -b "${BOARD}"
 
 	# Install the tinykernel modules into the immutable EROFS rootfs.
 	if [ -d "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules" ]; then
@@ -324,13 +300,6 @@ assemble_rootfs() {
 	# Remove transient build staging directories and local apk repo
 	rm -rf "${ALPINE_ROOTFS_DIR}/local-repo"
 	sed -i '\|/local-repo|d' "${ALPINE_ROOTFS_DIR}/etc/apk/repositories" 2>/dev/null || true
-
-	# Replace build-time resolv.conf with symlink to allow runtime DHCP DNS updates
-	ln -sf /tmp/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf"
-
-	# Touch a marker file to represent the absolute latest timestamp in the rootfs.
-	# The initramfs will use this to fast-forward the hardware clock and prevent OpenRC clock skew.
-	touch "${ALPINE_ROOTFS_DIR}/.build_time"
 }
 
 #──────────────────────────────────────────────────────────────────────────────
@@ -350,49 +319,9 @@ build_system_image() {
 	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' \
 		-exec cp -f {} "${TARGET_OUT}/" \;
 
-	# Generate system.erofs rootfs.
-	# Tar the rootfs excluding proc/sys/dev (which may still contain
-	# mount artifacts from assemble_rootfs), then extract to a clean
-	# staging directory.  This mirrors the old post-image pipeline
-	# and guarantees mkfs.erofs sees only real files.
-	echo "Building system.erofs..."
-	EROF_STAGE=$(mktemp -d)
-	umount -f -R "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || true
-	umount -f -R "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || true
-	umount -f -R "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || umount -lf "${ALPINE_ROOTFS_DIR}/dev" 2>/dev/null || true
-	(cd "${ALPINE_ROOTFS_DIR}" && tar -cf - --exclude='./proc/*' --exclude='./sys/*' --exclude='./dev/*' .) |
-		(cd "${EROF_STAGE}" && tar -xf -)
-	mkdir -p "${EROF_STAGE}/mnt/sdcard"
-	mkfs.erofs -z lz4hc "${TARGET_OUT}/system.erofs" "${EROF_STAGE}"
-	rm -rf "${EROF_STAGE}"
-
-	# Assemble custom boot-stage initramfs
-	echo "Assembling initramfs..."
-	INITRD_STAGE=$(mktemp -d)
-	mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
-		"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
-		"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
-
-	# Alpine's standard busybox is dynamically linked against musl; the
-	# initramfs runs before any dynamic linker is available on /mnt/system.
-	# Use busybox-static instead (installs to /bin/busybox.static).
-	BUSYBOX_STATIC="${ALPINE_ROOTFS_DIR}/bin/busybox.static"
-	if [ ! -f "${BUSYBOX_STATIC}" ]; then
-		die "busybox.static not found at ${BUSYBOX_STATIC} — add busybox-static to world-common"
-	fi
-	cp -f "${BUSYBOX_STATIC}" "${INITRD_STAGE}/bin/busybox"
-	for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync chroot date; do
-		ln -sf busybox "${INITRD_STAGE}/bin/${app}"
-	done
-	ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
-
-	if [ -f "${ALPINE_BOARD_DIR}/common/initramfs-init.sh" ]; then
-		cp -f "${ALPINE_BOARD_DIR}/common/initramfs-init.sh" "${INITRD_STAGE}/init"
-		chmod +x "${INITRD_STAGE}/init"
-	fi
-
-	(cd "${INITRD_STAGE}" && find . | cpio -H newc -o >"${TARGET_OUT}/initramfs.img")
-	rm -rf "${INITRD_STAGE}"
+	# Run system-image script (mimicking Buildroot's structure)
+	TARGET_DIR="${ALPINE_ROOTFS_DIR}" BINARIES_DIR="${TARGET_OUT}" \
+		"${ALPINE_DIR}/scripts/system-image.sh" -b "${BOARD}"
 
 	log "system image: ${TARGET_OUT}"
 }

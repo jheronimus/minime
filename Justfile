@@ -123,16 +123,21 @@ check-build-flow:
         failed=1
     fi
 
-    # 4. Makefile has both 'components' and 'image' targets
+    # 4. Makefiles have 'components' target, and common.mk has 'image' target
+    common_mk="minime/targets/common.mk"
+    if [ ! -f "$common_mk" ]; then
+        echo "ERROR: $common_mk missing" >&2
+        failed=1
+    elif ! grep -q '^image:' "$common_mk" && ! grep -q '^image ' "$common_mk"; then
+        echo "ERROR: $common_mk missing 'image' target" >&2
+        failed=1
+    fi
+
     for target in alpine buildroot; do
         mk="minime/targets/${target}/Makefile"
         if [ -f "$mk" ]; then
             if ! grep -q '^components:' "$mk" && ! grep -q '^components ' "$mk"; then
                 echo "ERROR: $mk missing 'components' target" >&2
-                failed=1
-            fi
-            if ! grep -q '^image:' "$mk" && ! grep -q '^image ' "$mk"; then
-                echo "ERROR: $mk missing 'image' target" >&2
                 failed=1
             fi
         fi

@@ -118,28 +118,7 @@ jobs:
           retention-days: 7
 
   upload-assets:
-    name: Upload prebuilt Allium assets to Release
+    uses: ./.github/workflows/upload-ui-assets.yml
     needs: build-allium
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download musl artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: allium-musl-aarch64
-          path: minime/ui/out
-
-      - name: Download glibc artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: allium-glibc-aarch64
-          path: minime/ui/out
-
-      - name: Upload to UI rolling release
-        run: |
-          gh release create latest-ui --title "Latest UI Assets" --notes "Rolling release for UI prebuilts" || true
-          gh release upload latest-ui minime/ui/out/allium-*.tar.xz --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      artifact_prefix: allium
