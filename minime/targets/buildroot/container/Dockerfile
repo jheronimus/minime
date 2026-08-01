@@ -41,6 +41,8 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		libncurses-dev \
 		ca-certificates \
 		sudo \
+		zlib1g-dev \
+		zlib1g-dev:arm64 \
 	&& rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI for release uploads in CI

@@ -82,6 +82,7 @@ RUN apk add --no-cache --no-progress \
 		u-boot-tools \
 		patchelf \
 		wget \
+		zlib-dev \
 	&& true
 
 # aports requires a non-root "packager" account.  Match the host UID/GID

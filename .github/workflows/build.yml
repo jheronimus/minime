@@ -87,17 +87,17 @@ jobs:
             ui-${{ matrix.libc }}-
 
       - name: Compile MinUI
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true'
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.xz', matrix.libc)) == ''
         run: |
           scripts/build-ui.sh minui ${{ matrix.libc }}
 
       - name: Compile Allium
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true'
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.xz', matrix.libc)) == ''
         run: |
           scripts/build-ui.sh allium ${{ matrix.libc }}
 
       - name: Save UI Cache
-        if: always() && steps.cache-ui-restore.outputs.cache-hit != 'true'
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.xz', matrix.libc)) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.xz', matrix.libc)) == '')
         uses: actions/cache/save@v4
         with:
           path: minime/ui/out
