@@ -10,7 +10,7 @@ The goal of Minime is to provide a simple foundation to play around with differe
 Under the hood Minime actually builds on two foundations:
 
 - Alpine offers panfrost-enabled images, but uses the musl LibC library, so can't really run a lot of closed source software.
-- Buildroot offers glibc, but it builds everything from scratch, so building Panfrost, LLVM, etc would take several hours easily. So it uses prebuilt libmali driver blobs, but those do not work with H700 on mainline kernel (at least I haven't figured out how).
+- Buildroot offers glibc, but it builds everything from scratch, so building Panfrost, LLVM, etc would take several hours easily. So it uses libmali driver blobs, but those do not work with H700 on mainline kernel (at least I haven't figured out how).
 
 Both targets are used to basically produce three main files:
 - the kernel
@@ -33,7 +33,7 @@ This approach will allow simple OTA updates and easy switching between Alpine on
 Most firmwares are built for one specific UI - EmulationStation, MinUI, etc. Minime tries to treat UIs the way Linux distros treat GNOME, KDE, etc. It does two things to achieve this:
 
 - maintains a traits system. UIs don't have to support each device Minime supports. They just have to read the traits file that contains specifics like screen aspect ratio, controls, connectivity, lid and all the important system paths.
-- provides a simple ui.sh script. UIs have to ship a simple ui.env file that provides key information: what binary launches the UI, what processes will be spawned and that's it. After ui.sh starts, the UI can take over.
+- provides a simple ui.sh script. UIs have to ship a ui.env file that provides key information: what binary launches the UI, what processes will be spawned and that's it. After ui.sh starts, the UI can take over.
 
 Minime doesn't override user directories that UIs provide (like roms or bios or savestates) and doesn't override built-in dependencies. If a UI comes with its own emulation cores, Minime will not try to make it use something else.
 
