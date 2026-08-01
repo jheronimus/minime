@@ -17,6 +17,7 @@ runs:
       with:
         path: ${{ inputs.target == 'alpine' && '~/alpine-dl' || '~/.buildroot-dl' }}
         key: minime-${{ inputs.target }}-dl
+        save-always: true
 
     - name: Restore & Save ccache (Buildroot)
       if: inputs.target == 'buildroot'
@@ -26,6 +27,7 @@ runs:
         key: minime-buildroot-ccache-${{ inputs.board }}-${{ hashFiles('minime/boards/*/tiny-*.config', 'minime/targets/buildroot/external/configs/*.config', 'minime/targets/buildroot/external/package/**/*.mk', 'minime/boards/*/patches/**') }}
         restore-keys: |
           minime-buildroot-ccache-${{ inputs.board }}-
+        save-always: true
 
     - name: Restore & Save package cache (Alpine)
       if: inputs.target == 'alpine'
@@ -35,6 +37,7 @@ runs:
         key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-panfrost.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/firmware/**', 'minime/boards/common/overlay/**', 'minime/boards/${{ inputs.board }}/tiny-*.config', 'minime/boards/${{ inputs.board }}/patches/**', 'minime/boards/${{ inputs.board }}/dts/**', 'minime/boards/${{ inputs.board }}/firmware/**', 'minime/targets/alpine/aports/**') }}
         restore-keys: |
           minime-alpine-pkgs-${{ inputs.board }}-
+        save-always: true
 
     - name: Prepare cache directories
       shell: bash
