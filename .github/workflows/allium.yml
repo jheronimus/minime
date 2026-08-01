@@ -35,8 +35,9 @@ jobs:
           token: ${{ secrets.UI_UPDATE || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly
           targets: ${{ matrix.target }}
 
       - name: Install build dependencies
@@ -49,7 +50,7 @@ jobs:
       - name: Configure Rust musl linker
         if: matrix.libc == 'musl'
         run: |
-          rustup target add aarch64-unknown-linux-musl
+          rustup target add --toolchain nightly aarch64-unknown-linux-musl || true
           mkdir -p ~/.cargo
           cat >> ~/.cargo/config.toml << 'EOF'
           [target.aarch64-unknown-linux-musl]
