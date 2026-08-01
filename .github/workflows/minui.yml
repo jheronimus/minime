@@ -17,8 +17,18 @@ permissions:
 
 jobs:
   build-minui:
-    name: Build MinUI
-    runs-on: ubuntu-latest
+    name: Build MinUI (${{ matrix.libc }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libc: musl
+            runner: ubuntu-24.04-arm
+            container: ghcr.io/${{ github.repository_owner }}/minime-builder-alpine:latest
+          - libc: glibc
+            runner: ubuntu-latest
+            container: ghcr.io/${{ github.repository_owner }}/minime-builder-buildroot:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,46 +36,34 @@ jobs:
           submodules: recursive
           token: ${{ secrets.UI_UPDATE || secrets.GITHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Cache C/C++ compilation (MinUI)
         uses: actions/cache@v4
         with:
-          path: ~/.minui-ccache
-          key: minui-ccache-${{ hashFiles('minime/ui/minui/**') }}
+          path: ~/.minui-ccache-${{ matrix.libc }}
+          key: minui-ccache-${{ matrix.libc }}-${{ hashFiles('minime/ui/minui/**') }}
           restore-keys: |
-            minui-ccache-
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Inject ccache into toolchain Dockerfile
-        run: |
-          sed -i 's/crossbuild-essential-arm64 \\/crossbuild-essential-arm64 \\\n        ccache \\/g' minime/ui/minui/toolchains/minime-toolchain/Dockerfile
-
-      - name: Build toolchain image
-        uses: docker/build-push-action@v5
-        with:
-          context: minime/ui/minui/toolchains/minime-toolchain
-          load: true
-          tags: minime-toolchain:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            minui-ccache-${{ matrix.libc }}-
 
       - name: Build MinUI binaries
         run: |
           cd minime/ui/minui
           make setup
-          mkdir -p ~/.minui-ccache
-          docker run --rm \
-            -v ~/.minui-ccache:/root/.ccache \
-            -e CCACHE_DIR=/root/.ccache \
-            -v ${{ github.workspace }}/minime/ui/minui/workspace:/root/workspace \
-            minime-toolchain \
-            /bin/bash -c '. ~/.bashrc && make CC="ccache aarch64-linux-gnu-gcc" CXX="ccache aarch64-linux-gnu-g++"'
-          make system PLATFORM=minime
-          make cores PLATFORM=minime
+          mkdir -p ~/.minui-ccache-${{ matrix.libc }}
+          
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            docker run --rm --user root \
+              -v ~/.minui-ccache-${{ matrix.libc }}:/alpine-ccache \
+              -v ${{ github.workspace }}:/workspace \
+              ${{ matrix.container }} \
+              /bin/bash -c "cd /workspace/minime/ui/minui && make CC=\"ccache gcc\" CXX=\"ccache g++\" system cores PLATFORM=minime"
+          else
+            docker run --rm --user root \
+              -v ~/.minui-ccache-${{ matrix.libc }}:/alpine-ccache \
+              -v ${{ github.workspace }}:/workspace \
+              ${{ matrix.container }} \
+              /bin/bash -c "cd /workspace/minime/ui/minui && make CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" system cores PLATFORM=minime"
+          fi
+          
           make package
 
       - name: Package & Stage Archive
@@ -76,14 +74,13 @@ jobs:
             [ -f "$zipfile" ] || continue
             unzip -q -o "$zipfile" -d "$STAGE_DIR"
           done
-          tar -cJf minime/ui/out/minui-glibc-aarch64.tar.xz -C "$STAGE_DIR" .
-          cp minime/ui/out/minui-glibc-aarch64.tar.xz minime/ui/out/minui-musl-aarch64.tar.xz
+          tar -cJf minime/ui/out/minui-${{ matrix.libc }}-aarch64.tar.xz -C "$STAGE_DIR" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: minui-assets
-          path: minime/ui/out/minui-*.tar.xz
+          name: minui-${{ matrix.libc }}-aarch64
+          path: minime/ui/out/minui-${{ matrix.libc }}-aarch64.tar.xz
           retention-days: 7
 
   upload-assets:

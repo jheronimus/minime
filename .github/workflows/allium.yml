@@ -18,14 +18,18 @@ permissions:
 jobs:
   build-allium:
     name: Build Allium (${{ matrix.libc }})
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - libc: musl
+            runner: ubuntu-24.04-arm
+            container: ghcr.io/${{ github.repository_owner }}/minime-builder-alpine:latest
             target: aarch64-unknown-linux-musl
           - libc: glibc
+            runner: ubuntu-latest
+            container: ghcr.io/${{ github.repository_owner }}/minime-builder-buildroot:latest
             target: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout code
@@ -33,29 +37,6 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.UI_UPDATE || secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          targets: ${{ matrix.target }}
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            build-essential pkg-config \
-            libsdl2-dev cmake musl-tools musl-dev
-
-      - name: Configure Rust musl linker
-        if: matrix.libc == 'musl'
-        run: |
-          rustup target add --toolchain nightly aarch64-unknown-linux-musl || true
-          mkdir -p ~/.cargo
-          cat >> ~/.cargo/config.toml << 'EOF'
-          [target.aarch64-unknown-linux-musl]
-          linker = "musl-gcc"
-          EOF
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -65,16 +46,32 @@ jobs:
 
       - name: Build Allium binaries
         run: |
-          cd minime/ui/allium
-          cargo build --release --target ${{ matrix.target }} --features minime \
-            --bin alliumd \
-            --bin allium-launcher \
-            --bin allium-menu \
-            --bin activity-tracker \
-            --bin screenshot \
-            --bin screenshot-viewer \
-            --bin say \
-            --bin show
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            # Build natively in Alpine arm64 (no --target needed as it's native)
+            docker run --rm --user root \
+              -v ${{ github.workspace }}:/workspace \
+              -v ~/.cargo/registry:/root/.cargo/registry \
+              ${{ matrix.container }} \
+              /bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --features minime \
+                --bin alliumd --bin allium-launcher --bin allium-menu \
+                --bin activity-tracker --bin screenshot --bin screenshot-viewer \
+                --bin say --bin show"
+            
+            # Create a symlink to match the target path expectations
+            mkdir -p minime/ui/allium/target/${{ matrix.target }}
+            ln -sf ../release minime/ui/allium/target/${{ matrix.target }}/release
+          else
+            # Cross-compile in Debian amd64
+            docker run --rm --user root \
+              -v ${{ github.workspace }}:/workspace \
+              -v ~/.cargo/registry:/root/.cargo/registry \
+              -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
+              ${{ matrix.container }} \
+              /bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --target ${{ matrix.target }} --features minime \
+                --bin alliumd --bin allium-launcher --bin allium-menu \
+                --bin activity-tracker --bin screenshot --bin screenshot-viewer \
+                --bin say --bin show"
+          fi
 
       - name: Assemble & Package Archive
         run: |

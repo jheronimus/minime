@@ -3,7 +3,7 @@ FROM docker.io/library/debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-install-recommends \
 		build-essential \
 		bison \
 		flex \
@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		curl \
 		ccache \
 		cmake \
+		crossbuild-essential-arm64 \
+		libsdl2-dev:arm64 \
+		libsdl2-image-dev:arm64 \
+		libsdl2-ttf-dev:arm64 \
 		mold \
 		zstd \
 		libelf-dev \
@@ -45,6 +49,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN echo "check_certificate = off" >> /etc/wgetrc
+
+# Install Rust toolchain for cross-compiling Allium
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly \
+	&& chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+	&& rustup target add aarch64-unknown-linux-gnu
 
 ARG BUILDER_UID=1000
 ARG BUILDER_GID=1000

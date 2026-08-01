@@ -66,6 +66,11 @@ RUN apk add --no-cache --no-progress \
 		python3 \
 		python3-dev \
 		rsync \
+		rust \
+		cargo \
+		sdl2-dev \
+		sdl2_image-dev \
+		sdl2_ttf-dev \
 		squashfs-tools \
 		sudo \
 		util-linux-dev \
