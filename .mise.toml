@@ -1,2 +1,4 @@
 [tools]
 actionlint = "latest"
+shellcheck = "latest"
+just = "latest"
