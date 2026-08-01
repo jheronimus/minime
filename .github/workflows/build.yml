@@ -31,7 +31,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/**', 'scripts/build-bootloader.sh') }}
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Compile Bootloader
         if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == ''
@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/**', 'scripts/build-bootloader.sh') }}
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Upload Bootloader Artifacts
         uses: actions/upload-artifact@v4
@@ -82,7 +82,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: minime/ui/out
-          key: ui-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/**', 'minime/ui/minui/**') }}
+          key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
           restore-keys: |
             ui-${{ matrix.libc }}-
 
@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: minime/ui/out
-          key: ui-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/**', 'minime/ui/minui/**') }}
+          key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
 
       - name: Upload UI Artifacts
         uses: actions/upload-artifact@v4

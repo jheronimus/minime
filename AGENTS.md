@@ -67,17 +67,19 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 
 ## Agent Directives (Buildroot Quirks)
 
-- **No Manual Workflow Dispatch**: Every push to `main` automatically triggers the Alpine and Buildroot build workflows. **Never** use `gh workflow run` to manually dispatch build workflows — this causes race conditions where concurrent builds corrupt the `testing` release assets. Only use manual dispatch for the bootloader workflow (`bootloader.yml`), which requires explicit invocation.
-- **Cancel Stale Jobs**: If you have made several pushes in succession, run `gh run list` and cancel any in-progress or queued builds from earlier pushes — only the latest commit matters. Never allow more than one job of any given kind (Alpine, Buildroot, Bootloader) to run concurrently.
+- **No Manual Workflow Dispatch**: Every push to `main` filtered to `minime/**` automatically triggers `build.yml`, which builds bootloaders, UIs, and OS images in one pipeline. **Never** use `gh workflow run` to manually dispatch `build.yml` — this causes concurrent runs that corrupt the `testing` release assets.
+- **Cancel Stale Jobs**: If you have made several pushes in succession, run `gh run list` and cancel any in-progress or queued `build.yml` runs from earlier pushes — only the latest commit matters. Never allow more than one `build.yml` run to be active concurrently.
 - **Architecture & Optimization Knowledge**: Store all architectural decisions, filesystem/kernel performance optimizations, and design rationale in Architecture Decision Records under `docs/adr/` (e.g. `docs/adr/0001-fat32-cluster-and-image-sizing.md`).
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
-- **UI Submodules & Central Prebuilt Artifacts**: `minime/ui/allium` and `minime/ui/minui` are git submodules. The UI workflows (`allium.yml`, `minui.yml`) build and upload binary archives (`allium-musl-aarch64.tar.xz`, `allium-glibc-aarch64.tar.xz`, `minui-musl-aarch64.tar.xz`, `minui-glibc-aarch64.tar.xz`) to the `latest-ui` GitHub release. The OS image workflows (`alpine.yml` and `buildroot.yml`) trigger off those UI workflows via `workflow_run` (completed, `main`), and on push to `main` for the build inputs (`minime/boards/**`, `minime/targets/**`, `minime/build/**`, `src/**`, `roms/**`, `scripts/**`, `.github/workflows/**`, `.github/actions/**`). At packaging time `genassets.sh` downloads the matching archive from the `latest-ui` release when it is not already present in `minime/ui/out/`.
+- **UI Submodules & CI Artifacts**: `minime/ui/allium` and `minime/ui/minui` are git submodules tracking fork branches. UI binaries are compiled by the `build-ui` job matrix inside `build.yml` (musl on ARM64, glibc on AMD64) and passed to `build-os` as ephemeral GitHub Actions run artifacts (`ui-musl`, `ui-glibc`). They are never committed to git and never uploaded to a GitHub Release. At packaging time `genassets.sh` extracts the matching archive from the downloaded artifact into `minime/ui/out/` (ephemeral runner path). Submodule SHAs in `minime` are bumped automatically by `update-submodules.yml` (daily cron + `repository_dispatch`).
 
 ## Infrastructure & Scripts
 
-For detailed documentation of GitHub Actions (GA) workflows, build orchestration scripts, entrypoints, and `Justfile` commands, consult [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md).
+**Mandatory reading for AI agents**: Before making any changes to build or workflow files, read [`docs/minime-workflow.yml`](file:///Users/ilembitov/Projects/minime/docs/minime-workflow.yml) — it is the single source of truth for the full CI pipeline: steps, scripts, dependencies, caches, and outputs.
+
+For detailed documentation of GitHub Actions workflows, build orchestration scripts, entrypoints, and `Justfile` commands, consult [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md).
 
 ## Unified Validation Quality Gates
 

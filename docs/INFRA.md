@@ -1,52 +1,54 @@
 # Infrastructure & Workflows (`docs/INFRA.md`)
 
-This document describes all GitHub Actions (GA) CI/CD workflows, build scripts, entrypoints, and `Justfile` developer utilities in the Minime monorepo.
+This document describes all GitHub Actions CI/CD workflows, build scripts, entrypoints, and `Justfile` developer utilities in the Minime monorepo.
+
+> **Mandatory reading for AI agents**: For a precise, structured breakdown of the full CI pipeline — steps, scripts, dependencies, caches, and outputs — read [`docs/minime-workflow.yml`](file:///Users/ilembitov/Projects/minime/docs/minime-workflow.yml) before making any changes to build or workflow files.
 
 ---
 
 ## 1. GitHub Actions Workflows (`.github/workflows/`)
 
-### `alpine.yml` — Build Alpine Images
-- **Trigger**: `workflow_run` of the Allium/MinUI UI workflows (completed, `main`); push to `main` on `minime/boards/**`, `minime/uboot/**`, `minime/build/**`, `minime/targets/alpine/**`, `src/**`, `roms/**`, `scripts/**`, `.github/workflows/alpine.yml`, `.github/actions/**`; or `workflow_dispatch`.
-- **Purpose**: Cross-compiles Alpine Linux firmware images using Podman/Docker on `ubuntu-24.04-arm` runners.
-- **Matrix**: Boards × UIs (`minui`, `allium`). Push builds `rk3566` + `h700`; `workflow_dispatch` can add `rk3326` (all three default on).
-- **Artifacts**: Uploads `.img.xz` compressed disk images and `.tar.xz` update archives to the `testing` release.
+### `build.yml` — Main Build Pipeline
+- **Trigger**: Push to `main` filtered to `minime/**`; pull request on `minime/**`; `workflow_dispatch`.
+- **Purpose**: Builds all bootloaders, UIs, OS images, and OTA update packages for all board/OS/UI combinations. Uploads final images to the `testing` GitHub Release on push to `main`.
+- **Jobs**:
+  - `build-bootloader` — compiles U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64. Cached by hash of `minime/uboot/**`.
+  - `build-ui` (matrix: `musl` / `glibc`) — compiles MinUI and Allium for both libc variants. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 with no container. Cached by hash of `minime/ui/**`.
+  - `build-os` (matrix: `{alpine, buildroot}` × `{h700, rk3326, rk3566}` = 6 jobs) — runs `make components` then `make image update` (once per UI). Depends on both asset jobs. Uploads `.img.xz` and `.tar.xz` to the `testing` release.
+- **Caches**: `bootloader-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
+- **Rule**: Never dispatch this workflow manually (`gh workflow run`). Push to `main` is the only intended trigger. Manual dispatch causes concurrent runs that corrupt `testing` release assets.
 
-### `buildroot.yml` — Build Buildroot Images
-- **Trigger**: `workflow_run` of the Allium/MinUI UI workflows (completed, `main`); push to `main` on `minime/boards/**`, `minime/uboot/**`, `minime/build/**`, `minime/targets/buildroot/**`, `src/**`, `roms/**`, `scripts/**`, `.github/workflows/buildroot.yml`, `.github/actions/**`; or `workflow_dispatch`.
-- **Purpose**: Compiles minimal Buildroot firmware images on Ubuntu runners using ccache and download caching. Runs `scripts/sync-kernel.sh` ("Check for updates") before building.
-- **Matrix**: Boards × UIs (`minui`, `allium`). Push builds `rk3566` + `h700`; `workflow_dispatch` can add `rk3326` (h700 defaults off, rk3326/rk3566 on) and optionally cleans the board output first.
-- **Artifacts**: Uploads `.img.xz` compressed disk images and `.tar.xz` update archives to the `testing` release.
-
-### `bootloader.yml` — Build Bootloaders
-- **Trigger**: `workflow_dispatch` (manual or programmatically dispatched).
-- **Purpose**: Clones upstream U-Boot and ARM Trusted Firmware (ATF), applies board patches and `minime/uboot/config/uboot.config` fragments, and builds bootloader binaries (`u-boot-sunxi-with-spl.bin`, `idbloader.img`, `u-boot.itb`).
-- **Automation**: Commits updated prebuilt binaries into `minime/uboot/out/<board>/`; the push lands under `minime/uboot/**`, which is in the push paths of `alpine.yml` and `buildroot.yml`, so the image rebuilds trigger automatically.
+### `containers.yml` — Build & Push Builder Images
+- **Trigger**: Push to `main` on `minime/targets/alpine/container/**` or `minime/targets/buildroot/container/**`; `workflow_dispatch`.
+- **Purpose**: Builds and pushes `ghcr.io/.../minime-musl:latest` (arm64) and `ghcr.io/.../minime-glibc:latest` (amd64) to GHCR. These images are prerequisites for `build.yml`.
 
 ### `sync-kernel.yml` — Automated Kernel Version Sync
-- **Trigger**: Daily schedule (cron); commits the bump directly to `main`.
-- **Purpose**: Runs `scripts/sync-kernel.sh` to keep the kernel version synced between Alpine's `tinykernel` APKBUILD and Buildroot's custom kernel config.
-- **Note**: `alpine.yml` and `buildroot.yml` also run `scripts/sync-kernel.sh` as a "Check for updates" step before building, so image builds always use the current Alpine-stable kernel regardless of the committed pin.
+- **Trigger**: Daily cron at 00:00 UTC. Commits directly to `main`.
+- **Purpose**: Runs `scripts/sync-kernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config.
+
+### `update-submodules.yml` — UI Submodule Bump
+- **Trigger**: Daily cron at 02:00 UTC; `repository_dispatch` event `update-submodules`.
+- **Purpose**: Runs `git submodule update --remote` on `minime/ui/allium` and `minime/ui/minui`, then commits the bumped SHAs to `main`.
 
 ---
 
 ## 2. Repository Scripts & Entrypoints
 
-### Orchestration & Build Scripts (`scripts/` and `minime/build/`)
-- **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`kernel`, `initramfs.img`, `rootfs.erofs`, `.dtb`, `ui/`) and prebuilt U-Boot binaries, stages `userdata.vfat`, runs `genimage`, and compresses `minime-<target>-<board>.img.xz`.
-- **`minime/build/mkupdate.sh`**: Central update package generator. Packages target artifacts into `minime-<target>-<board>[-<ui>].tar.xz` for live updates and distro switching.
+### Build Scripts (`scripts/` and `minime/build/`)
+- **`scripts/build-bootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
+- **`scripts/build-ui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
+- **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
+- **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.xz`.
+- **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.xz` for live updates.
+- **`scripts/sync-kernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
+- **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
+
+### Validation Scripts (`scripts/`)
 - **`scripts/check-traits.sh`**: Validates device hardware traits configuration against the trait schema for all boards.
 - **`scripts/check-kernel-config.sh`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
-- **`scripts/check-firmware.sh`**: Dynamically verifies that all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
+- **`scripts/check-firmware.sh`**: Verifies all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
-- **`scripts/sync-kernel.sh`**: Bumps the kernel version and source `sha512sums` in Alpine's `tinykernel` APKBUILD and Buildroot's `common.config` to the latest Alpine-stable release.
-- **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
-- **`scripts/build-bootloader.sh`**: Helper script invoked by `bootloader.yml` to compile ATF and U-Boot for `h700`, `rk3326`, or `rk3566`.
-- **`minime/targets/alpine/scripts/build.sh`**: Core Alpine image build engine. Compiles packages, stages rootfs, and generates erofs+initramfs.
-- **`minime/targets/buildroot/external/scripts/post-build.sh`**: Buildroot post-build script for copying runtime assets and init scripts into `$TARGET_DIR`.
-- **`minime/targets/buildroot/external/scripts/system-image.sh`**: Buildroot post-image hook that assembles `system.erofs` and the initramfs into `$(O)/images`.
-- **`roms/install.sh`**: Asset installer script that maps and stages preloaded ROMs into the appropriate launcher directory structure (`MinUI` vs `Allium`).
 
 ---
 
