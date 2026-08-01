@@ -26,6 +26,7 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		bc \
 		python3 \
 		python3-dev \
+		python3-setuptools \
 		u-boot-tools \
 		cpio \
 		genimage \
