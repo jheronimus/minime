@@ -217,36 +217,26 @@ fetch os="all" board="all" ui="all":
     board_val="{{board}}"
     ui_val="{{ui}}"
 
-    # Expand OS
-    case "$os_val" in
-        "all") os_list="alpine buildroot" ;;
-        alpine|buildroot) os_list="$os_val" ;;
-        *) echo "ERROR: OS must be 'alpine', 'buildroot', or 'all'" >&2; exit 1 ;;
-    esac
+    os_regex="${os_val}"
+    [ "$os_val" = "all" ] && os_regex="[^-]+"
+    
+    board_regex="${board_val}"
+    [ "$board_val" = "all" ] && board_regex="[^-]+"
+    
+    ui_regex="${ui_val}"
+    [ "$ui_val" = "all" ] && ui_regex="[^-]+"
 
-    # Expand board
-    case "$board_val" in
-        "all") board_list="h700 rk3566" ;;
-        h700|rk3326|rk3566) board_list="$board_val" ;;
-        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or 'all'" >&2; exit 1 ;;
-    esac
+    pattern="^minime-${os_regex}-${board_regex}-${ui_regex}\.img\.xz$"
 
-    # Expand UI
-    case "$ui_val" in
-        "all") ui_list="minui allium" ;;
-        minui|allium) ui_list="$ui_val" ;;
-        *) echo "ERROR: UI must be 'minui', 'allium', or 'all'" >&2; exit 1 ;;
-    esac
+    echo "Querying available testing releases from GitHub..."
+    available_assets=$(curl -sL https://api.github.com/repos/jheronimus/minime/releases/tags/testing | grep -o '"name": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
 
-    # Build image list
-    images=""
-    for o in $os_list; do
-        for b in $board_list; do
-            for u in $ui_list; do
-                images="${images:+$images }minime-${o}-${b}-${u}.img.xz"
-            done
-        done
-    done
+    images=$(echo "$available_assets" | grep -E "$pattern" || true)
+
+    if [ -z "$images" ]; then
+        echo "ERROR: These images are currently not available in the testing release (os=${os_val} board=${board_val} ui=${ui_val})." >&2
+        exit 1
+    fi
 
     echo "Images to fetch:"
     for img in $images; do
@@ -339,35 +329,26 @@ fetch-update os="all" board="all" ui="all":
     board_val="{{board}}"
     ui_val="{{ui}}"
 
-    # Expand OS
-    case "$os_val" in
-        "all") os_list="alpine buildroot" ;;
-        alpine|buildroot) os_list="$os_val" ;;
-        *) echo "ERROR: OS must be 'alpine', 'buildroot', or 'all'" >&2; exit 1 ;;
-    esac
+    os_regex="${os_val}"
+    [ "$os_val" = "all" ] && os_regex="[^-]+"
+    
+    board_regex="${board_val}"
+    [ "$board_val" = "all" ] && board_regex="[^-]+"
+    
+    ui_regex="${ui_val}"
+    [ "$ui_val" = "all" ] && ui_regex="[^-]+"
 
-    # Expand board
-    case "$board_val" in
-        "all") board_list="h700 rk3566" ;;
-        h700|rk3326|rk3566) board_list="$board_val" ;;
-        *) echo "ERROR: board must be 'h700', 'rk3326', 'rk3566', or 'all'" >&2; exit 1 ;;
-    esac
+    pattern="^minime-${os_regex}-${board_regex}-${ui_regex}\.tar\.xz$"
 
-    # Expand UI
-    case "$ui_val" in
-        "all") ui_list="minui allium" ;;
-        minui|allium) ui_list="$ui_val" ;;
-        *) echo "ERROR: UI must be 'minui', 'allium', or 'all'" >&2; exit 1 ;;
-    esac
+    echo "Querying available testing updates from GitHub..."
+    available_assets=$(curl -sL https://api.github.com/repos/jheronimus/minime/releases/tags/testing | grep -o '"name": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
 
-    updates=""
-    for o in $os_list; do
-        for b in $board_list; do
-            for u in $ui_list; do
-                updates="${updates:+$updates }minime-${o}-${b}-${u}.tar.xz"
-            done
-        done
-    done
+    updates=$(echo "$available_assets" | grep -E "$pattern" || true)
+
+    if [ -z "$updates" ]; then
+        echo "ERROR: These update packages are currently not available in the testing release (os=${os_val} board=${board_val} ui=${ui_val})." >&2
+        exit 1
+    fi
 
     echo "Update packages to fetch:"
     for pkg in $updates; do

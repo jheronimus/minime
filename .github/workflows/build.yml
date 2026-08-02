@@ -9,6 +9,15 @@ on:
     paths:
       - 'minime/**'
   workflow_dispatch:
+    inputs:
+      build_rk3326:
+        description: 'Build rk3326 targets'
+        type: boolean
+        default: false
+      build_buildroot_h700:
+        description: 'Build Buildroot h700 target'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -157,6 +166,13 @@ jobs:
           - os: buildroot
             libc: glibc
             runner: ubuntu-latest
+        exclude:
+          - board: ${{ inputs.build_rk3326 == true && 'never_match' || 'rk3326' }}
+            os: alpine
+          - board: ${{ inputs.build_rk3326 == true && 'never_match' || 'rk3326' }}
+            os: buildroot
+          - board: ${{ inputs.build_buildroot_h700 == true && 'never_match' || 'h700' }}
+            os: buildroot
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
