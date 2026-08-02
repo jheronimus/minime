@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -28,13 +28,13 @@ jobs:
 
       - name: Restore Bootloader Cache
         id: cache-bootloader-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: minime/uboot/out
           key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Restore Bootloader CCache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.bootloader-ccache
           key: ccache-bootloader-${{ github.sha }}
@@ -54,20 +54,20 @@ jobs:
 
       - name: Save Bootloader Cache
         if: always() && (steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == '')
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: minime/uboot/out
           key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Save Bootloader CCache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.bootloader-ccache
           key: ccache-bootloader-${{ github.sha }}
 
       - name: Upload Bootloader Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bootloader-out
           path: minime/uboot/out
@@ -86,7 +86,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -95,7 +95,7 @@ jobs:
 
       - name: Restore UI Cache
         id: cache-ui-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
           key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
@@ -103,7 +103,7 @@ jobs:
             ui-${{ matrix.libc }}-
 
       - name: Restore UI CCache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.ui-ccache-${{ matrix.libc }}
           key: ccache-ui-${{ matrix.libc }}-${{ github.sha }}
@@ -122,20 +122,20 @@ jobs:
 
       - name: Save UI Cache
         if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.xz', matrix.libc)) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.xz', matrix.libc)) == '')
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: minime/ui/out
           key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
 
       - name: Save UI CCache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-${{ matrix.libc }}
           key: ccache-ui-${{ matrix.libc }}-${{ github.sha }}
 
       - name: Upload UI Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ui-${{ matrix.libc }}
           path: minime/ui/out
@@ -158,24 +158,24 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Download Bootloader
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bootloader-out
           path: minime/uboot/out
 
       - name: Download UI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ui-${{ matrix.libc }}
           path: minime/ui/out
 
       - name: Restore CCache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/alpine-ccache
@@ -185,7 +185,7 @@ jobs:
             ccache-${{ matrix.os }}-${{ matrix.board }}-
 
       - name: Restore DL Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/alpine-dl
@@ -205,7 +205,7 @@ jobs:
 
       - name: Save CCache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/alpine-ccache
@@ -214,7 +214,7 @@ jobs:
 
       - name: Save DL Cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/alpine-dl
