@@ -146,7 +146,7 @@ Building Alpine Linux firmware for Minime:
 - **`container/Dockerfile`**: Build environment container (`arm64`, `abuild`, `erofs-utils`, `genimage`, `mtools`).
 - **`configs/`**: Build configuration and world package lists per board.
 - **`aports/`**: Local APK build recipes (tinykernel, fatresize, libretro-headers, libretro-cores, retroarch, drkhrse-miyoo-bezels).
-- **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>.img.xz`.
+- **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>-<ui>.img.xz` (plus `minime-alpine-<board>-<ui>.tar.xz` OTA package).
 
 ## Buildroot Target Builder (`minime/targets/buildroot/`)
 

@@ -4,12 +4,12 @@
 #
 # Usage:
 #   mkimage.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
-#                --input-dir <dir> --output-dir <dir>
+#                --input-dir <dir> --output-dir <dir> [--ui <minui|allium>]
 
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} --target <alpine|buildroot> --board <h700|rk3326|rk3566> --input-dir <dir> --output-dir <dir>" >&2
+	echo "Usage: ${0##*/} --target <alpine|buildroot> --board <h700|rk3326|rk3566> --input-dir <dir> --output-dir <dir> [--ui <minui|allium>]" >&2
 	exit 1
 }
 
@@ -17,6 +17,7 @@ TARGET=""
 BOARD=""
 INPUT_DIR=""
 OUTPUT_DIR=""
+UI=""
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -34,6 +35,10 @@ while [ $# -gt 0 ]; do
 		;;
 	--output-dir)
 		OUTPUT_DIR="$2"
+		shift 2
+		;;
+	--ui)
+		UI="$2"
 		shift 2
 		;;
 	*)
@@ -66,15 +71,22 @@ USERDATA_STAGE="${ROOTPATH_TMP}/userdata"
 mkdir -p "${BINARIES_DIR}" "${USERDATA_STAGE}/.minime/config" "${USERDATA_STAGE}/.minime/devices"
 
 # 1. Stage Kernel, Initramfs, EROFS System RootFS
-[ -f "${INPUT_DIR}/Image" ] || { echo "ERROR: Image missing" >&2; exit 1; }
-[ -f "${INPUT_DIR}/initramfs.img" ] || { echo "ERROR: initramfs.img missing" >&2; exit 1; }
-[ -f "${INPUT_DIR}/system.erofs" ] || { echo "ERROR: system.erofs missing" >&2; exit 1; }
+[ -f "${INPUT_DIR}/Image" ] || {
+	echo "ERROR: Image missing" >&2
+	exit 1
+}
+[ -f "${INPUT_DIR}/initramfs.img" ] || {
+	echo "ERROR: initramfs.img missing" >&2
+	exit 1
+}
+[ -f "${INPUT_DIR}/system.erofs" ] || {
+	echo "ERROR: system.erofs missing" >&2
+	exit 1
+}
 
 cp -f "${INPUT_DIR}/Image" "${USERDATA_STAGE}/.minime/kernel"
 cp -f "${INPUT_DIR}/initramfs.img" "${USERDATA_STAGE}/.minime/initramfs"
 cp -f "${INPUT_DIR}/system.erofs" "${USERDATA_STAGE}/.minime/system"
-
-
 
 # 2. Stage Platform Device Trees (DTBs)
 if [ -d "${INPUT_DIR}/devices" ]; then
@@ -183,6 +195,9 @@ GENIMAGE_CFG="${BOARD_DIR}/genimage.cfg"
 [ -f "${GENIMAGE_CFG}" ] || GENIMAGE_CFG="${COMMON_DIR}/genimage.cfg"
 
 IMG_TAG="minime-${TARGET}-${BOARD}"
+if [ -n "${UI}" ]; then
+	IMG_TAG="${IMG_TAG}-${UI}"
+fi
 FINAL_IMG="${OUTPUT_DIR}/${IMG_TAG}.img"
 FINAL_IMG_XZ="${FINAL_IMG}.xz"
 

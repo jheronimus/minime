@@ -11,7 +11,7 @@ image:
 	$(PODMAN_CMD) run $(PODMAN_TTY) --rm $(PACKAGER_USER) --platform $(PACKAGER_PLATFORM) \
 		-v $(MINIME_ROOT):/workspace \
 		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)/ui $(TARGET_NAME) && /workspace/minime/build/mkimage.sh --target $(TARGET_NAME) --board $(BOARD) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) && /workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"
+		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)/ui $(TARGET_NAME) && /workspace/minime/build/mkimage.sh --target $(TARGET_NAME) --board $(BOARD) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --ui $(UI) && /workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"
 
 update:
 	@mkdir -p $(CURDIR)/out/$(BOARD)
