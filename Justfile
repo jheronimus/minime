@@ -2,8 +2,16 @@ default: validate
 
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
-# Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes)
-validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow
+# Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes, UI submodules)
+validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow check-allium check-minui
+
+# Validate Allium Rust code formatting (cargo fmt) and lints (cargo clippy)
+check-allium:
+    ./scripts/check-allium.sh
+
+# Validate MinUI C code formatting (clang-format)
+check-minui:
+    ./scripts/check-minui.sh
 
 # Validate GitHub Actions workflow files with actionlint
 check-workflows:
