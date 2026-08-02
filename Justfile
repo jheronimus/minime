@@ -418,21 +418,11 @@ deploy image disk_device="":
         fi
 
         if [ -z "${has_minime}" ]; then
-            if [ -t 0 ]; then
-                printf "WARNING: Target disk '%s' in deploy.cfg does not contain a partition labeled 'minime'.\n" "${target_device}" >&2
-                printf "Are you SURE you want to overwrite this disk? [y/N] " >&2
-                read -r ans
-                case "$ans" in
-                    y|Y|yes|YES) ;;
-                    *) echo "Aborting." >&2; exit 1 ;;
-                esac
-            else
-                echo "ERROR: Target disk '${target_device}' in deploy.cfg does not contain a partition labeled 'minime'." >&2
-                echo "Auto-deploy via deploy.cfg is restricted to previously flashed Minime cards." >&2
-                echo "To flash a fresh card, specify the target disk explicitly:" >&2
-                echo "  just deploy {{image}} ${target_device}" >&2
-                exit 1
-            fi
+            echo "ERROR: Target disk '${target_device}' in deploy.cfg does not contain a partition labeled 'minime'." >&2
+            echo "Auto-deploy via deploy.cfg is restricted to previously flashed Minime cards." >&2
+            echo "To flash a fresh card, specify the target disk explicitly:" >&2
+            echo "  just deploy {{image}} ${target_device}" >&2
+            exit 1
         fi
     fi
 
