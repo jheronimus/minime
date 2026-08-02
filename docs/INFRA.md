@@ -71,8 +71,10 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.sh` | Ensures all `.patch` files are referenced in build manifests. |
 | `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.sh` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
 | `check-git` | Git staged diff | `git diff --check` | Catches whitespace errors and unresolved merge conflict markers. |
-| `just fetch <os> <board> <ui>` | Download release image | `curl` / `xz` | Fetches release image to `downloads/` and prompts for auto-deployment. |
-| `just deploy <image> [disk]` | Flash image to SD card | `dd` / `diskutil` | Writes image to target disk, injects `wifi.cfg`, ejects card. Supports `deploy.cfg` + `minime` label guard. |
-| `just update [package] [ip]` | Deliver OTA update to device | `scripts/update-device.sh` | Delivers OTA payload over FTP/telnet and reboots device. Uses `target_ip` in `deploy.cfg`. |
+| `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.xz`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
+| `just update <os> <board> <ui> [ip]` | Deliver latest OTA to device | `fetch-asset.sh` + `scripts/update-device.sh` | Fetches the latest `minime-<os>-<board>-<ui>.tar.xz`, applies it over FTP/telnet (clean-replaces `.system`, overlays `.minime`), reboots device. Uses `target_ip` in `deploy.cfg`. |
+| `just check-version <os> <board> <ui> [ip]` | Verify device build is current | `scripts/check-version.sh` | Fetches the latest testing OTA, reads the device's `.minime/manifest.json`, reports up-to-date or out-of-date. |
 | `just remote <cmd> [ip]` | Run remote telnet command | `scripts/remote-cmd.sh` | Executes shell command on target device via telnet. Uses `target_ip` in `deploy.cfg`. |
 | `just install-hooks` | Git pre-commit hook | `.git/hooks/pre-commit` | Installs hook to run `just validate` before every commit. |
+
+> `just fetch` and `just fetch-update` are deprecated and removed. `just deploy` and `just update` now fetch the latest testing asset for a target on demand via `scripts/fetch-asset.sh`.

@@ -33,6 +33,8 @@
 
 ## Board Infrastructure & System
 
+- [ ] Update the MinUI `README.txt` shipped on the card
+  - [THEORY] `minime/ui/minui/skeleton/BASE/README.txt` (formatted by `workspace/all/readmes/makefile` into the card's `README.txt`) still documents stock-firmware install over Anbernic/Trimui/Miyoo/M17 etc. It must be rewritten for Minime: supported devices, MinUI.zip / `.minime` layout, OTA updates, traits, and the `just fetch`/`just update` flow.
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](file:///Users/ilembitov/Projects/minime/docs/spec/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.
 - [ ] Implement U-Boot SPL dual DRAM training fallback for H700 (LPDDR4 -> LPDDR3)

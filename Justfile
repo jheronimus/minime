@@ -215,189 +215,34 @@ install-hooks:
 
 # ── Image Management ──────────────────────────────────────────────────────────
 
-# Fetch testing images. Use "all" for any slot to match all options.
-# Examples: just fetch alpine rk3566 all    just fetch all    just fetch all all minui
-fetch os="all" board="all" ui="all":
+# Flash the latest testing image for a target to an SD card.
+# Usage:
+#   just deploy <os> <board> <ui> [disk_device]
+#   just deploy ./path/to/minime-alpine-h700-minui.img  [disk_device]  (explicit image)
+# Example:
+#   just deploy alpine h700 minui
+deploy os="" board="" ui="" disk_device="":
     #!/usr/bin/env sh
     set -eu
 
-    os_val="{{os}}"
-    board_val="{{board}}"
-    ui_val="{{ui}}"
-
-    os_regex="${os_val}"
-    [ "$os_val" = "all" ] && os_regex="[^-]+"
-    
-    board_regex="${board_val}"
-    [ "$board_val" = "all" ] && board_regex="[^-]+"
-    
-    ui_regex="${ui_val}"
-    [ "$ui_val" = "all" ] && ui_regex="[^-]+"
-
-    pattern="^minime-${os_regex}-${board_regex}-${ui_regex}\.img\.xz$"
-
-    echo "Querying available testing releases from GitHub..."
-    available_assets=$(curl -sL https://api.github.com/repos/jheronimus/minime/releases/tags/testing | grep -o '"name": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
-
-    images=$(echo "$available_assets" | grep -E "$pattern" || true)
-
-    if [ -z "$images" ]; then
-        echo "ERROR: These images are currently not available in the testing release (os=${os_val} board=${board_val} ui=${ui_val})." >&2
+    target_image="{{os}}"
+    if [ -z "${target_image}" ]; then
+        echo "ERROR: No target or image specified." >&2
+        echo "Usage: just deploy <os> <board> <ui> [disk] | just deploy <image> [disk]" >&2
         exit 1
     fi
 
-    echo "Images to fetch:"
-    for img in $images; do
-        echo "  ${img}"
-    done
-    echo ""
-
-    # Download
-    mkdir -p downloads
-    downloaded=""
-    for img in $images; do
-        url="https://github.com/jheronimus/minime/releases/download/testing/${img}"
-        dest="downloads/${img}"
-        img_decompressed="downloads/${img%.xz}"
-
-        rm -f "${dest}"
-
-        if command -v aria2c >/dev/null 2>&1; then
-            echo "Fetching ${img} using aria2 (10 parallel connections)..."
-            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 --allow-overwrite=true -d downloads -o "${img}" "${url}"
-        else
-            echo "Fetching ${img}..."
-            curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
-        fi
-
-        echo "Decompressing to ${img_decompressed}..."
-        xz -d -f "${dest}"
-        echo "Success! Image saved to ${img_decompressed}"
-        downloaded="${downloaded:+$downloaded }$img_decompressed"
-    done
-
-    # Desktop notification
-    img_count=$(echo "$downloaded" | wc -w | tr -d ' ')
-    printf '\033]9;Minime: Download Complete (%s images)\007\a' "$img_count" 2>/dev/null || true
-
-    # Flash phase (interactive only)
-    if [ -t 0 ] && [ -n "$downloaded" ]; then
-        if [ "$img_count" -eq 1 ]; then
-            printf "Deploy image %s to SD card? [y/N] " "$downloaded"
-            read -r ans
-            case "$ans" in
-                y|Y|yes|YES) just deploy "$downloaded" ;;
-                *) echo "Skipping deployment." ;;
-            esac
-        else
-            while true; do
-                echo ""
-                echo "Downloaded images:"
-                i=1
-                for img in $downloaded; do
-                    printf "  %s) %s\n" "$i" "$img"
-                    i=$((i + 1))
-                done
-                none_option=$i
-                printf "  %s) None (skip)\n" "$none_option"
-                echo ""
-                printf "Which image to flash? [1-%s] " "$none_option"
-                read -r choice
-
-                if [ -z "$choice" ] || [ "$choice" -eq "$none_option" ]; then
-                    echo "Skipping deployment."
-                    break
-                fi
-
-                if ! printf '%s' "$choice" | grep -qE '^[0-9]+$' || [ "$choice" -lt 1 ] || [ "$choice" -gt "$img_count" ]; then
-                    echo "Invalid choice. Please enter 1-${none_option}."
-                    continue
-                fi
-
-                selected_img=$(echo "$downloaded" | cut -d' ' -f"$choice")
-                just deploy "$selected_img"
-
-                printf "Flash another image? [y/N] "
-                read -r ans
-                case "$ans" in
-                    y|Y|yes|YES) continue ;;
-                    *) break ;;
-                esac
-            done
-        fi
-    fi
-
-# Fetch testing update packages (.tar.xz). Use "all" for any slot to match all options.
-# Examples: just fetch-update alpine rk3566 all
-fetch-update os="all" board="all" ui="all":
-    #!/usr/bin/env sh
-    set -eu
-
-    os_val="{{os}}"
-    board_val="{{board}}"
-    ui_val="{{ui}}"
-
-    os_regex="${os_val}"
-    [ "$os_val" = "all" ] && os_regex="[^-]+"
-    
-    board_regex="${board_val}"
-    [ "$board_val" = "all" ] && board_regex="[^-]+"
-    
-    ui_regex="${ui_val}"
-    [ "$ui_val" = "all" ] && ui_regex="[^-]+"
-
-    pattern="^minime-${os_regex}-${board_regex}-${ui_regex}\.tar\.xz$"
-
-    echo "Querying available testing updates from GitHub..."
-    available_assets=$(curl -sL https://api.github.com/repos/jheronimus/minime/releases/tags/testing | grep -o '"name": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
-
-    updates=$(echo "$available_assets" | grep -E "$pattern" || true)
-
-    if [ -z "$updates" ]; then
-        echo "ERROR: These update packages are currently not available in the testing release (os=${os_val} board=${board_val} ui=${ui_val})." >&2
-        exit 1
-    fi
-
-    echo "Update packages to fetch:"
-    for pkg in $updates; do
-        echo "  ${pkg}"
-    done
-    echo ""
-
-    mkdir -p downloads
-    downloaded=""
-    for pkg in $updates; do
-        url="https://github.com/jheronimus/minime/releases/download/testing/${pkg}"
-        dest="downloads/${pkg}"
-
-        rm -f "${dest}"
-
-        if command -v aria2c >/dev/null 2>&1; then
-            echo "Fetching ${pkg} using aria2..."
-            aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 --allow-overwrite=true -d downloads -o "${pkg}" "${url}"
-        else
-            echo "Fetching ${pkg}..."
-            curl -L --fail --show-error --progress-bar "${url}" -o "${dest}"
-        fi
-
-        echo "Success! Update package saved to ${dest}"
-        downloaded="${downloaded:+$downloaded }${dest}"
-    done
-
-    echo ""
-    echo "Downloaded update archives:"
-    for d in $downloaded; do
-        echo "  $d"
-    done
-
-
-# Deploy a firmware image to a target disk device
-deploy image disk_device="":
-    #!/usr/bin/env sh
-    set -eu
-    if [ ! -f "{{image}}" ]; then
-        echo "ERROR: Image file '{{image}}' not found" >&2
-        exit 1
+    # If the first arg is an existing file (or looks like a path), treat it as
+    # an explicit image; otherwise resolve the latest testing image by target.
+    if [ -f "${target_image}" ] || [ "${target_image#/}" != "${target_image}" ] || [ "${target_image#./}" != "${target_image}" ]; then
+        img_file="${target_image}"
+    else
+        [ -z "{{board}}" ] || [ -z "{{ui}}" ] && {
+            echo "ERROR: deploy by target requires <os> <board> <ui>." >&2
+            exit 1
+        }
+        asset="minime-{{os}}-{{board}}-{{ui}}.img.xz"
+        img_file=$(./scripts/fetch-asset.sh "${asset}")
     fi
 
     target_device="{{disk_device}}"
@@ -406,7 +251,7 @@ deploy image disk_device="":
         if [ ! -f "deploy.cfg" ]; then
             echo "ERROR: No disk device specified and deploy.cfg file not found." >&2
             echo "Copy deploy_sample.cfg to deploy.cfg or pass the device explicitly:" >&2
-            echo "  just deploy {{image}} /dev/rdiskN" >&2
+            echo "  just deploy {{os}} {{board}} {{ui}} /dev/rdiskN" >&2
             exit 1
         fi
 
@@ -429,9 +274,14 @@ deploy image disk_device="":
             echo "ERROR: Target disk '${target_device}' in deploy.cfg does not contain a partition labeled 'minime'." >&2
             echo "Auto-deploy via deploy.cfg is restricted to previously flashed Minime cards." >&2
             echo "To flash a fresh card, specify the target disk explicitly:" >&2
-            echo "  just deploy {{image}} ${target_device}" >&2
+            echo "  just deploy {{os}} {{board}} {{ui}} ${target_device}" >&2
             exit 1
         fi
+    fi
+
+    if [ ! -f "${img_file}" ] && [ ! -f "${img_file%.xz}" ]; then
+        echo "ERROR: Image file '${img_file}' not found" >&2
+        exit 1
     fi
 
     _base=$(echo "${target_device}" | sed 's|/dev/r\{0,1\}disk|/dev/disk|')
@@ -442,7 +292,6 @@ deploy image disk_device="":
     diskutil unmountDisk force "${device}" 2>/dev/null || true
 
     echo "Writing image to ${device}..."
-    img_file="{{image}}"
     if [ ! -f "${img_file}" ] && [ -f "${img_file%.xz}" ]; then
         img_file="${img_file%.xz}"
     fi
@@ -495,12 +344,20 @@ deploy image disk_device="":
     # Push desktop notification (OSC 9) and audio bell chime (\a)
     printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
 
-# Deliver an OTA update payload to target device over network (FTP/telnet)
+# Download and deliver the latest testing OTA for a target to the device.
 # Usage:
-#   just update [package] [ip]
-update package="" ip="":
+#   just update <os> <board> <ui> [ip]
+# Example:
+#   just update alpine h700 minui
+update os="" board="" ui="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
+
+    if [ -z "{{os}}" ] || [ -z "{{board}}" ] || [ -z "{{ui}}" ]; then
+        echo "ERROR: just update requires <os> <board> <ui>." >&2
+        echo "Usage: just update <os> <board> <ui> [ip]" >&2
+        exit 1
+    fi
 
     target_ip="{{ip}}"
     if [ -z "${target_ip}" ]; then
@@ -511,21 +368,22 @@ update package="" ip="":
 
     if [ -z "${target_ip}" ]; then
         echo "ERROR: No target IP specified and target_ip not found in deploy.cfg." >&2
-        echo "Usage: just update [package] [ip]" >&2
+        echo "Usage: just update <os> <board> <ui> [ip]" >&2
         exit 1
     fi
 
-    target_pkg="{{package}}"
-    if [ -z "${target_pkg}" ]; then
-        target_pkg=$(find minime/ui/minui/releases/ -name "MinUI-*-base.zip" 2>/dev/null | sort -V | tail -n1 || true)
-    fi
-
-    if [ -z "${target_pkg}" ] || [ ! -f "${target_pkg}" ]; then
-        echo "ERROR: Update package '${target_pkg}' not found." >&2
-        exit 1
-    fi
+    asset="minime-{{os}}-{{board}}-{{ui}}.tar.xz"
+    target_pkg=$(./scripts/fetch-asset.sh "${asset}")
 
     ./scripts/update-device.sh "${target_pkg}" "${target_ip}"
+
+# Check the device's running build against the latest testing OTA
+# Usage:
+#   just check-version <os> <board> <ui> [ip]
+check-version os="" board="" ui="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/check-version.sh "{{os}}" "{{board}}" "{{ui}}" "{{ip}}"
 
 # Execute a remote shell command on target device over telnet
 # Usage:

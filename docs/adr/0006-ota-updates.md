@@ -1,4 +1,4 @@
-# ADR 0006: OTA Update Package Format and Manual Upgrade Workflow
+# ADR 0006: OTA Update Package Format and Delivery Workflow
 
 ## Status
 
@@ -8,25 +8,37 @@ Accepted
 
 Minime produces raw bootable SD card images (`.img.xz`) and OTA update packages (`.tar.xz`) in the single CI workflow `build.yml`.
 
-Questions arose regarding system behavior during OTA updates:
+Questions arose regarding OTA behavior and delivery:
+
 1. Will applying an OTA update trigger partition expansion (`first_boot_expand`) on reboot?
 2. How can users apply OTA updates before launchers (Allium and MinUI) implement native UI update features?
+3. How do updates reach the device, and how is user data (ROMs, BIOS files, save states, configs) guaranteed to be preserved?
 
 ## Decision
 
 ### 1. Update Package Specification
 
-The update package generator [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) packages system binaries into a compressed archive `minime-<target>-<board>[-<ui>].tar.xz`.
+The update package generator [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.xz`.
 
-The archive contains strictly:
+The archive is a **deliberate mirror of the on-SD payload layout**. It contains strictly:
 
-| Artifact | Source File | Description |
-|----------|-------------|-------------|
-| `kernel` | `Image` | Uncompressed Linux kernel binary |
-| `initramfs` | `initramfs.img` | Initramfs CPIO archive containing early init logic |
-| `system` | `system.erofs` | Read-only compressed EROFS root filesystem |
-| `devices/` | `*.dtb` | Device Tree Blobs for board hardware variants |
-| `manifest.json` | Generated | Update metadata (`target`, `board`, `ui`, `timestamp`) |
+| Archive entry | Source | Description |
+|---------------|--------|-------------|
+| `.minime/kernel` | `Image` | Uncompressed Linux kernel binary |
+| `.minime/initramfs` | `initramfs.img` | Initramfs CPIO archive containing early init logic |
+| `.minime/system` | `system.erofs` | Read-only compressed EROFS root filesystem |
+| `.minime/devices/*.dtb` | `*.dtb` | Device Tree Blobs for board hardware variants |
+| `.minime/ui.env` | UI payload | UI contract manifest (only when a `--ui` is specified) |
+| `.minime/manifest.json` | Generated | Build identity: `target`, `board`, `ui`, `minime_commit`, `ui_commit`, `timestamp` |
+| `.system/` | UI payload staging | MinUI binaries (`minime/`, `res/`, `version.txt`, `commits.txt`) |
+
+The archive is built with a leading `.` so that **extracting it directly onto `/mnt/sdcard/` places each entry in its final location**:
+
+```sh
+tar -xf minime-alpine-h700-minui.tar.xz -C /mnt/sdcard/
+```
+
+**Nothing else is packaged.** BIOS files, ROMs, save states, emulator paks, `Tools/`, `Emus/`, `.userdata/`, `.minime/config/`, `.minime/traits`, `dtb`, `u-boot-ddr3.bin`, and `boot.log` are deliberately excluded. User data is preserved **by construction** — it never enters the archive — rather than by defensive checks in the delivery script.
 
 ### 2. Partition Expansion Safety
 
@@ -37,21 +49,50 @@ OTA updates do not trigger SD card partition expansion:
 - On first boot after raw image flash, [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
 - When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
 
-### 3. Manual Upgrade Workflow
+### 3. Delivery Tooling
 
-Until Allium or MinUI launcher ports implement native update UI flows, users can update existing installations manually:
+#### Local delivery (`just update`)
 
-1. Download update package `minime-<target>-<board>[-<ui>].tar.xz` from GitHub Releases.
-2. Mount the SD card on a host computer or access `/mnt/card` via telnet/FTP.
-3. Extract archive contents directly into `.minime/` on the FAT32 SD card partition:
-   ```sh
-   tar -xf minime-alpine-h700-allium.tar.xz -C /path/to/sdcard/.minime/
-   ```
-4. Safely unmount and insert SD card into device.
-5. Reboot device -> `initramfs-init.sh` mounts updated `kernel`, `initramfs`, and `system.erofs` automatically.
+`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.xz` from the `testing` GitHub Release via [scripts/fetch-asset.sh](file:///Users/ilembitov/Projects/minime/scripts/fetch-asset.sh), then [scripts/update-device.sh](file:///Users/ilembitov/Projects/minime/scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
+
+1. Stop the UI service (`/etc/init.d/ui stop`) and kill launcher processes.
+2. Upload the `.tar.xz` over FTP.
+3. On the device: `rm -rf /mnt/sdcard/.system && tar -xf <pkg> -C /mnt/sdcard/`.
+   - `.system/` is **clean-replaced** — it is pure MinUI payload, so removing it first guarantees no stale binaries (e.g. a removed core `.so`) linger after an update.
+   - `.minime/` is **overlaid** by `tar -xf` — device-specific state (`config/`, `traits`, `dtb`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
+4. Reboot the device.
+
+The target IP is read from `target_ip` in `deploy.cfg` unless passed explicitly.
+
+#### Full image flash (`just deploy`)
+
+`just deploy <os> <board> <ui> [disk]` fetches the latest `minime-<os>-<board>-<ui>.img.xz` and flashes it to the SD card (`dd` / `diskutil`), optionally injecting `wifi.cfg`. It also accepts an explicit image path for flashing a specific build. The `deploy.cfg` `minime`-label guard prevents accidental writes to non-Minime cards.
+
+#### Version check (`just check-version`)
+
+`just check-version <os> <board> <ui> [ip]` fetches the latest testing OTA and reads the device's `.minime/manifest.json` (build identity written by `mkupdate.sh`) to report whether the installed image matches the latest build.
+
+#### Deprecated: `just fetch`
+
+`just fetch` and `just fetch-update` are removed. `just deploy` and `just update` fetch the latest testing asset on demand; there is no longer a separate "download all images" step.
+
+### 4. User Data Ownership
+
+The FAT32 card layout keeps user data separate from updateable system content:
+
+| Path | Owner | Updateable by OTA? |
+|------|-------|--------------------|
+| `.minime/{kernel,initramfs,system,devices,ui.env}` | Minime OS + UI contract | Yes (overlaid) |
+| `.system/` | Active UI (MinUI/Allium) | Yes (clean-replaced) |
+| `.userdata/` | Active UI (upstream MinUI convention) | No — never packaged |
+| `Bios/`, `Roms/`, `Saves/`, `Emus/`, `Tools/` | User | No — never packaged |
+| `.minime/config/`, `.minime/traits`, `dtb`, `u-boot-ddr3.bin`, `boot.log` | Minime OS device state | No — never packaged |
+
+`.userdata/` is an **upstream MinUI** directory (defined in MinUI's `defines.h` and created at runtime by MinUI's `launch.sh`/`minarch.c` for logs, recents, shader cache, and per-game config/slot state). It is not a Minime invention and is neither shipped in images nor packaged in OTAs.
 
 ## Consequences
 
-- OTA archives remain small (typically under 100 MB) because bootloaders and FAT32 user data files are excluded.
-- User data, emulator configs, saved states, and ROMs on FAT32 partition are preserved across updates.
+- OTA archives remain small (typically under 100 MB) because bootloaders, BIOS files, and FAT32 user data are excluded.
+- User data, emulator configs, saved states, ROMs, and `.minime/config` are preserved across updates by construction.
 - No risk of partition re-expansion or filesystem corruption during system updates.
+- `.system/` is replaced wholesale per update; `.minime/` device state persists.
