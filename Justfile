@@ -534,3 +534,11 @@ remote cmd="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/remote-cmd.sh "{{cmd}}" "{{ip}}"
+
+# Upload a file to target device over FTP
+# Usage:
+#   just upload <file> [remote_filename] [ip]
+upload file="" remote_filename="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-upload.sh "{{file}}" "{{remote_filename}}" "{{ip}}"
