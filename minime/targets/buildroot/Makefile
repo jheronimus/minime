@@ -38,3 +38,4 @@ include ../common.mk
 %:
 	@if [ -z "$(BOARD)" ]; then echo "ERROR: BOARD= is required" >&2; exit 1; fi; \
 	BOARD=$(BOARD) ./scripts/build.sh "$@"
+# trigger cache run
