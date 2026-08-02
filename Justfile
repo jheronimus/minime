@@ -486,3 +486,35 @@ deploy image disk_device="":
 
     # Push desktop notification (OSC 9) and audio bell chime (\a)
     printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
+
+# Deliver an OTA update payload to target device over network (FTP/telnet)
+# Usage:
+#   just update [package] [ip]
+update package="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    target_ip="{{ip}}"
+    if [ -z "${target_ip}" ]; then
+        if [ -f "deploy.cfg" ]; then
+            target_ip=$(grep -E '^\s*target_ip=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\r')
+        fi
+    fi
+
+    if [ -z "${target_ip}" ]; then
+        echo "ERROR: No target IP specified and target_ip not found in deploy.cfg." >&2
+        echo "Usage: just update [package] [ip]" >&2
+        exit 1
+    fi
+
+    target_pkg="{{package}}"
+    if [ -z "${target_pkg}" ]; then
+        target_pkg=$(find minime/ui/minui/releases/ -name "MinUI-*-base.zip" 2>/dev/null | sort -V | tail -n1 || true)
+    fi
+
+    if [ -z "${target_pkg}" ] || [ ! -f "${target_pkg}" ]; then
+        echo "ERROR: Update package '${target_pkg}' not found." >&2
+        exit 1
+    fi
+
+    ./scripts/update-device.sh "${target_pkg}" "${target_ip}"

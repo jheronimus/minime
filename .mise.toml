@@ -2,3 +2,4 @@
 actionlint = "latest"
 shellcheck = "latest"
 just = "latest"
+clang-format = "latest"
