@@ -16,6 +16,7 @@ OWNER="${GITHUB_REPOSITORY_OWNER:-jheronimus}"
 if [ "$UI" = "minui" ]; then
     echo "Building MinUI binaries for ${LIBC}..."
     cd "$ROOT_DIR/minime/ui/minui"
+    rm -rf releases build
     make setup
     
     if [ "$LIBC" = "musl" ]; then
@@ -112,4 +113,8 @@ else
     exit 1
 fi
 
-sudo chown -R $USER:$USER "$ROOT_DIR/minime/ui/out"
+if [ "$(id -u)" -eq 0 ]; then
+    chown -R "$USER:$USER" "$ROOT_DIR/minime/ui/out" 2>/dev/null || true
+else
+    sudo chown -R "$USER:$USER" "$ROOT_DIR/minime/ui/out" 2>/dev/null || true
+fi

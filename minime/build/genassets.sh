@@ -46,29 +46,24 @@ if [ "$UI" = "minui" ]; then
 
 	if [ -f "${local_zip}" ]; then
 		echo "Using local UI artifact: ${local_zip}" >&2
-		unzip -q -o "${local_zip}" -d "${WORK_TMP}/minui"
+		unzip -q -o "${local_zip}" -d "${DEST_DIR}"
 	elif [ -f "${local_tar}" ]; then
 		echo "Using local UI artifact: ${local_tar}" >&2
-		mkdir -p "${WORK_TMP}/minui"
-		tar -xf "${local_tar}" -C "${WORK_TMP}/minui"
+		tar -xf "${local_tar}" -C "${DEST_DIR}"
 	else
 		echo "ERROR: Local MinUI artifact not found in ${UI_ART_DIR}/." >&2
 		echo "Run the build-ui job or 'just build-minui' to generate it." >&2
 		exit 1
 	fi
 
-	[ -f "${WORK_TMP}/minui/MinUI.zip" ] && unzip -q -o "${WORK_TMP}/minui/MinUI.zip" -d "${WORK_TMP}/minui"
-
-	[ -d "${WORK_TMP}/minui/.system" ] && cp -a "${WORK_TMP}/minui/.system" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/minui/.minime" ] && cp -a "${WORK_TMP}/minui/.minime" "${DEST_DIR}/"
-
-	# Strip .elf extensions (MinUI convention; Minime expects bare names)
-	for f in "${DEST_DIR}/.system/minime/bin/"*.elf; do
-		[ -f "$f" ] && mv -f "$f" "${f%.elf}"
-	done
-
-	[ -d "${WORK_TMP}/minui/Emus" ] && cp -a "${WORK_TMP}/minui/Emus" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/minui/Tools" ] && cp -a "${WORK_TMP}/minui/Tools" "${DEST_DIR}/"
+	if [ -f "${DEST_DIR}/MinUI.zip" ]; then
+		unzip -q -o "${DEST_DIR}/MinUI.zip" -d "${DEST_DIR}"
+		rm -f "${DEST_DIR}/MinUI.zip"
+	fi
+	if [ -f "${DEST_DIR}/MinUI-extras.zip" ]; then
+		unzip -q -o "${DEST_DIR}/MinUI-extras.zip" -d "${DEST_DIR}"
+		rm -f "${DEST_DIR}/MinUI-extras.zip"
+	fi
 
 elif [ "$UI" = "allium" ]; then
 	local_zip="${UI_ART_DIR}/allium-${LIBC}-aarch64.zip"
@@ -76,22 +71,15 @@ elif [ "$UI" = "allium" ]; then
 
 	if [ -f "${local_zip}" ]; then
 		echo "Using local UI artifact: ${local_zip}" >&2
-		unzip -q -o "${local_zip}" -d "${WORK_TMP}/allium"
+		unzip -q -o "${local_zip}" -d "${DEST_DIR}"
 	elif [ -f "${local_tar}" ]; then
 		echo "Using local UI artifact: ${local_tar}" >&2
-		mkdir -p "${WORK_TMP}/allium"
-		tar -xf "${local_tar}" -C "${WORK_TMP}/allium"
+		tar -xf "${local_tar}" -C "${DEST_DIR}"
 	else
 		echo "ERROR: Local Allium artifact not found in ${UI_ART_DIR}/." >&2
 		echo "Run the build-ui job or 'just build-allium' to generate it." >&2
 		exit 1
 	fi
-
-	[ -d "${WORK_TMP}/allium/.ui" ] && cp -a "${WORK_TMP}/allium/.ui" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/allium/.minime" ] && cp -a "${WORK_TMP}/allium/.minime" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/allium/apps" ] && cp -a "${WORK_TMP}/allium/apps" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/allium/.tmp_update" ] && cp -a "${WORK_TMP}/allium/.tmp_update" "${DEST_DIR}/"
-	[ -d "${WORK_TMP}/allium/RetroArch" ] && cp -a "${WORK_TMP}/allium/RetroArch" "${DEST_DIR}/"
 fi
 
 # 2. Stage Preloaded ROMs

@@ -13,6 +13,9 @@ Previously:
 
 ## Decision
 
+### Core Contract Boundary
+Minime OS has zero internal knowledge of how any UI works. Minime reads `.minime/ui.env` provided by the UI payload, and UIs read hardware traits from `.minime/traits` provided by Minime — that is the complete contract boundary. Minime build scripts and init services must never mutate UI binaries, reorganize UI internal directories, or interpret UI-specific internal logic.
+
 ### 1. Hardware Traits Architecture
 Hardware platform capabilities are abstracted via immutable `.ini` manifests bundled into the rootfs at build time under `/usr/share/minime/traits/`:
 - `platform.ini`: Defines SoC and platform traits (e.g. `sound_card`, `video_device`, `key_*` mappings, `backlight_path`).
@@ -38,8 +41,8 @@ UI_PROCESSES="<Space-separated list of process names for stop cleanup>"
 #### Example (`.minime/ui.env`)
 ```sh
 UI_NAME="MinUI"
-UI_BIN="/mnt/sdcard/.system/minime/bin/minui"
-UI_PROCESSES="minui minarch keymon clock minput syncsettings say"
+UI_BIN="/mnt/sdcard/.system/minime/paks/MinUI.pak/launch.sh"
+UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings.elf say.elf"
 ```
 
 ### 4. Service Lifecycle (`init.d/ui`)

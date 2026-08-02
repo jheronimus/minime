@@ -109,8 +109,6 @@ jobs:
         with:
           path: minime/ui/out
           key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
-          restore-keys: |
-            ui-${{ matrix.libc }}-
 
       - name: Restore UI CCache
         id: ccache-ui-restore

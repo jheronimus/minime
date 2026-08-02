@@ -35,6 +35,8 @@ depend() {
 start() {
 	ebegin "Starting UI"
 
+	dmesg -n 1 2>/dev/null || true
+
 	UI_NAME=$(read_ui_env UI_NAME)
 	UI_BIN=$(read_ui_env UI_BIN)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
@@ -46,6 +48,10 @@ start() {
 	else
 		rm -f "$ASOUNDRC_FILE"
 	fi
+
+	amixer sset 'Line Out' 100% unmute >/dev/null 2>&1 || true
+	amixer sset 'DAC' 100% unmute >/dev/null 2>&1 || true
+	amixer sset 'Speaker' unmute >/dev/null 2>&1 || true
 
 	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ] && amixer -c "$sound_card" controls >/dev/null 2>&1; then
 		(

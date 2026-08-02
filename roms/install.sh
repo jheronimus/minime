@@ -48,7 +48,7 @@ ngp|Neo Geo Pocket (NGP)|NGP
 wswan|WonderSwan (WS)|WS
 "
 
-for map in ${mappings}; do
+echo "${mappings}" | while IFS= read -r map; do
     [ -n "${map}" ] || continue
     src_name="$(echo "${map}" | cut -d'|' -f1)"
     minui_name="$(echo "${map}" | cut -d'|' -f2)"
