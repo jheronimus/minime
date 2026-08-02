@@ -35,19 +35,6 @@ fi
 
 echo "Uploading '$LOCAL_FILE' -> '$REMOTE_FILE' on $IP..."
 
-python3 - "$IP" "$LOCAL_FILE" "$REMOTE_FILE" <<'EOF'
-import ftplib, sys
-
-ip = sys.argv[1]
-local_file = sys.argv[2]
-remote_file = sys.argv[3]
-
-ftp = ftplib.FTP()
-ftp.connect(ip, 21)
-ftp.login("root", "")
-with open(local_file, "rb") as f:
-    ftp.storbinary(f"STOR {remote_file}", f)
-ftp.quit()
-EOF
+curl -s -S -u root: -T "$LOCAL_FILE" "ftp://$IP/$REMOTE_FILE"
 
 echo "Upload completed successfully!"
