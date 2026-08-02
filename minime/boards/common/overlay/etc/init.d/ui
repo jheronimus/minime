@@ -109,28 +109,30 @@ start() {
 stop() {
 	ebegin "Stopping UI"
 
+	UI_STOP_CMD=$(read_ui_env UI_STOP_CMD)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
 	if [ -f /tmp/watch_jack.pid ]; then
 		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
 		rm -f /tmp/watch_jack.pid
 	fi
+
+	if [ -n "$UI_STOP_CMD" ]; then
+		eval "$UI_STOP_CMD" >/dev/null 2>&1 || true
+		sleep 1.0
+	fi
+
 	if [ -f /tmp/ui.pid ]; then
 		loop_pid="$(cat /tmp/ui.pid)"
-		pkill -9 -P "$loop_pid" 2>/dev/null || true
-		kill -9 "$loop_pid" 2>/dev/null || true
+		pkill -P "$loop_pid" 2>/dev/null || true
+		kill "$loop_pid" 2>/dev/null || true
 		rm -f /tmp/ui.pid
 	fi
+
 	if [ -n "${UI_PROCESSES:-}" ]; then
 		# shellcheck disable=SC2086
 		killall $UI_PROCESSES 2>/dev/null || true
-		sleep 0.5
-		# shellcheck disable=SC2086
-		killall -9 $UI_PROCESSES 2>/dev/null || true
 	fi
-
-	# Fallback: ensure no orphan launcher processes remain active across UI switches
-	killall -9 minui.elf minarch.elf keymon.elf alliumd allium-launcher allium-menu 2>/dev/null || true
 
 	eend 0
 }

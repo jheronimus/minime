@@ -35,6 +35,7 @@ The active UI manifest lives at `/mnt/sdcard/.minime/ui.env`. It is owned and pr
 ```sh
 UI_NAME="<Frontend Display Name>"
 UI_BIN="<Absolute path to primary UI executable or entrypoint script on /mnt/sdcard>"
+UI_STOP_CMD="<Command or script path for native graceful UI teardown>"
 UI_PROCESSES="<Space-separated list of process names for stop cleanup>"
 ```
 
@@ -42,6 +43,7 @@ UI_PROCESSES="<Space-separated list of process names for stop cleanup>"
 ```sh
 UI_NAME="MinUI"
 UI_BIN="/mnt/sdcard/.system/minime/paks/MinUI.pak/launch.sh"
+UI_STOP_CMD="killall -TERM minui.elf minarch.elf keymon.elf"
 UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings.elf say.elf"
 ```
 
@@ -49,7 +51,7 @@ UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings
 The OS `ui` init script is a clean, UI-agnostic contract executor:
 - **Environment & Library Paths**: `ui.sh` does **not** manage `LD_LIBRARY_PATH` or set UI environment variables. Relaunch loops, environment setups, and library loading are 100% internal to the UI payload (managed by RPATH or the UI's own entrypoint script pointed to by `UI_BIN`).
 - **Start**: Reads `/mnt/sdcard/.minime/ui.env`. If missing or if `UI_BIN` is non-executable, logs `No UI binary found` to `/mnt/sdcard/boot.log` and exits cleanly. Otherwise, launches `UI_BIN` via `start-stop-daemon`.
-- **Stop & UI Hot-Swapping**: Sends `SIGKILL` to `/tmp/ui.pid` process group. Reads `UI_PROCESSES` from `ui.env` to issue `killall`. If `ui.env` was rewritten *before* service restart during a UI switch (e.g. MinUI -> Allium), `init.d/ui` performs a fallback kill sweep across known launcher process groups to prevent orphan processes from running concurrently.
+- **Stop**: Reads `UI_STOP_CMD` from `ui.env` and executes it to trigger native UI graceful teardown. Sends `SIGTERM` to `/tmp/ui.pid` process group, followed by `UI_PROCESSES` cleanup. OS init scripts never hardcode launcher binary names.
 - **IPC / Shutdown**: UI applications handle power off / reboot directly (calling `poweroff` or `reboot`). `ui.sh` does not interpret UI-specific IPC files (e.g. `/tmp/next`, `/tmp/poweroff`).
 
 ### 5. SD Card Directory Ownership
