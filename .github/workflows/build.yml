@@ -34,6 +34,7 @@ jobs:
           key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Restore Bootloader CCache
+        id: ccache-bootloader-restore
         uses: actions/cache/restore@v6
         with:
           path: ~/.bootloader-ccache
@@ -60,7 +61,7 @@ jobs:
           key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'scripts/build-bootloader.sh') }}
 
       - name: Save Bootloader CCache
-        if: always()
+        if: always() && steps.ccache-bootloader-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ~/.bootloader-ccache
@@ -103,6 +104,7 @@ jobs:
             ui-${{ matrix.libc }}-
 
       - name: Restore UI CCache
+        id: ccache-ui-restore
         uses: actions/cache/restore@v6
         with:
           path: ~/.ui-ccache-${{ matrix.libc }}
@@ -128,7 +130,7 @@ jobs:
           key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/minui/HEAD', 'scripts/build-ui.sh') }}
 
       - name: Save UI CCache
-        if: always()
+        if: always() && steps.ccache-ui-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-${{ matrix.libc }}
@@ -175,6 +177,7 @@ jobs:
           path: minime/ui/out
 
       - name: Restore CCache
+        id: ccache-os-restore
         uses: actions/cache/restore@v6
         with:
           path: |
@@ -185,6 +188,7 @@ jobs:
             ccache-${{ matrix.os }}-${{ matrix.board }}-
 
       - name: Restore DL Cache
+        id: dl-os-restore
         uses: actions/cache/restore@v6
         with:
           path: |
@@ -204,7 +208,7 @@ jobs:
         run: make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
-        if: always()
+        if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: |
@@ -213,7 +217,7 @@ jobs:
           key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
-        if: always()
+        if: always() && steps.dl-os-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: |
