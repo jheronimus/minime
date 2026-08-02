@@ -75,6 +75,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 - **Minimal UI Codebase Intrusion**: Unless implementing a user-requested feature, restrict UI code modifications strictly to the Minime platform port directory (e.g. `workspace/minime/` in MinUI, `src/platform/minime/` in Allium). Leave shared upstream launcher code untouched. Exceptions are permitted ONLY when:
   - Working around upstream behavior within the platform port directory is excessively complex or hacky (e.g. requiring dozens of lines of workaround vs. a clean one-line fix in shared code).
   - The change objectively fixes crashes, memory corruption, thread deadlocks, or performance regressions across all targets.
+- **On-Device Live Verification**: After modifying any code and allowing CI to rebuild artifacts, AI agents must run `just fetch` / `just update` to deploy and empirically verify changes on the live physical hardware target.
 
 ## Infrastructure & Scripts
 
