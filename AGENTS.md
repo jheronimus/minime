@@ -40,8 +40,6 @@ For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime
 
 For init scripts, `minime/boards/common/overlay/etc/init.d/` is the single source of truth for cross-distro OpenRC services. At build time, target builders copy these init scripts into their rootfs before building `system.erofs`.
 
-- **Shared Source Code (`src/`)**: Holds local, self-contained source code vaults for modules built in both environments (e.g. `libmali` and `mali-kbase`).
-
 ## Local Target Builds
 
 Alpine and Buildroot targets are built from their respective directories in `minime/targets/` using the two-step build convention:
@@ -60,12 +58,12 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 - `build.sh` does compilation only. No image packaging (no genimage, no mcopy, no mkdosfs).
 - `mkimage.sh` does image packaging only. No compilation (no make, no gcc, no kernel build).
 - `mkupdate.sh` does update archive generation only.
-- `genassets.sh` does UI payload download only.
+- `genassets.sh` does UI asset retrieval and extraction only.
 - The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
 - Never add compilation logic to `mkimage.sh` or `mkupdate.sh`.
 - Never add packaging logic to `build.sh`.
 
-## Agent Directives (Buildroot Quirks)
+## Agent Directives
 
 - **No Manual Workflow Dispatch**: Every push to `main` filtered to `minime/**` automatically triggers `build.yml`, which builds bootloaders, UIs, and OS images in one pipeline. **Never** use `gh workflow run` to manually dispatch `build.yml` — this causes concurrent runs that corrupt the `testing` release assets.
 - **Cancel Stale Jobs**: If you have made several pushes in succession, run `gh run list` and cancel any in-progress or queued `build.yml` runs from earlier pushes — only the latest commit matters. Never allow more than one `build.yml` run to be active concurrently.
@@ -85,7 +83,7 @@ For detailed documentation of GitHub Actions workflows, build orchestration scri
 
 All checks must pass before committing. Do not suppress/bypass warnings.
 All gates are defined in the root `Justfile` and must be run via `just`.
-For detailed descriptions of quality gate recipes and shell conventions, see [docs/INFRA.md](file:///Users/ilembitov/Projects/minime/docs/INFRA.md).
+
 
 - **Fast gates (pre-commit)**: `just validate`
 - **CI-only gates**: `just validate-ci`
