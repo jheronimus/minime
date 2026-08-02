@@ -526,3 +526,11 @@ update package="" ip="":
     fi
 
     ./scripts/update-device.sh "${target_pkg}" "${target_ip}"
+
+# Execute a remote shell command on target device over telnet
+# Usage:
+#   just remote "ps aux" [ip]
+remote cmd="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-cmd.sh "{{cmd}}" "{{ip}}"

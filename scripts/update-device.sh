@@ -51,12 +51,11 @@ ftp.quit()
 print("3. Extracting OTA update archive on target...")
 print(run_telnet("cd /mnt/sdcard && unzip -o minui-ota.zip && unzip -o MinUI.zip -d /mnt/sdcard/ 2>/dev/null || true; rm -f minui-ota.zip /mnt/sdcard/.system/minime/.system 2>/dev/null || true"))
 
-print("4. Starting UI service on target...")
-print(run_telnet("/etc/init.d/ui start"))
-time.sleep(1.0)
-
-print("5. Verifying running processes...")
-print(run_telnet("ps aux | grep -E \"minui|minarch|keymon\""))
+print("4. Triggering system reboot on target...")
+try:
+    run_telnet("sync && reboot")
+except Exception:
+    pass
 EOF
 
 echo "OTA update successfully delivered to $TARGET_IP!"
