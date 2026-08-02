@@ -117,8 +117,8 @@ stop() {
 	fi
 	if [ -f /tmp/ui.pid ]; then
 		loop_pid="$(cat /tmp/ui.pid)"
-		pkill -P "$loop_pid" 2>/dev/null || true
-		kill "$loop_pid" 2>/dev/null || true
+		pkill -9 -P "$loop_pid" 2>/dev/null || true
+		kill -9 "$loop_pid" 2>/dev/null || true
 		rm -f /tmp/ui.pid
 	fi
 	if [ -n "${UI_PROCESSES:-}" ]; then
@@ -128,6 +128,9 @@ stop() {
 		# shellcheck disable=SC2086
 		killall -9 $UI_PROCESSES 2>/dev/null || true
 	fi
+
+	# Fallback: ensure no orphan launcher processes remain active across UI switches
+	killall -9 minui.elf minarch.elf keymon.elf alliumd allium-launcher allium-menu 2>/dev/null || true
 
 	eend 0
 }

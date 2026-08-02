@@ -49,7 +49,7 @@ UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings
 The OS `ui` init script is a clean, UI-agnostic contract executor:
 - **Environment & Library Paths**: `ui.sh` does **not** manage `LD_LIBRARY_PATH` or set UI environment variables. Relaunch loops, environment setups, and library loading are 100% internal to the UI payload (managed by RPATH or the UI's own entrypoint script pointed to by `UI_BIN`).
 - **Start**: Reads `/mnt/sdcard/.minime/ui.env`. If missing or if `UI_BIN` is non-executable, logs `No UI binary found` to `/mnt/sdcard/boot.log` and exits cleanly. Otherwise, launches `UI_BIN` via `start-stop-daemon`.
-- **Stop**: Sends `SIGTERM` to `/tmp/ui.pid` process group. If `UI_PROCESSES` is specified in `ui.env`, terminates those processes via `killall`, waits 0.5s, and sends `SIGKILL` (`killall -9`) for clean teardown.
+- **Stop & UI Hot-Swapping**: Sends `SIGKILL` to `/tmp/ui.pid` process group. Reads `UI_PROCESSES` from `ui.env` to issue `killall`. If `ui.env` was rewritten *before* service restart during a UI switch (e.g. MinUI -> Allium), `init.d/ui` performs a fallback kill sweep across known launcher process groups to prevent orphan processes from running concurrently.
 - **IPC / Shutdown**: UI applications handle power off / reboot directly (calling `poweroff` or `reboot`). `ui.sh` does not interpret UI-specific IPC files (e.g. `/tmp/next`, `/tmp/poweroff`).
 
 ### 5. SD Card Directory Ownership
