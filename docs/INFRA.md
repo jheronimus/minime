@@ -24,7 +24,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ### `sync-kernel.yml` — Automated Kernel Version Sync
 - **Trigger**: Daily cron at 00:00 UTC. Commits directly to `main`.
-- **Purpose**: Runs `scripts/sync-kernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config.
+- **Purpose**: Runs `minime/build/synckernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config.
 
 ### `update-submodules.yml` — UI Submodule Bump
 - **Trigger**: Daily cron at 02:00 UTC; `repository_dispatch` event `update-submodules`.
@@ -34,14 +34,14 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ## 2. Repository Scripts & Entrypoints
 
-### Build Scripts (`scripts/` and `minime/build/`)
-- **`scripts/build-bootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
-- **`scripts/build-ui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
+### Build Scripts (`minime/build/`)
+- **`minime/build/mkbootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
+- **`minime/build/mkui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
 - **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
 - **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.xz`.
 - **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.xz` for live updates.
-- **`scripts/sync-kernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
-- **`scripts/prepare-linux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
+- **`minime/build/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
+- **`minime/build/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 
 ### Validation Scripts (`scripts/`)
 - **`scripts/check-traits.sh`**: Validates device hardware traits configuration against the trait schema for all boards.
