@@ -52,12 +52,12 @@ fi
 
 if [ "$(uname -m)" = "aarch64" ]; then
 	if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
-		export CROSS_COMPILE="${CCACHE}aarch64-linux-gnu-"
+		export CROSS_COMPILE="aarch64-linux-gnu-"
 	else
-		export CROSS_COMPILE="${CCACHE}"
+		export CROSS_COMPILE=""
 	fi
 else
-	export CROSS_COMPILE="${CCACHE}aarch64-linux-gnu-"
+	export CROSS_COMPILE="aarch64-linux-gnu-"
 fi
 export ARCH=arm
 
@@ -97,6 +97,7 @@ fi
 # Run everything inside the U-Boot dir
 (
 	cd "${WORK_DIR}/uboot"
+	export CROSS_COMPILE="${CCACHE}${CROSS_COMPILE}"
 
 	if [ "$BOARD" = "h700" ]; then
 		echo "Applying U-Boot MMC delay patch..."
