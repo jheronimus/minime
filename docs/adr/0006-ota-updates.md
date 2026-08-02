@@ -57,7 +57,9 @@ OTA updates do not trigger SD card partition expansion:
 
 1. Stop the UI service (`/etc/init.d/ui stop`) and kill launcher processes.
 2. Upload the `.tar.xz` over FTP.
-3. On the device: `rm -rf /mnt/sdcard/.system && tar -xf <pkg> -C /mnt/sdcard/`.
+3. On the device: `rm -rf /mnt/sdcard/.system && tar -xJf <pkg> -C /mnt/sdcard/`.
+   - `-J` is required: the device's busybox `tar` does not auto-detect xz compression.
+   - Decompressing the ~100 MB archive outlives the telnet session window, so the extraction runs in the background with a completion marker and the delivery script polls for it before rebooting.
    - `.system/` is **clean-replaced** — it is pure MinUI payload, so removing it first guarantees no stale binaries (e.g. a removed core `.so`) linger after an update.
    - `.minime/` is **overlaid** by `tar -xf` — device-specific state (`config/`, `traits`, `dtb`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
 4. Reboot the device.

@@ -31,15 +31,36 @@ fi
 echo "Delivering OTA update '$PKG_PATH' to device at $TARGET_IP..."
 
 echo "1. Stopping UI service on target..."
-"$SCRIPT_DIR/remote-cmd.sh" "/etc/init.d/ui stop; killall -9 minui minui.elf minarch minarch.elf keymon keymon.elf 2>/dev/null || true" "$TARGET_IP" >/dev/null 2>&1 || true
+"$SCRIPT_DIR/remote-cmd.sh" "/etc/init.d/ui stop; killall -9 minui.elf minarch.elf keymon.elf 2>/dev/null || true" "$TARGET_IP" >/dev/null 2>&1 || true
 
 echo "2. Uploading update archive over FTP..."
 "$SCRIPT_DIR/remote-upload.sh" "$PKG_PATH" "minime-ota.tar.xz" "$TARGET_IP"
 
 echo "3. Applying update on target..."
-"$SCRIPT_DIR/remote-cmd.sh" "cd /mnt/sdcard && rm -rf .system && tar -xf minime-ota.tar.xz && rm -f minime-ota.tar.xz && sync" "$TARGET_IP"
+# -J is required: the device's busybox tar does not auto-detect xz.
+# Run in the background and log: decompressing the ~100 MB archive outlives
+# the telnet session window, so extract, verify, then reboot via a marker.
+"$SCRIPT_DIR/remote-cmd.sh" "cd /mnt/sdcard && rm -f minime-ota.tar.xz.minime-ok && rm -rf .system && (tar -xJf minime-ota.tar.xz > /tmp/ota-extract.log 2>&1 && touch minime-ota.tar.xz.minime-ok; echo done >> /tmp/ota-extract.log) & echo applying" "$TARGET_IP" >/dev/null 2>&1 || true
 
-echo "4. Triggering system reboot on target..."
-"$SCRIPT_DIR/remote-cmd.sh" "sync && reboot" "$TARGET_IP" >/dev/null 2>&1 || true
+echo "4. Waiting for extraction to complete..."
+applied="no"
+attempt=0
+while [ "$attempt" -lt 60 ]; do
+	sleep 5
+	attempt=$((attempt + 1))
+	applied=$("$SCRIPT_DIR/remote-cmd.sh" "test -f /mnt/sdcard/minime-ota.tar.xz.minime-ok && echo yes || echo no" "$TARGET_IP" 2>/dev/null | tr -d '\r' | tail -n1)
+	if [ "$applied" = "yes" ]; then
+		break
+	fi
+done
+
+if [ "$applied" != "yes" ]; then
+	echo "ERROR: OTA extraction did not complete in time." >&2
+	echo "Check /tmp/ota-extract.log on the device." >&2
+	exit 1
+fi
+
+echo "5. Cleaning up and rebooting..."
+"$SCRIPT_DIR/remote-cmd.sh" "rm -f /mnt/sdcard/minime-ota.tar.xz.minime-ok && rm -f /mnt/sdcard/minime-ota.tar.xz && sync && reboot" "$TARGET_IP" >/dev/null 2>&1 || true
 
 echo "OTA update successfully delivered to $TARGET_IP!"

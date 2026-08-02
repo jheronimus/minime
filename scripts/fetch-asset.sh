@@ -18,16 +18,16 @@ mkdir -p downloads
 rm -f "${DEST}"
 
 if command -v aria2c >/dev/null 2>&1; then
-	echo "Fetching ${ASSET} using aria2 (10 parallel connections)..."
+	echo "Fetching ${ASSET} using aria2 (10 parallel connections)..." >&2
 	if ! aria2c -x10 -s10 -k1m --console-log-level=warn --summary-interval=0 --allow-overwrite=true -d downloads -o "${ASSET}" "${URL}" >/dev/null 2>&1; then
 		echo "ERROR: Failed to download ${ASSET} (HTTP error)." >&2
 		rm -f "${DEST}"
 		exit 1
 	fi
 else
-	echo "Fetching ${ASSET}..."
+	echo "Fetching ${ASSET}..." >&2
 	curl -L --fail --show-error --progress-bar "${URL}" -o "${DEST}"
 fi
 
-echo "Saved to ${DEST}"
+echo "Saved to ${DEST}" >&2
 echo "${DEST}"
