@@ -174,13 +174,14 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	}
 
 	# Re-hide the system directories (mkfs.vfat resets the hidden attribute).
-	# Run via chroot into the EROFS system (its busybox has the attrib applet),
-	# bind-mounting the card so the paths resolve inside the chroot.
-	mkdir -p /mnt/system/mnt/card
-	mount --bind /mnt/card /mnt/system/mnt/card
-	chroot /mnt/system attrib +h /mnt/card/.minime 2>/dev/null || true
-	chroot /mnt/system attrib +h /mnt/card/.system 2>/dev/null || true
-	umount /mnt/system/mnt/card 2>/dev/null || true
+	# Run via chroot into the EROFS system (its busybox has the fatattr applet).
+	# The EROFS has /mnt/sdcard (the post-switch_root mount point) but the card
+	# is currently mounted at /mnt/card in the initramfs; bind-mount it there so
+	# the paths resolve inside the chroot.
+	mount --bind /mnt/card /mnt/system/mnt/sdcard 2>/dev/null || true
+	chroot /mnt/system fatattr +h /mnt/sdcard/.minime 2>/dev/null || true
+	chroot /mnt/system fatattr +h /mnt/sdcard/.system 2>/dev/null || true
+	umount /mnt/system/mnt/sdcard 2>/dev/null || true
 
 	umount "$STAGE" 2>/dev/null || true
 	rm -f /mnt/card/.minime/config/first_boot_expand
