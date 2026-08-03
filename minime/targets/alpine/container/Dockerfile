@@ -48,6 +48,7 @@ RUN apk add --no-cache --no-progress \
 		linux-headers \
 		llvm \
 		llvm-dev \
+		lz4-dev \
 		m4 \
 		makedepend \
 		mpc1-dev \
