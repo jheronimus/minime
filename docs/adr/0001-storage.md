@@ -35,16 +35,26 @@ Minime must support heterogeneous SoC families with diverging partition table re
 
 To unify infrastructure, `genimage.cfg` uses conditional includes. RK3326/RK3566 include `board/common/genimage.cfg` to emit GPT images, while H700 provides its own `board/h700/genimage.cfg` overriding to MBR.
 
-## First-Boot Expansion and `fatresize`
-During first boot on H700, expanding the `userdata` MBR partition triggered silent failures in `fatresize`, which logged `Error: Could not detect file system.` while RK3566 expanded flawlessly.
+## First-Boot Expansion
+Minime ships a small seeded FAT32 (1040 MB floor, ~246 MB used) so the image fits on any SD card. On first boot, an initramfs script (`first_boot_expand`) grows the `userdata` partition to 100% of the card and recreates the FAT32 at full size.
 
-**Root Cause**: The initramfs invoked `fatresize -f -s max -i "$PART_NUM" "$DISK_DEV"`. The `-i` argument in GNU `fatresize` stands for `--info`, taking no arguments. `getopt_long` consumed `-i`, leaving `1` (the partition index) and `/dev/mmcblk0` as positional arguments. `fatresize` parses positional arguments as target devices via `get_device()`.
+The initramfs performs the following steps, mirroring the approach used by EmuELEC, dArkOS, and fraggod's RPi FAT32 resize script:
 
-Because `get_device()` attempts to extract a trailing partition number from block devices (e.g. `/dev/sda1` -> `/dev/sda` partition 1), it stripped `0` from `/dev/mmcblk0`, probed `/dev/mmcblk` (which failed), and fell back to probing `/dev/mmcblk0`. During this fallback, `get_device()` improperly skipped assigning the extracted partition number (`opts.pnum = 0`).
+1. `parted resizepart` grows the `userdata` partition to 100% of the SD card.
+2. All FAT contents (`.minime`, `.system`, `boot.scr`, config, etc. — ~246 MB) are staged into a RAM-backed tmpfs (`/tmp/stage`, 512 MB).
+3. The EROFS system image is re-mounted from the staged copy so the tools survive the wipe.
+4. `mkfs.vfat -F 32 -s 32 -n minime` wipes and recreates the FAT32 at the full resized partition size.
+5. Staged contents are restored, `.minime`/`.system` re-hidden, the `first_boot_expand` marker removed, and the device reboots.
 
-With `opts.pnum = 0`, `fatresize` mistakenly attempted to probe the *entire parent disk* (`/dev/mmcblk0`) for a FAT32 filesystem instead of the specific partition. Due to H700's MBR layout, libparted immediately choked on the MBR signature and failed. RK3566 succeeded merely because libparted on GPT disks coincidentally skips the raw bootloader blobs and resolves the underlying partition anyway.
+### Why not `fatresize`
+FAT32 cannot be grown in place reliably. `fatresize` (used previously) has two failure modes on real device geometries:
+- Growing to the partition boundary hits `constraint_intersect_and_destroy()` returning NULL or `snap()` assertion failures (`fatresize.c:347`) because libparted's FAT resize constraint cannot end at the very last sector of the partition.
+- Growing a volume whose FAT tables must be enlarged (e.g. 1 GB -> 32 GB) requires relocating the FAT tables; the required slack is geometry-dependent (16 MB on some sizes, 64 MB on others), so no fixed target size works.
 
-**Fix**: The initramfs command was corrected to use the proper partition index argument: `fatresize -n "$PART_NUM"`.
+These are documented in the reference projects: teslausb pads 64 KiB because "fatresize doesn't seem to like extending partitions to the very end", and Tails caps growth at `partition_size - 2 MiB` "due to bugs in fatresize". Recreating the volume with `mkfs.vfat` sidesteps these entirely and is the proven pattern for single-FAT32 firmware.
+
+### Historical note: the `-i` argument bug
+An earlier `fatresize` invocation `fatresize -f -s max -i "$PART_NUM" "$DISK_DEV"` mistook `-i` for `--info`, leaving the partition index and device as positional arguments, which made `fatresize` probe the whole parent disk. This was corrected with `-n "$PART_NUM"` before fatresize was ultimately removed in favor of the recreate approach above.
 
 ## Rationale
 - **Hardware NAND Flash Alignment**: 16 KB cluster size matches 16 KB NAND flash page sizes on modern SD cards, preventing write amplification and minimizing random read latency.

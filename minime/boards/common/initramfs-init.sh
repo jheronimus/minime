@@ -87,13 +87,17 @@ if [ -f /mnt/card/.minime/config/first_boot_probe ]; then
 	reboot -f
 fi
 
-# Grow partition 1 and FAT32 without reformatting.
+# Grow partition 1 and recreate FAT32 at full card size.
+# FAT32 cannot be grown in place reliably (fatresize has geometry bugs), so on
+# first boot we stage the seeded FAT contents into RAM, wipe the partition with
+# mkfs.vfat at its full resized size, and restore the contents. This mirrors
+# the approach used by EmuELEC, dArkOS, and similar single-FAT32 firmware.
 if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	log_card "[INITRAMFS] Expanding SD card on $CARD_DEV..."
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
 
-	# parted and fatresize are not in the initramfs to avoid dynamic linking
+	# parted and mkfs.vfat are not in the initramfs to avoid dynamic linking
 	# complexity. We temporarily mount the EROFS system image and run them via
 	# chroot with the device nodes, proc, and sysfs bind-mounted.
 	mkdir -p /mnt/system
@@ -112,42 +116,79 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	sleep 1
 
 	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
-	SECTOR_SIZE="$(cat "/sys/block/${DISK_DEV##*/}/queue/logical_block_size" 2>/dev/null || echo 512)"
-	# fatresize expects the end sector to be part_start + part_length - 1.
-	TARGET_BYTES=$(((PART_SECTORS - 1) * SECTOR_SIZE))
-
-	log_card "[INITRAMFS] Resizing FAT32 to ${TARGET_BYTES} bytes..."
-
-	# Grow the FAT filesystem to fill the resized partition. fatresize needs
-	# the partition unmounted and only understands the raw device.
-	umount /mnt/card 2>/dev/null || true
-	FATRESIZE_OUT="$(chroot /mnt/system fatresize -f -s "${TARGET_BYTES}" -n "$PART_NUM" "$DISK_DEV" 2>&1)"
-	FATRESIZE_RC=$?
-
-	umount /mnt/system/sys
-	umount /mnt/system/proc
-	umount /mnt/system/dev
-	umount /mnt/system
-
-	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
-
 	log_card "[INITRAMFS] parted output: ${PARTED_OUT} (exit ${PARTED_RC})"
-	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS} target_bytes=${TARGET_BYTES}"
-	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
-	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
+	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS}"
 
 	if [ "$PARTED_RC" -ne 0 ]; then
 		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
 		exec sh
 	fi
 
-	if [ "$FATRESIZE_RC" -ne 0 ]; then
-		log_card "ERROR: failed to expand $CARD_DEV"
+	# Stage all FAT contents into a RAM-backed tmpfs before wiping the volume.
+	STAGE=/tmp/stage
+	mkdir -p "$STAGE"
+	if ! mount -t tmpfs -o size=512M tmpfs "$STAGE" 2>/dev/null; then
+		log_card "ERROR: failed to mount staging tmpfs at $STAGE"
 		exec sh
 	fi
-	log_card "[INITRAMFS] Partition expansion successful. Removing first_boot_expand..."
+	log_card "[INITRAMFS] Staging FAT contents into $STAGE..."
+	cp -a /mnt/card/. "$STAGE"/ 2>/dev/null || {
+		log_card "ERROR: failed to stage FAT contents"
+		exec sh
+	}
+
+	# The EROFS loop mount still points at the card file we are about to wipe.
+	# Re-mount it from the staged copy so mkfs.vfat survives the reformat.
+	umount /mnt/system/dev
+	umount /mnt/system/proc
+	umount /mnt/system/sys
+	umount /mnt/system
+	if ! mount -t erofs -o loop,ro "$STAGE/.minime/system" /mnt/system 2>/dev/null; then
+		log_card "ERROR: failed to mount staged EROFS system"
+		exec sh
+	fi
+	mount --bind /dev /mnt/system/dev
+	mount --bind /proc /mnt/system/proc
+	mount --bind /sys /mnt/system/sys
+
+	# Wipe and recreate FAT32 at the full resized partition size.
+	umount /mnt/card 2>/dev/null || true
+	log_card "[INITRAMFS] Recreating FAT32 on $CARD_DEV..."
+	MKFS_OUT="$(chroot /mnt/system mkfs.vfat -F 32 -s 32 -n minime "$CARD_DEV" 2>&1)"
+	MKFS_RC=$?
+	log_card "[INITRAMFS] mkfs.vfat output: ${MKFS_OUT} (exit ${MKFS_RC})"
+	if [ "$MKFS_RC" -ne 0 ]; then
+		log_card "ERROR: failed to recreate $CARD_DEV"
+		exec sh
+	fi
+
+	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || {
+		log_card "ERROR: failed to remount recreated $CARD_DEV"
+		exec sh
+	}
+
+	log_card "[INITRAMFS] Restoring staged FAT contents..."
+	cp -a "$STAGE"/. /mnt/card/ 2>/dev/null || {
+		log_card "ERROR: failed to restore FAT contents"
+		exec sh
+	}
+
+	# Re-hide the system directories (mkfs.vfat resets the hidden attribute).
+	# Run via chroot into the EROFS system (its busybox has the attrib applet),
+	# bind-mounting the card so the paths resolve inside the chroot.
+	mkdir -p /mnt/system/mnt/card
+	mount --bind /mnt/card /mnt/system/mnt/card
+	chroot /mnt/system attrib +h /mnt/card/.minime 2>/dev/null || true
+	chroot /mnt/system attrib +h /mnt/card/.system 2>/dev/null || true
+	umount /mnt/system/mnt/card 2>/dev/null || true
+
+	umount "$STAGE" 2>/dev/null || true
 	rm -f /mnt/card/.minime/config/first_boot_expand
 	sync
+
+	log_card "[INITRAMFS] Partition recreation successful. Rebooting..."
+	umount /mnt/card 2>/dev/null || true
+	reboot -f
 fi
 
 log_card "[INITRAMFS] Mounting EROFS system image..."
