@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APKBUILD_PATH="${ROOT_DIR}/minime/targets/alpine/aports/tinykernel/APKBUILD"
 CONFIG_PATH="${ROOT_DIR}/minime/targets/buildroot/external/configs/common.config"
 ALPINE_URL="https://gitlab.alpinelinux.org/alpine/aports/-/raw/master/community/linux-stable/APKBUILD"
