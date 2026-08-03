@@ -21,6 +21,7 @@
 - [ ] Calibrate voltage-based battery gauge with PMIC percentage fallback
 - [ ] Enhance LED support (green status LED, charging/battery level indicators, low-battery threshold disable)
 - [ ] Fix power button handling
+- [ ] Fix power button on RG35xxSP not waking the device up from sleep
 - [ ] Analyze and optimize idle power consumption (power domains, runtime-PM, unused rails)
 
 ## Display, Audio & Input
@@ -34,13 +35,15 @@
 ## Board Infrastructure & System
 
 - [ ] Update the MinUI `README.txt` shipped on the card
-  - [THEORY] `minime/ui/minui/skeleton/BASE/README.txt` (formatted by `workspace/all/readmes/makefile` into the card's `README.txt`) still documents stock-firmware install over Anbernic/Trimui/Miyoo/M17 etc. It must be rewritten for Minime: supported devices, MinUI.zip / `.minime` layout, OTA updates, traits, and the `just fetch`/`just update` flow.
+  - [THEORY] `minime/ui/minui/skeleton/BASE/README.txt` (formatted by `workspace/all/readmes/makefile` into the card's `README.txt`) still documents stock-firmware install over Anbernic/Trimui/Miyoo/M17 etc. It must be rewritten for Minime: supported devices, MinUI.zip / `.minime` layout, OTA updates, traits, and the `just update`/`just deploy`/`just check-version` flow.
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](file:///Users/ilembitov/Projects/minime/docs/spec/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.
 - [ ] Implement U-Boot SPL dual DRAM training fallback for H700 (LPDDR4 -> LPDDR3)
   - [THEORY] Modify `dram_sunxi_h616.c` in U-Boot SPL to attempt LPDDR4 training first and fallback to LPDDR3 timing if training fails, enabling a single U-Boot binary across all H700 RAM variants.
 - [ ] Implement init script to clear Mac metadata files (`._*`, `.DS_Store`)
 - [ ] Review and trim init scripts; start wireless services (`wpa_supplicant`, `bluetoothd`) on demand
+- [ ] Research and implement a way for devices to announce their hostname on the network so `just update` could work without a hardcoded `target_ip`
+  - [THEORY] e.g. mDNS/`avahi` publishing, or a hostname-based address; would let `just update`/`just check-version`/`just remote` resolve the device without `deploy.cfg`.
 - [ ] Optimize U-Boot boot speed
 - [ ] Optimize Wi-Fi connection speed
 
