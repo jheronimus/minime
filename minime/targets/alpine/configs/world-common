@@ -48,6 +48,7 @@ util-linux
 zstd
 xz
 lz4
+lz4-libs
 # ── Networking (link/addr) ───────────────────────────────────────────────
 iproute2
 iputils
