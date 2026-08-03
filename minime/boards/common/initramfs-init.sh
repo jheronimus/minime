@@ -93,8 +93,9 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
 
-	# parted is no longer in the initramfs to avoid dynamic linking complexity.
-	# We temporarily mount the EROFS system image and use its parted via chroot.
+	# parted and fatresize are not in the initramfs to avoid dynamic linking
+	# complexity. We temporarily mount the EROFS system image and run them via
+	# chroot with the device nodes, proc, and sysfs bind-mounted.
 	mkdir -p /mnt/system
 	if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system 2>/dev/null; then
 		log_card "ERROR: failed to mount /mnt/system for partition expansion"
@@ -108,32 +109,32 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	PARTED_RC=$?
 	chroot /mnt/system partprobe "$DISK_DEV" 2>/dev/null || true
 
+	sleep 1
+
+	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
+	SECTOR_SIZE="$(cat "/sys/block/${DISK_DEV##*/}/queue/logical_block_size" 2>/dev/null || echo 512)"
+	# fatresize expects the end sector to be part_start + part_length - 1.
+	TARGET_BYTES=$(((PART_SECTORS - 1) * SECTOR_SIZE))
+
+	log_card "[INITRAMFS] Resizing FAT32 to ${TARGET_BYTES} bytes..."
+
+	# Grow the FAT filesystem to fill the resized partition. fatresize needs
+	# the partition unmounted and only understands the raw device.
+	umount /mnt/card 2>/dev/null || true
+	FATRESIZE_OUT="$(chroot /mnt/system fatresize -f -s "${TARGET_BYTES}" -n "$PART_NUM" "$DISK_DEV" 2>&1)"
+	FATRESIZE_RC=$?
+
 	umount /mnt/system/sys
 	umount /mnt/system/proc
 	umount /mnt/system/dev
 	umount /mnt/system
 
-	sleep 1
-
-	PART_SECTORS="$(cat "/sys/block/${DISK_DEV##*/}/${CARD_DEV##*/}/size" 2>/dev/null || echo 0)"
-	
-	# Patch the FAT32 BPB_TotSec32 header (4 bytes at offset 0x20)
-	# to match the actual partition sector count after resize.
-	log_card "[INITRAMFS] Patching FAT32 BPB_TotSec32 to $PART_SECTORS sectors..."
-	
-	# Unmount the FAT partition to safely patch the BPB
-	umount /mnt/card 2>/dev/null || true
-
-	HEX="$(printf "%08x" "$PART_SECTORS")"
-	# shellcheck disable=SC3057
-	printf "\\x${HEX:6:2}\\x${HEX:4:2}\\x${HEX:2:2}\\x${HEX:0:2}" |
-		dd of="$CARD_DEV" bs=1 seek=32 count=4 conv=notrunc 2>/dev/null
-	FATRESIZE_RC=$?
-
 	mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null || true
 
 	log_card "[INITRAMFS] parted output: ${PARTED_OUT} (exit ${PARTED_RC})"
-	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS}"
+	log_card "[INITRAMFS] $CARD_DEV: sectors=${PART_SECTORS} target_bytes=${TARGET_BYTES}"
+	log_card "[INITRAMFS] fatresize output: ${FATRESIZE_OUT}"
+	log_card "[INITRAMFS] fatresize exit code: ${FATRESIZE_RC}"
 
 	if [ "$PARTED_RC" -ne 0 ]; then
 		log_card "ERROR: failed to expand partition $PART_NUM on $DISK_DEV"
