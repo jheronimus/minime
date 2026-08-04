@@ -35,6 +35,7 @@ mkdir -p "${DEST_DIR}/Roms"
 # Format: short_name|minui_name|allium_name
 mappings="
 gb|Game Boy (GB)|GB
+gbc|Game Boy Color (GBC)|GBC
 gba|Game Boy Advance (GBA)|GBA
 nes|Nintendo Entertainment System (FC)|FC
 snes|Super Nintendo (SFC)|SFC
