@@ -44,6 +44,8 @@
 - [ ] Review and trim init scripts; start wireless services (`wpa_supplicant`, `bluetoothd`) on demand
 - [ ] Research and implement a way for devices to announce their hostname on the network so `just update` could work without a hardcoded `target_ip`
   - [THEORY] e.g. mDNS/`avahi` publishing, or a hostname-based address; would let `just update`/`just check-version`/`just remote` resolve the device without `deploy.cfg`.
+- [ ] Investigate why OTA uploads take too long (just update times out at the reboot-wait step even though delivery succeeds)
+  - [THEORY] FTP upload of the OTA archive and/or the post-upload reboot-wait could be slow; measure upload throughput and extraction time to find the bottleneck.
 - [ ] Optimize U-Boot boot speed
 - [ ] Optimize Wi-Fi connection speed
 
