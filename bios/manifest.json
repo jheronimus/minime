@@ -1,0 +1,828 @@
+{
+  "manifest_version": 1,
+  "generated": "2026-08-04T00:00:00Z",
+  "source_of_truth": "https://docs.libretro.com/library",
+  "bios_source_root": "/Volumes/htpc/roms/bios (remote source; files copied into local_bios_root)",
+  "description": "RetroArch BIOS manifest. Lists every BIOS/system file required by RetroArch cores for the target platforms, sorted by console and emulator, with required filename, md5 checksum, and the on-disk location of the sourced file in /Volumes/htpc/roms/bios. Checksums are MD5 of the actual sourced files and match docs.libretro.com where published. 'required': true means the core needs it to run that system; false/optional means recommended for full compatibility. NOTE: BIOS files are proprietary and NOT committed; this manifest only records their metadata and location.",
+  "required_by_console": {
+    "GB/GBC/SGB": {
+      "emulators": {
+        "Gambatte": [
+          {
+            "filename": "dmg_boot.bin",
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "required": false,
+            "description": "Game Boy (DMG) boot ROM"
+          }
+        ],
+        "SameBoy": [
+          {
+            "filename": "dmg_boot.bin",
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "required": false,
+            "description": "Game Boy (DMG) boot ROM"
+          },
+          {
+            "filename": "cgb_boot.bin",
+            "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+            "required": false,
+            "description": "Game Boy Color boot ROM"
+          },
+          {
+            "filename": "sgb_boot.bin",
+            "md5": "d574d4f9c12f305074798f54c091a8b4",
+            "required": false,
+            "description": "Super Game Boy boot ROM"
+          },
+          {
+            "filename": "sgb2_boot.bin",
+            "md5": "e0430bca9925fb9882148fd2dc2418c1",
+            "required": false,
+            "description": "Super Game Boy 2 boot ROM"
+          }
+        ],
+        "mGBA (Game Boy / Color mode)": [
+          {
+            "filename": "gb_bios.bin",
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "required": false,
+            "description": "Game Boy (DMG) BIOS (same content as dmg_boot.bin)"
+          },
+          {
+            "filename": "gbc_bios.bin",
+            "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+            "required": false,
+            "description": "Game Boy Color BIOS (same content as cgb_boot.bin)"
+          }
+        ],
+        "higan / bsnes (Super Game Boy)": [
+          {
+            "filename": "SGB1.sfc",
+            "md5": "b15ddb15721c657d82c5bab6db982ee9(e)/d574d4f9c12f305074798f54c091a8b4(boot)",
+            "required": false,
+            "description": "Super Game Boy 1 (folder: program.rom + sgb1.boot.rom)"
+          },
+          {
+            "filename": "SGB2.sfc",
+            "md5": "8ecd73eb4edf7ed7e81aef1be80031d5(e)/e0430bca9925fb9882148fd2dc2418c1(boot)",
+            "required": false,
+            "description": "Super Game Boy 2 (folder: program.rom + sgb2.boot.rom)"
+          }
+        ]
+      }
+    },
+    "SMS/GG": {
+      "emulators": {
+        "Genesis Plus GX (Master System / Game Gear)": [
+          {
+            "filename": "bios_E.sms",
+            "md5": "840481177270d5642a14ca71ee72844c",
+            "required": false,
+            "description": "Master System EU boot ROM"
+          },
+          {
+            "filename": "bios_U.sms",
+            "md5": "840481177270d5642a14ca71ee72844c",
+            "required": false,
+            "description": "Master System US boot ROM"
+          },
+          {
+            "filename": "bios_J.sms",
+            "md5": "24a519c53f67b00640d0048ef7089105",
+            "required": false,
+            "description": "Master System JP boot ROM"
+          },
+          {
+            "filename": "bios.gg",
+            "md5": "672e104c3be3a238301aceffc3b23fd6",
+            "required": false,
+            "description": "Game Gear boot ROM"
+          }
+        ],
+        "PicoDrive (Master System / Game Gear)": [
+          {
+            "filename": "bios_E.sms",
+            "md5": "840481177270d5642a14ca71ee72844c",
+            "required": false,
+            "description": "Master System EU boot ROM"
+          },
+          {
+            "filename": "bios_U.sms",
+            "md5": "840481177270d5642a14ca71ee72844c",
+            "required": false,
+            "description": "Master System US boot ROM"
+          },
+          {
+            "filename": "bios_J.sms",
+            "md5": "24a519c53f67b00640d0048ef7089105",
+            "required": false,
+            "description": "Master System JP boot ROM"
+          },
+          {
+            "filename": "bios.gg",
+            "md5": "672e104c3be3a238301aceffc3b23fd6",
+            "required": false,
+            "description": "Game Gear boot ROM"
+          }
+        ],
+        "SMS Plus GX": [],
+        "Gearsystem": [],
+        "Emux SMS": []
+      }
+    },
+    "NES/FDS": {
+      "emulators": {
+        "FCEUmm": [
+          {
+            "filename": "disksys.rom",
+            "md5": "ca30b50f880eb660a320674ed365ef7a",
+            "required": true,
+            "description": "Famicom Disk System BIOS, required for FDS"
+          },
+          {
+            "filename": "gamegenie.nes",
+            "md5": "717e1a60a22ed39e242794cb7d38d8d1",
+            "required": false,
+            "description": "Game Genie cheat device ROM"
+          }
+        ],
+        "Nestopia": [
+          {
+            "filename": "disksys.rom",
+            "md5": "ca30b50f880eb660a320674ed365ef7a",
+            "required": true,
+            "description": "Famicom Disk System BIOS, required for FDS"
+          }
+        ],
+        "Mesen": [
+          {
+            "filename": "disksys.rom",
+            "md5": "ca30b50f880eb660a320674ed365ef7a",
+            "required": true,
+            "description": "Famicom Disk System BIOS, required for FDS"
+          }
+        ]
+      }
+    },
+    "PCE/PCE-CD/SGFX": {
+      "emulators": {
+        "Beetle PCE Fast": [
+          {
+            "filename": "syscard3.pce",
+            "md5": "38179df8f4ac870017db21ebcbf53114",
+            "required": true,
+            "description": "Super CD-ROM2 System Card V3.xx"
+          },
+          {
+            "filename": "syscard2.pce",
+            "md5": "3cdd6614a918616bfc41c862e889dd79",
+            "required": false,
+            "description": "CD-ROM2 System Card V2.xx"
+          },
+          {
+            "filename": "syscard1.pce",
+            "md5": "2b7ccb3d86baa18f6402c176f3065082",
+            "required": false,
+            "description": "CD-ROM2 System Card V1.xx"
+          },
+          {
+            "filename": "gexpress.pce",
+            "md5": "6d2cb14fc3e1f65ceb135633d1694122",
+            "required": false,
+            "description": "Game Express CD card"
+          }
+        ],
+        "Beetle SGX (SuperGrafx)": [
+          {
+            "filename": "syscard3.pce",
+            "md5": "38179df8f4ac870017db21ebcbf53114",
+            "required": true,
+            "description": "Super CD-ROM2 System Card V3.xx"
+          },
+          {
+            "filename": "syscard2.pce",
+            "md5": "3cdd6614a918616bfc41c862e889dd79",
+            "required": false,
+            "description": "CD-ROM2 System Card V2.xx"
+          },
+          {
+            "filename": "syscard1.pce",
+            "md5": "2b7ccb3d86baa18f6402c176f3065082",
+            "required": false,
+            "description": "CD-ROM2 System Card V1.xx"
+          }
+        ]
+      }
+    },
+    "MD/MDCD/32X": {
+      "emulators": {
+        "Genesis Plus GX (Mega Drive / Sega CD)": [
+          {
+            "filename": "bios_CD_E.bin",
+            "md5": "e66fa1dc5820d254611fdcdba0662372",
+            "required": true,
+            "description": "Mega-CD EU BIOS, required for Sega CD"
+          },
+          {
+            "filename": "bios_CD_U.bin",
+            "md5": "2efd74e3232ff260e371b99f84024f7f",
+            "required": true,
+            "description": "Sega CD US BIOS, required for Sega CD"
+          },
+          {
+            "filename": "bios_CD_J.bin",
+            "md5": "278a9397d192149e84e820ac621a8edd",
+            "required": true,
+            "description": "Mega-CD JP BIOS, required for Sega CD"
+          }
+        ],
+        "PicoDrive (Mega Drive / Sega CD / 32X)": [
+          {
+            "filename": "bios_CD_E.bin",
+            "md5": "e66fa1dc5820d254611fdcdba0662372",
+            "required": true,
+            "description": "MegaCD EU BIOS, required"
+          },
+          {
+            "filename": "bios_CD_U.bin",
+            "md5": "2efd74e3232ff260e371b99f84024f7f",
+            "required": true,
+            "description": "SegaCD US BIOS, required"
+          },
+          {
+            "filename": "bios_CD_J.bin",
+            "md5": "278a9397d192149e84e820ac621a8edd",
+            "required": true,
+            "description": "MegaCD JP BIOS, required"
+          }
+        ],
+        "BlastEm (Mega Drive / Sega CD)": [],
+        "Mednafen MD (Beetle MD)": [
+          {
+            "filename": "bios_MD.bin",
+            "md5": "d3293ebaaa7f4eb2a6766b68a0fb4609",
+            "required": false,
+            "description": "Mega Drive / Genesis lockout BIOS"
+          }
+        ]
+      }
+    },
+    "PSX": {
+      "emulators": {
+        "Beetle PSX / Beetle PSX HW": [
+          {
+            "filename": "scph5500.bin",
+            "md5": "8dd7d5296a650fac7319bce665a6a53c",
+            "required": true,
+            "description": "PS1 JP BIOS (SCPH-5500)"
+          },
+          {
+            "filename": "scph5501.bin",
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "required": true,
+            "description": "PS1 US BIOS (SCPH-5501)"
+          },
+          {
+            "filename": "scph5502.bin",
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "required": true,
+            "description": "PS1 EU BIOS (SCPH-5502)"
+          }
+        ],
+        "DuckStation": [
+          {
+            "filename": "scph5500.bin",
+            "md5": "8dd7d5296a650fac7319bce665a6a53c",
+            "required": false,
+            "description": "PS1 JP BIOS (SCPH-5500)"
+          },
+          {
+            "filename": "scph5501.bin",
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "required": false,
+            "description": "PS1 US BIOS (SCPH-5501)"
+          },
+          {
+            "filename": "scph5502.bin",
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "required": false,
+            "description": "PS1 EU BIOS (SCPH-5502)"
+          },
+          {
+            "filename": "PSXONPSP660.bin",
+            "md5": "c53ca5908936d412331790f4426c6c33",
+            "required": false,
+            "description": "All-in-one PS1 BIOS set"
+          }
+        ],
+        "PCSX ReARMed": [
+          {
+            "filename": "scph1001.bin",
+            "md5": "924e392ed05558ffdb115408c263dccf",
+            "required": false,
+            "description": "PS1 US BIOS (SCPH-1001)"
+          },
+          {
+            "filename": "scph5501.bin",
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "required": false,
+            "description": "PS1 US BIOS (SCPH-5501)"
+          },
+          {
+            "filename": "scph7001.bin",
+            "md5": "1e68c231d0896b7eadcad1d7d8e76129",
+            "required": false,
+            "description": "PS1 EU BIOS (SCPH-7001)"
+          },
+          {
+            "filename": "ps1_rom.bin",
+            "md5": "81bbe60ba7a3d1cea1d48c14cbcc647b",
+            "required": false,
+            "description": "PCSX ReARMed all-in-one BIOS"
+          }
+        ]
+      }
+    },
+    "SNES": {
+      "emulators": {
+        "Snes9x": [
+          {
+            "filename": "BS-X.bin",
+            "md5": "fed4d8242cfbed61343d53d48432aced",
+            "required": false,
+            "description": "Satellaview BS-X base ROM, needed for BS-X content"
+          }
+        ],
+        "bsnes / higan": [
+          {
+            "filename": "BS-X.bin",
+            "md5": "fed4d8242cfbed61343d53d48432aced",
+            "required": false,
+            "description": "Satellaview BS-X base ROM, needed for BS-X content"
+          }
+        ],
+        "Mesen-S": []
+      }
+    },
+    "N64": {
+      "emulators": {
+        "Mupen64Plus-Next": [
+          {
+            "filename": "64DD_IPL.bin",
+            "md5": "8d3d9f294b6e174bc7b1d2fd1c727530",
+            "required": false,
+            "description": "Nintendo 64 Disk Drive IPL, needed for 64DD games"
+          }
+        ],
+        "ParaLLEl N64": [
+          {
+            "filename": "64DD_IPL.bin",
+            "md5": "8d3d9f294b6e174bc7b1d2fd1c727530",
+            "required": false,
+            "description": "Nintendo 64 Disk Drive IPL, needed for 64DD games"
+          }
+        ]
+      }
+    },
+    "SS": {
+      "emulators": {
+        "Beetle Saturn": [
+          {
+            "filename": "sega_101.bin",
+            "md5": "85ec9ca47d8f6807718151cbcca8b964",
+            "required": true,
+            "description": "Saturn JP BIOS"
+          },
+          {
+            "filename": "mpr-17933.bin",
+            "md5": "3240872c70984b6cbfda1586cab68dbe",
+            "required": true,
+            "description": "Saturn US/EU BIOS"
+          },
+          {
+            "filename": "mpr-18811-mx.ic1",
+            "md5": "255113ba943c92a54facd25a10fd780c",
+            "required": false,
+            "description": "The King of Fighters '95 ROM cartridge"
+          },
+          {
+            "filename": "mpr-19367-mx.ic1",
+            "md5": "1cd19988d1d72a3e7caa0b73234c96b4",
+            "required": false,
+            "description": "Ultraman: Hikari no Kyojin Densetsu ROM cartridge"
+          }
+        ],
+        "Kronos": [
+          {
+            "filename": "kronos/saturn_bios.bin",
+            "md5": "af5828fdff51384f99b3c4926be27762",
+            "required": true,
+            "description": "Saturn BIOS"
+          },
+          {
+            "filename": "kronos/stvbios.zip",
+            "md5": "n/a (zip archive)",
+            "required": false,
+            "description": "ST-V BIOS, needed for ST-V games"
+          },
+          {
+            "filename": "mpr-18811-mx.ic1",
+            "md5": "255113ba943c92a54facd25a10fd780c",
+            "required": false,
+            "description": "The King of Fighters '95 ROM cartridge"
+          },
+          {
+            "filename": "mpr-19367-mx.ic1",
+            "md5": "1cd19988d1d72a3e7caa0b73234c96b4",
+            "required": false,
+            "description": "Ultraman: Hikari no Kyojin Densetsu ROM cartridge"
+          }
+        ],
+        "Yabause": [
+          {
+            "filename": "saturn_bios.bin",
+            "md5": "af5828fdff51384f99b3c4926be27762",
+            "required": false,
+            "description": "Saturn BIOS"
+          }
+        ],
+        "YabaSanshiro": [
+          {
+            "filename": "sega_101.bin",
+            "md5": "85ec9ca47d8f6807718151cbcca8b964",
+            "required": false,
+            "description": "Saturn BIOS"
+          }
+        ]
+      }
+    },
+    "GBA": {
+      "emulators": {
+        "mGBA": [
+          {
+            "filename": "gba_bios.bin",
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "required": false,
+            "description": "Game Boy Advance BIOS"
+          }
+        ],
+        "VBA-M": [
+          {
+            "filename": "gba_bios.bin",
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "required": false,
+            "description": "Game Boy Advance BIOS"
+          }
+        ],
+        "Beetle GBA": [
+          {
+            "filename": "gba_bios.bin",
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "required": false,
+            "description": "Game Boy Advance BIOS"
+          }
+        ],
+        "gpSP": [
+          {
+            "filename": "gba_bios.bin",
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "required": false,
+            "description": "Game Boy Advance BIOS"
+          }
+        ]
+      }
+    }
+  },
+  "sources_by_platform": {
+    "GB/GBC/SGB": [
+      {
+        "filename": "dmg_boot.bin",
+        "location": "GB-GBC-SGB/dmg_boot.bin",
+        "md5": "32fbbd84168d3482956eb3c5051637f5",
+        "size_bytes": 256
+      },
+      {
+        "filename": "cgb_boot.bin",
+        "location": "GB-GBC-SGB/cgb_boot.bin",
+        "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+        "size_bytes": 2304
+      },
+      {
+        "filename": "sgb_boot.bin",
+        "location": "GB-GBC-SGB/sgb_boot.bin",
+        "md5": "d574d4f9c12f305074798f54c091a8b4",
+        "size_bytes": 256
+      },
+      {
+        "filename": "sgb2_boot.bin",
+        "location": "GB-GBC-SGB/sgb2_boot.bin",
+        "md5": "e0430bca9925fb9882148fd2dc2418c1",
+        "size_bytes": 256
+      },
+      {
+        "filename": "gb_bios.bin",
+        "location": "GB-GBC-SGB/gb_bios.bin",
+        "md5": "32fbbd84168d3482956eb3c5051637f5",
+        "size_bytes": 256,
+        "note": "same content as dmg_boot.bin"
+      },
+      {
+        "filename": "gbc_bios.bin",
+        "location": "GB-GBC-SGB/gbc_bios.bin",
+        "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+        "size_bytes": 2304,
+        "note": "same content as cgb_boot.bin"
+      },
+      {
+        "filename": "sgb_bios.bin",
+        "location": "GB-GBC-SGB/sgb_bios.bin",
+        "md5": "d574d4f9c12f305074798f54c091a8b4",
+        "size_bytes": 256,
+        "note": "same content as sgb_boot.bin"
+      },
+      {
+        "filename": "sgb2_bios.bin",
+        "location": "GB-GBC-SGB/sgb2_bios.bin",
+        "md5": "e0430bca9925fb9882148fd2dc2418c1",
+        "size_bytes": 256,
+        "note": "same content as sgb2_boot.bin"
+      },
+      {
+        "filename": "SGB1.sfc/",
+        "location": "GB-GBC-SGB/SGB1.sfc",
+        "md5": "b15ddb15721c657d82c5bab6db982ee9(e)/d574d4f9c12f305074798f54c091a8b4(boot)",
+        "size_bytes": 262400,
+        "note": "Super Game Boy 1 folder (program.rom + sgb1.boot.rom)"
+      },
+      {
+        "filename": "SGB2.sfc/",
+        "location": "GB-GBC-SGB/SGB2.sfc",
+        "md5": "8ecd73eb4edf7ed7e81aef1be80031d5(e)/e0430bca9925fb9882148fd2dc2418c1(boot)",
+        "size_bytes": 524544,
+        "note": "Super Game Boy 2 folder (program.rom + sgb2.boot.rom)"
+      }
+    ],
+    "SMS/GG": [
+      {
+        "filename": "bios_E.sms",
+        "location": "SMS-GG/bios_E.sms",
+        "md5": "840481177270d5642a14ca71ee72844c",
+        "size_bytes": 8192
+      },
+      {
+        "filename": "bios_U.sms",
+        "location": "SMS-GG/bios_U.sms",
+        "md5": "840481177270d5642a14ca71ee72844c",
+        "size_bytes": 8192
+      },
+      {
+        "filename": "bios_J.sms",
+        "location": "SMS-GG/bios_J.sms",
+        "md5": "24a519c53f67b00640d0048ef7089105",
+        "size_bytes": 8192
+      },
+      {
+        "filename": "bios.sms",
+        "location": "SMS-GG/bios.sms",
+        "md5": "840481177270d5642a14ca71ee72844c",
+        "size_bytes": 8192,
+        "note": "generic SMS boot ROM"
+      },
+      {
+        "filename": "bios.gg",
+        "location": "SMS-GG/bios.gg",
+        "md5": "672e104c3be3a238301aceffc3b23fd6",
+        "size_bytes": 1024
+      }
+    ],
+    "NES/FDS": [
+      {
+        "filename": "disksys.rom",
+        "location": "NES-FDS/disksys.rom",
+        "md5": "ca30b50f880eb660a320674ed365ef7a",
+        "size_bytes": 8192,
+        "note": "Famicom Disk System BIOS"
+      },
+      {
+        "filename": "gamegenie.nes",
+        "location": "NES-FDS/gamegenie.nes",
+        "md5": "717e1a60a22ed39e242794cb7d38d8d1",
+        "size_bytes": 8192
+      }
+    ],
+    "PCE/PCE-CD/SGFX": [
+      {
+        "filename": "syscard1.pce",
+        "location": "PCE-PCE-CD-SGFX/syscard1.pce",
+        "md5": "2b7ccb3d86baa18f6402c176f3065082",
+        "size_bytes": 262144
+      },
+      {
+        "filename": "syscard2.pce",
+        "location": "PCE-PCE-CD-SGFX/syscard2.pce",
+        "md5": "3cdd6614a918616bfc41c862e889dd79",
+        "size_bytes": 262144
+      },
+      {
+        "filename": "syscard3.pce",
+        "location": "PCE-PCE-CD-SGFX/syscard3.pce",
+        "md5": "38179df8f4ac870017db21ebcbf53114",
+        "size_bytes": 262144
+      },
+      {
+        "filename": "gexpress.pce",
+        "location": "PCE-PCE-CD-SGFX/gexpress.pce",
+        "md5": "6d2cb14fc3e1f65ceb135633d1694122",
+        "size_bytes": 262144
+      }
+    ],
+    "MD/MDCD/32X": [
+      {
+        "filename": "bios_CD_E.bin",
+        "location": "MD-MDCD-32X/bios_CD_E.bin",
+        "md5": "e66fa1dc5820d254611fdcdba0662372",
+        "size_bytes": 131072,
+        "note": "Mega-CD EU BIOS"
+      },
+      {
+        "filename": "bios_CD_U.bin",
+        "location": "MD-MDCD-32X/bios_CD_U.bin",
+        "md5": "2efd74e3232ff260e371b99f84024f7f",
+        "size_bytes": 131072,
+        "note": "Sega CD US BIOS"
+      },
+      {
+        "filename": "bios_CD_J.bin",
+        "location": "MD-MDCD-32X/bios_CD_J.bin",
+        "md5": "278a9397d192149e84e820ac621a8edd",
+        "size_bytes": 131072,
+        "note": "Mega-CD JP BIOS"
+      },
+      {
+        "filename": "bios_MD.bin",
+        "location": "MD-MDCD-32X/bios_MD.bin",
+        "md5": "d3293ebaaa7f4eb2a6766b68a0fb4609",
+        "size_bytes": 2048,
+        "note": "Mega Drive / Genesis lockout BIOS"
+      },
+      {
+        "filename": "ggenie.bin",
+        "location": "MD-MDCD-32X/ggenie.bin",
+        "md5": "e8af7fe115a75c849f6aab3701e7799b",
+        "size_bytes": 32768,
+        "note": "Game Genie for Mega Drive, optional"
+      }
+    ],
+    "PSX": [
+      {
+        "filename": "scph5500.bin",
+        "location": "PSX/scph5500.bin",
+        "md5": "8dd7d5296a650fac7319bce665a6a53c",
+        "size_bytes": 524288,
+        "note": "PS1 JP BIOS (SCPH-5500)"
+      },
+      {
+        "filename": "scph5501.bin",
+        "location": "PSX/scph5501.bin",
+        "md5": "490f666e1afb15b7362b406ed1cea246",
+        "size_bytes": 524288,
+        "note": "PS1 US BIOS (SCPH-5501)"
+      },
+      {
+        "filename": "scph5502.bin",
+        "location": "PSX/scph5502.bin",
+        "md5": "32736f17079d0b2b7024407c39bd3050",
+        "size_bytes": 524288,
+        "note": "PS1 EU BIOS (SCPH-5502)"
+      },
+      {
+        "filename": "scph1001.bin",
+        "location": "PSX/scph1001.bin",
+        "md5": "924e392ed05558ffdb115408c263dccf",
+        "size_bytes": 524288,
+        "note": "PS1 US BIOS (SCPH-1001)"
+      },
+      {
+        "filename": "scph7001.bin",
+        "location": "PSX/scph7001.bin",
+        "md5": "1e68c231d0896b7eadcad1d7d8e76129",
+        "size_bytes": 524288,
+        "note": "PS1 EU BIOS (SCPH-7001)"
+      },
+      {
+        "filename": "ps1_rom.bin",
+        "location": "PSX/ps1_rom.bin",
+        "md5": "81bbe60ba7a3d1cea1d48c14cbcc647b",
+        "size_bytes": 524288,
+        "note": "PCSX ReARMed all-in-one BIOS"
+      },
+      {
+        "filename": "PSXONPSP660.bin",
+        "location": "PSX/PSXONPSP660.bin",
+        "md5": "c53ca5908936d412331790f4426c6c33",
+        "size_bytes": 524288,
+        "note": "All-in-one PS1 BIOS set"
+      }
+    ],
+    "SNES": [
+      {
+        "filename": "BS-X.bin",
+        "location": "SNES/BS-X.bin",
+        "md5": "fed4d8242cfbed61343d53d48432aced",
+        "size_bytes": 1048576,
+        "note": "Satellaview BS-X base ROM"
+      },
+      {
+        "filename": "BS-X (En)/BS-X.bin",
+        "location": "SNES/BS-X (En)/BS-X.bin",
+        "md5": "33b62505da6ca4525e3839db4e1a7bca",
+        "size_bytes": 1048576,
+        "note": "English-translated Satellaview BIOS"
+      },
+      {
+        "filename": "BS-X (En) (DRM-Free)/BS-X.bin",
+        "location": "SNES/BS-X (En) (DRM-Free)/BS-X.bin",
+        "md5": "4ed9648505ab33a4daec93707b16caba",
+        "size_bytes": 1048576,
+        "note": "English-translated Satellaview BIOS (DRM-free)"
+      }
+    ],
+    "N64": [
+      {
+        "filename": "64DD_IPL.bin",
+        "location": "N64/64DD_IPL.bin",
+        "md5": "8d3d9f294b6e174bc7b1d2fd1c727530",
+        "size_bytes": 4194304,
+        "note": "Nintendo 64 Disk Drive IPL"
+      },
+      {
+        "filename": "IPL.n64",
+        "location": "N64/IPL.n64",
+        "md5": "8d3d9f294b6e174bc7b1d2fd1c727530",
+        "size_bytes": 4194304,
+        "note": "alias of 64DD_IPL.bin"
+      }
+    ],
+    "SS": [
+      {
+        "filename": "sega_101.bin",
+        "location": "SS/sega_101.bin",
+        "md5": "85ec9ca47d8f6807718151cbcca8b964",
+        "size_bytes": 524288,
+        "note": "Saturn JP BIOS"
+      },
+      {
+        "filename": "mpr-17933.bin",
+        "location": "SS/mpr-17933.bin",
+        "md5": "3240872c70984b6cbfda1586cab68dbe",
+        "size_bytes": 524288,
+        "note": "Saturn US/EU BIOS"
+      },
+      {
+        "filename": "mpr-18811-mx.ic1",
+        "location": "SS/mpr-18811-mx.ic1",
+        "md5": "255113ba943c92a54facd25a10fd780c",
+        "size_bytes": 2097152,
+        "note": "The King of Fighters '95 ROM cartridge"
+      },
+      {
+        "filename": "mpr-19367-mx.ic1",
+        "location": "SS/mpr-19367-mx.ic1",
+        "md5": "1cd19988d1d72a3e7caa0b73234c96b4",
+        "size_bytes": 2097152,
+        "note": "Ultraman: Hikari no Kyojin Densetsu ROM cartridge"
+      },
+      {
+        "filename": "saturn_bios.bin",
+        "location": "SS/saturn_bios.bin",
+        "md5": "af5828fdff51384f99b3c4926be27762",
+        "size_bytes": 524288,
+        "note": "generic Saturn BIOS (Yabause)"
+      },
+      {
+        "filename": "kronos/saturn_bios.bin",
+        "location": "SS/kronos/saturn_bios.bin",
+        "md5": "af5828fdff51384f99b3c4926be27762",
+        "size_bytes": 524288,
+        "note": "Kronos Saturn BIOS"
+      },
+      {
+        "filename": "kronos/stvbios.zip",
+        "location": "SS/kronos/stvbios.zip",
+        "md5": "n/a",
+        "size_bytes": 3203164,
+        "note": "Kronos ST-V BIOS archive"
+      }
+    ],
+    "GBA": [
+      {
+        "filename": "gba_bios.bin",
+        "location": "GBA/gba_bios.bin",
+        "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+        "size_bytes": 16384,
+        "note": "Game Boy Advance BIOS"
+      }
+    ]
+  },
+  "local_bios_root": "/Users/ilembitov/Projects/minime/bios"
+}
