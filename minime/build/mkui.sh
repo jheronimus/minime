@@ -24,13 +24,13 @@ if [ "$UI" = "minui" ]; then
             -v "$HOME/.ui-ccache-musl:/root/.ccache" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             "ghcr.io/${OWNER}/minime-musl:latest" \
-            /bin/bash -c "cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"ccache \" PREFIX=/usr CC=\"ccache gcc\" CXX=\"ccache g++\" PLATFORM=minime && cd .. && make CROSS_COMPILE=\"ccache \" PREFIX=/usr system cores PLATFORM=minime"
+            /bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"ccache \" PREFIX=/usr CC=\"ccache gcc\" CXX=\"ccache g++\" && cd .. && make CROSS_COMPILE=\"ccache \" PREFIX=/usr system cores PLATFORM=minime"
     else
         docker run --rm -u root \
             -v "$HOME/.ui-ccache-glibc:/root/.ccache" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             "ghcr.io/${OWNER}/minime-glibc:latest" \
-            /bin/bash -c "cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" PLATFORM=minime && cd .. && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr system cores PLATFORM=minime"
+            /bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" && cd .. && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr system cores PLATFORM=minime"
     fi
     
     make package
