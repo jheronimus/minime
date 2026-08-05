@@ -46,6 +46,7 @@ check-scripts:
         -not -path "*/ui/*" \
         -not -path "*/.git/*" \
         -not -path "*/pkg/*" \
+        -not -path "*/downloads/*" \
         | sort | while read -r f; do
         echo "  sh: $f"
         sh -n "$f"
