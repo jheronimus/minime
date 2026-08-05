@@ -199,25 +199,49 @@ while time.monotonic() - t0 < 90:
     except OSError:
         down = time.monotonic() - t0
         break
-while True:
+    while True:
+        try:
+            s = socket.create_connection((ip, 23), timeout=0.5)
+            s.close()
+            break
+        except OSError:
+            if time.monotonic() - t0 > 180:
+                sys.exit(1)
+            time.sleep(0.3)
+    up = time.monotonic() - t0
+    if down is None:
+        down = up
+    # Host reaches the device over WiFi here, which is later than telnetd's
+    # own start (telnetd binds at ~3.5s uptime but wifi+DHCP connects at
+    # ~14s).  Capture the device uptime at the moment the host's connection
+    # succeeds so pre-kernel (U-Boot + power-cycle) is wall - uptime.
     try:
-        s = socket.create_connection((ip, 23), timeout=0.5)
+        s = socket.create_connection((ip, 23), timeout=3)
+        s.sendall(b"cat /proc/uptime\n")
+        s.settimeout(3)
+        data = b""
+        deadline = time.monotonic() + 3
+        import re
+        m = None
+        while time.monotonic() < deadline:
+            data += s.recv(1024)
+            # The telnet banner carries IAC negotiation bytes, so scrape the
+            # two floats out of the "UPTIME IDLE" reply line instead of split().
+            m = re.search(rb"(\d+\.\d+)\s+(\d+\.\d+)", data)
+            if m:
+                break
         s.close()
-        break
-    except OSError:
-        if time.monotonic() - t0 > 180:
-            sys.exit(1)
-        time.sleep(0.3)
-up = time.monotonic() - t0
-if down is None:
-    down = up
-print(f"{up:.1f} {up - down:.1f}")
+        dev_up = float(m.group(1)) if m else -1
+    except (OSError, ValueError, IndexError):
+        dev_up = -1
+    print(f"{up:.1f} {up - down:.1f} {dev_up:.2f}")
 PY
 	) || die "device did not come back up"
-	local up net
-	read -r up net <<<"$wall"
+	local up net dev_up
+	read -r up net dev_up <<<"$wall"
 	printf '%s\n' "$net" >"$ws/wall-to-telnet.txt"
-	log "device back up: ${up}s after reboot trigger, boot took ~${net}s (host wall clock)"
+	printf '%.2f\n' "$dev_up" >"$ws/device-uptime-at-connect.txt"
+	log "device back up: ${up}s after reboot trigger, boot took ~${net}s (host wall clock, device uptime ${dev_up}s)"
 }
 
 # --------------------------------------------------------------------------
@@ -326,10 +350,11 @@ END {
     if (ui_exec > 0 && ui_ready > 0) printf "  ui         launch.sh -> launcher ready  %6.2f s\n", ui_ready - ui_exec
 
     if (wall != "") {
-        telnet_t = 0
-        find_first(/^proc:telnetd/, telnet_t)
-        printf "host        reset -> telnet (wall clock)    %6.2f s\n", wall
-        if (telnet_t > 0) printf "             (uptime at telnetd %.2f -> U-Boot+kernel ~%.2f s)\n", telnet_t, wall - telnet_t
+        printf "host        reset -> reachable (wall clock)  %6.2f s\n", wall
+        if (dev_up > 0) {
+            printf "             device uptime at connect %.2f s\n", dev_up
+            printf "             U-Boot + power-cycle (pre-kernel) ~%.2f s\n", wall - dev_up
+        }
     }
 
     for (i = 1; i <= 5; i++) { gapv[i] = 0; ga[i] = ""; gb[i] = "" }
@@ -352,7 +377,9 @@ END {
     if (shown == 0) print "  none"
 }
 AWK
-	awk -v wall="$wall" -f "$awkfile" "$profile"
+	local dev_up=""
+	[ -f "$ws/device-uptime-at-connect.txt" ] && dev_up=$(cat "$ws/device-uptime-at-connect.txt")
+	awk -v wall="$wall" -v dev_up="$dev_up" -f "$awkfile" "$profile"
 }
 
 report_bootlog_last() {
