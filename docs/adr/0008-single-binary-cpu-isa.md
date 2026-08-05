@@ -30,9 +30,13 @@ Build all shared binaries (UI, cores, libmsettings) for the **ARMv8-A baseline**
 |--------------|-------------------------------------|--------|
 | `-march=armv8.2-a` | fceumm, gambatte, gpsp, picodrive, pokemini, race | Enables ARMv8.2 instruction set (newer NEON/SIMD ops, dot-product, etc.) |
 | `-mtune=cortex-a55` | fceumm, gambatte, gpsp, picodrive, pokemini, race | Instruction scheduling tuned for the A55 pipeline |
-| `-march=armv8-a+crc+simd` | mednafen_supafaust, pcsx_rearmed | CRC32 and NEON SIMD extension flags |
 
-These come from upstream's `rgb30` (RK3566) core patches. H700 (A53) and RK3326 (A35) are ARMv8.0 and cannot execute `armv8.2-a` code, so the flags cannot appear in the shared binary.
+These come from upstream's `rgb30` (RK3566) core patches. H700 (Cortex-A53) and RK3326 (Cortex-A35) are ARMv8.0 and cannot execute `armv8.2-a` code, and their pipelines differ from A55, so these two flags cannot appear in the shared binary.
+
+### Optimizations that *are* usable in the shared binary
+
+- **`-march=armv8-a+crc`** (`crc` = CRC32 instructions): CRC32 is an *optional* ARMv8.0 extension, but **all three SoCs implement it** — Cortex-A53 and Cortex-A35 report `ID_ISAR5.CRC32 = 0x1`, and A55 does too. So the shared binary can safely use `armv8-a+crc` (upstream rgb30 applies it to mednafen_supafaust and pcsx_rearmed).
+- **`+simd`** (NEON/AdvSIMD): for AArch64, NEON is **mandatory in the base ARMv8-A architecture**, so `+simd` is a no-op at `armv8-a` — the compiler already emits NEON code. It is not an omitted optimization.
 
 ### Per-board tuning that *is* retained
 
@@ -43,7 +47,7 @@ Runtime, traits-driven performance tuning is unaffected by the single-binary con
 ## Consequences
 
 - **H700 and RK3326**: get exactly the correct ISA (ARMv8.0 baseline). No loss.
-- **RK3566**: forgoes the `armv8.2-a`/`cortex-a55`/`crc+simd` compile-time optimizations. The practical impact is small — emulator hot paths are integer/memory-bound and rarely use ARMv8.2-specific instructions, and the dynarec cores (gpsp, pcsx_rearmed, picodrive) generate the perf-critical code at runtime, where compiler flags barely matter.
+- **RK3566**: forgoes the `armv8.2-a` and `cortex-a55` compile-time optimizations. The practical impact is small — emulator hot paths are integer/memory-bound and rarely use ARMv8.2-specific instructions, and the dynarec cores (gpsp, pcsx_rearmed, picodrive) generate the perf-critical code at runtime, where compiler flags barely matter. The `crc` extension is *not* omitted (all three SoCs implement CRC32); the shared build may use `armv8-a+crc`.
 - **Simplicity**: one binary per libc keeps the `build-ui` → `build-os` contract, one artifact set, one QA cycle.
 - **Future option**: if RK3566 performance ever justifies it, ship per-board binary variants with per-SoC `-march`/`-mtune` — a deliberate break of the single-binary contract, revisited on measured evidence rather than assumed gains.
 
