@@ -6,6 +6,7 @@ mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 
 CARD_DEV=""
+BOOT_LOG_DIR="/mnt/card"
 
 log_console() {
 	echo "$*"
@@ -14,7 +15,7 @@ log_console() {
 log_card() {
 	echo "$*"
 	if mountpoint -q /mnt/card 2>/dev/null || grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
-		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >>/mnt/card/boot.log 2>/dev/null || true
+		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >>"${BOOT_LOG_DIR}/boot.log" 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
 }
@@ -209,6 +210,42 @@ if [ "$BUILD_TIME" -gt "$CUR_TIME" ]; then
 	log_card "[INITRAMFS] Advancing system time to $BUILD_TIME to prevent clock skew"
 	date -s "@$BUILD_TIME" >/dev/null 2>&1 || true
 fi
+
+# Establish a per-boot log directory.  Boot-id = YYYYmmdd-N, where N is a
+# per-day monotonic counter stored in .minime/logs/.seq (format "DATE N").
+# The time-of-day is deliberately omitted: the RTC wakes in the past, so
+# HHMMSS would be wrong or repeated across cold boots.  Runs after the clock
+# skew fix above so the date (and thus the 7-day prune via FAT mtime) is sane.
+LOGS_DIR="/mnt/card/.minime/logs"
+mkdir -p "${LOGS_DIR}"
+seq_date=""
+seq_num="0"
+if [ -f "${LOGS_DIR}/.seq" ]; then
+	read -r seq_date seq_num <"${LOGS_DIR}/.seq" 2>/dev/null || true
+fi
+today="$(date +%Y%m%d 2>/dev/null || echo 19700101)"
+if [ "${seq_date}" != "${today}" ]; then
+	seq_num="1"
+else
+	seq_num="$((seq_num + 1))"
+fi
+BOOT_ID="${today}-${seq_num}"
+printf '%s %s\n' "${today}" "${seq_num}" >"${LOGS_DIR}/.seq"
+
+# Adopt U-Boot's stage markers (.minime/boot.log) and any early initramfs
+# boot.log, then point subsequent logging at the per-boot dir.
+BOOT_LOG_DIR="${LOGS_DIR}/${BOOT_ID}"
+mkdir -p "${BOOT_LOG_DIR}"
+if [ -f /mnt/card/.minime/boot.log ]; then
+	cat /mnt/card/.minime/boot.log >>"${BOOT_LOG_DIR}/boot.log" 2>/dev/null || true
+fi
+if [ -f /mnt/card/boot.log ]; then
+	cat /mnt/card/boot.log >>"${BOOT_LOG_DIR}/boot.log" 2>/dev/null || true
+	rm -f /mnt/card/boot.log 2>/dev/null || true
+fi
+printf '%s\n' "${BOOT_ID}" >"${LOGS_DIR}/current"
+sync
+log_card "[INITRAMFS] Boot log: ${BOOT_ID}"
 
 # Also ensure backlight is at a visible level.  minui later reads
 # msettings.bin, but having backlight off at boot makes the display

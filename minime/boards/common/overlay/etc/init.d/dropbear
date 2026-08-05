@@ -1,0 +1,66 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# dropbear: SSH server (encrypted remote shell).  Not enabled by default —
+# start it by touching /mnt/sdcard/.minime/config/ssh/enabled and rebooting,
+# or start it on demand with `rc-service dropbear start`.
+# Host keys persist on the FAT partition so they survive rootfs updates.
+
+description="SSH server (dropbear)"
+
+DB_PIDFILE="/run/dropbear.pid"
+DB_HOSTKEY_DIR="/mnt/sdcard/.minime/config/ssh"
+DB_HOSTKEY="${DB_HOSTKEY_DIR}/dropbear_host_key"
+DB_ENABLED="${DB_HOSTKEY_DIR}/enabled"
+DB_CONFIG="${DB_HOSTKEY_DIR}/config"
+DB_PORT="22"
+
+depend() {
+	need localmount
+}
+
+keygen() {
+	if [ ! -f "${DB_HOSTKEY}" ]; then
+		mkdir -p "${DB_HOSTKEY_DIR}"
+		dropbearkey -t ed25519 -f "${DB_HOSTKEY}" 2>/dev/null || \
+			dropbearkey -t rsa -s 2048 -f "${DB_HOSTKEY}" 2>/dev/null || true
+	fi
+	[ -f "${DB_HOSTKEY}" ] || return 1
+	# Only readable by root.
+	chmod 600 "${DB_HOSTKEY}" 2>/dev/null || true
+}
+
+is_enabled() {
+	[ -f "${DB_ENABLED}" ]
+}
+
+start() {
+	if ! is_enabled; then
+		einfo "dropbear disabled by user"
+		return 0
+	fi
+	ebegin "Starting dropbear"
+	keygen || {
+		eend 1 "failed to generate host key"
+		return 1
+	}
+
+	port="${DB_PORT}"
+	if [ -f "${DB_CONFIG}" ]; then
+		cfg_port="$(grep -E '^port=' "${DB_CONFIG}" 2>/dev/null | cut -d= -f2 | tr -d ' \r')"
+		[ -n "${cfg_port}" ] && port="${cfg_port}"
+	fi
+
+	start-stop-daemon -S -q -b -m \
+		-p "${DB_PIDFILE}" \
+		-x /usr/sbin/dropbear -- -r "${DB_HOSTKEY}" -p "${port}"
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping dropbear"
+	if [ -f "${DB_PIDFILE}" ]; then
+		start-stop-daemon -K -q -p "${DB_PIDFILE}" 2>/dev/null || true
+		rm -f "${DB_PIDFILE}"
+	fi
+	eend 0
+}

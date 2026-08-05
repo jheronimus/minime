@@ -53,13 +53,19 @@ lz4-libs
 iproute2
 iputils
 iproute2-minimal
+# dropbear SSH server (started on demand, not enabled by default; see
+# /etc/init.d/dropbear).  Provides an encrypted remote shell alongside telnet.
+dropbear
 # ── DNS / mDNS ───────────────────────────────────────────────────────────
 # ── Wi-Fi + regulatory ───────────────────────────────────────────────────
-wpa_supplicant
+# iwd (Internet Wireless Daemon) replaces wpa_supplicant: it does 802.11 + WPA
+# natively with built-in DHCP (EnableNetworkConfiguration) and persists known
+# networks in /var/lib/iwd (redirected to the FAT partition by the wifi
+# service).  iwd depends on dbus (already in this list).
+iwd
 wireless-regdb
-# busybox udhcpc is sufficient for DHCP; the Alpine package set above
-# already pulls in busybox.  wireless-regdb lives in /usr/share/wireless.
-# Realtek firmware fragments are installed by minime-overlay's post-install.
+# wireless-regdb lives in /usr/share/wireless.  Realtek firmware fragments are
+# installed by minime-overlay's post-install.
 # ── Bluetooth (with audio sink) ──────────────────────────────────────────
 dbus
 bluez

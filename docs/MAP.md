@@ -62,19 +62,23 @@ The `minime/boards/` directory is the single source of truth for all hardware de
 ## 1. OpenRC Init Services (`minime/boards/common/overlay/etc/init.d/`)
 Cross-distro OpenRC init scripts copied into the rootfs of both targets at build time:
 - `bluetooth`: Dual-stack BlueZ daemon and Bluetooth manager.
+- `dropbear`: SSH server (not enabled by default; opt-in via config marker).
 - `fb-unblank`: Unblanks DRM/FB console and initializes display power.
 - `ftpd`: Lightweight FTP server service.
 - `gpudriver`: Dynamically loads Mali GPU kernel modules and sets device permissions.
+- `logger`: Persistent per-boot kernel + syslog capture under `.minime/logs/`.
 - `modules`: Loads kernel modules specified in `/etc/modules`.
 - `telnetd`: Remote debug shell daemon.
 - `traits`: Parses hardware `platform.ini` and sets environment variables.
 - `ui`: Launches the configured user interface launcher (`allium` or `minui`).
-- `wifi`: WPA Supplicant and Wi-Fi interface initialization.
+- `wifi`: iwd (Internet Wireless Daemon) Wi-Fi connectivity + DHCP.
 - `thermal-watchdog`: Board-specific CPU/GPU thermal watchdog daemon (in `minime/boards/rk3566/overlay/etc/init.d/`).
 
 ## 2. Shared Scripts & Boot Inits (`minime/boards/common/`)
 - `initramfs-init.sh`: Early boot initramfs entrypoint script that mounts FAT32, loads `system.erofs`, and performs `switch_root`.
 - `scripts/device.sh`: On-device hardware detection and DTB resolution script.
+- `scripts/log-boot.sh`: Append a timestamped marker to the current boot's `boot.log`.
+- `scripts/collect-diagnostics.sh`: Bundle logs + dmesg + config into a diagnostics tarball.
 - `scripts/thermal-watchdog`: Temperature monitoring and throttling background script.
 - `overlay/etc/sysctl.conf`: Kernel sysctl tuning (virtual memory, network buffers).
 - `overlay/etc/wpa_supplicant.conf`: Default wireless network configuration template.

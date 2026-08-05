@@ -79,6 +79,14 @@ if [ -f "${COMMON_DIR}/scripts/device.sh" ]; then
 	cp -f "${COMMON_DIR}/scripts/device.sh" "${TARGET_DIR}/usr/share/minime/scripts/"
 	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/device.sh"
 fi
+if [ -f "${COMMON_DIR}/scripts/log-boot.sh" ]; then
+	cp -f "${COMMON_DIR}/scripts/log-boot.sh" "${TARGET_DIR}/usr/share/minime/scripts/"
+	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/log-boot.sh"
+fi
+if [ -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" ]; then
+	cp -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" "${TARGET_DIR}/usr/share/minime/scripts/"
+	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/collect-diagnostics.sh"
+fi
 
 # 7. OpenRC SysV Cleanup
 # Clean up legacy SysV scripts created by some packages, as we use pure OpenRC
