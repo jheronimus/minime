@@ -103,6 +103,16 @@ start() {
 
 	( "$UI_BIN" </dev/console >/tmp/ui.log 2>&1 ) &
 	echo $! >/tmp/ui.pid
+
+	# Detach the framebuffer console once the UI owns fb0 so kernel
+	# messages and VT key echoes can no longer bleed through the UI.
+	for vtcon in /sys/class/vtconsole/vtcon*/; do
+		[ -r "${vtcon}/name" ] || continue
+		if grep -q "frame buffer device" "${vtcon}/name" 2>/dev/null; then
+			echo 0 >"${vtcon}/bind" 2>/dev/null || true
+		fi
+	done
+
 	eend 0
 }
 
