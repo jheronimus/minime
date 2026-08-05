@@ -1,48 +1,55 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# wifi: wpa_supplicant + udhcpc.  Self-contained — no external script dependency.
+# wifi: iwd (Internet Wireless Daemon).  iwd does 802.11 + WPA natively and,
+# with EnableNetworkConfiguration=true (see /etc/iwd/main.conf), provides its
+# own DHCP client.  Known networks persist as .psk profiles in the writable
+# state directory on the FAT partition.
 
-description="Minime Wi-Fi (wpa_supplicant + udhcpc)"
+description="Minime Wi-Fi (iwd)"
 
 # --- Configuration ---
 wifi_interface="wlan0"
-wpa_supplicant_state_dir="/tmp"
-wpa_supplicant_config_file="${wpa_supplicant_state_dir}/wpa_supplicant.conf"
-wpa_supplicant_seed_dir="/mnt/sdcard/.minime/config/wpa_supplicant"
+iwd_state_dir="/mnt/sdcard/.minime/config/iwd"
+iwd_seed_dir="/mnt/sdcard/.minime/config/iwd/seed"
 wifi_config_file="/mnt/sdcard/.minime/config/wifi.cfg"
-udhcpc_pidfile="/run/udhcpc.${wifi_interface}.pid"
-udhcpc_logfile="/run/udhcpc.${wifi_interface}.log"
+dbus_pidfile="/run/dbus/pid"
+iwd_pidfile="/run/iwd.pid"
 diagnostic_logfile="/tmp/wifi.diagnostics"
 
 # --- Timeouts ---
 station_connect_wait_seconds=40
-ipv4_wait_seconds=20
 wifi_driver_wait_seconds=5
 
 # --- Helper functions ---
 
-init_wpa_supplicant_conf() {
-	mkdir -p "${wpa_supplicant_state_dir}"
-	chmod 755 "${wpa_supplicant_state_dir}" 2>/dev/null || true
-	{
-		printf '%s\n' 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=wheel'
-		printf '%s\n' 'update_config=1'
-		printf '%s\n' ''
-	} >"${wpa_supplicant_config_file}"
-	chmod 600 "${wpa_supplicant_config_file}" 2>/dev/null || true
+log_boot() {
+	/usr/share/minime/scripts/log-boot.sh WIFI "$@" 2>/dev/null || true
 }
 
-seed_wpa_profiles() {
-	[ -d "${wpa_supplicant_seed_dir}" ] || return 0
-	for profile_path in "${wpa_supplicant_seed_dir}"/*.conf; do
-		[ -f "${profile_path}" ] || continue
-		cat "${profile_path}" >>"${wpa_supplicant_config_file}"
-		printf '\n' >>"${wpa_supplicant_config_file}"
-	done
+start_dbus() {
+	# /etc/machine-id is baked into the rootfs, so dbus needs no on-disk uuid.
+	[ -d /run/dbus ] || mkdir -p /run/dbus
+	if ! pgrep -f "dbus-daemon --system" >/dev/null 2>&1; then
+		dbus-daemon --system 2>/dev/null || true
+	fi
+}
+
+stop_dbus() {
+	# Only stop dbus if bluetooth isn't using it.
+	if [ -f "${dbus_pidfile}" ]; then
+		kill "$(cat "${dbus_pidfile}")" >/dev/null 2>&1 || true
+		rm -f "${dbus_pidfile}"
+	fi
+}
+
+profile_file_for() {
+	# iwd profile name = SSID with unsafe characters replaced.
+	printf '%s' "$1" | tr ' /' '__'
 }
 
 load_wifi_cfg_profiles() {
 	[ -f "${wifi_config_file}" ] || return 0
+	mkdir -p "${iwd_state_dir}"
 	ssid=""
 	psk=""
 
@@ -54,11 +61,7 @@ load_wifi_cfg_profiles() {
 		\#*) continue ;;
 		SSID)
 			if [ -n "$ssid" ]; then
-				{
-					printf 'network={\n\tssid="%s"\n' "$ssid"
-					if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
-					printf '}\n\n'
-				} >>"${wpa_supplicant_config_file}"
+				write_profile "$ssid" "$psk"
 				psk=""
 			fi
 			ssid="$val"
@@ -68,12 +71,34 @@ load_wifi_cfg_profiles() {
 	done <"${wifi_config_file}"
 
 	if [ -n "$ssid" ]; then
-		{
-			printf 'network={\n\tssid="%s"\n' "$ssid"
-			if [ -n "$psk" ]; then printf '\tpsk="%s"\n' "$psk"; else printf '\tkey_mgmt=NONE\n'; fi
-			printf '}\n\n'
-		} >>"${wpa_supplicant_config_file}"
+		write_profile "$ssid" "$psk"
 	fi
+}
+
+write_profile() {
+	ssid="$1"
+	psk="$2"
+	name="$(profile_file_for "$ssid")"
+	profile="${iwd_state_dir}/${name}.psk"
+	{
+		printf '[Security]\n'
+		if [ -n "$psk" ]; then
+			printf 'Passphrase=%s\n' "$psk"
+		else
+			printf 'Passphrase=\n'
+		fi
+		printf '[Settings]\nAutoConnect=true\n'
+	} >"${profile}" 2>/dev/null
+	chmod 600 "${profile}" 2>/dev/null || true
+}
+
+seed_iwd_profiles() {
+	[ -d "${iwd_seed_dir}" ] || return 0
+	mkdir -p "${iwd_state_dir}"
+	for profile in "${iwd_seed_dir}"/*.psk; do
+		[ -f "${profile}" ] || continue
+		cp -f "${profile}" "${iwd_state_dir}/" 2>/dev/null || true
+	done
 }
 
 check_wifi_hardware() {
@@ -91,50 +116,24 @@ check_wifi_hardware() {
 	return 1
 }
 
-wait_for_wpa_handshake() {
+wait_for_connected() {
 	i=0
 	while [ "${i}" -lt "${station_connect_wait_seconds}" ]; do
-		if wpa_cli -i "${wifi_interface}" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
-			return 0
+		if command -v iwctl >/dev/null 2>&1; then
+			if iwctl station "${wifi_interface}" show 2>/dev/null | grep -q "connected"; then
+				return 0
+			fi
+		else
+			# Fallback: check interface state + IP via kernel.
+			if [ -d "/sys/class/net/${wifi_interface}" ] && \
+			   ip -4 addr show "${wifi_interface}" 2>/dev/null | grep -q "inet "; then
+				return 0
+			fi
 		fi
 		i=$((i + 1))
 		sleep 1
 	done
 	return 1
-}
-
-wait_for_ipv4_address() {
-	i=0
-	while [ "${i}" -lt "${ipv4_wait_seconds}" ]; do
-		if ip -4 addr show "${wifi_interface}" 2>/dev/null | grep -q "inet "; then
-			return 0
-		fi
-		i=$((i + 1))
-		sleep 1
-	done
-	return 1
-}
-
-stop_dhcp_client() {
-	if [ -f "${udhcpc_pidfile}" ]; then
-		kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
-	fi
-	for pid in $(pidof udhcpc 2>/dev/null); do
-		tr '\0' ' ' <"/proc/${pid}/cmdline" 2>/dev/null |
-			grep -q -- "-i ${wifi_interface}" && kill "${pid}" 2>/dev/null || true
-	done
-	rm -f "${udhcpc_pidfile}"
-}
-
-start_dhcp_client() {
-	stop_dhcp_client
-	: >"${udhcpc_logfile}"
-	udhcpc -b -R -x hostname:"$(hostname)" -F "$(hostname)" \
-		-O search -O staticroutes \
-		-p "${udhcpc_pidfile}" \
-		-i "${wifi_interface}" \
-		-s /usr/share/udhcpc/default.script \
-		>>"${udhcpc_logfile}" 2>&1
 }
 
 log_failure_diagnostics() {
@@ -150,77 +149,21 @@ log_failure_diagnostics() {
 		fi
 		printf '%s\n' "/sys/bus/sdio/devices:"
 		ls -la /sys/bus/sdio/devices 2>&1 || true
-		printf '%s\n' "wpa_cli -i ${wifi_interface} status:"
-		if command -v wpa_cli >/dev/null 2>&1; then
-			wpa_cli -i "${wifi_interface}" status 2>&1 || true
+		printf '%s\n' "iwctl station ${wifi_interface} show:"
+		if command -v iwctl >/dev/null 2>&1; then
+			iwctl station "${wifi_interface}" show 2>&1 || true
 		else
-			printf '%s\n' "wpa_cli missing"
+			printf '%s\n' "iwctl missing"
 		fi
+		printf '%s\n' "iwd profiles:"
+		ls -la "${iwd_state_dir}" 2>&1 || true
 	} >>"${diagnostic_logfile}"
 	if [ -d /mnt/sdcard ]; then
 		cp -f "${diagnostic_logfile}" /mnt/sdcard/wifi.diagnostics 2>/dev/null || true
-		printf '[WIFI %s] startup failed: %s; diagnostics in /mnt/sdcard/wifi.diagnostics\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "${reason}" >>/mnt/sdcard/boot.log 2>/dev/null || true
-		sync 2>/dev/null || true
+		log_boot "startup failed: ${reason}; diagnostics in /mnt/sdcard/wifi.diagnostics"
 	fi
 	logger -t wifi "startup failed: ${reason}; diagnostics in ${diagnostic_logfile}" 2>/dev/null || true
 	echo "wifi: startup failed: ${reason}" >&2
-}
-
-start_background() {
-	has_profiles="$1"
-	exec >/dev/null 2>&1
-
-	if [ -d /mnt/sdcard ]; then
-		printf '[WIFI %s] Starting background worker (has_profiles=%s)...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "$has_profiles" >>/mnt/sdcard/boot.log 2>/dev/null || true
-	fi
-
-	wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
-
-	if [ "$has_profiles" -eq 0 ]; then
-		if [ -d /mnt/sdcard ]; then
-			printf '[WIFI %s] No profiles found in wifi.cfg or wpa_supplicant config. Idling.\n' \
-				"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
-		fi
-		return 0
-	fi
-
-	if [ -d /mnt/sdcard ]; then
-		printf '[WIFI %s] Waiting for WPA handshake...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
-	fi
-
-	if ! wait_for_wpa_handshake; then
-		log_failure_diagnostics "station-connect-timeout"
-		return 1
-	fi
-
-	if [ -d /mnt/sdcard ]; then
-		printf '[WIFI %s] WPA handshake completed. Requesting DHCP lease...\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
-	fi
-
-	start_dhcp_client
-	if ! wait_for_ipv4_address; then
-		log_failure_diagnostics "ipv4-timeout"
-		return 1
-	fi
-
-	logger -t wifi "connection established with IP" 2>/dev/null || true
-	if [ -d /mnt/sdcard ]; then
-		printf '[WIFI %s] Connection established with IP\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" >>/mnt/sdcard/boot.log 2>/dev/null || true
-		sync 2>/dev/null || true
-	fi
-
-	# Start NTP daemon to sync time and fix clock skew
-	if command -v ntpd >/dev/null 2>&1; then
-		killall ntpd 2>/dev/null || true
-		ntpd -p pool.ntp.org
-	fi
-
-	return 0
 }
 
 # --- OpenRC service ---
@@ -232,52 +175,56 @@ depend() {
 }
 
 start() {
-	ebegin "Starting Wi-Fi"
+	ebegin "Starting Wi-Fi (iwd)"
 
-	# Quick hardware check — fail immediately if no WiFi interface
 	if ! check_wifi_hardware; then
 		log_failure_diagnostics "missing-${wifi_interface}"
 		eend 1 "no ${wifi_interface} interface found"
 		return 1
 	fi
 
-	init_wpa_supplicant_conf
+	start_dbus
+
+	mkdir -p "${iwd_state_dir}"
 	load_wifi_cfg_profiles
-	seed_wpa_profiles
+	seed_iwd_profiles
 
-	has_profiles=0
-	if grep -q '^network={' "${wpa_supplicant_config_file}" 2>/dev/null; then
-		has_profiles=1
-	fi
-
-	# Start wpa_supplicant synchronously — fail immediately if it can't start
-	mkdir -p /var/run/wpa_supplicant
-	wpa_bin="$(command -v wpa_supplicant)"
-	if ! start-stop-daemon -S -q -b -m \
-		-p /var/run/wpa_supplicant.pid \
-		-x "${wpa_bin}" -- \
-		-i"${wifi_interface}" -c"${wpa_supplicant_config_file}" 2>>"${diagnostic_logfile}"; then
-		log_failure_diagnostics "wpa_supplicant-failed-to-start"
-		eend 1 "wpa_supplicant failed to start"
+	# Start iwd with the state dir on the FAT partition so known networks
+	# persist across reboots.  EnableNetworkConfiguration (main.conf) makes
+	# iwd run its own DHCP client.
+	iwd_bin="$(command -v iwd 2>/dev/null || echo /usr/libexec/iwd)"
+	if ! STATE_DIRECTORY="${iwd_state_dir}" env start-stop-daemon -S -q -b -m \
+		-p "${iwd_pidfile}" \
+		-x "${iwd_bin}" -- 2>>"${diagnostic_logfile}"; then
+		log_failure_diagnostics "iwd-failed-to-start"
+		eend 1 "iwd failed to start"
 		return 1
 	fi
 
-	# Background the slow parts (handshake + DHCP)
-	start_background "${has_profiles}" &
-	echo $! >/run/wifi.pid
+	# Wait for the driver to appear before checking connection state.
+	if ! wait_for_connected; then
+		log_failure_diagnostics "station-connect-timeout"
+		eend 1 "not connected"
+		return 1
+	fi
+
+	logger -t wifi "connection established" 2>/dev/null || true
+	log_boot "Connection established with IP"
+
+	# Start NTP daemon to sync time and fix clock skew.
+	if command -v ntpd >/dev/null 2>&1; then
+		killall ntpd 2>/dev/null || true
+		ntpd -p pool.ntp.org
+	fi
+
 	eend 0
 }
 
 stop() {
 	ebegin "Stopping Wi-Fi"
-	stop_dhcp_client
-	if [ -f "/var/run/wpa_supplicant.pid" ]; then
-		kill "$(cat "/var/run/wpa_supplicant.pid")" >/dev/null 2>&1 || true
-		rm -f "/var/run/wpa_supplicant.pid"
-	fi
-	if [ -f "/run/wifi.pid" ]; then
-		kill "$(cat "/run/wifi.pid")" >/dev/null 2>&1 || true
-		rm -f "/run/wifi.pid"
+	if [ -f "${iwd_pidfile}" ]; then
+		kill "$(cat "${iwd_pidfile}")" >/dev/null 2>&1 || true
+		rm -f "${iwd_pidfile}"
 	fi
 	ip link set "${wifi_interface}" down >/dev/null 2>&1 || true
 	eend 0
@@ -285,20 +232,7 @@ stop() {
 
 reload() {
 	ebegin "Reloading Wi-Fi"
-	init_wpa_supplicant_conf
 	load_wifi_cfg_profiles
-	seed_wpa_profiles
-
-	if ! wpa_cli -i "${wifi_interface}" ping >/dev/null 2>&1; then
-		eend 1 "wpa_supplicant not running"
-		start
-		return $?
-	fi
-
-	if ! wpa_cli -i "${wifi_interface}" reconfigure >/dev/null 2>&1; then
-		eend 1 "reconfigure failed"
-	fi
-	wpa_cli -i "${wifi_interface}" reassociate >/dev/null 2>&1 || true
-	start_dhcp_client
+	seed_iwd_profiles
 	eend 0
 }

@@ -1,0 +1,107 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# logger: persist kernel and userspace logs to the FAT partition per boot.
+# - kernel.log  : raw /dev/kmsg drain (boot log + live stream, sync'd)
+# - syslog.log  : busybox syslogd catch-all for userspace daemons
+# Each boot's files live in .minime/logs/<boot-id>/ (see initramfs-init.sh);
+# dirs older than 7 days are pruned at start.  Crash evidence in kernel.log
+# survives hard power-cycles because the drain syncs every SYNC_INTERVAL.
+
+description="Persistent per-boot logger"
+
+LOGS_DIR="/mnt/sdcard/.minime/logs"
+KMSG_PIDFILE="/run/logger-kmsg.pid"
+SYNC_PIDFILE="/run/logger-sync.pid"
+SYSLOG_PIDFILE="/run/logger-syslog.pid"
+SYNC_INTERVAL="3"
+PRUNE_DAYS="7"
+SYSLOG_MAX_KB="200"
+SYSLOG_KEEP="1"
+
+depend() {
+	need localmount
+}
+
+get_boot_id() {
+	[ -f "${LOGS_DIR}/current" ] && cat "${LOGS_DIR}/current" 2>/dev/null || true
+}
+
+prune_old_logs() {
+	# Prune per-boot dirs older than PRUNE_DAYS (by FAT mtime).
+	[ -d "${LOGS_DIR}" ] || return 0
+	for d in "${LOGS_DIR}"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*; do
+		[ -d "${d}" ] || continue
+		[ "${d}" = "${LOGS_DIR}/current" ] && continue
+		if [ "$(find "${d}" -maxdepth 0 -mtime +"${PRUNE_DAYS}" 2>/dev/null)" = "${d}" ]; then
+			rm -rf "${d}" 2>/dev/null || true
+		fi
+	done
+	sync
+}
+
+start() {
+	ebegin "Starting persistent logger"
+
+	[ -d /mnt/sdcard ] || {
+		eend 1 "no /mnt/sdcard"
+		return 1
+	}
+
+	BOOT_ID="$(get_boot_id)"
+	if [ -z "${BOOT_ID}" ]; then
+		# Fallback if the initramfs did not establish a boot-id.
+		BOOT_ID="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo unknown)"
+	fi
+	LOG_DIR="${LOGS_DIR}/${BOOT_ID}"
+	mkdir -p "${LOG_DIR}"
+
+	prune_old_logs
+
+	# Kernel ring buffer drain (raw kmsg).  A fresh /dev/kmsg reader starts
+	# at the beginning of the ring buffer, so this captures the full boot
+	# log and then streams new messages.  Non-destructive to other readers.
+	(
+		cat /dev/kmsg >>"${LOG_DIR}/kernel.log" 2>/dev/null &
+		kmsg_pid=$!
+
+		while kill -0 "${kmsg_pid}" 2>/dev/null; do
+			sleep "${SYNC_INTERVAL}"
+			sync
+		done
+	) &
+	echo $! >"${KMSG_PIDFILE}"
+
+	# Userspace daemon catch-all.  Direct file output with size rotation.
+	start-stop-daemon -S -q -b -m \
+		-p "${SYSLOG_PIDFILE}" \
+		-x /sbin/syslogd -- \
+		-O "${LOG_DIR}/syslog.log" \
+		-s "${SYSLOG_MAX_KB}" \
+		-b "${SYSLOG_KEEP}"
+
+	sync
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping persistent logger"
+
+	if [ -f "${KMSG_PIDFILE}" ]; then
+		kill "$(cat "${KMSG_PIDFILE}")" 2>/dev/null || true
+		rm -f "${KMSG_PIDFILE}"
+	fi
+	pkill -f 'cat /dev/kmsg' 2>/dev/null || true
+	if [ -f "${SYSLOG_PIDFILE}" ]; then
+		kill "$(cat "${SYSLOG_PIDFILE}")" 2>/dev/null || true
+		rm -f "${SYSLOG_PIDFILE}"
+	fi
+
+	# Flush whatever is in the ring buffer at stop time.
+	BOOT_ID="$(get_boot_id)"
+	if [ -n "${BOOT_ID}" ] && [ -d "${LOGS_DIR}/${BOOT_ID}" ]; then
+		dmesg >>"${LOGS_DIR}/${BOOT_ID}/kernel.log" 2>/dev/null || true
+	fi
+	sync
+
+	eend 0
+}

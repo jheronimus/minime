@@ -73,6 +73,10 @@ mkdir -p "${TARGET_DIR}/usr/share/minime/scripts"
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 [ -f "${COMMON_DIR}/scripts/thermal-watchdog" ] && install -m 0755 "${COMMON_DIR}/scripts/thermal-watchdog" \
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
+[ -f "${COMMON_DIR}/scripts/log-boot.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/log-boot.sh" \
+	"${TARGET_DIR}/usr/share/minime/scripts/" || true
+[ -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/collect-diagnostics.sh" \
+	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 
 # 5. Replace build-time resolv.conf with symlink to allow runtime DHCP DNS updates
 ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"

@@ -20,6 +20,10 @@ get_trait() {
 	grep "^${key}=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r' || true
 }
 
+log_boot() {
+	/usr/share/minime/scripts/log-boot.sh UI "$@" 2>/dev/null || true
+}
+
 read_ui_env() {
 	key="$1"
 	[ -f "$UI_ENV_FILE" ] || return 0
@@ -81,8 +85,7 @@ start() {
 	if [ -z "$UI_BIN" ] || ! [ -x "$UI_BIN" ]; then
 		echo "No UI binary found" >/tmp/ui.log
 		if [ -d /mnt/sdcard ]; then
-			printf '[UI %s] ERROR: No UI binary found\n' \
-				"$(date -u +'%T' 2>/dev/null || true)" >> /mnt/sdcard/boot.log 2>/dev/null || true
+			log_boot "ERROR: No UI binary found"
 			cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
 			sync 2>/dev/null || true
 		fi
@@ -91,8 +94,7 @@ start() {
 	fi
 
 	if [ -d /mnt/sdcard ]; then
-		printf '[UI %s] Executing %s (%s)\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "$UI_NAME" "$UI_BIN" >> /mnt/sdcard/boot.log 2>/dev/null || true
+		log_boot "Executing ${UI_NAME} (${UI_BIN})"
 		sync 2>/dev/null || true
 	fi
 

@@ -77,9 +77,7 @@ generate_traits() {
 
 	if [ -d /mnt/sdcard ]; then
 		model="$(tr -d '\000\r\n' < /proc/device-tree/model 2>/dev/null || true)"
-		printf '[TRAITS %s] Model: %s, Device file: %s\n' \
-			"$(date -u +'%T' 2>/dev/null || true)" "$model" "${device_file##*/}" >> /mnt/sdcard/boot.log 2>/dev/null || true
-		sync 2>/dev/null || true
+		/usr/share/minime/scripts/log-boot.sh TRAITS "Model: ${model}, Device file: ${device_file##*/}" 2>/dev/null || true
 	fi
 
 	echo "Minime traits: ${device_file##*/}"

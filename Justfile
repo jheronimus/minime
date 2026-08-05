@@ -401,3 +401,11 @@ upload file="" remote_filename="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/remote-upload.sh "{{file}}" "{{remote_filename}}" "{{ip}}"
+
+# Fetch a diagnostics bundle from the target device (logs + dmesg + config)
+# Usage:
+#   just get-logs [ip]
+get-logs ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/get-logs.sh "{{ip}}"
