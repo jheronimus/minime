@@ -28,9 +28,14 @@ log_boot() {
 
 start_dbus() {
 	# /etc/machine-id is baked into the rootfs, so dbus needs no on-disk uuid.
+	# Use start-stop-daemon (pidfile-based), NOT pgrep -f: pgrep -f would
+	# match this service's own shell (its source contains the dbus command)
+	# and skip starting the daemon entirely.
 	[ -d /run/dbus ] || mkdir -p /run/dbus
-	if ! pgrep -f "dbus-daemon --system" >/dev/null 2>&1; then
-		dbus-daemon --system 2>/dev/null || true
+	if ! [ -f "${dbus_pidfile}" ] || ! kill -0 "$(cat "${dbus_pidfile}" 2>/dev/null)" 2>/dev/null; then
+		start-stop-daemon -S -q -b -m \
+			-p "${dbus_pidfile}" \
+			-x /usr/bin/dbus-daemon -- --system 2>/dev/null || true
 	fi
 }
 
