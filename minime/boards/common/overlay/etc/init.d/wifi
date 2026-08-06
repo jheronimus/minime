@@ -12,7 +12,6 @@ wifi_interface="wlan0"
 iwd_state_dir="/mnt/sdcard/.minime/config/iwd"
 iwd_seed_dir="/mnt/sdcard/.minime/config/iwd/seed"
 wifi_config_file="/mnt/sdcard/.minime/config/wifi.cfg"
-dbus_pidfile="/run/dbus/pid"
 iwd_pidfile="/run/iwd.pid"
 diagnostic_logfile="/tmp/wifi.diagnostics"
 
@@ -28,28 +27,38 @@ log_boot() {
 
 start_dbus() {
 	# /etc/machine-id is baked into the rootfs, so dbus needs no on-disk uuid.
-	# Use start-stop-daemon (pidfile-based), NOT pgrep -f: pgrep -f would
-	# match this service's own shell (its source contains the dbus command)
-	# and skip starting the daemon entirely.
+	# Use dbus-daemon's own --fork (it writes /run/dbus/dbus.pid), NOT
+	# pgrep -f (matches this service's own shell) and NOT start-stop-daemon
+	# (conflicts with dbus's self-managed pidfile).
 	[ -d /run/dbus ] || mkdir -p /run/dbus
-	if ! [ -f "${dbus_pidfile}" ] || ! kill -0 "$(cat "${dbus_pidfile}" 2>/dev/null)" 2>/dev/null; then
-		start-stop-daemon -S -q -b -m \
-			-p "${dbus_pidfile}" \
-			-x /usr/bin/dbus-daemon -- --system 2>/dev/null || true
+	if ! [ -f /run/dbus/dbus.pid ] || ! kill -0 "$(cat /run/dbus/dbus.pid 2>/dev/null)" 2>/dev/null; then
+		rm -f /run/dbus/dbus.pid 2>/dev/null || true
+		dbus-daemon --system --fork 2>/dev/null || true
 	fi
 }
 
 stop_dbus() {
 	# Only stop dbus if bluetooth isn't using it.
-	if [ -f "${dbus_pidfile}" ]; then
-		kill "$(cat "${dbus_pidfile}")" >/dev/null 2>&1 || true
-		rm -f "${dbus_pidfile}"
+	if [ -f /run/dbus/dbus.pid ]; then
+		kill "$(cat /run/dbus/dbus.pid)" >/dev/null 2>&1 || true
+		rm -f /run/dbus/dbus.pid
 	fi
 }
 
 profile_file_for() {
-	# iwd profile name = SSID with unsafe characters replaced.
-	printf '%s' "$1" | tr ' /' '__'
+	# iwd profile filename encoding (iwd.network(5)): the SSID is used
+	# verbatim only if it is alphanumeric + space + '_' + '-'.  Otherwise
+	# the file is named '=' followed by the lower-case hex encoding of the
+	# SSID.  e.g. "Greeks & Geeks" -> "=477265656b732026204765656b73".
+	ssid="$1"
+	case "${ssid}" in
+	*[!A-Za-z0-9_\ -]*)
+		printf '=%s\n' "$(printf '%s' "${ssid}" | od -An -tx1 | tr -d ' \n')"
+		;;
+	*)
+		printf '%s\n' "${ssid}"
+		;;
+	esac
 }
 
 load_wifi_cfg_profiles() {
@@ -201,9 +210,14 @@ start() {
 	if ! env STATE_DIRECTORY="${iwd_state_dir}" start-stop-daemon -S -q -b -m \
 		-p "${iwd_pidfile}" \
 		-x "${iwd_bin}" -- 2>>"${diagnostic_logfile}"; then
-		log_failure_diagnostics "iwd-failed-to-start"
-		eend 1 "iwd failed to start"
-		return 1
+		# Already running (e.g. a previous start left it up) is fine.
+		if [ -f "${iwd_pidfile}" ] && kill -0 "$(cat "${iwd_pidfile}" 2>/dev/null)" 2>/dev/null; then
+			log_boot "iwd already running"
+		else
+			log_failure_diagnostics "iwd-failed-to-start"
+			eend 1 "iwd failed to start"
+			return 1
+		fi
 	fi
 
 	# Give iwd a moment to register on the system bus before probing.
