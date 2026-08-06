@@ -117,18 +117,17 @@ check_wifi_hardware() {
 }
 
 wait_for_connected() {
+	# Require iwd to be alive AND the link associated AND an IP assigned.
+	# Checking the kernel directly (carrier + address) is robust regardless
+	# of iwctl's output format; a dead iwd must not look like success.
 	i=0
 	while [ "${i}" -lt "${station_connect_wait_seconds}" ]; do
-		if command -v iwctl >/dev/null 2>&1; then
-			if iwctl station "${wifi_interface}" show 2>/dev/null | grep -q "connected"; then
-				return 0
-			fi
-		else
-			# Fallback: check interface state + IP via kernel.
-			if [ -d "/sys/class/net/${wifi_interface}" ] && \
-			   ip -4 addr show "${wifi_interface}" 2>/dev/null | grep -q "inet "; then
-				return 0
-			fi
+		if ! kill -0 "$(cat "${iwd_pidfile}" 2>/dev/null)" 2>/dev/null; then
+			return 1
+		fi
+		if [ "$(cat "/sys/class/net/${wifi_interface}/carrier" 2>/dev/null)" = "1" ] && \
+		   ip -4 addr show "${wifi_interface}" 2>/dev/null | grep -q "inet "; then
+			return 0
 		fi
 		i=$((i + 1))
 		sleep 1
@@ -191,9 +190,10 @@ start() {
 
 	# Start iwd with the state dir on the FAT partition so known networks
 	# persist across reboots.  EnableNetworkConfiguration (main.conf) makes
-	# iwd run its own DHCP client.
+	# iwd run its own DHCP client.  env is used so STATE_DIRECTORY reaches the
+	# daemonized child reliably.
 	iwd_bin="$(command -v iwd 2>/dev/null || echo /usr/libexec/iwd)"
-	if ! STATE_DIRECTORY="${iwd_state_dir}" env start-stop-daemon -S -q -b -m \
+	if ! env STATE_DIRECTORY="${iwd_state_dir}" start-stop-daemon -S -q -b -m \
 		-p "${iwd_pidfile}" \
 		-x "${iwd_bin}" -- 2>>"${diagnostic_logfile}"; then
 		log_failure_diagnostics "iwd-failed-to-start"
@@ -201,7 +201,10 @@ start() {
 		return 1
 	fi
 
-	# Wait for the driver to appear before checking connection state.
+	# Give iwd a moment to register on the system bus before probing.
+	sleep 2
+
+	# Wait for iwd to be alive and the link associated with an IP.
 	if ! wait_for_connected; then
 		log_failure_diagnostics "station-connect-timeout"
 		eend 1 "not connected"

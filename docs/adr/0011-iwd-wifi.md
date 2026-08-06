@@ -38,7 +38,10 @@ Transition Wi-Fi to **iwd (Internet Wireless Daemon)**:
   --system` idempotently (reusing the `/etc/machine-id` baked into the rootfs;
   no on-disk uuid write needed, unlike the old `dbus-uuidgen --ensure` which
   fails on a read-only rootfs). This also happens to fix the same latent bug
-  in the bluetooth service.
+  in the bluetooth service. iwd is launched **directly** by the wifi service
+  (not via dbus on-demand activation), so no `system-services/iwd.service`
+  activation file is needed — only the bus policy file
+  (`/usr/share/dbus-1/system.d/iwd-dbus.conf`) that grants iwd its name.
 - **Kernel crypto**: iwd's AES/CCMP + key handling needs crypto API options
   that were absent. Added to `tiny-base.config`: `CRYPTO_AES`, `CRYPTO_CMAC`,
   `CRYPTO_ECB`, `CRYPTO_HMAC`, `CRYPTO_SHA256`, `CRYPTO_SHA512`.
