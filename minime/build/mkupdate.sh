@@ -110,9 +110,11 @@ if [ -n "${UI}" ]; then
 fi
 
 # Build identity: record the commits this archive was built from so the
-# installed image can be checked against the latest release.
-MINIME_COMMIT="$(git -C "${MINIME_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-UI_COMMIT="$(git -C "${MINIME_ROOT}/minime/ui/${UI}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+# installed image can be checked against the latest release. Prefer the
+# caller-supplied values (set by CI/host from the checkout) over computing
+# them here, since the packaging container may not carry a usable .git.
+MINIME_COMMIT="${MINIME_COMMIT:-$(git -C "${MINIME_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
+UI_COMMIT="${UI_COMMIT:-$(git -C "${MINIME_ROOT}/minime/ui/${UI}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 
 cat <<EOF >"${STAGE_DIR}/.minime/manifest.json"
 {
