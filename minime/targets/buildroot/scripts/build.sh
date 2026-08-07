@@ -39,9 +39,11 @@ esac
 # Resolve paths
 BUILDROOT_DIR="${BUILDROOT_ROOT}/buildroot"
 BR2_EXTERNAL="${BUILDROOT_ROOT}/external"
-BUILDROOT_OUTPUT_DIR="${HOME}/buildroot-output/${BOARD}"
-BUILDROOT_CCACHE_DIR="${HOME}/.buildroot-ccache"
-BUILDROOT_DL_DIR="${HOME}/.buildroot-dl"
+# Overridable so CI container jobs can redirect caches under the workspace
+# (persisted by actions/cache); local podman builds use $HOME.
+BUILDROOT_OUTPUT_DIR="${BUILDROOT_OUTPUT_DIR:-${HOME}/buildroot-output/${BOARD}}"
+BUILDROOT_CCACHE_DIR="${BUILDROOT_CCACHE_DIR:-${HOME}/.buildroot-ccache}"
+BUILDROOT_DL_DIR="${BUILDROOT_DL_DIR:-${HOME}/.buildroot-dl}"
 BUILDROOT_MAKE_ARGS="BR2_EXTERNAL=${BR2_EXTERNAL} O=${BUILDROOT_OUTPUT_DIR} BR2_CCACHE_DIR=${BUILDROOT_CCACHE_DIR} BR2_DL_DIR=${BUILDROOT_DL_DIR} MINIME_ROOT=${MINIME_ROOT} BUILDROOT_ROOT=${BUILDROOT_ROOT}"
 
 LOG_DIR="${BUILDROOT_ROOT}/logs"
