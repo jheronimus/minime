@@ -9,9 +9,21 @@ UI ?= minui
 HOST_ARCH := $(shell uname -m)
 PACKAGER_PLATFORM := linux/arm64
 
+# On an arm64 host (GitHub's ubuntu-24.04-arm runner) passing --platform
+# linux/arm64 makes crun reject the image with "unknown version specified".
+# The host is already arm64, so omit the flag and run the image natively.
+# On any other host keep --platform so the arm64 image still runs (emulated).
+ifeq ($(HOST_ARCH),aarch64)
+PLATFORM_ARGS :=
+else ifeq ($(HOST_ARCH),arm64)
+PLATFORM_ARGS :=
+else
+PLATFORM_ARGS := --platform $(PACKAGER_PLATFORM)
+endif
+
 BUILDER_IMAGE := ghcr.io/jheronimus/minime-musl:latest
 
-RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 --platform linux/arm64 \
+RUN_ARGS := $(PODMAN_TTY) --rm --privileged --user 0:0 $(PLATFORM_ARGS) \
 	--ulimit nofile=65536:65536 \
 	-e HOME=/home/builder \
 	-v $(MINIME_ROOT):/workspace \
