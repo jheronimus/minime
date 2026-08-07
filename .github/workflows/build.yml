@@ -161,11 +161,9 @@ jobs:
           - os: alpine
             libc: musl
             runner: ubuntu-24.04-arm
-            container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
           - os: buildroot
             libc: glibc
             runner: ubuntu-latest
-            container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
         exclude:
           - board: ${{ inputs.build_rk3326 == true && 'never_match' || 'rk3326' }}
             os: alpine
@@ -174,23 +172,13 @@ jobs:
           - board: ${{ inputs.build_buildroot_h700 == true && 'never_match' || 'h700' }}
             os: buildroot
     runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.container }}
     env:
-      # The job runs inside the builder container (GitHub's container runtime,
-      # which works on ubuntu-24.04-arm; host podman/crun rejects the image with
-      # "crun: unknown version specified"). The target Makefiles run build.sh /
-      # mkimage.sh directly instead of re-wrapping in podman.
-      MINIME_IN_CONTAINER: '1'
-      # Redirect caches and scratch state under the workspace so actions/cache
-      # can persist them across runs (container jobs only share the workspace
-      # with the runner; /alpine-* inside the container is ephemeral).
-      ALPINE_OUTPUT_DIR: ${{ github.workspace }}/.alpine-output
-      ALPINE_REPO_DIR: ${{ github.workspace }}/.alpine-repo
-      ALPINE_DL_DIR: ${{ github.workspace }}/.alpine-dl/src
-      CCACHE_DIR: ${{ github.workspace }}/.alpine-ccache
-      BUILDROOT_OUTPUT_DIR: ${{ github.workspace }}/.buildroot-output/${{ matrix.board }}
-      BUILDROOT_CCACHE_DIR: ${{ github.workspace }}/.buildroot-ccache
-      BUILDROOT_DL_DIR: ${{ github.workspace }}/.buildroot-dl
+      # The arm runner's host podman (crun) rejects the arm64 builder image
+      # with "crun: unknown version specified", and GitHub's newer runner
+      # image blocks JS actions inside Alpine/ARM container jobs. Use the
+      # host's docker CLI (runc/containerd) instead of podman; the Makefile's
+      # PODMAN_CMD is overridable so this takes effect without code changes.
+      PODMAN_CMD: docker
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -214,8 +202,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            .alpine-ccache
-            .buildroot-ccache
+            ~/alpine-ccache
+            ~/.buildroot-ccache
           key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ matrix.os }}-${{ matrix.board }}-
@@ -225,8 +213,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            .alpine-dl
-            .buildroot-dl
+            ~/alpine-dl
+            ~/.buildroot-dl
           key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
             dl-${{ matrix.os }}-${{ matrix.board }}-
@@ -245,8 +233,8 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
-            .alpine-ccache
-            .buildroot-ccache
+            ~/alpine-ccache
+            ~/.buildroot-ccache
           key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
@@ -254,8 +242,8 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
-            .alpine-dl
-            .buildroot-dl
+            ~/alpine-dl
+            ~/.buildroot-dl
           key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
 
       - name: Upload to Testing Release
