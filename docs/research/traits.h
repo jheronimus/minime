@@ -32,6 +32,8 @@ typedef struct MinimeTraitsRef {
     int screen2_width;
     int screen2_height;
     int screen2_rotation;
+    MinimeScreenAspect screen2_aspect;
+    int screen2_refresh_rate;
     char screen2_backlight_path[MINIME_TRAIT_PATH_MAX];
     char screen2_blank_path[MINIME_TRAIT_PATH_MAX];
     int screen2_touch;
@@ -100,17 +102,17 @@ typedef struct MinimeTraitsRef {
     int key_power;
     int key_vol_up;
     int key_vol_down;
-    int axis_lx;
-    int axis_ly;
-    int axis_rx;
-    int axis_ry;
-    int axis_min;
-    int axis_center;
-    int axis_max;
-    int axis_lx_invert;
-    int axis_ly_invert;
-    int axis_rx_invert;
-    int axis_ry_invert;
+    int input_axis_lx;
+    int input_axis_ly;
+    int input_axis_rx;
+    int input_axis_ry;
+    int input_axis_min;
+    int input_axis_center;
+    int input_axis_max;
+    int input_axis_lx_invert;
+    int input_axis_ly_invert;
+    int input_axis_rx_invert;
+    int input_axis_ry_invert;
 
     // [wireless]
     char wifi_interface[MINIME_TRAIT_NAME_MAX];
