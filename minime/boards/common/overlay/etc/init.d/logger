@@ -6,12 +6,15 @@
 # Each boot's files live in .minime/logs/<boot-id>/ (see initramfs-init.sh);
 # dirs older than 7 days are pruned at start.  Crash evidence in kernel.log
 # survives hard power-cycles because the drain syncs every SYNC_INTERVAL.
+#
+# A single background worker owns the kmsg drain; start-stop-daemon tracks
+# it so OpenRC reports the service as started and a re-start does not spawn
+# a second drain.
 
 description="Persistent per-boot logger"
 
 LOGS_DIR="/mnt/sdcard/.minime/logs"
-KMSG_PIDFILE="/run/logger-kmsg.pid"
-SYNC_PIDFILE="/run/logger-sync.pid"
+WORKER_PIDFILE="/run/logger.pid"
 SYSLOG_PIDFILE="/run/logger-syslog.pid"
 SYNC_INTERVAL="3"
 PRUNE_DAYS="7"
@@ -57,19 +60,14 @@ start() {
 
 	prune_old_logs
 
-	# Kernel ring buffer drain (raw kmsg).  A fresh /dev/kmsg reader starts
-	# at the beginning of the ring buffer, so this captures the full boot
-	# log and then streams new messages.  Non-destructive to other readers.
-	(
-		cat /dev/kmsg >>"${LOG_DIR}/kernel.log" 2>/dev/null &
-		kmsg_pid=$!
-
-		while kill -0 "${kmsg_pid}" 2>/dev/null; do
-			sleep "${SYNC_INTERVAL}"
-			sync
-		done
-	) &
-	echo $! >"${KMSG_PIDFILE}"
+	# One worker owns the kmsg drain.  start-stop-daemon rejects a duplicate
+	# start via the pidfile, preventing double-drain on service re-start.
+	# The worker is a self-contained shell snippet (function not visible to
+	# the spawned sh).
+	worker_cmd="log_dir='${LOG_DIR}'; cat /dev/kmsg >>\"\${log_dir}/kernel.log\" 2>/dev/null & kmsg_pid=\$!; while kill -0 \"\${kmsg_pid}\" 2>/dev/null; do sleep ${SYNC_INTERVAL}; sync; done"
+	start-stop-daemon -S -q -b -m \
+		-p "${WORKER_PIDFILE}" \
+		-x /bin/sh -- -c "${worker_cmd}" 2>/dev/null || true
 
 	# Userspace daemon catch-all.  Direct file output with size rotation.
 	start-stop-daemon -S -q -b -m \
@@ -77,7 +75,7 @@ start() {
 		-x /sbin/syslogd -- \
 		-O "${LOG_DIR}/syslog.log" \
 		-s "${SYSLOG_MAX_KB}" \
-		-b "${SYSLOG_KEEP}"
+		-b "${SYSLOG_KEEP}" 2>/dev/null || true
 
 	sync
 	eend 0
@@ -86,13 +84,13 @@ start() {
 stop() {
 	ebegin "Stopping persistent logger"
 
-	if [ -f "${KMSG_PIDFILE}" ]; then
-		kill "$(cat "${KMSG_PIDFILE}")" 2>/dev/null || true
-		rm -f "${KMSG_PIDFILE}"
+	if [ -f "${WORKER_PIDFILE}" ]; then
+		start-stop-daemon -K -q -p "${WORKER_PIDFILE}" 2>/dev/null || true
+		rm -f "${WORKER_PIDFILE}"
 	fi
 	pkill -f 'cat /dev/kmsg' 2>/dev/null || true
 	if [ -f "${SYSLOG_PIDFILE}" ]; then
-		kill "$(cat "${SYSLOG_PIDFILE}")" 2>/dev/null || true
+		start-stop-daemon -K -q -p "${SYSLOG_PIDFILE}" 2>/dev/null || true
 		rm -f "${SYSLOG_PIDFILE}"
 	fi
 
