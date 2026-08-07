@@ -66,6 +66,7 @@ load_wifi_cfg_profiles() {
 	mkdir -p "${iwd_state_dir}"
 	ssid=""
 	psk=""
+	target_ssid=""
 
 	while IFS='=' read -r key val || [ -n "$key" ]; do
 		[ -n "$key" ] || continue
@@ -78,6 +79,7 @@ load_wifi_cfg_profiles() {
 				write_profile "$ssid" "$psk"
 				psk=""
 			fi
+			[ -n "${target_ssid}" ] || target_ssid="$val"
 			ssid="$val"
 			;;
 		Passphrase) psk="$val" ;;
@@ -147,6 +149,18 @@ wait_for_connected() {
 		sleep 1
 	done
 	return 1
+}
+
+connect_via_iwctl() {
+	# Explicitly scan + connect.  Relying on AutoConnect + periodic scan is
+	# unreliable (iwd can be idle with no scan and never connect).  If the
+	# profile is already known, connect will pick it up.
+	[ -n "${target_ssid}" ] || return 0
+	command -v iwctl >/dev/null 2>&1 || return 0
+
+	iwctl station "${wifi_interface}" scan >/dev/null 2>&1 || true
+	sleep 2
+	iwctl station "${wifi_interface}" connect "${target_ssid}" >/dev/null 2>&1 || true
 }
 
 log_failure_diagnostics() {
@@ -222,6 +236,9 @@ start() {
 
 	# Give iwd a moment to register on the system bus before probing.
 	sleep 2
+
+	# Explicitly scan + connect (more reliable than AutoConnect alone).
+	connect_via_iwctl
 
 	# Wait for iwd to be alive and the link associated with an IP.
 	if ! wait_for_connected; then
