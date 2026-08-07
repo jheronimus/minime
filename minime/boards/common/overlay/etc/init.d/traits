@@ -3,6 +3,13 @@
 # traits: generate /mnt/sdcard/.minime/traits from the immutable
 # /usr/share/minime/traits payload bundled at build time.
 # Self-contained — no external script dependency.
+#
+# Cascade model: platform.ini holds SoC-wide defaults; each device file may
+# override any key, and panel-revision variants inherit from a base device via
+# a `parent=` key in the [device] section.  Files are merged in order
+# platform.ini -> parent chain (rootmost first) -> device file, so the last
+# value of any duplicated key wins.  The `parent` key and the [match] section
+# are meta-data and never emitted into the output file.
 
 description="Generate Minime device traits"
 
@@ -16,16 +23,39 @@ read_match() {
 	sed -n "s/^$1=//p" "$2" | head -n 1
 }
 
-write_section() {
-	section="$1"
-	file="$2"
+read_device_key() {
+	# value of a key in the [device] section (or any section) of a device file
+	sed -n "s/^$1=//p" "$2" | head -n 1
+}
 
-	printf '[%s]\n' "$section"
+# Emit the non-meta trait lines of a file: all key=value lines outside the
+# [match] section, excluding the cascade `parent` key.
+emit_file() {
 	awk '
 		/^\[match\]$/ { skip = 1; next }
 		/^\[/ { skip = 0; next }
-		!skip && /^[A-Za-z0-9_]+=/ { print }
-	' "$file"
+		!skip && /^[A-Za-z0-9_]+=/ && $0 !~ /^parent=/ { print }
+	' "$1"
+}
+
+# Resolve the parent chain of a device file, rootmost first.
+parent_chain() {
+	file="$1"
+	chain=""
+	while [ -n "$file" ]; do
+		chain="$file ${chain}"
+		parent="$(read_device_key parent "$file")"
+		if [ -n "$parent" ]; then
+			file="${TRAITS_DIR}/devices/${parent}.ini"
+			[ -f "$file" ] || {
+				echo "traits: ${1}: unknown parent '$parent'" >&2
+				return 1
+			}
+		else
+			file=""
+		fi
+	done
+	printf '%s\n' "$chain"
 }
 
 require_key() {
@@ -66,12 +96,15 @@ generate_traits() {
 	device_file="${1:-$(find_device)}"
 	tmp="${TRAITS_FILE}.tmp"
 
+	chain="$(parent_chain "$device_file")" || exit 1
+
 	mkdir -p "${TRAITS_FILE%/*}"
 	{
 		echo "# Minime device traits"
-		write_section platform "$TRAITS_DIR/platform.ini"
-		echo
-		write_section device "$device_file"
+		emit_file "${TRAITS_DIR}/platform.ini"
+		for file in $chain; do
+			emit_file "$file"
+		done
 	} > "$tmp"
 	mv "$tmp" "$TRAITS_FILE"
 
@@ -85,13 +118,13 @@ generate_traits() {
 
 check_traits() {
 	device_file="$(find_device)" || exit 1
-	expected_id="$(read_match device_id "$device_file")"
+	expected_id="$(read_device_key device_id "$device_file")"
 
 	if [ ! -f "$TRAITS_FILE" ]; then
 		generate_traits "$device_file"
-	elif [ "$(read_match device_id "$TRAITS_FILE")" != "$expected_id" ]; then
+	elif [ "$(read_device_key device_id "$TRAITS_FILE")" != "$expected_id" ]; then
 		generate_traits "$device_file"
-	elif ! require_key video_device "$TRAITS_FILE" 2>/dev/null || \
+	elif ! require_key gpu_device "$TRAITS_FILE" 2>/dev/null || \
 	     ! require_key device_id "$TRAITS_FILE" 2>/dev/null; then
 		generate_traits "$device_file"
 	fi

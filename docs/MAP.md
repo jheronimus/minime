@@ -69,7 +69,7 @@ Cross-distro OpenRC init scripts copied into the rootfs of both targets at build
 - `logger`: Persistent per-boot kernel + syslog capture under `.minime/logs/`.
 - `modules`: Loads kernel modules specified in `/etc/modules`.
 - `telnetd`: Remote debug shell daemon.
-- `traits`: Parses hardware `platform.ini` and sets environment variables.
+- `traits`: Emits the merged device traits file at `/mnt/sdcard/.minime/traits` (cascades `platform.ini` + device `parent=` chain) for UIs to consume.
 - `ui`: Launches the configured user interface launcher (`allium` or `minui`).
 - `wifi`: iwd (Internet Wireless Daemon) Wi-Fi connectivity + DHCP.
 - `thermal-watchdog`: Board-specific CPU/GPU thermal watchdog daemon (in `minime/boards/rk3566/overlay/etc/init.d/`).
@@ -115,10 +115,11 @@ Cross-distro OpenRC init scripts copied into the rootfs of both targets at build
 
 ## 8. Hardware Traits (`minime/boards/<board>/traits/`)
 Immutable hardware capability profiles copied to `/usr/share/minime/traits/`:
-- `platform.ini`: General system traits (SoC architecture, GPU driver flavor).
-- `audio.ini`: Audio card and mixer definitions.
-- `display.ini`: Display resolution, refresh rates, and brightness control paths.
-- `controls.ini`: Input device mapping and button definitions.
+- `platform.ini`: SoC-wide defaults (screen/backlight, CPU clocks + thermal, GPU, audio, input device names, keycodes, power, USB, storage). Any key may be overridden at device level.
+- `devices/<device>.ini`: Per-device traits (identity, screen geometry, HDMI, touch, rumble, wireless). Panel-revision variants inherit from a base device via a `parent=` key.
+- At boot `init.d/traits` merges `platform.ini` → parent chain → device file into `/mnt/sdcard/.minime/traits` (last-wins for duplicated keys).
+
+See `docs/adr/0012-traits-schema.md` for the full section/key reference.
 
 ---
 
@@ -212,7 +213,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
    - `boot.env` — U-Boot boot arguments
    - `dts/` — Device Tree Source files
    - `patches/linux/` — Kernel patches (if needed)
-   - `traits/` — Hardware trait files (`platform.ini`, `display.ini`, etc.)
+   - `traits/` — Hardware trait files (`platform.ini`, `devices/<device>.ini`)
 2. Add board config fragments:
    - `minime/boards/<board>/tiny-<board>.config` — kernel config fragment
    - `minime/targets/alpine/configs/world-<board>` — Alpine package list

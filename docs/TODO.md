@@ -24,17 +24,33 @@
 
 ## Display, Audio & Input
 
+- [ ] Verify RG DS dual-display traits on hardware: `gpu_device`/`gpu_device2` fb-node ordering, `screen2_backlight_path`, `audio_mic` (DTB wires a microphone; confirm evdev/ALSA surfaces it)
 - [ ] Implement driver/DTS level screen rotation instead of per-application handling
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 
 ## Board Infrastructure & System
 
-- [ ] Comprehensive audit of traits system to expose all hardware controls needed for UIs
-  - [ ] Standardize DRM/extcon HDMI state paths (`hdmi_state_path`) and ALSA audio routing helpers
-  - [ ] Expose power supply and battery status paths (`battery_capacity_path`, `charger_online_path`)
-  - [ ] Expose LED sysfs control paths (`power_led_path`, charging indicators, low-battery threshold disable)
-  - [ ] Expose input traits and hardware mode toggles (e.g. RG Arc D D-pad / left-stick swap)
+- [x] Comprehensive audit of traits system to expose all hardware controls needed for UIs
+  - [x] Sectioned schema + layered cascade (`platform.ini` → `parent=` chain → device) per ADR 0012
+  - [x] Standardize HDMI state paths via DRM connector (`gpu_hdmi_state_path`), ALSA audio routing helpers
+  - [x] Expose power supply and battery status paths (`power_battery_sysfs`, `power_charger_online_path`)
+  - [x] Expose LED sysfs control paths (`power_led_path`, charging indicators)
+  - [x] Expose input traits and hardware mode toggles (RG ARC touch, d-pad/left-stick swap)
+  - [x] Cross-referenced every trait against mainline DTS + Rocknix sources (clone review): keycodes, touch devices (ARC goodix gt927, RG353 hynitron cst340), audio cards/mixers, eMMC topology, HDMI wiring, GPU OPPs, thermal zones
+  - [x] Add DTB↔traits cross-reference to `check-traits.sh` (every shipped DTB has a traits file and vice-versa; U-Boot FDT-fixup compatibles allowed)
+  - [x] `gpu_hdmi_connector` = stable connector id (e.g. `HDMI-A-1`); `cardN` prefix resolved at init by traits.c/traits.rs (DRM minor index is first-come-first-serve, not static)
+  - [ ] Compile patched DTB → decompile in CI and compare geometry/keycodes/names/refresh to the traits files (deeper variant of the cross-reference; needs the kernel build env)
+  - [ ] Verify RG DS fb node ordering on real hardware (top-primary ⇒ `gpu_device=/dev/fb1`)
+  - [x] Rumble: `input_rumble_device_name` input-FF model (pwm-vibrator) — RK3566 + H700 40XX/CubeXX; verify PWM on hardware
+  - [x] RG353P/M/V touch: `CONFIG_TOUCHSCREEN_HYNITRON_CSTXXX` enabled in `tiny-rk3566.config` (both targets)
+  - [x] ARC-D/S HDMI: already wired via the `rgxx3.dtsi` include (hdmi-con, &hdmi, &hdmi_sound, vp0→HDMI0) — traits set `gpu_hdmi_connector=HDMI-A-1`; no kernel change needed
+  - [ ] Verify exact H700 mixer control on-device: trait now `Line Out Playback Volume` (old `Line Out` was a routing label, not a control); confirm `amixer` on the SP
+
+- [ ] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
+  - [THEORY] Either load `.minime/devices/${device}` when set, or drop the resolution entirely; RK3326 `first-boot-probe.sh` currently writes `device.cfg` that nothing consumes.
+- [ ] RK3326 bringup (make `rk3326` a supported board in `minime/targets/*/Makefile` + CI matrix)
+- [ ] Add RG353M support end-to-end (U-Boot rgxx3 FDT fixup + traits already added in `rg353m.ini`)
 
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](file:///Users/ilembitov/Projects/minime/docs/spec/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.

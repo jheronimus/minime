@@ -18,7 +18,7 @@ The `internal` repository ([MustardOS/internal](https://github.com/MustardOS/int
 - **Per-Device Hardware Directories**: `device/` (`rg35xx-h`, `rg40xx-h`, `tui-brick`, etc.) holding static INIs for screen, audio, and input.
 - **OS Daemons & Utilities**: `script/system/` (battery, swap, storage, USB gadget).
 
-**Minime Replacement**: Minime's OpenRC init system, `device.sh`, native ALSA/Mali drivers, and `traits.sh` render `MustardOS/internal` obsolete. Only the minimal launcher scripts (`frontend.sh`, `launch.sh`) and stock UI assets (`share/`) are retained and bundled into the UI payload.
+**Minime Replacement**: Minime's OpenRC init system, `device.sh`, native ALSA/Mali drivers, and `init.d/traits` render `MustardOS/internal` obsolete. Only the minimal launcher scripts (`frontend.sh`, `launch.sh`) and stock UI assets (`share/`) are retained and bundled into the UI payload.
 
 ### 2. `MustardOS/frontend` (Primary Target for Porting)
 The `frontend` repository ([MustardOS/frontend](https://github.com/MustardOS/frontend)) contains the C applications compiled against LVGL 9, PlutoSVG, and custom rendering backends.
@@ -40,7 +40,7 @@ The `frontend` repository ([MustardOS/frontend](https://github.com/MustardOS/fro
 | **GPU Drivers & Display** | Minime OS | RootFS (`/usr/lib`) | Mali GPU binaries (`libmali`), DRM/KMS graphics drivers |
 | **Audio & Network** | Minime OS | RootFS | ALSA, BlueZ, `wpa_supplicant`, OpenRC init services |
 | **UI Init Service** | Minime OS | `/etc/init.d/ui` | UI-agnostic OpenRC launcher executing `.minime/ui.env` |
-| **Hardware Traits** | Minime OS | `/mnt/sdcard/.minime/traits` | Hardware capabilities manifest output by `traits.sh` |
+| **Hardware Traits** | Minime OS | `/mnt/sdcard/.minime/traits` | Hardware capabilities manifest output by `init.d/traits` |
 | **muOS C Binaries** | muOS Payload | `/mnt/sdcard/MUOS/bin/` | Compiled `MustardOS/frontend` binaries (`muxfrontend`, `mubattery`, `muhotkey`, `mulog`, `libmustage.so`) |
 | **muOS Launcher Scripts** | muOS Payload | `/mnt/sdcard/MUOS/script/` | Lightweight orchestration scripts (`frontend.sh`, `launch.sh`, `quit.sh`, `func.sh`) |
 | **muOS UI Assets** | muOS Payload | `/mnt/sdcard/MUOS/share/` | Fonts, themes, language bundles, gamecontrollerdb |
