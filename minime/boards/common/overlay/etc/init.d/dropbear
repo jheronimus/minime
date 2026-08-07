@@ -50,9 +50,11 @@ start() {
 		[ -n "${cfg_port}" ] && port="${cfg_port}"
 	fi
 
+	# -B allows blank-password logins (root has an empty password, so
+	# `ssh <host>` connects without a prompt, matching telnet's autologin).
 	start-stop-daemon -S -q -b -m \
 		-p "${DB_PIDFILE}" \
-		-x /usr/sbin/dropbear -- -r "${DB_HOSTKEY}" -p "${port}"
+		-x /usr/sbin/dropbear -- -r "${DB_HOSTKEY}" -B -p "${port}"
 	eend $?
 }
 

@@ -282,6 +282,12 @@ assemble_rootfs() {
 	# Run post-build script (mimicking Buildroot's structure)
 	TARGET_DIR="${ALPINE_ROOTFS_DIR}" "${ALPINE_DIR}/scripts/post-build.sh" -b "${BOARD}"
 
+	# Minime has no authentication model: telnet uses an autologin shell and
+	# dropbear allows blank-password root logins (like telnet).  Clear root's
+	# password so `ssh <host>` and `telnet <host>` both connect without auth.
+	chroot "${ALPINE_ROOTFS_DIR}" /bin/sh -c \
+		"passwd -d root 2>/dev/null || sed -i 's/^root:.*/root::0:0:root:\/root:\/bin\/sh/' /etc/shadow" 2>/dev/null || true
+
 	# Install the tinykernel modules into the immutable EROFS rootfs.
 	if [ -d "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules" ]; then
 		cp -a "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules/." \
