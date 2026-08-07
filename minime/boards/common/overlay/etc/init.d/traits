@@ -92,20 +92,34 @@ find_device() {
 	printf '%s\n' "$match"
 }
 
-generate_traits() {
-	device_file="${1:-$(find_device)}"
-	tmp="${TRAITS_FILE}.tmp"
+# Render the merged traits payload for a device file to the given output path.
+render_traits() {
+	device_file="$1"
+	output="$2"
 
 	chain="$(parent_chain "$device_file")" || exit 1
 
-	mkdir -p "${TRAITS_FILE%/*}"
+	mkdir -p "${output%/*}"
 	{
 		echo "# Minime device traits"
 		emit_file "${TRAITS_DIR}/platform.ini"
 		for file in $chain; do
 			emit_file "$file"
 		done
-	} > "$tmp"
+	} > "$output"
+}
+
+# SHA-1 of a rendered payload (marker line excluded).
+traits_hash() {
+	sha1sum "$1" | cut -d' ' -f1
+}
+
+generate_traits() {
+	device_file="${1:-$(find_device)}"
+	tmp="${TRAITS_FILE}.tmp"
+
+	render_traits "$device_file" "$tmp"
+	echo "# traits-hash $(traits_hash "$tmp")" >> "$tmp"
 	mv "$tmp" "$TRAITS_FILE"
 
 	if [ -d /mnt/sdcard ]; then
@@ -120,14 +134,24 @@ check_traits() {
 	device_file="$(find_device)" || exit 1
 	expected_id="$(read_device_key device_id "$device_file")"
 
-	if [ ! -f "$TRAITS_FILE" ]; then
+	if [ ! -f "$TRAITS_FILE" ] || \
+	   [ "$(read_device_key device_id "$TRAITS_FILE")" != "$expected_id" ] || \
+	   ! require_key gpu_device "$TRAITS_FILE" 2>/dev/null || \
+	   ! require_key device_id "$TRAITS_FILE" 2>/dev/null; then
 		generate_traits "$device_file"
-	elif [ "$(read_device_key device_id "$TRAITS_FILE")" != "$expected_id" ]; then
-		generate_traits "$device_file"
-	elif ! require_key gpu_device "$TRAITS_FILE" 2>/dev/null || \
-	     ! require_key device_id "$TRAITS_FILE" 2>/dev/null; then
-		generate_traits "$device_file"
+		return
 	fi
+
+	# The bundled payload is the source of truth. device_id is stable across
+	# firmware updates, so regenerate whenever the merged payload content
+	# drifted from the last generation (e.g. a trait default value change).
+	tmp="${TRAITS_FILE}.tmp"
+	render_traits "$device_file" "$tmp"
+	stored_hash="$(sed -n 's/^# traits-hash //p' "$TRAITS_FILE" | head -n 1)"
+	[ "$stored_hash" = "$(traits_hash "$tmp")" ]
+	up_to_date=$?
+	rm -f "$tmp"
+	[ "$up_to_date" -eq 0 ] || generate_traits "$device_file"
 }
 
 # --- OpenRC service ---
