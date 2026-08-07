@@ -78,6 +78,10 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
   - The change objectively fixes crashes, memory corruption, thread deadlocks, or performance regressions across all targets.
 - **On-Device Live Verification**: After modifying any code and allowing CI to rebuild artifacts, AI agents must deploy and empirically verify changes on the live physical hardware target. Use `just update <os> <board> <ui>` to deliver the latest testing OTA to the device (e.g. `just update alpine h700 minui`), `just check-version <os> <board> <ui>` to confirm the device is current, and `just remote <cmd>` for on-device inspection. For a full reflash, use `just deploy <os> <board> <ui> [disk]`. Follow the **`live-test` skill** for the full procedure (deploy, device log locations, and the 5 Whys debugging workflow).
 
+## Device Card Mount (`card`)
+
+`card` at the repo root is a **local symlink to `/Volumes/minime`** — the SD card mounted on this Mac when it is inserted (macOS mounts a FAT volume labeled `minime` there). It is **gitignored** because it is a machine-specific absolute path; never commit it or rely on it being present in a fresh clone. When the card is mounted, read/inspect device logs via `card/` from the repo root (e.g. `card/.minime/logs/<boot-id>/boot.log`, `card/wifi.diagnostics`) — no permissions needed for reads. When unmounted the symlink dangles and those paths fail, which just means the card is not inserted. Reflashing still requires `sudo dd` (raw device write), typically via `just deploy`.
+
 ## Infrastructure & Scripts
 
 **Mandatory reading for AI agents**: Before making any changes to build or workflow files, read [`docs/INFRA.md`](file:///Users/ilembitov/Projects/minime/docs/INFRA.md) — it documents the full CI pipeline (workflows, scripts, dependencies, caches, and outputs). The `.github/workflows/*.yml` files are the executable source of truth for the pipeline; INFRA.md is the human-readable reference for it.
