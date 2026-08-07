@@ -151,9 +151,17 @@ Rocknix sources (cloned, not web-searched) plus on-device checks:
   consumers upload/play/stop a rumble effect via `EVIOCSFF`/`EV_FF`. RK3566
   and the H700 40XX/CubeXX have it; RK3326 and the other H700 devices do not.
   (See `docs/research/traits.c` for the reference HAL.)
-- `screen_rotation` is 0 for all devices: the DTS panel `rotation` property
-  is applied by the DRM driver, so the framebuffer presented to userspace is
-  already upright.
+- `screen_rotation` is the userspace UI rotation in degrees (0/90/180/270),
+  consumed by `platform.c`/the Allium port to rotate the SDL renderer. It is
+  the single source of truth for UI orientation. On RK3326 it is 0: the DTS
+  panel `rotation` property (e.g. `rk3326-anbernic-rg351p.dts`) is applied by
+  the DRM driver, so the framebuffer presented to userspace is already
+  upright. RK3566 devices rely on the trait instead (ARC=90, RG353 family=270,
+  RG503/RG DS=0); their kernel DTS/panel drivers do not rotate. The kernel
+  fbcon boot-console rotation (`fbcon=rotate:1` in `rk3566/boot.env`) is a
+  separate layer that only affects the transient pre-UI console and is
+  documented there; it is not trait-derived because bootargs are baked at
+  image build time and cannot read the runtime traits file.
 
 ### 4. Strict parser contract
 
