@@ -223,10 +223,18 @@ jobs:
         run: make -C minime/targets/${{ matrix.os }} components BOARD=${{ matrix.board }}
 
       - name: Build Image for MinUI
-        run: make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=minui
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=minui
 
       - name: Build Image for Allium
-        run: make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
         if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
