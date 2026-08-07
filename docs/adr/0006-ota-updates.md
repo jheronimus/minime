@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Minime produces raw bootable SD card images (`.img.xz`) and OTA update packages (`.tar.xz`) in the single CI workflow `build.yml`.
+Minime produces raw bootable SD card images (`.img.zst`) and OTA update packages (`.tar.zst`) in the single CI workflow `build.yml`.
 
 Questions arose regarding OTA behavior and delivery:
 
@@ -18,7 +18,7 @@ Questions arose regarding OTA behavior and delivery:
 
 ### 1. Update Package Specification
 
-The update package generator [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.xz`.
+The update package generator [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.zst`.
 
 The archive is a **deliberate mirror of the on-SD payload layout**. It contains strictly:
 
@@ -35,7 +35,7 @@ The archive is a **deliberate mirror of the on-SD payload layout**. It contains 
 The archive is built with a leading `.` so that **extracting it directly onto `/mnt/sdcard/` places each entry in its final location**:
 
 ```sh
-tar -xf minime-alpine-h700-minui.tar.xz -C /mnt/sdcard/
+unzstd -c minime-alpine-h700-minui.tar.zst | tar -xf - -C /mnt/sdcard/
 ```
 
 **Nothing else is packaged.** BIOS files, ROMs, save states, emulator paks, `Tools/`, `Emus/`, `.userdata/`, `.minime/config/`, `.minime/traits`, `dtb`, `u-boot-ddr3.bin`, and `boot.log` are deliberately excluded. User data is preserved **by construction** — it never enters the archive — rather than by defensive checks in the delivery script.
@@ -44,7 +44,7 @@ tar -xf minime-alpine-h700-minui.tar.xz -C /mnt/sdcard/
 
 OTA updates do not trigger SD card partition expansion:
 
-- [mkimage.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkimage.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.xz`).
+- [mkimage.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkimage.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.zst`).
 - [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) omits `/mnt/card/.minime/config/first_boot_expand`.
 - On first boot after raw image flash, [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
 - When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
@@ -53,11 +53,11 @@ OTA updates do not trigger SD card partition expansion:
 
 #### Local delivery (`just update`)
 
-`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.xz` from the `testing` GitHub Release via [scripts/fetch-asset.sh](file:///Users/ilembitov/Projects/minime/scripts/fetch-asset.sh), then [scripts/update-device.sh](file:///Users/ilembitov/Projects/minime/scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
+`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.zst` from the `testing` GitHub Release via [scripts/fetch-asset.sh](file:///Users/ilembitov/Projects/minime/scripts/fetch-asset.sh), then [scripts/update-device.sh](file:///Users/ilembitov/Projects/minime/scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
 
 1. Stop the UI service (`/etc/init.d/ui stop`) and kill launcher processes.
-2. Upload the `.tar.xz` over FTP.
-3. On the device: `rm -rf /mnt/sdcard/.system && tar -xJf <pkg> -C /mnt/sdcard/`.
+2. Upload the `.tar.zst` over FTP.
+3. On the device: `rm -rf /mnt/sdcard/.system && unzstd -c <pkg> | tar -xf - -C /mnt/sdcard/`.
    - `-J` is required: the device's busybox `tar` does not auto-detect xz compression.
    - Decompressing the ~100 MB archive outlives the telnet session window, so the extraction runs in the background with a completion marker and the delivery script polls for it before rebooting.
    - `.system/` is **clean-replaced** — it is pure MinUI payload, so removing it first guarantees no stale binaries (e.g. a removed core `.so`) linger after an update.
@@ -68,7 +68,7 @@ The target IP is read from `target_ip` in `deploy.cfg` unless passed explicitly.
 
 #### Full image flash (`just deploy`)
 
-`just deploy <os> <board> <ui> [disk]` fetches the latest `minime-<os>-<board>-<ui>.img.xz` and flashes it to the SD card (`dd` / `diskutil`), optionally injecting `wifi.cfg`. It also accepts an explicit image path for flashing a specific build. The `deploy.cfg` `minime`-label guard prevents accidental writes to non-Minime cards.
+`just deploy <os> <board> <ui> [disk]` fetches the latest `minime-<os>-<board>-<ui>.img.zst` and flashes it to the SD card (`dd` / `diskutil`), optionally injecting `wifi.cfg`. It also accepts an explicit image path for flashing a specific build. The `deploy.cfg` `minime`-label guard prevents accidental writes to non-Minime cards.
 
 #### Version check (`just check-version`)
 

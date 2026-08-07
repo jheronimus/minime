@@ -14,7 +14,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **Jobs**:
   - `build-bootloader` — compiles U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64. Cached by hash of `minime/uboot/**`.
   - `build-ui` (matrix: `musl` / `glibc`) — compiles MinUI and Allium for both libc variants. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 with no container. Cached by hash of `minime/ui/**`.
-  - `build-os` (matrix: `{alpine, buildroot}` × `{h700, rk3326, rk3566}` = 6 jobs) — runs `make components` then `make image update` (once per UI). Depends on both asset jobs. Uploads `.img.xz` and `.tar.xz` to the `testing` release.
+  - `build-os` (matrix: `{alpine, buildroot}` × `{h700, rk3326, rk3566}` = 6 jobs) — runs `make components` then `make image update` (once per UI). Depends on both asset jobs. Uploads `.img.zst` and `.tar.zst` to the `testing` release.
 - **Caches**: `bootloader-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
 - **Rule**: Never dispatch this workflow manually (`gh workflow run`). Push to `main` is the only intended trigger. Manual dispatch causes concurrent runs that corrupt `testing` release assets.
 
@@ -38,8 +38,8 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`minime/build/mkbootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
 - **`minime/build/mkui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
 - **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
-- **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.xz`.
-- **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.xz` for live updates.
+- **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
+- **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.
 - **`minime/build/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
 - **`minime/build/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 
@@ -50,7 +50,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
 - **`scripts/update-device.sh`**: Uploads OTA update packages over FTP/telnet and reboots target device.
-- **`scripts/fetch-asset.sh`**: Downloads a named release asset (`.img.xz` or `.tar.xz`) from the latest `testing` GitHub Release.
+- **`scripts/fetch-asset.sh`**: Downloads a named release asset (`.img.zst` or `.tar.zst`) from the latest `testing` GitHub Release.
 - **`scripts/check-version.sh`**: Reads the device's `.minime/manifest.json` and compares it against the latest testing OTA for a target.
 - **`scripts/remote-cmd.sh`**: Executes arbitrary shell commands on target device over telnet using `target_ip` from `deploy.cfg`.
 - **`scripts/remote-upload.sh`**: Uploads a local file to the target device over FTP.
@@ -74,8 +74,8 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.sh` | Ensures all `.patch` files are referenced in build manifests. |
 | `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.sh` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
 | `check-git` | Git staged diff | `git diff --check` | Catches whitespace errors and unresolved merge conflict markers. |
-| `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.xz`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
-| `just update <os> <board> <ui> [ip]` | Deliver latest OTA to device | `fetch-asset.sh` + `scripts/update-device.sh` | Fetches the latest `minime-<os>-<board>-<ui>.tar.xz`, applies it over FTP/telnet (clean-replaces `.system`, overlays `.minime`), reboots device. Uses `target_ip` in `deploy.cfg`. |
+| `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.zst`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
+| `just update <os> <board> <ui> [ip]` | Deliver latest OTA to device | `fetch-asset.sh` + `scripts/update-device.sh` | Fetches the latest `minime-<os>-<board>-<ui>.tar.zst`, applies it over FTP/telnet (clean-replaces `.system`, overlays `.minime`), reboots device. Uses `target_ip` in `deploy.cfg`. |
 | `just check-version <os> <board> <ui> [ip]` | Verify device build is current | `scripts/check-version.sh` | Fetches the latest testing OTA, reads the device's `.minime/manifest.json`, reports up-to-date or out-of-date. |
 | `just remote <cmd> [ip]` | Run remote telnet command | `scripts/remote-cmd.sh` | Executes shell command on target device via telnet. Uses `target_ip` in `deploy.cfg`. |
 | `just upload <file> [remote_filename] [ip]` | Upload a file to device | `scripts/remote-upload.sh` | Uploads a local file to the target device over FTP. |

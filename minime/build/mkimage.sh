@@ -199,9 +199,9 @@ if [ -n "${UI}" ]; then
 	IMG_TAG="${IMG_TAG}-${UI}"
 fi
 FINAL_IMG="${OUTPUT_DIR}/${IMG_TAG}.img"
-FINAL_IMG_XZ="${FINAL_IMG}.xz"
+FINAL_IMG_ZST="${FINAL_IMG}.zst"
 
-rm -f "${FINAL_IMG}" "${FINAL_IMG_XZ}"
+rm -f "${FINAL_IMG}" "${FINAL_IMG_ZST}"
 
 cp -f "${GENIMAGE_CFG}" "${ROOTPATH_TMP}/genimage.cfg"
 sed -i "s/__IMAGE_NAME__/${IMG_TAG}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
@@ -219,5 +219,6 @@ if [ ! -f "${FINAL_IMG}" ]; then
 fi
 
 echo "Compressing ${FINAL_IMG}..."
-xz -f -T0 "${FINAL_IMG}"
-echo "Build complete: ${FINAL_IMG_XZ}"
+zstd -q -9 -f "${FINAL_IMG}" -o "${FINAL_IMG_ZST}"
+rm -f "${FINAL_IMG}"
+echo "Build complete: ${FINAL_IMG_ZST}"

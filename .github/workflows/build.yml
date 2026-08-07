@@ -120,17 +120,17 @@ jobs:
             ccache-ui-${{ matrix.libc }}-
 
       - name: Compile MinUI
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.xz', matrix.libc)) == ''
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', matrix.libc)) == ''
         run: |
           minime/build/mkui.sh minui ${{ matrix.libc }}
 
       - name: Compile Allium
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.xz', matrix.libc)) == ''
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', matrix.libc)) == ''
         run: |
           minime/build/mkui.sh allium ${{ matrix.libc }}
 
       - name: Save UI Cache
-        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.xz', matrix.libc)) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.xz', matrix.libc)) == '')
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', matrix.libc)) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', matrix.libc)) == '')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
@@ -259,5 +259,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.img.xz --clobber || true
-          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.tar.xz --clobber || true
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.tar.zst --clobber || true

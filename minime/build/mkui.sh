@@ -49,7 +49,9 @@ if [ "$UI" = "minui" ]; then
 		unzip -q -o "$zipfile" -d "$STAGE_DIR"
 	done
 	cd "$ROOT_DIR"
-	tar -cJf "$ROOT_DIR/minime/ui/out/minui-${LIBC}-aarch64.tar.xz" -C "$STAGE_DIR" .
+	tar -cf "$ROOT_DIR/minime/ui/out/minui-${LIBC}-aarch64.tar" -C "$STAGE_DIR" .
+	zstd -q -9 -f "$ROOT_DIR/minime/ui/out/minui-${LIBC}-aarch64.tar"
+	rm -f "$ROOT_DIR/minime/ui/out/minui-${LIBC}-aarch64.tar"
 
 elif [ "$UI" = "allium" ]; then
 	echo "Building Allium binaries for ${LIBC}..."
@@ -114,9 +116,11 @@ elif [ "$UI" = "allium" ]; then
 	cp -r "$STATIC/RetroArch/." "$STAGE_DIR/RetroArch/" || true
 	[ -d "$STATIC/.minime" ] && cp -r "$STATIC/.minime" "$STAGE_DIR/" || true
 
-	OUT_TAR="$ROOT_DIR/minime/ui/out/allium-${LIBC}-aarch64.tar.xz"
-	tar -cJf "$OUT_TAR" -C "$STAGE_DIR" .
-	echo "Created $OUT_TAR"
+	OUT_TAR="$ROOT_DIR/minime/ui/out/allium-${LIBC}-aarch64.tar"
+	tar -cf "$OUT_TAR" -C "$STAGE_DIR" .
+	zstd -q -9 -f "$OUT_TAR"
+	rm -f "$OUT_TAR"
+	echo "Created ${OUT_TAR}.zst"
 else
 	echo "Unknown UI: $UI" >&2
 	exit 1

@@ -33,7 +33,7 @@ if [ -z "$TARGET_IP" ]; then
 	exit 1
 fi
 
-ota=$("$SCRIPT_DIR/fetch-asset.sh" "minime-${OS}-${BOARD}-${UI}.tar.xz")
+ota=$("$SCRIPT_DIR/fetch-asset.sh" "minime-${OS}-${BOARD}-${UI}.tar.zst")
 
 latest_commit=$(tar -xOf "${ota}" ./.minime/manifest.json 2>/dev/null | sed -n 's/.*"minime_commit": *"\([^"]*\)".*/\1/p' | head -n1 || true)
 if [ -z "$latest_commit" ]; then
