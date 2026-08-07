@@ -5,6 +5,15 @@ local.mk
 ._*
 **/._*
 
+# CI workspace cache/scratch dirs (container jobs persist these via actions/cache)
+/.alpine-output/
+/.alpine-repo/
+/.alpine-dl/
+/.alpine-ccache/
+/.buildroot-output/
+/.buildroot-ccache/
+/.buildroot-dl/
+
 # Alpine abuild artifacts
 minime/targets/alpine/aports/*/src
 minime/targets/alpine/aports/*/pkg

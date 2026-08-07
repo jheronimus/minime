@@ -7,21 +7,37 @@ PACKAGER_USER ?= --user 0:0
 # differs from the host (see each target Makefile's PLATFORM_ARGS).
 PLATFORM_ARGS ?= --platform $(PACKAGER_PLATFORM)
 
+# CI runs inside the builder container (GitHub container job), so packaging
+# runs directly against the workspace. Local dev wraps in podman.
+IN_CONTAINER := $(if $(MINIME_IN_CONTAINER),yes)
+
+OUT_DIR := $(CURDIR)/out/$(BOARD)
+
 .PHONY: image update clean
 
 image:
-	@mkdir -p $(CURDIR)/out/$(BOARD)
-	$(PODMAN_CMD) run $(PODMAN_TTY) --rm $(PACKAGER_USER) $(PLATFORM_ARGS) \
-		-v $(MINIME_ROOT):/workspace \
-		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)/ui $(TARGET_NAME) && /workspace/minime/build/mkimage.sh --target $(TARGET_NAME) --board $(BOARD) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --ui $(UI) && /workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"
+	@mkdir -p $(OUT_DIR)
+	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
+		$(MINIME_ROOT)/minime/build/genassets.sh $(UI) $(OUT_DIR)/ui $(TARGET_NAME) && \
+		$(MINIME_ROOT)/minime/build/mkimage.sh --target $(TARGET_NAME) --board $(BOARD) --input-dir $(OUT_DIR) --output-dir $(OUT_DIR) --ui $(UI) && \
+		$(MINIME_ROOT)/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir $(OUT_DIR) --output-dir $(OUT_DIR); \
+	else \
+		$(PODMAN_CMD) run $(PODMAN_TTY) --rm $(PACKAGER_USER) $(PLATFORM_ARGS) \
+			-v $(MINIME_ROOT):/workspace \
+			$(PACKAGER_IMAGE) \
+			sh -c "/workspace/minime/build/genassets.sh $(UI) /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)/ui $(TARGET_NAME) && /workspace/minime/build/mkimage.sh --target $(TARGET_NAME) --board $(BOARD) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --ui $(UI) && /workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"; \
+	fi
 
 update:
-	@mkdir -p $(CURDIR)/out/$(BOARD)
-	$(PODMAN_CMD) run $(PODMAN_TTY) --rm $(PACKAGER_USER) $(PLATFORM_ARGS) \
-		-v $(MINIME_ROOT):/workspace \
-		$(PACKAGER_IMAGE) \
-		sh -c "/workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"
+	@mkdir -p $(OUT_DIR)
+	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
+		$(MINIME_ROOT)/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir $(OUT_DIR) --output-dir $(OUT_DIR); \
+	else \
+		$(PODMAN_CMD) run $(PODMAN_TTY) --rm $(PACKAGER_USER) $(PLATFORM_ARGS) \
+			-v $(MINIME_ROOT):/workspace \
+			$(PACKAGER_IMAGE) \
+			sh -c "/workspace/minime/build/mkupdate.sh --target $(TARGET_NAME) --board $(BOARD) --ui $(UI) --input-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD) --output-dir /workspace/minime/targets/$(TARGET_NAME)/out/$(BOARD)"; \
+	fi
 
 clean:
-	@rm -rf $(CURDIR)/out/$(BOARD)
+	@rm -rf $(OUT_DIR)

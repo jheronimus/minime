@@ -42,10 +42,21 @@ help:
 		"  make update BOARD=rk3566 UI=minui Build update tarball package" \
 		"  make clean                      Remove built outputs"
 
+# CI runs inside the builder container (GitHub container job), so the build
+# scripts run directly with env vars pointing caches at the workspace.
+# Local dev still wraps in podman to enter the image.
+IN_CONTAINER := $(if $(MINIME_IN_CONTAINER),yes)
+
 components:
-	@mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl $(CURDIR)/out/$(BOARD)
-	$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
-		sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"
+	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
+		mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPO_DIR) $(ALPINE_DL_DIR) $(CCACHE_DIR) $(CURDIR)/out/$(BOARD); \
+		BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=$(MINIME_ROOT)/minime/targets/alpine \
+			$(MINIME_ROOT)/minime/targets/alpine/scripts/build.sh components; \
+	else \
+		mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl $(CURDIR)/out/$(BOARD); \
+		$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
+			sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"; \
+	fi
 
 TARGET_NAME := alpine
 

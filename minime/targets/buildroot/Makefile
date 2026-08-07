@@ -21,14 +21,24 @@ help:
 		"  make update BOARD=rk3566 UI=minui Build update tarball package" \
 		"  make clean                      Remove built outputs"
 
+# CI runs inside the builder container (GitHub container job), so build.sh
+# runs directly with env vars pointing caches at the workspace. Local dev
+# wraps in podman.
+IN_CONTAINER := $(if $(MINIME_IN_CONTAINER),yes)
+
 components:
-	@mkdir -p $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl
-	$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform linux/amd64 \
-		-v $(MINIME_ROOT):/workspace \
-		-v $(HOME)/.buildroot-ccache:/root/.buildroot-ccache \
-		-v $(HOME)/.buildroot-dl:/root/.buildroot-dl \
-		$(BUILDER_IMAGE) \
-		sh -c "BOARD=$(BOARD) UI=$(UI) /workspace/minime/targets/buildroot/scripts/build.sh components"
+	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
+		BOARD=$(BOARD) UI=$(UI) MINIME_ROOT=$(MINIME_ROOT) \
+			$(MINIME_ROOT)/minime/targets/buildroot/scripts/build.sh components; \
+	else \
+		mkdir -p $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl; \
+		$(PODMAN_CMD) run $(PODMAN_TTY) --rm --platform linux/amd64 \
+			-v $(MINIME_ROOT):/workspace \
+			-v $(HOME)/.buildroot-ccache:/root/.buildroot-ccache \
+			-v $(HOME)/.buildroot-dl:/root/.buildroot-dl \
+			$(BUILDER_IMAGE) \
+			sh -c "BOARD=$(BOARD) UI=$(UI) /workspace/minime/targets/buildroot/scripts/build.sh components"; \
+	fi
 
 TARGET_NAME := buildroot
 
