@@ -45,30 +45,31 @@ start() {
 	UI_BIN=$(read_ui_env UI_BIN)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
-	sound_card=$(get_trait sound_card)
-	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ]; then
+	audio_card=$(get_trait audio_card)
+	audio_mixer=$(get_trait audio_mixer)
+	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
 		printf 'pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n' \
-			"$sound_card" "$sound_card" >"$ASOUNDRC_FILE"
+			"$audio_card" "$audio_card" >"$ASOUNDRC_FILE"
 	else
 		rm -f "$ASOUNDRC_FILE"
 	fi
 
-	amixer sset 'Line Out' 100% unmute >/dev/null 2>&1 || true
-	amixer sset 'DAC' 100% unmute >/dev/null 2>&1 || true
-	amixer sset 'Speaker' unmute >/dev/null 2>&1 || true
+	if [ -n "$audio_mixer" ]; then
+		amixer sset "$audio_mixer" 100% unmute >/dev/null 2>&1 || true
+	fi
 
-	if [ -n "$sound_card" ] && [ "$sound_card" != "default" ] && amixer -c "$sound_card" controls >/dev/null 2>&1; then
+	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ] && amixer -c "$audio_card" controls >/dev/null 2>&1; then
 		(
 			while true; do
-				if amixer -c "$sound_card" cget numid=1 2>/dev/null | grep -q "values=on"; then
+				if amixer -c "$audio_card" cget numid=1 2>/dev/null | grep -q "values=on"; then
 					target_state="HP"
 					current_val="0"
 				else
 					target_state="SPK"
 					current_val="1"
 				fi
-				if ! amixer -c "$sound_card" cget name='Playback Mux' 2>/dev/null | grep -q "values=$current_val"; then
-					amixer -c "$sound_card" sset 'Playback Mux' "$target_state" >/dev/null 2>&1
+				if ! amixer -c "$audio_card" cget name='Playback Mux' 2>/dev/null | grep -q "values=$current_val"; then
+					amixer -c "$audio_card" sset 'Playback Mux' "$target_state" >/dev/null 2>&1
 				fi
 				sleep 2
 			done

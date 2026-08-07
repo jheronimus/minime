@@ -39,7 +39,7 @@ Previously, Minime's platform backend mapped `speed <= 1` to the Linux kernel go
 
 ### 1. Default Boot Governor
 
-OpenRC initialization (`init.d/ui` / `traits.sh`) sets `schedutil` (or `ondemand`) as the system-wide default governor on boot:
+OpenRC initialization (`init.d/ui` / `init.d/traits`) sets `schedutil` (or `ondemand`) as the system-wide default governor on boot:
 
 ```sh
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor

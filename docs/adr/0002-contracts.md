@@ -21,7 +21,7 @@ Hardware platform capabilities are abstracted via immutable `.ini` manifests bun
 - `platform.ini`: Defines SoC and platform traits (e.g. `sound_card`, `video_device`, `key_*` mappings, `backlight_path`).
 - `devices/*.ini`: Defines device-specific traits matched against `/proc/device-tree/model` and `compatible`.
 
-On boot, `traits.sh` merges `platform.ini` and the matching device manifest into `/mnt/sdcard/.minime/traits`. Core scripts (`ui`, `wifi`) query traits via key lookup functions (`get_trait <key>`). UIs target `minime` directly by reading `/mnt/sdcard/.minime/traits`.
+On boot, `init.d/traits` merges `platform.ini` and the matching device manifest into `/mnt/sdcard/.minime/traits`. Core scripts (`ui`, `wifi`) query traits via key lookup functions (`get_trait <key>`). UIs target `minime` directly by reading `/mnt/sdcard/.minime/traits`.
 
 ### 2. UI Payload & Archive Extraction Contract
 - UIs build and package their release archives (`.zip`) in their own repositories.
@@ -59,5 +59,5 @@ The OS `ui` init script is a clean, UI-agnostic contract executor:
 - Minime OS does **not** create media directories (`Roms/`, `Bios/`, `Saves/`) or vestigial storage folders (`.userdata/`). All user directories are owned by the UI payload or created on first boot by the UI.
 
 ## Rationale
-- **Zero Coupling**: OS firmware scripts (`ui`, `traits.sh`) and build recipes remain 100% free of UI-specific package names, paths, and entrypoint wrappers.
+- **Zero Coupling**: OS firmware scripts (`ui`, `init.d/traits`) and build recipes remain 100% free of UI-specific package names, paths, and entrypoint wrappers.
 - **Portability & Hot-Swapping**: Third-party UIs can be ported or hot-swapped simply by dropping their files on the SD card and updating `/mnt/sdcard/.minime/ui.env`.
