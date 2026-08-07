@@ -50,6 +50,15 @@ start() {
 		return 1
 	}
 
+	# Idempotency guard: OpenRC may re-run start() if it deems the service
+	# crashed.  If our worker is already running, don't spawn a second one
+	# (and a second syslogd).
+	if [ -f "${WORKER_PIDFILE}" ] && kill -0 "$(cat "${WORKER_PIDFILE}" 2>/dev/null)" 2>/dev/null; then
+		einfo "logger already running"
+		eend 0
+		return 0
+	fi
+
 	BOOT_ID="$(get_boot_id)"
 	if [ -z "${BOOT_ID}" ]; then
 		# Fallback if the initramfs did not establish a boot-id.
@@ -70,12 +79,15 @@ start() {
 		-x /bin/sh -- -c "${worker_cmd}" 2>/dev/null || true
 
 	# Userspace daemon catch-all.  Direct file output with size rotation.
-	start-stop-daemon -S -q -b -m \
-		-p "${SYSLOG_PIDFILE}" \
-		-x /sbin/syslogd -- \
-		-O "${LOG_DIR}/syslog.log" \
-		-s "${SYSLOG_MAX_KB}" \
-		-b "${SYSLOG_KEEP}" 2>/dev/null || true
+	# Only start if not already running (guards the double-start case).
+	if ! [ -f "${SYSLOG_PIDFILE}" ] || ! kill -0 "$(cat "${SYSLOG_PIDFILE}" 2>/dev/null)" 2>/dev/null; then
+		start-stop-daemon -S -q -b -m \
+			-p "${SYSLOG_PIDFILE}" \
+			-x /sbin/syslogd -- \
+			-O "${LOG_DIR}/syslog.log" \
+			-s "${SYSLOG_MAX_KB}" \
+			-b "${SYSLOG_KEEP}" 2>/dev/null || true
+	fi
 
 	sync
 	eend 0
