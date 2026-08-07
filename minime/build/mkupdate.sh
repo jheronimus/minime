@@ -128,10 +128,10 @@ cat <<EOF >"${STAGE_DIR}/.minime/manifest.json"
 EOF
 
 if [ -n "${UI}" ]; then
-	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.xz"
+	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
 else
-	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}.tar.xz"
+	UPDATE_PKG="${OUTPUT_DIR}/minime-${TARGET}-${BOARD}.tar.zst"
 fi
-(cd "${STAGE_DIR}" && tar -cf - . | xz -T0 -9 >"${UPDATE_PKG}")
+(cd "${STAGE_DIR}" && tar -cf - . | zstd -q -9 >"${UPDATE_PKG}")
 
 echo "Update package created: ${UPDATE_PKG}"

@@ -242,7 +242,7 @@ deploy os="" board="" ui="" disk_device="":
             echo "ERROR: deploy by target requires <os> <board> <ui>." >&2
             exit 1
         }
-        asset="minime-{{os}}-{{board}}-{{ui}}.img.xz"
+        asset="minime-{{os}}-{{board}}-{{ui}}.img.zst"
         img_file=$(./scripts/fetch-asset.sh "${asset}")
     fi
 
@@ -280,7 +280,7 @@ deploy os="" board="" ui="" disk_device="":
         fi
     fi
 
-    if [ ! -f "${img_file}" ] && [ ! -f "${img_file%.xz}" ]; then
+    if [ ! -f "${img_file}" ] && [ ! -f "${img_file%.zst}" ]; then
         echo "ERROR: Image file '${img_file}' not found" >&2
         exit 1
     fi
@@ -293,16 +293,16 @@ deploy os="" board="" ui="" disk_device="":
     diskutil unmountDisk force "${device}" 2>/dev/null || true
 
     echo "Writing image to ${device}..."
-    if [ ! -f "${img_file}" ] && [ -f "${img_file%.xz}" ]; then
-        img_file="${img_file%.xz}"
+    if [ ! -f "${img_file}" ] && [ -f "${img_file%.zst}" ]; then
+        img_file="${img_file%.zst}"
     fi
 
     case "${img_file}" in
-        *.xz)
-            if ! (xz -dc "${img_file}" | sudo dd of="${rdevice}" bs=1m status=progress); then
+        *.zst)
+            if ! (unzstd -c "${img_file}" | sudo dd of="${rdevice}" bs=1m status=progress); then
                 echo "Raw device write interrupted; retrying on block device ${device}..."
                 diskutil unmountDisk force "${device}" 2>/dev/null || true
-                xz -dc "${img_file}" | sudo dd of="${device}" bs=1m status=progress
+                unzstd -c "${img_file}" | sudo dd of="${device}" bs=1m status=progress
             fi
             ;;
         *)
@@ -373,7 +373,7 @@ update os="" board="" ui="" ip="":
         exit 1
     fi
 
-    asset="minime-{{os}}-{{board}}-{{ui}}.tar.xz"
+    asset="minime-{{os}}-{{board}}-{{ui}}.tar.zst"
     target_pkg=$(./scripts/fetch-asset.sh "${asset}")
 
     ./scripts/update-device.sh "${target_pkg}" "${target_ip}"

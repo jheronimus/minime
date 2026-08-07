@@ -42,14 +42,14 @@ UI_ART_DIR="${MINIME_ROOT}/minime/ui/out"
 
 if [ "$UI" = "minui" ]; then
 	local_zip="${UI_ART_DIR}/minui-${LIBC}-aarch64.zip"
-	local_tar="${UI_ART_DIR}/minui-${LIBC}-aarch64.tar.xz"
+	local_tar="${UI_ART_DIR}/minui-${LIBC}-aarch64.tar.zst"
 
 	if [ -f "${local_zip}" ]; then
 		echo "Using local UI artifact: ${local_zip}" >&2
 		unzip -q -o "${local_zip}" -d "${DEST_DIR}"
 	elif [ -f "${local_tar}" ]; then
 		echo "Using local UI artifact: ${local_tar}" >&2
-		tar -xf "${local_tar}" -C "${DEST_DIR}"
+		unzstd -q -c "${local_tar}" | tar -xf - -C "${DEST_DIR}"
 	else
 		echo "ERROR: Local MinUI artifact not found in ${UI_ART_DIR}/." >&2
 		echo "Run the build-ui job or 'just build-minui' to generate it." >&2
@@ -67,14 +67,14 @@ if [ "$UI" = "minui" ]; then
 
 elif [ "$UI" = "allium" ]; then
 	local_zip="${UI_ART_DIR}/allium-${LIBC}-aarch64.zip"
-	local_tar="${UI_ART_DIR}/allium-${LIBC}-aarch64.tar.xz"
+	local_tar="${UI_ART_DIR}/allium-${LIBC}-aarch64.tar.zst"
 
 	if [ -f "${local_zip}" ]; then
 		echo "Using local UI artifact: ${local_zip}" >&2
 		unzip -q -o "${local_zip}" -d "${DEST_DIR}"
 	elif [ -f "${local_tar}" ]; then
 		echo "Using local UI artifact: ${local_tar}" >&2
-		tar -xf "${local_tar}" -C "${DEST_DIR}"
+		unzstd -q -c "${local_tar}" | tar -xf - -C "${DEST_DIR}"
 	else
 		echo "ERROR: Local Allium artifact not found in ${UI_ART_DIR}/." >&2
 		echo "Run the build-ui job or 'just build-allium' to generate it." >&2

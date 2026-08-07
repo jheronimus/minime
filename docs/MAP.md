@@ -23,7 +23,7 @@ minime/
 │   ├── alpine/         # Alpine target builder (aports, Makefile, container, configs, scripts)
 │   └── buildroot/      # Buildroot target builder (external packages, Makefile, defconfigs, scripts)
 ├── build/              # Central Packaging Pipeline
-│   ├── mkimage.sh      # SD card bootable image builder (.img.xz)
+│   ├── mkimage.sh      # SD card bootable image builder (.img.zst)
 │   ├── mkupdate.sh     # Cross-distro update archive generator (.tar.gz)
 │   ├── genassets.sh    # UI payload downloader
 │   └── container/      # Multi-arch shared packager container (genimage + mtools)
@@ -151,7 +151,7 @@ Building Alpine Linux firmware for Minime:
 - **`container/Dockerfile`**: Build environment container (`arm64`, `abuild`, `erofs-utils`, `genimage`, `mtools`).
 - **`configs/`**: Build configuration and world package lists per board.
 - **`aports/`**: Local APK build recipes (tinykernel, fatresize, libretro-headers, libretro-cores, retroarch, drkhrse-miyoo-bezels).
-- **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>-<ui>.img.xz` (plus `minime-alpine-<board>-<ui>.tar.xz` OTA package).
+- **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>-<ui>.img.zst` (plus `minime-alpine-<board>-<ui>.tar.zst` OTA package).
 
 ## Buildroot Target Builder (`minime/targets/buildroot/`)
 
@@ -178,8 +178,8 @@ Building Buildroot firmware for Minime:
 
 # Central Packager (`minime/build/`)
 
-- **`mkimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.xz`.
-- **`mkupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-<target>-<board>[-<ui>].tar.xz` for cross-distro updates and live target switching.
+- **`mkimage.sh`**: Consumes output artifacts (`Image`, `initramfs.img`, `system.erofs`, `.dtb`s) from `minime/targets/<target>/out/<board>/`, constructs `userdata.vfat`, stages prebuilt bootloaders from `${MINIME_ROOT}/minime/uboot/out/<board>/`, runs `genimage`, and compresses final `minime-<target>-<board>.img.zst`.
+- **`mkupdate.sh`**: Consumes output artifacts from `minime/targets/<target>/out/<board>/` and emits `minime-<target>-<board>[-<ui>].tar.zst` for cross-distro updates and live target switching.
 
 ---
 

@@ -79,11 +79,11 @@ remote() {
 # --------------------------------------------------------------------------
 fetch_stock() {
 	local ws="$1"
-	local pkg="$ws/stock-ota.tar.xz"
+	local pkg="$ws/stock-ota.tar.zst"
 	if [ ! -f "$pkg" ]; then
-		log "fetching stock OTA minime-$(triple).tar.xz from testing..."
+		log "fetching stock OTA minime-$(triple).tar.zst from testing..."
 		local fetched
-		fetched=$("$SCRIPTS/fetch-asset.sh" "minime-$(triple).tar.xz")
+		fetched=$("$SCRIPTS/fetch-asset.sh" "minime-$(triple).tar.zst")
 		cp "$fetched" "$pkg"
 	else
 		log "reusing cached stock OTA $pkg"
@@ -95,7 +95,7 @@ extract_stock_initramfs() {
 	local ws="$1" stock="$2"
 	rm -rf "$ws/stage" "$ws/initrd"
 	mkdir -p "$ws/stage" "$ws/initrd"
-	tar -xf "$stock" -C "$ws/stage"
+	unzstd -c "$stock" | tar -xf - -C "$ws/stage"
 	if [ ! -f "$ws/stage/.minime/initramfs" ]; then
 		die "stock OTA has no .minime/initramfs"
 	fi
@@ -168,12 +168,12 @@ push_via_ota() {
 	local ws="$1"
 	local triple_str
 	triple_str="$(triple)"
-	local pkg="$ws/minime-${triple_str}-profiler.tar.xz"
+	local pkg="$ws/minime-${triple_str}-profiler.tar.zst"
 	log "rebuilding OTA from staged payload..."
 	cp "$ws/initramfs.instrumented" "$ws/stage/.minime/initramfs"
 	(
 		cd "$ws/stage" &&
-			tar -cf - . | xz -T0 -9 >"$pkg"
+			tar -cf - . | zstd -q -9 >"$pkg"
 	)
 	log "delivering OTA via update-device.sh..."
 	"$SCRIPTS/update-device.sh" "$pkg" "$IP"
@@ -487,10 +487,10 @@ cmd_restore() {
 		cp "$initramfs" "$ws/stage/.minime/initramfs"
 		local triple_str
 		triple_str="$(triple)"
-		local pkg="$ws/minime-${triple_str}-stock.tar.xz"
+		local pkg="$ws/minime-${triple_str}-stock.tar.zst"
 		(
 			cd "$ws/stage" &&
-				tar -cf - . | xz -T0 -9 >"$pkg"
+				tar -cf - . | zstd -q -9 >"$pkg"
 		)
 		log "delivering stock OTA via update-device.sh..."
 		"$SCRIPTS/update-device.sh" "$pkg" "$IP"

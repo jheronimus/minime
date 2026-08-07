@@ -77,6 +77,7 @@ alsa-utils
 alsa-plugins
 # ── OpenGL ES / DRM/GBM / KMS / Vulkan (Mesa Panfrost & PanVK) ───────────
 mesa
+mesa-gl
 mesa-dri-gallium
 mesa-egl
 mesa-gbm

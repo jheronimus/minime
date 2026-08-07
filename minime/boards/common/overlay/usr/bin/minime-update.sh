@@ -92,8 +92,8 @@ log "board=${BOARD} target=${TARGET} ui=${UI}"
 [ -x /usr/bin/curl ] || die "curl is not available on this image"
 [ -d "${SDCARD}" ] || die "no SD card at ${SDCARD}"
 
-ARCHIVE="${STAGE_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.xz"
-URL="https://github.com/${REPO}/releases/download/${RELEASE}/minime-${TARGET}-${BOARD}-${UI}.tar.xz"
+ARCHIVE="${STAGE_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
+URL="https://github.com/${REPO}/releases/download/${RELEASE}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
 
 log "Checking ${URL}"
 mkdir -p "${STAGE_DIR}"
@@ -108,7 +108,7 @@ SIZE="$(wc -c <"${ARCHIVE}" 2>/dev/null || echo 0)"
 log "downloaded ${SIZE} bytes"
 
 # Compare the archive's manifest against the installed one.
-REMOTE_MANIFEST="$(tar -xJOf "${ARCHIVE}" ./.minime/manifest.json 2>/dev/null || true)"
+REMOTE_MANIFEST="$(unzstd -c "${ARCHIVE}" 2>/dev/null | tar -xOf - ./.minime/manifest.json 2>/dev/null || true)"
 if [ -n "${REMOTE_MANIFEST}" ] && [ -f "${INSTALLED_MANIFEST}" ]; then
 	rem_min="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"minime_commit": *"\([^"]*\)".*/\1/p' | head -n1)"
 	rem_ui="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"ui_commit": *"\([^"]*\)".*/\1/p' | head -n1)"
@@ -133,7 +133,7 @@ sleep 1
 
 # Apply: .system clean-replaced (UI payload), .minime overlaid (state kept).
 rm -rf "${SDCARD}/.system"
-tar -xJf "${ARCHIVE}" -C "${SDCARD}"
+unzstd -c "${ARCHIVE}" | tar -xf - -C "${SDCARD}"
 
 # Verify the payload landed before removing the archive.
 [ -f "${SDCARD}/.system/version.txt" ] ||
