@@ -28,8 +28,8 @@ project is in the heavy development/debugging stage. Specifically:
 | `telnetd` | 23 | None | busybox `telnetd -l /usr/bin/autologin`; drops into `/bin/sh -l` |
 | `ftpd` | 21 | Anonymous | `tcpsvd ... /usr/sbin/ftpd -A -w /mnt/sdcard` (read/write of the whole SD card) |
 | `dropbear` (SSH) | 22 | Blank-password root | `dropbear -B` with an **empty root password** baked into the rootfs |
-| `wifi` (iwd) | — | WPA2-PSK only | iwd authenticates to the AP via `wifi.cfg`; no device-side auth |
-| `logger` (NTP via wifi) | — | — | `ntpd` syncs time after Wi-Fi connects; not a login service |
+| `wifi` (iwd) | — | WPA2-PSK only | iwd authenticates to the AP via `wifi.cfg`; no device-side auth; also starts `ntpd` (time sync) once connected |
+| `logger` | — | — | persists kernel + syslog per boot; not a login service |
 
 ### Implementation details
 
