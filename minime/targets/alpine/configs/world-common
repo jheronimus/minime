@@ -88,6 +88,13 @@ libdrm
 sdl2
 sdl2_image
 sdl2_ttf
+sdl2_mixer
+# ── HTTP / media (UI runtime) ───────────────────────────────────────────
+# curl: HTTPS client spawned by launcher updaters/scrapers.
+# ffmpeg: FFmpeg shared libraries (libavcodec/libavformat/...) linked by
+#         launcher UIs (e.g. muOS) and a usable ffmpeg/ffprobe binary.
+curl
+ffmpeg
 # ── Minime firmware pieces (libpng/zlib are SDL_image deps) ─────────────
 libpng
 zlib
