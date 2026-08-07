@@ -46,7 +46,7 @@
   - [x] RG353P/M/V touch: `CONFIG_TOUCHSCREEN_HYNITRON_CSTXXX` enabled in `tiny-rk3566.config` (both targets)
   - [x] ARC-D/S HDMI: already wired via the `rgxx3.dtsi` include (hdmi-con, &hdmi, &hdmi_sound, vp0→HDMI0) — traits set `gpu_hdmi_connector=HDMI-A-1`; no kernel change needed
   - [ ] Revisit parser design: generic KV-store parser (loop over file into a `key→value` map) + thin typed accessor layer, instead of the hardcoded schema table in traits.c/traits.rs. Trade-off deferred: pure KV loses consumer type-safety/typo detection and missing-vs-zero distinction; schema table is the maintenance surface for renames but surfaces drift loudly. Unknown-key tolerance is already required (shared file carries OS-only keys like `gpu_driver`).
-  - [ ] Verify exact H700 mixer control on-device: trait now `Line Out Playback Volume` (old `Line Out` was a routing label, not a control); confirm `amixer` on the SP
+  - [x] Verify exact H700 mixer control on-device: trait `Line Out Playback Volume` is the real control (numid=2, INTEGER 0-31) but is UNUSABLE by any amixer invocation — `sset` can't see it (not a simple control) and `cset '<name>'` fails to resolve the name; only `cset numid=2 <val>` works. The H700/H616 codec needs a numid-driven volume HAL (or a different ALSA approach); `sset` remains correct for the rk817-based RK3566/RK3326.
 
 - [ ] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
   - [THEORY] Either load `.minime/devices/${device}` when set, or drop the resolution entirely; RK3326 `first-boot-probe.sh` currently writes `device.cfg` that nothing consumes.
