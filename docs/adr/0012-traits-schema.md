@@ -134,10 +134,13 @@ Rocknix sources (cloned, not web-searched) plus on-device checks:
   `"Goodix Capacitive TouchScreen"` (goodix driver; RG DS, ARC-D),
   `"Hynitron cst3xx Touchscreen"` (hynitron_cstxxx driver; RG353P/M/V).
   ARC-S has no touchscreen.
-- **Audio** cards/mixers from the codec driver + DTS: H700 `Line Out Playback
-  Volume` (sun4i/H616 codec), RK3326/RK3566 `Master Playback Volume`
-  (rk817); RK3566 card is `rk817_int` except RG503/ARC/RG DS which use
-  `rk817_ext`.
+- **Audio** cards/mixers from the codec driver + DTS: the `audio_mixer` is the
+  ALSA **simple-mixer control** name used by `amixer sset '<mixer>' <pct>% unmute`.
+  All boards use `Line Out` (sun4i/H616 codec on H700, rk817 on RK3326/RK3566).
+  The H700 codec also exposes a raw numid control (`Line Out Playback Volume`,
+  numid=2) that is NOT a simple control and is unusable via `sset`/`cset`
+  `<name>`; it must NOT be used as `audio_mixer`. RK3566 card is `rk817_int`
+  except RG503/ARC/RG DS which use `rk817_ext`.
 - **eMMC** present on RG353P/M/V, ARC-D, RG DS (`/dev/mmcblk1`), absent on
   RG353PS/VS, RG503, ARC-S.
 - **HDMI** via DRM connector, identified by the stable `gpu_hdmi_connector`
