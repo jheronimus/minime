@@ -46,3 +46,6 @@ minime/uboot/out/*
 minime/uboot/out/rk3566/*
 !minime/uboot/out/rk3566/rkbin/
 minime/ui/out/
+
+# Mounted Minime SD card (symlink to /Volumes/minime)
+card
