@@ -9,15 +9,6 @@ on:
     paths:
       - 'minime/**'
   workflow_dispatch:
-    inputs:
-      build_rk3326:
-        description: 'Build rk3326 targets'
-        type: boolean
-        default: false
-      build_buildroot_h700:
-        description: 'Build Buildroot h700 target'
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -155,22 +146,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [alpine, buildroot]
-        board: [h700, rk3326, rk3566]
         include:
           - os: alpine
+            board: h700
+            libc: musl
+            runner: ubuntu-24.04-arm
+          - os: alpine
+            board: rk3326
+            libc: musl
+            runner: ubuntu-24.04-arm
+          - os: alpine
+            board: rk3566
             libc: musl
             runner: ubuntu-24.04-arm
           - os: buildroot
+            board: rk3326
             libc: glibc
             runner: ubuntu-latest
-        exclude:
-          - board: ${{ inputs.build_rk3326 == true && 'never_match' || 'rk3326' }}
-            os: alpine
-          - board: ${{ inputs.build_rk3326 == true && 'never_match' || 'rk3326' }}
-            os: buildroot
-          - board: ${{ inputs.build_buildroot_h700 == true && 'never_match' || 'h700' }}
-            os: buildroot
+          - os: buildroot
+            board: rk3566
+            libc: glibc
+            runner: ubuntu-latest
     runs-on: ${{ matrix.runner }}
     env:
       # The arm runner's host podman (crun) rejects the arm64 builder image
