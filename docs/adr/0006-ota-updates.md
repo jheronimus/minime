@@ -18,7 +18,7 @@ Questions arose regarding OTA behavior and delivery:
 
 ### 1. Update Package Specification
 
-The update package generator [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.zst`.
+The update package generator [mkupdate.sh](../../minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.zst`.
 
 The archive is a **deliberate mirror of the on-SD payload layout**. It contains strictly:
 
@@ -44,16 +44,16 @@ unzstd -c minime-alpine-h700-minui.tar.zst | tar -xf - -C /mnt/sdcard/
 
 OTA updates do not trigger SD card partition expansion:
 
-- [mkimage.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkimage.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.zst`).
-- [mkupdate.sh](file:///Users/ilembitov/Projects/minime/minime/build/mkupdate.sh) omits `/mnt/card/.minime/config/first_boot_expand`.
-- On first boot after raw image flash, [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
-- When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](file:///Users/ilembitov/Projects/minime/minime/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
+- [mkimage.sh](../../minime/build/mkimage.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.zst`).
+- [mkupdate.sh](../../minime/build/mkupdate.sh) omits `/mnt/card/.minime/config/first_boot_expand`.
+- On first boot after raw image flash, [initramfs-init.sh](../../minime/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
+- When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](../../minime/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
 
 ### 3. Delivery Tooling
 
 #### Local delivery (`just update`)
 
-`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.zst` from the `testing` GitHub Release via [scripts/fetch-asset.sh](file:///Users/ilembitov/Projects/minime/scripts/fetch-asset.sh), then [scripts/update-device.sh](file:///Users/ilembitov/Projects/minime/scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
+`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.zst` from the `testing` GitHub Release via [scripts/fetch-asset.sh](../../scripts/fetch-asset.sh), then [scripts/update-device.sh](../../scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
 
 1. Stop the UI service (`/etc/init.d/ui stop`) and kill launcher processes.
 2. Upload the `.tar.zst` over FTP.

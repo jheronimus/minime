@@ -36,7 +36,7 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 
 Minime supports two build targets: Alpine and Buildroot, housed under `minime/targets/`. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the central `minime/boards/` directory. Target build scripts reference or import them directly from there.
 
-For precise paths, consult [docs/MAP.md](file:///Users/ilembitov/Projects/minime/docs/MAP.md).
+For precise paths, consult [docs/MAP.md](docs/MAP.md).
 
 For init scripts, `minime/boards/common/overlay/etc/init.d/` is the single source of truth for cross-distro OpenRC services. At build time, target builders copy these init scripts into their rootfs before building `system.erofs`.
 
@@ -84,7 +84,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 
 ## Infrastructure & Scripts
 
-**Mandatory reading for AI agents**: Before making any changes to build or workflow files, read [`docs/INFRA.md`](file:///Users/ilembitov/Projects/minime/docs/INFRA.md) — it documents the full CI pipeline (workflows, scripts, dependencies, caches, and outputs). The `.github/workflows/*.yml` files are the executable source of truth for the pipeline; INFRA.md is the human-readable reference for it.
+**Mandatory reading for AI agents**: Before making any changes to build or workflow files, read [`docs/INFRA.md`](docs/INFRA.md) — it documents the full CI pipeline (workflows, scripts, dependencies, caches, and outputs). The `.github/workflows/*.yml` files are the executable source of truth for the pipeline; INFRA.md is the human-readable reference for it.
 
 ## Unified Validation Quality Gates
 

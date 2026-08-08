@@ -5,7 +5,7 @@ description: Use when deploying updated Minime binaries to the physical handheld
 
 # Live Testing on Physical Hardware
 
-Minime's [On-Device Live Verification](/Users/ilembitov/Projects/minime/AGENTS.md) directive requires that **every code change is deployed to the real handheld and verified empirically** — never assumed from a clean build. This skill is the procedure for delivering updates, collecting evidence, and debugging on-device failures.
+Minime's [On-Device Live Verification](../../../AGENTS.md) directive requires that **every code change is deployed to the real handheld and verified empirically** — never assumed from a clean build. This skill is the procedure for delivering updates, collecting evidence, and debugging on-device failures.
 
 ## When to use
 

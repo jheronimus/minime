@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This research evaluates the technical feasibility of decoupling **muOS** ([MustardOS](https://github.com/MustardOS)) from its native Buildroot OS foundations and porting its user interface frontend to run on top of **Minime**, fully conforming to [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](file:///Users/ilembitov/Projects/minime/docs/adr/0002-ui-decoupling-and-traits-contract.md).
+This research evaluates the technical feasibility of decoupling **muOS** ([MustardOS](https://github.com/MustardOS)) from its native Buildroot OS foundations and porting its user interface frontend to run on top of **Minime**, fully conforming to [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0002-contracts.md).
 
 ### Core Principles & Architecture Strategy
 1. **Surgical Isolation & Low Code Churn**: Upstream `MustardOS/frontend` is actively developed. All changes must be strictly isolated (via conditional macro overrides, thin shims, and environment fallbacks) to ensure effortless upstream rebase and tracking.
@@ -133,6 +133,6 @@ To keep `MustardOS/frontend` easily updateable from upstream:
 
 ## Primary Sources & References
 
-- [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](file:///Users/ilembitov/Projects/minime/docs/adr/0002-ui-decoupling-and-traits-contract.md)
+- [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0002-contracts.md)
 - [MustardOS/internal Repository](https://github.com/MustardOS/internal) (`script/init/S99muos.sh`, `script/mux/frontend.sh`, `script/var/func.sh`)
 - [MustardOS/frontend Repository](https://github.com/MustardOS/frontend) (`Makefile`, `common/options.h`, `common/config.c`, `module/muxfrontend.c`)
