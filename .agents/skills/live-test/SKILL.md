@@ -85,7 +85,7 @@ Collect logs via `just remote "cat <path>"` or `just remote "tail -n 100 <path>"
 
 | Log | Path | Contents |
 |---|---|---|
-| Initramfs + boot log | `/mnt/sdcard/boot.log` | `[INITRAMFS]` / `[WIFI]` / `[UI]` / `[TRAITS]` lines: partition expansion, EROFS mount, wifi handshake, launcher execution. First place to check. |
+| Initramfs + boot log | `/mnt/sdcard/.minime/logs/<boot-id>/boot.log` | `[INITRAMFS]` / `[WIFI]` / `[UI]` / `[TRAITS]` lines: partition expansion, EROFS mount, wifi handshake, launcher execution. First place to check. The active boot-id is in `/mnt/sdcard/.minime/logs/current`; the dir also holds `kernel.log` and `syslog.log`. |
 | Launcher (minui) log | `/mnt/sdcard/.userdata/minime/logs/minui.txt` | MinUI launcher stdout/stderr (`minui.elf > $LOGS_PATH/minui.txt 2>&1`). |
 | Per-system emulator logs | `/mnt/sdcard/.userdata/minime/logs/<TAG>.txt` | `minarch.elf` output per console, e.g. `FC.txt` (NES), `GBA.txt`, `PS.txt`, `SMS.txt`, `MD.txt`, `GG.txt`, `NGP.txt`, `PCE.txt`. Contains `rom_path`, core version, `aspect_ratio`, `selectScaler`, ALSA errors, **`Error relocating ... symbol not found` / `Segmentation fault`** on dlopen failure. |
 | UI runtime log | `/tmp/ui.log` | Current UI session (empty when fine). |
