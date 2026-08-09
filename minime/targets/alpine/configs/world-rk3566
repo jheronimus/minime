@@ -12,9 +12,8 @@
 #     common + rk3566 kernel config fragments.  No extra userspace
 #     packages are needed beyond world-common.
 #   - The thermal watchdog is in-kernel (CONFIG_THERMAL with
-#     DEVFREQ_THERMAL + the Rockchip DFI driver); RK3566's existing
-#     S15thermal-watchdog init script is replaced by the OpenRC thermal
-#     service in minime-overlay.
+#     DEVFREQ_THERMAL + the Rockchip DFI driver); thermal monitoring is
+#     folded into the shared `logger` service (ADR 0014).
 
 # Inherit world-common behavior is provided by build.sh, which concatenates
 # world-common and world-<board> at install time.  This file currently

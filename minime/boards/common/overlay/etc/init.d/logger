@@ -1,28 +1,35 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# logger: persist kernel and userspace logs to the FAT partition per boot.
+# logger: persist kernel and userspace logs to the FAT partition per boot,
+# and monitor SoC temperature against the kernel's own DTS trip points.
 # - kernel.log  : raw /dev/kmsg drain (boot log + live stream, sync'd)
-# - syslog.log  : busybox syslogd catch-all for userspace daemons
+# - syslog.log  : busybox syslogd catch-all (userspace daemons + thermal monitor)
 # Each boot's files live in .minime/logs/<boot-id>/ (see initramfs-init.sh);
 # dirs older than 7 days are pruned at start.  Crash evidence in kernel.log
 # survives hard power-cycles because the drain syncs every SYNC_INTERVAL.
 #
-# A single background worker owns the kmsg drain; start-stop-daemon tracks
-# it so OpenRC reports the service as started and a re-start does not spawn
-# a second drain.
+# Two background workers are tracked by start-stop-daemon pidfiles so a
+# re-start never spawns duplicates: the kmsg drain and the thermal monitor.
+# The thermal worker reads trip_point_* from the zone dir (located via the
+# cpu_thermal_path trait) so the kernel's step_wise governor and the log
+# thresholds can never disagree (ADR 0014).
 
-description="Persistent per-boot logger"
+description="Persistent per-boot logger + thermal monitor"
 
 LOGS_DIR="/mnt/sdcard/.minime/logs"
+TRAITS="/usr/share/minime/traits/platform.ini"
 WORKER_PIDFILE="/run/logger.pid"
 SYSLOG_PIDFILE="/run/logger-syslog.pid"
+THERMAL_PIDFILE="/run/logger-thermal.pid"
+THERMAL_WORKER="/run/logger-thermal.sh"
 SYNC_INTERVAL="3"
 PRUNE_DAYS="7"
 SYSLOG_MAX_KB="200"
 SYSLOG_KEEP="1"
+THERMAL_POLL="5"
 
 depend() {
-	need localmount
+	need localmount modules
 }
 
 get_boot_id() {
@@ -80,13 +87,106 @@ start() {
 
 	# Userspace daemon catch-all.  Direct file output with size rotation.
 	# Only start if not already running (guards the double-start case).
+	# -l 3: only emerg/alert/crit priorities reach the console, so thermal
+	# warning/info lines never flash over the UI framebuffer (busybox syslogd
+	# echoes to the console by default).  Value verified on-device (ADR 0014).
 	if ! [ -f "${SYSLOG_PIDFILE}" ] || ! kill -0 "$(cat "${SYSLOG_PIDFILE}" 2>/dev/null)" 2>/dev/null; then
 		start-stop-daemon -S -q -b -m \
 			-p "${SYSLOG_PIDFILE}" \
 			-x /sbin/syslogd -- \
 			-O "${LOG_DIR}/syslog.log" \
 			-s "${SYSLOG_MAX_KB}" \
-			-b "${SYSLOG_KEEP}" 2>/dev/null || true
+			-b "${SYSLOG_KEEP}" \
+			-l 3 2>/dev/null || true
+	fi
+
+	# Second worker: thermal monitor (ADR 0014).  The zone dir comes from the
+	# cpu_thermal_path trait (stripped of /temp); thresholds are derived from
+	# the zone's trip_point_* files at worker start.  If no passive trip exists
+	# the worker falls back to critical-only ("throttle-detection only").
+	THERMAL_ZONE_DIR=""
+	if [ -r "${TRAITS}" ]; then
+		thermal_path="$(sed -n 's/^cpu_thermal_path=//p' "${TRAITS}" | head -n 1)"
+		case "${thermal_path}" in
+			/sys/class/thermal/thermal_zone*) THERMAL_ZONE_DIR="${thermal_path%/temp}" ;;
+		esac
+	fi
+	if [ -n "${THERMAL_ZONE_DIR}" ] && [ -r "${THERMAL_ZONE_DIR}/temp" ]; then
+		cat > "${THERMAL_WORKER}" <<'THERMAL_EOF'
+#!/bin/sh
+# Thermal monitor worker spawned by the logger service (ADR 0014).
+# $1 = thermal zone dir, $2 = poll interval (s).
+set -eu
+
+ZONE_DIR="$1"
+POLL="$2"
+TRAITS="/usr/share/minime/traits/platform.ini"
+
+find_trip() {
+	# $1 = trip type; prints the first matching trip_point_N_temp.
+	i=0
+	while [ -f "${ZONE_DIR}/trip_point_${i}_temp" ]; do
+		ttype="$(cat "${ZONE_DIR}/trip_point_${i}_type" 2>/dev/null || true)"
+		if [ "${ttype}" = "$1" ]; then
+			cat "${ZONE_DIR}/trip_point_${i}_temp"
+			return 0
+		fi
+		i=$((i + 1))
+	done
+	return 1
+}
+
+WARN_TEMP=""
+CRIT_TEMP=""
+if [ -f "${ZONE_DIR}/trip_point_0_temp" ]; then
+	WARN_TEMP="$(find_trip passive || true)"
+	CRIT_TEMP="$(find_trip critical || true)"
+fi
+[ -n "${CRIT_TEMP}" ] || CRIT_TEMP=95000
+if [ -z "${WARN_TEMP}" ]; then
+	logger -t thermal-monitor "throttle-detection only: no passive trip in ${ZONE_DIR}"
+	WARN_TEMP="${CRIT_TEMP}"
+fi
+
+# cpufreq policy dir from the cpu_clock_path trait (same policy dir).
+POLICY_DIR=""
+	clock_path="$(sed -n 's/^cpu_clock_path=//p' "${TRAITS}" 2>/dev/null | head -n 1)"
+case "${clock_path}" in
+	/sys/devices/system/cpu/cpufreq/*/scaling_max_freq) POLICY_DIR="${clock_path%/scaling_max_freq}" ;;
+esac
+
+freq_state() {
+	[ -n "${POLICY_DIR}" ] || { printf 'freq=n/a'; return 0; }
+	cur="$(cat "${POLICY_DIR}/scaling_cur_freq" 2>/dev/null || echo 0)"
+	max="$(cat "${POLICY_DIR}/scaling_max_freq" 2>/dev/null || echo 0)"
+	if [ "${cur}" -lt "${max}" ]; then
+		printf 'throttle cur=%s max=%s' "${cur}" "${max}"
+	else
+		printf 'cur=%s max=%s' "${cur}" "${max}"
+	fi
+}
+
+last_beat=0
+logger -t thermal-monitor "monitoring ${ZONE_DIR} (warn=${WARN_TEMP} crit=${CRIT_TEMP}) poll=${POLL}s"
+while true; do
+	temp="$(cat "${ZONE_DIR}/temp" 2>/dev/null || true)"
+	if [ -n "${temp}" ]; then
+		if [ "${temp}" -ge "${CRIT_TEMP}" ]; then
+			logger -t thermal-monitor "CRITICAL: ${temp} mC (>= ${CRIT_TEMP}) $(freq_state)"
+		elif [ "${temp}" -ge "${WARN_TEMP}" ]; then
+			logger -t thermal-monitor "WARNING: ${temp} mC (>= ${WARN_TEMP}) $(freq_state)"
+		elif [ "$((last_beat + 60))" -le "$(date +%s)" ]; then
+			logger -t thermal-monitor "temp ${temp} mC"
+			last_beat="$(date +%s)"
+		fi
+	fi
+	sleep "${POLL}"
+done
+THERMAL_EOF
+		chmod +x "${THERMAL_WORKER}"
+		start-stop-daemon -S -q -b -m \
+			-p "${THERMAL_PIDFILE}" \
+			-x /bin/sh -- "${THERMAL_WORKER}" "${THERMAL_ZONE_DIR}" "${THERMAL_POLL}" 2>/dev/null || true
 	fi
 
 	sync
@@ -105,6 +205,11 @@ stop() {
 		start-stop-daemon -K -q -p "${SYSLOG_PIDFILE}" 2>/dev/null || true
 		rm -f "${SYSLOG_PIDFILE}"
 	fi
+	if [ -f "${THERMAL_PIDFILE}" ]; then
+		start-stop-daemon -K -q -p "${THERMAL_PIDFILE}" 2>/dev/null || true
+		rm -f "${THERMAL_PIDFILE}"
+	fi
+	rm -f "${THERMAL_WORKER}" 2>/dev/null || true
 
 	# Flush whatever is in the ring buffer at stop time.
 	BOOT_ID="$(get_boot_id)"

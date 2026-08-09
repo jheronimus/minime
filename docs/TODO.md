@@ -2,10 +2,11 @@
 
 ## Kernel & Performance
 
-- [ ] Integrate mainline Rockchip power/charger drivers and enable Energy Model on RK3566
-  - [THEORY] Enable `rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, and `rk817-charger`; unblocks kernel `CONFIG_THERMAL_OF` and `CONFIG_ENERGY_MODEL` (Panfrost DRM graphics is already active on Alpine).
+- [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards
+  - [x] `CONFIG_ENERGY_MODEL=y` enabled in the shared kernel fragment (ADR 0014)
 - [ ] Optimize kernel memory management and schedulers
-  - [THEORY] Enable EAS, MGLRU, TEO, schedutil, memory compaction; set swappiness=30, vm.watermark_scale_factor=150, vm.page-cluster=0 ([reference gist](https://gist.github.com/aenertia/522cd8df6f0b68a0a2f59f73d5fe3af7)).
+  - [x] `CONFIG_COMPACTION=y` enabled (CMA GPU heap pressure, ADR 0014)
+  - [ ] EAS (`CONFIG_SCHED_ENERGY`) deferred: no populated energy model on RK3566 (ADR 0014). Remaining: MGLRU, TEO, schedutil; set swappiness=30, vm.watermark_scale_factor=150, vm.page-cluster=0 ([reference gist](https://gist.github.com/aenertia/522cd8df6f0b68a0a2f59f73d5fe3af7)).
 - [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
@@ -30,6 +31,9 @@
 
 ## Board Infrastructure & System
 
+- [ ] Inspect Rocknix per-platform/device quirks for adoptable fixes (RK3566, RK3326, H700)
+  - [THEORY] Boot-time scripts under `hardware/quirks/platforms/{RK3566,RK3326,H700}` and `hardware/quirks/devices/*` (per-DT-model override dirs) cover far more than power/thermal: thermal trips, governor/DVFS paths, turbo/boost, GPU floors, suspend/fake-suspend hooks, fan/LED/battery handling, audio latency/volume, input modifiers, UI service selection, WiFi/BT. Quirks are executed every boot by `/usr/bin/autostart` — platform (SoC) dir first, then device dir, then global `autostart/common`; they persist state via `/storage/.config/profile.d/NNN-*` files and are wired into suspend/resume via `sleep.d/{pre,post}/*`. Not all installed quirks run (device dir is installed for all models but only the matching DT-model subdir executes; some guard on settings/DT nodes). Sources: [RK3566 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3566), [RK3326 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3326), [H700 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/H700), [device quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/devices).
+
 - [ ] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
   - [THEORY] Either load `.minime/devices/${device}` when set, or drop the resolution entirely; RK3326 `first-boot-probe.sh` currently writes `device.cfg` that nothing consumes.
 - [ ] RK3326 bringup (make `rk3326` a supported board in `minime/targets/*/Makefile` + CI matrix)
@@ -50,9 +54,16 @@
 - [ ] Compile patched DTB → decompile in CI and compare geometry/keycodes/names/refresh to the traits files (deeper variant of the cross-reference; needs the kernel build env)
 - [ ] Verify RG DS fb node ordering on real hardware (top-primary ⇒ `gpu_device=/dev/fb1`)
 - [ ] Revisit parser design: generic KV-store parser (loop over file into a `key→value` map) + thin typed accessor layer, instead of the hardcoded schema table in traits.c/traits.rs. Trade-off deferred: pure KV loses consumer type-safety/typo detection and missing-vs-zero distinction; schema table is the maintenance surface for renames but surfaces drift loudly. Unknown-key tolerance is already required (shared file carries OS-only keys like `gpu_driver`).
+- [ ] Review the traits system again
+  - [THEORY] Traits hand-copy values that already live in the DTS (freqs, keycodes, thermal trips, GPU OPPs) — every repetition is a drift risk. Explore generating trait values from the compiled DTB at build time (DTS as single source of truth) so hand-authored copies cannot silently diverge; hand-author only true device facts (identity, geometry) that the DTS does not expose.
 
 ## Completed
 
+- [x] CPU thermal stability policy + qualification procedure ([ADR 0014](adr/0014-cpu-thermal-stability-and-testing.md))
+  - [x] RK3566 DTS thermal trips raised to 83/88 °C CPU, 80/88 °C GPU passive (`0017-arm64-dts-rockchip-rk356x-update-thermal-trips.patch`); TSADC 95 °C hardware shutdown untouched
+  - [x] Default `cpu_clock_performance` 1800 → 1608 MHz in RK3566 traits; 1800 MHz now requires opt-in undervolt
+  - [x] Thermal monitoring merged into the `logger` service (thresholds derived from `trip_point_*` sysfs, throttle telemetry, `syslogd -l` keeps it off the framebuffer); standalone `thermal-watchdog` service removed
+  - [x] `stress-ng` + `memtester` behind a `TEST_PACKAGES=1` build-time opt-in (Alpine `world-test` fragment, Buildroot `test.config`)
 - [x] Comprehensive audit of traits system to expose all hardware controls needed for UIs
   - [x] Sectioned schema + layered cascade (`platform.ini` → `parent=` chain → device) per ADR 0012
   - [x] Standardize HDMI state paths via DRM connector (`gpu_hdmi_state_path`), ALSA audio routing helpers

@@ -269,6 +269,15 @@ assemble_rootfs() {
 	WORLD_PKGS="$(cat "${WORLD_COMMON}" "${WORLD_BOARD}" | grep -v '^#' | tr '\n' ' ')"
 	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
 
+	# Optional diagnostic/stress tooling (ADR 0014 stability test).  Release
+	# images stay lean; only TEST_PACKAGES=1 builds carry these.
+	if [ "${TEST_PACKAGES:-0}" = "1" ]; then
+		WORLD_TEST="${ALPINE_DIR}/configs/world-test"
+		[ -f "${WORLD_TEST}" ] || die "missing ${WORLD_TEST}"
+		WORLD_PKGS="${WORLD_PKGS} $(grep -v '^#' "${WORLD_TEST}" | tr '\n' ' ')"
+		log "TEST_PACKAGES=1: adding diagnostic/stress packages"
+	fi
+
 	cp /etc/resolv.conf "${ALPINE_ROOTFS_DIR}/etc/resolv.conf" 2>/dev/null || true
 	mount -t proc proc "${ALPINE_ROOTFS_DIR}/proc" 2>/dev/null || mount --bind /proc "${ALPINE_ROOTFS_DIR}/proc"
 	mount -t sysfs sysfs "${ALPINE_ROOTFS_DIR}/sys" 2>/dev/null || mount --bind /sys "${ALPINE_ROOTFS_DIR}/sys"

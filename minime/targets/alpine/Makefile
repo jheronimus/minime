@@ -50,12 +50,12 @@ IN_CONTAINER := $(if $(MINIME_IN_CONTAINER),yes)
 components:
 	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
 		mkdir -p $(ALPINE_OUTPUT_DIR) $(ALPINE_REPO_DIR) $(ALPINE_DL_DIR) $(CCACHE_DIR) $(CURDIR)/out/$(BOARD); \
-		BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=$(MINIME_ROOT)/minime/targets/alpine \
+		BOARD=$(BOARD) UI=$(UI) TEST_PACKAGES=$(TEST_PACKAGES) ALPINE_DIR=$(MINIME_ROOT)/minime/targets/alpine \
 			$(MINIME_ROOT)/minime/targets/alpine/scripts/build.sh components; \
 	else \
 		mkdir -p $(HOME)/alpine-output/$(BOARD) $(HOME)/alpine-repos $(HOME)/alpine-ccache $(HOME)/alpine-dl $(CURDIR)/out/$(BOARD); \
 		$(PODMAN_CMD) run $(RUN_ARGS) $(BUILDER_IMAGE) \
-			sh -c "BOARD=$(BOARD) UI=$(UI) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"; \
+			sh -c "BOARD=$(BOARD) UI=$(UI) TEST_PACKAGES=$(TEST_PACKAGES) ALPINE_DIR=/workspace/minime/targets/alpine /workspace/minime/targets/alpine/scripts/build.sh components"; \
 	fi
 
 TARGET_NAME := alpine

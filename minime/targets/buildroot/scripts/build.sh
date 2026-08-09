@@ -86,6 +86,10 @@ defconfig() {
 	if [ -n "${UI}" ] && [ -f "${BR2_EXTERNAL}/configs/${UI}.config" ]; then
 		configs="${configs} ${BR2_EXTERNAL}/configs/${UI}.config"
 	fi
+	if [ "${TEST_PACKAGES:-0}" = "1" ] && [ -f "${BR2_EXTERNAL}/configs/test.config" ]; then
+		log "TEST_PACKAGES=1: adding diagnostic/stress packages"
+		configs="${configs} ${BR2_EXTERNAL}/configs/test.config"
+	fi
 	"${BUILDROOT_DIR}/support/kconfig/merge_config.sh" \
 		-O "${BUILDROOT_OUTPUT_DIR}" \
 		-m \

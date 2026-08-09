@@ -28,7 +28,7 @@ IN_CONTAINER := $(if $(MINIME_IN_CONTAINER),yes)
 
 components:
 	@if [ "$(IN_CONTAINER)" = "yes" ]; then \
-		BOARD=$(BOARD) UI=$(UI) MINIME_ROOT=$(MINIME_ROOT) \
+		BOARD=$(BOARD) UI=$(UI) TEST_PACKAGES=$(TEST_PACKAGES) MINIME_ROOT=$(MINIME_ROOT) \
 			$(MINIME_ROOT)/minime/targets/buildroot/scripts/build.sh components; \
 	else \
 		mkdir -p $(HOME)/.buildroot-ccache $(HOME)/.buildroot-dl; \
@@ -37,7 +37,7 @@ components:
 			-v $(HOME)/.buildroot-ccache:/root/.buildroot-ccache \
 			-v $(HOME)/.buildroot-dl:/root/.buildroot-dl \
 			$(BUILDER_IMAGE) \
-			sh -c "BOARD=$(BOARD) UI=$(UI) /workspace/minime/targets/buildroot/scripts/build.sh components"; \
+			sh -c "BOARD=$(BOARD) UI=$(UI) TEST_PACKAGES=$(TEST_PACKAGES) /workspace/minime/targets/buildroot/scripts/build.sh components"; \
 	fi
 
 TARGET_NAME := buildroot

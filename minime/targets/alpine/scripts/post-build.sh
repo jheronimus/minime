@@ -71,8 +71,6 @@ fi
 mkdir -p "${TARGET_DIR}/usr/share/minime/scripts"
 [ -f "${COMMON_DIR}/scripts/device.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/device.sh" \
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
-[ -f "${COMMON_DIR}/scripts/thermal-watchdog" ] && install -m 0755 "${COMMON_DIR}/scripts/thermal-watchdog" \
-	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 [ -f "${COMMON_DIR}/scripts/log-boot.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/log-boot.sh" \
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 [ -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/collect-diagnostics.sh" \
