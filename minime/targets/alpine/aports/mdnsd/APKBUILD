@@ -2,7 +2,7 @@
 # abuild framework sets srcdir/builddir/pkgdir in the build env.
 # Maintainer: Minime <maintainers@minime-os.local>
 pkgname=mdnsd
-pkgver=1.1
+pkgver=1.2
 pkgrel=0
 pkgdesc="Embeddable Multicast DNS (mDNS/DNS-SD) daemon for Minime .local discovery"
 url="https://github.com/troglobit/mdnsd"
@@ -13,7 +13,7 @@ makedepends="
 	pkgconf
 "
 source="mdnsd-$pkgver.tar.gz::https://github.com/troglobit/mdnsd/releases/download/v$pkgver/mdnsd-$pkgver.tar.gz"
-sha512sums="31a3d0f6ccabe383ffd01a30374b17d502664107bc50fdaaba15a9a854b02ca18b819bae133be96b7d6626bbb1f28367b9095a2cfdce2c7553eee525edc72213  mdnsd-1.1.tar.gz"
+sha512sums="88d87b9609ed3ade5fff9c1c4dc87e6215a62c09536fdee7d906854b3733309cb6101d0969d449c8227cbe92ae165c548b14e381e8d1f546cb81cec262a28121  mdnsd-1.2.tar.gz"
 
 build() {
 	./configure \

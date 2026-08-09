@@ -1,0 +1,23 @@
+diff -ru a/package/mdnsd/mdnsd.hash b/package/mdnsd/mdnsd.hash
+--- a/package/mdnsd/mdnsd.hash	2026-08-10 02:14:49
++++ b/package/mdnsd/mdnsd.hash	2026-08-10 02:14:49
+@@ -1,5 +1,5 @@
+ # Upstream sha256 from GitHub
+-sha256  1af8742ab82a0af88d99d0b15508358ad4305879ab039631bea889138f5c87e8  mdnsd-0.12.tar.gz
++sha256  8f65b60c4e050f251db069bdde63c2eebcad7303f7a4638ef1a7cb423b8fb4c8  mdnsd-1.2.tar.gz
+ 
+ # Locally computed
+-sha256  2969546227b58ce1b431cc4c36c9a9b45d604e6b94fb8b787ea5d3696f3eee3b  LICENSE
++sha256  89a722240ac1fdc0366696eaa5469968397ae274a0003e09a88d0686eeb3cd3e  LICENSE
+diff -ru a/package/mdnsd/mdnsd.mk b/package/mdnsd/mdnsd.mk
+--- a/package/mdnsd/mdnsd.mk	2026-08-10 02:14:49
++++ b/package/mdnsd/mdnsd.mk	2026-08-10 02:14:49
+@@ -4,7 +4,7 @@
+ #
+ ################################################################################
+ 
+-MDNSD_VERSION = 0.12
++MDNSD_VERSION = 1.2
+ MDNSD_SITE = https://github.com/troglobit/mdnsd/releases/download/v$(MDNSD_VERSION)
+ MDNSD_LICENSE = BSD-3-Clause
+ MDNSD_LICENSE_FILES = LICENSE

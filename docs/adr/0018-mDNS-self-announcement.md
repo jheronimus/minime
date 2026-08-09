@@ -42,8 +42,13 @@ mDNSResponder.
   `post-build.sh`. This ADR wires it up with the shared service below.
 - **Alpine**: built as a local aport
   [aports/mdnsd/APKBUILD](../../minime/targets/alpine/aports/mdnsd/APKBUILD)
-  from the upstream release tarball, pinned to **v1.1** (the same version
-  Buildroot uses), and added to `world-common` + the `build.sh` package loop.
+  from the upstream release tarball and added to `world-common` + the
+  `build.sh` package loop.
+
+Both targets run **mdnsd v1.2**. Alpine builds it from the upstream source
+directly; Buildroot `2026.05.1` ships an older in-tree version (0.12), so the
+buildroot tree is patched to 1.2 via
+[support/buildroot-patches](../../minime/targets/buildroot/support/buildroot-patches/0001-mdnsd-bump-to-1.2.patch).
 
 ### 2. Shared init service
 
@@ -55,8 +60,8 @@ runlevel) runs `mdnsd -n -s -H minime`:
 - `-s` routes logs to syslog (captured by the `logger` service, ADR 0010).
 - `-H minime` fixes the advertised hostname, independent of the OS hostname
   service.
-- The pidfile is managed by `start-stop-daemon --make-pidfile`; mdnsd 1.1 has
-  no `-p` flag (added in 1.2).
+- The pidfile is managed by `start-stop-daemon --make-pidfile`, so mdnsd's
+  own `-p` flag is not used.
 - `depend()` is `need localmount modules` only — no `after wifi`, since
   netlink tracking handles the interface appearing whenever Wi-Fi connects
   (and avoids waiting on the wifi service's 40 s connect timeout).
