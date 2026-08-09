@@ -28,6 +28,7 @@ The archive is a **deliberate mirror of the on-SD payload layout**. It contains 
 | `.minime/initramfs` | `initramfs.img` | Initramfs CPIO archive containing early init logic |
 | `.minime/system` | `system.erofs` | Read-only compressed EROFS root filesystem |
 | `.minime/devices/*.dtb` | `*.dtb` | Device Tree Blobs for board hardware variants |
+| `.minime/dtb` | default DTB | The DTB the bootloader actually loads (`boot.cmd` `fatload`s `.minime/dtb`), chosen like `mkimage.sh` (`DEFAULT_DEVICE` from `boot.env`, else the first `devices/*.dtb`). Without this entry, DTS-affecting kernel changes silently never deploy over OTA |
 | `.minime/ui.env` | UI payload | UI contract manifest (only when a `--ui` is specified) |
 | `.minime/manifest.json` | Generated | Build identity: `target`, `board`, `ui`, `minime_commit`, `ui_commit`, `timestamp` |
 | `.system/` | UI payload staging | MinUI binaries (`minime/`, `res/`, `version.txt`, `commits.txt`) |
@@ -38,7 +39,7 @@ The archive is built with a leading `.` so that **extracting it directly onto `/
 unzstd -c minime-alpine-h700-minui.tar.zst | tar -xf - -C /mnt/sdcard/
 ```
 
-**Nothing else is packaged.** BIOS files, ROMs, save states, emulator paks, `Tools/`, `Emus/`, `.userdata/`, `.minime/config/`, `.minime/traits`, `dtb`, `u-boot-ddr3.bin`, and `boot.log` are deliberately excluded. User data is preserved **by construction** — it never enters the archive — rather than by defensive checks in the delivery script.
+**Nothing else is packaged.** BIOS files, ROMs, save states, emulator paks, `Tools/`, `Emus/`, `.userdata/`, `.minime/config/`, `.minime/traits`, `u-boot-ddr3.bin`, and `boot.log` are deliberately excluded. User data is preserved **by construction** — it never enters the archive — rather than by defensive checks in the delivery script.
 
 ### 2. Partition Expansion Safety
 
@@ -61,7 +62,7 @@ OTA updates do not trigger SD card partition expansion:
    - `-J` is required: the device's busybox `tar` does not auto-detect xz compression.
    - Decompressing the ~100 MB archive outlives the telnet session window, so the extraction runs in the background with a completion marker and the delivery script polls for it before rebooting.
    - `.system/` is **clean-replaced** — it is pure MinUI payload, so removing it first guarantees no stale binaries (e.g. a removed core `.so`) linger after an update.
-   - `.minime/` is **overlaid** by `tar -xf` — device-specific state (`config/`, `traits`, `dtb`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
+   - `.minime/` is **overlaid** by `tar -xf` — the OS payload (including the bootloader's default `.minime/dtb`) is refreshed, while device-specific state (`config/`, `traits`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
 4. Reboot the device.
 
 The target IP is read from `target_ip` in `deploy.cfg` unless passed explicitly.
@@ -84,11 +85,11 @@ The FAT32 card layout keeps user data separate from updateable system content:
 
 | Path | Owner | Updateable by OTA? |
 |------|-------|--------------------|
-| `.minime/{kernel,initramfs,system,devices,ui.env}` | Minime OS + UI contract | Yes (overlaid) |
+| `.minime/{kernel,initramfs,system,devices,dtb,ui.env}` | Minime OS + UI contract | Yes (overlaid) |
 | `.system/` | Active UI (MinUI/Allium) | Yes (clean-replaced) |
 | `.userdata/` | Active UI (upstream MinUI convention) | No — never packaged |
 | `Bios/`, `Roms/`, `Saves/`, `Emus/`, `Tools/` | User | No — never packaged |
-| `.minime/config/`, `.minime/traits`, `dtb`, `u-boot-ddr3.bin`, `boot.log` | Minime OS device state | No — never packaged |
+| `.minime/config/`, `.minime/traits`, `u-boot-ddr3.bin`, `boot.log` | Minime OS device state | No — never packaged |
 
 `.userdata/` is an **upstream MinUI** directory (defined in MinUI's `defines.h` and created at runtime by MinUI's `launch.sh`/`minarch.c` for logs, recents, shader cache, and per-game config/slot state). It is not a Minime invention and is neither shipped in images nor packaged in OTAs.
 

@@ -87,17 +87,16 @@ start() {
 
 	# Userspace daemon catch-all.  Direct file output with size rotation.
 	# Only start if not already running (guards the double-start case).
-	# -l 3: only emerg/alert/crit priorities reach the console, so thermal
-	# warning/info lines never flash over the UI framebuffer (busybox syslogd
-	# echoes to the console by default).  Value verified on-device (ADR 0014).
+	# No severity filter: busybox `-l N` drops messages globally (below-N
+	# priorities never even reach the file), so passing it would silence the
+	# thermal monitor's WARNING/info lines entirely (verified on-device).
 	if ! [ -f "${SYSLOG_PIDFILE}" ] || ! kill -0 "$(cat "${SYSLOG_PIDFILE}" 2>/dev/null)" 2>/dev/null; then
 		start-stop-daemon -S -q -b -m \
 			-p "${SYSLOG_PIDFILE}" \
 			-x /sbin/syslogd -- \
 			-O "${LOG_DIR}/syslog.log" \
 			-s "${SYSLOG_MAX_KB}" \
-			-b "${SYSLOG_KEEP}" \
-			-l 3 2>/dev/null || true
+			-b "${SYSLOG_KEEP}" 2>/dev/null || true
 	fi
 
 	# Second worker: thermal monitor (ADR 0014).  The zone dir comes from the

@@ -85,12 +85,13 @@ editing that file on a PC.
 - **Telemetry**: the worker additionally samples `scaling_cur_freq` vs
   `scaling_max_freq` while temperature is elevated and logs throttle events,
   giving the stability test data beyond raw temperature.
-- **No TTY output**: add `-l <value>` to the `syslogd` invocation in the
-  `logger` service so warning/info priorities never reach the framebuffer
-  console (busybox `syslogd` echoes to the console by default; `-l N` logs only
-  messages more urgent than N to console). The merged worker then behaves like
-  any other log producer. Exact `-l` value verified on-device (busybox
-  semantics vary by version).
+- **File-only logging**: busybox `syslogd` does not echo messages to the
+  console (no console option in its usage), and its `-l N` filter drops
+  below-N priorities *globally* — they never reach the log file either —
+  which would silently silence the thermal monitor. So no severity filter is
+  applied; the worker logs through the same `logger` path as any other
+  daemon. Verified on-device: with `-l 3` no `user.notice` lines reached
+  `syslog.log`; without it they do.
 
 ### 5. Two-phase stability test
 

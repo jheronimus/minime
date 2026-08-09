@@ -7,7 +7,7 @@
 #                 --input-dir <dir> --output-dir <dir> [--ui <minui|allium>]
 #
 # The archive is a deliberate mirror of the SD card payload: only
-#   .minime/{kernel,initramfs,system,devices/*.dtb,ui.env,manifest.json}  (OS + contract + build identity)
+#   .minime/{kernel,initramfs,system,dtb,devices/*.dtb,ui.env,manifest.json}  (OS + contract + build identity)
 #   .system/...                                              (UI binaries)
 # are packaged. User data (Bios/, Roms/, Saves/, Emus/, Tools/, .userdata/) is
 # never included, so extracting the archive onto /mnt/sdcard cannot clobber it.
@@ -59,6 +59,7 @@ if [ -z "$TARGET" ] || [ -z "$BOARD" ] || [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_D
 fi
 
 MINIME_ROOT="${MINIME_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+BOARD_DIR="${MINIME_ROOT}/minime/boards/${BOARD}"
 
 mkdir -p "${OUTPUT_DIR}"
 
@@ -93,6 +94,23 @@ if [ -d "${INPUT_DIR}/devices" ]; then
 	cp -f "${INPUT_DIR}/devices/"*.dtb "${STAGE_DIR}/.minime/devices/" 2>/dev/null || true
 fi
 cp -f "${INPUT_DIR}"/*.dtb "${STAGE_DIR}/.minime/devices/" 2>/dev/null || true
+
+# Stage the default DTB the bootloader actually loads (boot.cmd fatloads
+# .minime/dtb). Without this, DTS-affecting changes never reach the device
+# over OTA, only via a full image reflash. Mirrors mkimage.sh.
+DEFAULT_DEVICE="${DEFAULT_DEVICE:-}"
+if [ -z "${DEFAULT_DEVICE}" ] && [ -f "${BOARD_DIR}/boot.env" ]; then
+	DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${BOARD_DIR}/boot.env" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+fi
+
+if [ -n "${DEFAULT_DEVICE}" ] && [ -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" ]; then
+	cp -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" "${STAGE_DIR}/.minime/dtb"
+else
+	first_dtb="$(ls "${STAGE_DIR}/.minime/devices/"*.dtb 2>/dev/null | head -1 || true)"
+	if [ -n "${first_dtb}" ]; then
+		cp -f "${first_dtb}" "${STAGE_DIR}/.minime/dtb"
+	fi
+fi
 
 # --- UI payload (.system/ + .minime/ui.env) --------------------------------
 if [ -n "${UI}" ]; then
