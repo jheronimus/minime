@@ -3,7 +3,7 @@ default: validate
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
 # Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes, UI submodules)
-validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow check-allium check-minui
+validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow check-allium check-minui check-yabause
 
 # Validate Allium Rust code formatting (cargo fmt) and lints (cargo clippy)
 check-allium:
@@ -12,6 +12,10 @@ check-allium:
 # Validate MinUI C code formatting (clang-format)
 check-minui:
     ./scripts/check-minui.sh
+
+# Validate YabaSanshiro libretro glue formatting (clang-format)
+check-yabause:
+    ./scripts/check-yabause.sh
 
 # Validate GitHub Actions workflow files with actionlint
 check-workflows:
@@ -47,6 +51,8 @@ check-scripts:
         -not -path "*/.git/*" \
         -not -path "*/pkg/*" \
         -not -path "*/downloads/*" \
+        -not -path "*/src/yabause/libchdr/*" \
+        -not -path "*/src/yabause/yabause/*" \
         | sort | while read -r f; do
         echo "  sh: $f"
         sh -n "$f"
