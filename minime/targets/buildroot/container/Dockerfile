@@ -54,6 +54,8 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		zlib1g-dev \
 		zlib1g-dev:arm64 \
 		liblz4-dev:arm64 \
+		nodejs \
+		npm \
 	&& rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI for release uploads in CI

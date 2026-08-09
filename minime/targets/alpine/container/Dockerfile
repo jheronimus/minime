@@ -75,6 +75,8 @@ RUN apk add --no-cache --no-progress \
 		sdl2-dev \
 		sdl2_image-dev \
 		sdl2_ttf-dev \
+		nodejs \
+		npm \
 		squashfs-tools \
 		sudo \
 		util-linux-dev \

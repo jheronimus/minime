@@ -67,6 +67,7 @@ elif [ "$UI" = "allium" ]; then
             --bin activity-tracker --bin screenshot --bin screenshot-viewer \
             --bin say --bin show; \
             make retroarch-aarch64 CC=\"ccache gcc\" CXX=\"ccache g++\"; \
+            make tools-aarch64 AARCH64_TARGET=aarch64-unknown-linux-musl; \
             chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target /workspace/minime/ui/allium/dist"
 
 		mkdir -p minime/ui/allium/target/${TARGET}
@@ -84,6 +85,7 @@ elif [ "$UI" = "allium" ]; then
             --bin activity-tracker --bin screenshot --bin screenshot-viewer \
             --bin say --bin show; \
             make retroarch-aarch64 HOST=aarch64-linux-gnu CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\"; \
+            make tools-aarch64 AARCH64_TARGET=aarch64-unknown-linux-gnu; \
             chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target /workspace/minime/ui/allium/dist"
 	fi
 
@@ -126,6 +128,18 @@ elif [ "$UI" = "allium" ]; then
 	else
 		echo "WARNING: retroarch binary not found — skipping injection" >&2
 	fi
+	# Stage the .allium runtime tree (config/cores/locales/fonts/scripts/
+	# migrations) plus the bundled aarch64 tools (dufs/collie/syncthing)
+	# built by the tools-aarch64 target into .allium/bin.
+	cp -r "$STATIC/.allium/." "$STAGE_DIR/.allium/" 2>/dev/null || true
+	mkdir -p "$STAGE_DIR/.allium/bin"
+	for tool in dufs collie syncthing; do
+		if [ -f "$ROOT_DIR/minime/ui/allium/dist/.allium/bin/$tool" ]; then
+			cp "$ROOT_DIR/minime/ui/allium/dist/.allium/bin/$tool" "$STAGE_DIR/.allium/bin/$tool"
+		else
+			echo "WARNING: $tool binary not found — skipping injection" >&2
+		fi
+	done
 	[ -d "$STATIC/.minime" ] && cp -r "$STATIC/.minime" "$STAGE_DIR/" || true
 
 	OUT_TAR="$ROOT_DIR/minime/ui/out/allium-${LIBC}-aarch64.tar"
