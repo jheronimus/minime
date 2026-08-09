@@ -44,6 +44,7 @@ gg|Game Gear (GG)|GG
 sms|Master System (SMS)|MS
 psx|Sony PlayStation (PS)|PS
 pce|PC Engine (PCE)|PCE
+saturn|Sega Saturn (SAT)|SAT
 lynx|Atari Lynx (LYNX)|LYNX
 ngp|Neo Geo Pocket (NGP)|NGP
 wswan|WonderSwan (WS)|WS
