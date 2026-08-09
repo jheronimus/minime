@@ -48,13 +48,15 @@ mDNSResponder.
 ### 2. Shared init service
 
 [init.d/mdns](../../minime/boards/common/overlay/etc/init.d/mdns) (boot
-runlevel) runs `mdnsd -n -s -H minime -p /run/mdnsd.pid`:
+runlevel) runs `mdnsd -n -s -H minime`:
 
 - `-n` keeps mdnsd in the foreground so `start-stop-daemon` tracks the pid
   correctly (mdnsd daemonizes by default otherwise).
 - `-s` routes logs to syslog (captured by the `logger` service, ADR 0010).
 - `-H minime` fixes the advertised hostname, independent of the OS hostname
   service.
+- The pidfile is managed by `start-stop-daemon --make-pidfile`; mdnsd 1.1 has
+  no `-p` flag (added in 1.2).
 - `depend()` is `need localmount modules` only — no `after wifi`, since
   netlink tracking handles the interface appearing whenever Wi-Fi connects
   (and avoids waiting on the wifi service's 40 s connect timeout).

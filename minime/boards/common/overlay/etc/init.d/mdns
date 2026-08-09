@@ -10,7 +10,8 @@
 description="Minime mDNS (mdnsd)"
 
 command="/usr/sbin/mdnsd"
-command_args="-n -s -H minime -p /run/mdnsd.pid"
+# mdnsd 1.1 has no -p flag; start-stop-daemon's --make-pidfile owns the pidfile.
+command_args="-n -s -H minime"
 pidfile="/run/mdnsd.pid"
 
 depend() {
