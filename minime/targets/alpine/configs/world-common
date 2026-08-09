@@ -102,4 +102,3 @@ zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 # fatresize        FAT32 expansion
-# libretro-headers  libretro.h

@@ -1,5 +1,0 @@
-config BR2_PACKAGE_LIBRETRO_HEADERS
-	bool
-	help
-	  Build-time libretro API header package pinned to the
-	  libretro-common commit aligned with RetroArch.

@@ -148,7 +148,7 @@ Building Alpine Linux firmware for Minime:
   - `minirootfs`, `apks`, `rootfs`: individual steps for development
 - **`container/Dockerfile`**: Build environment container (`arm64`, `abuild`, `erofs-utils`, `genimage`, `mtools`).
 - **`configs/`**: Build configuration and world package lists per board.
-- **`aports/`**: Local APK build recipes (tinykernel, fatresize, libretro-headers, libretro-cores, retroarch, drkhrse-miyoo-bezels).
+- **`aports/`**: Local APK build recipes (tinykernel, fatresize, drkhrse-miyoo-bezels).
 - **`out/<board>/`**: Staging directory for `Image`, `initramfs.img`, `system.erofs`, `.dtb` files, and final `minime-alpine-<board>-<ui>.img.zst` (plus `minime-alpine-<board>-<ui>.tar.zst` OTA package).
 
 ## Buildroot Target Builder (`minime/targets/buildroot/`)
@@ -168,7 +168,7 @@ Building Buildroot firmware for Minime:
   - `external/configs/`: Config fragments: `common.config`, `<board>.config`, `<ui>.config`.
   - `external/scripts/post-build.sh`: Copies OpenRC services, traits, firmware into rootfs.
   - `external/scripts/system-image.sh`: Builds system.erofs and initramfs.
-  - `external/package/`: Custom packages (fatresize, libretro-headers, libretro-cores, retroarch, libmali, mali-kbase, drkhrse-miyoo-bezels).
+  - `external/package/`: Custom packages (fatresize, libmali, mali-kbase, drkhrse-miyoo-bezels).
 - **`container/Dockerfile`**: Build environment container (`debian:bookworm-slim`, `genimage`, `mtools`, `erofs-utils`).
 - **`out/<board>/`**: Target output directory.
 
