@@ -16,9 +16,19 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		crossbuild-essential-arm64 \
 		crossbuild-essential-armhf \
 		swig \
+		autoconf \
+		automake \
+		libtool \
+		pkg-config \
 		libsdl2-dev:arm64 \
 		libsdl2-image-dev:arm64 \
 		libsdl2-ttf-dev:arm64 \
+		libasound2-dev:arm64 \
+		libdrm-dev:arm64 \
+		libegl1-mesa-dev:arm64 \
+		libgles2-mesa-dev:arm64 \
+		libgbm-dev:arm64 \
+		libzstd-dev:arm64 \
 		mold \
 		zstd \
 		libelf-dev \

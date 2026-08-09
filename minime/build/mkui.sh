@@ -60,12 +60,14 @@ elif [ "$UI" = "allium" ]; then
 		docker run --rm -u root \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.cargo/registry:/root/.cargo/registry" \
+			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-musl:latest" \
 			/bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --features minime \
             --bin alliumd --bin allium-launcher --bin allium-menu \
             --bin activity-tracker --bin screenshot --bin screenshot-viewer \
             --bin say --bin show; \
-            chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target"
+            make retroarch-aarch64 CC=\"ccache gcc\" CXX=\"ccache g++\"; \
+            chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target /workspace/minime/ui/allium/dist"
 
 		mkdir -p minime/ui/allium/target/${TARGET}
 		ln -sf ../release minime/ui/allium/target/${TARGET}/release
@@ -74,13 +76,15 @@ elif [ "$UI" = "allium" ]; then
 		docker run --rm -u root \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.cargo/registry:/root/.cargo/registry" \
+			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
 			-e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
 			"ghcr.io/${OWNER}/minime-glibc:latest" \
 			/bin/bash -c "cd /workspace/minime/ui/allium && cargo build --release --target ${TARGET} --features minime \
             --bin alliumd --bin allium-launcher --bin allium-menu \
             --bin activity-tracker --bin screenshot --bin screenshot-viewer \
             --bin say --bin show; \
-            chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target"
+            make retroarch-aarch64 HOST=aarch64-linux-gnu CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\"; \
+            chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target /workspace/minime/ui/allium/dist"
 	fi
 
 	BUILD="minime/ui/allium/target/${TARGET}/release"
@@ -114,6 +118,14 @@ elif [ "$UI" = "allium" ]; then
 	cp -r "$STATIC/Apps/"*.pak "$STAGE_DIR/apps/" 2>/dev/null || true
 
 	cp -r "$STATIC/RetroArch/." "$STAGE_DIR/RetroArch/" || true
+	# Inject the aarch64 RetroArch built by the retroarch-aarch64 target
+	# (third-party/RetroArch-patch assembled source + the UDP-command patches
+	# Allium's menu depends on).  The upstream static/RetroArch has no binary.
+	if [ -f "$ROOT_DIR/minime/ui/allium/dist/RetroArch/retroarch" ]; then
+		cp "$ROOT_DIR/minime/ui/allium/dist/RetroArch/retroarch" "$STAGE_DIR/RetroArch/retroarch"
+	else
+		echo "WARNING: retroarch binary not found — skipping injection" >&2
+	fi
 	[ -d "$STATIC/.minime" ] && cp -r "$STATIC/.minime" "$STAGE_DIR/" || true
 
 	OUT_TAR="$ROOT_DIR/minime/ui/out/allium-${LIBC}-aarch64.tar"

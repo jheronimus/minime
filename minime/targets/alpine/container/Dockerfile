@@ -61,6 +61,9 @@ RUN apk add --no-cache --no-progress \
 		perl \
 		pkgconf \
 		py3-pip \
+		alsa-lib-dev \
+		libdrm-dev \
+		mesa-dev \
 		py3-pycryptodome \
 		py3-requests \
 		py3-yaml \
