@@ -1,0 +1,22 @@
+# Minime preloaded-ROM folder mapping (single source of truth).
+#
+# Format: short_name|minui_name|allium_name
+#
+# Consumed at build time by roms/install.sh (per-UI preloaded-ROM staging) and
+# at runtime by /usr/bin/update.sh (renames Roms/ subfolders when switching
+# UIs).  Both use the same table so the two naming conventions never diverge.
+
+gb|Game Boy (GB)|GB
+gbc|Game Boy Color (GBC)|GBC
+gba|Game Boy Advance (GBA)|GBA
+nes|Nintendo Entertainment System (FC)|FC
+snes|Super Nintendo (SFC)|SFC
+md|Sega Genesis (MD)|MD
+gg|Game Gear (GG)|GG
+sms|Master System (SMS)|MS
+psx|Sony PlayStation (PS)|PS
+pce|PC Engine (PCE)|PCE
+saturn|Sega Saturn (SAT)|SAT
+lynx|Atari Lynx (LYNX)|LYNX
+ngp|Neo Geo Pocket (NGP)|NGP
+wswan|WonderSwan (WS)|WS

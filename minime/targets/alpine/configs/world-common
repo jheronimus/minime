@@ -8,6 +8,7 @@
 #   - minui / allium      UI frontends (mutually exclusive, fetch-prebuilt)
 #   - preloaded-roms      bundled ROMs
 #   - fatresize           FAT32 resizer for first-boot expansion
+#   - mdnsd               mDNS/DNS-SD daemon (minime.local announcement)
 #
 # Notes:
 #   - musl replaces glibc; the gcompat compatibility layer is intentionally
@@ -57,6 +58,9 @@ iproute2-minimal
 # /etc/init.d/dropbear).  Provides an encrypted remote shell alongside telnet.
 dropbear
 # ── DNS / mDNS ───────────────────────────────────────────────────────────
+# mdnsd announces the device as <hostname>.local (minime.local) with conflict
+# resolution and DNS-SD service records for telnet/FTP/SSH (see /etc/init.d/mdns).
+mdnsd
 # ── Wi-Fi + regulatory ───────────────────────────────────────────────────
 # iwd (Internet Wireless Daemon) replaces wpa_supplicant: it does 802.11 + WPA
 # natively with built-in DHCP (EnableNetworkConfiguration) and persists known

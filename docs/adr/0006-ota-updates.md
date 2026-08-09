@@ -52,32 +52,32 @@ OTA updates do not trigger SD card partition expansion:
 
 ### 3. Delivery Tooling
 
-#### Local delivery (`just update`)
+#### Device-side updates (`/usr/bin/update.sh`)
 
-`just update <os> <board> <ui> [ip]` fetches the latest `minime-<os>-<board>-<ui>.tar.zst` from the `testing` GitHub Release via [scripts/fetch-asset.sh](../../scripts/fetch-asset.sh), then [scripts/update-device.sh](../../scripts/update-device.sh) delivers it to a reachable device over FTP/telnet:
+OTA updates are applied **on the device** by `/usr/bin/update.sh <minui|allium>` (baked into the rootfs overlay). It is invoked over telnet/SSH (e.g. `just remote "update.sh minui"`) and detaches itself so it survives the session:
 
-1. Stop the UI service (`/etc/init.d/ui stop`) and kill launcher processes.
-2. Upload the `.tar.zst` over FTP.
-3. On the device: `rm -rf /mnt/sdcard/.system && unzstd -c <pkg> | tar -xf - -C /mnt/sdcard/`.
-   - `-J` is required: the device's busybox `tar` does not auto-detect xz compression.
-   - Decompressing the ~100 MB archive outlives the telnet session window, so the extraction runs in the background with a completion marker and the delivery script polls for it before rebooting.
-   - `.system/` is **clean-replaced** — it is pure MinUI payload, so removing it first guarantees no stale binaries (e.g. a removed core `.so`) linger after an update.
-   - `.minime/` is **overlaid** by `tar -xf` — the OS payload (including the bootloader's default `.minime/dtb`) is refreshed, while device-specific state (`config/`, `traits`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
-4. Reboot the device.
+1. Self-detects board (`/proc/device-tree/compatible`) and target (`/etc/os-release`).
+2. Downloads `minime-<target>-<board>-<ui>.tar.zst` from the `testing` GitHub Release with curl.
+3. Compares the archive's `.minime/manifest.json` against the installed one; exits early when already current.
+4. Stops the UI, then `rm -rf /mnt/sdcard/.system && unzstd -c <pkg> | tar -xf - -C /mnt/sdcard/`.
+   - `.system/` is **clean-replaced** — pure UI payload, so no stale binaries linger after a switch.
+   - `.minime/` is **overlaid** — the OS payload (including the bootloader's default `.minime/dtb`) is refreshed, while device-specific state (`config/`, `traits`, `u-boot-ddr3.bin`, `boot.log`) is not in the archive and is therefore preserved.
+   - Switching UIs (e.g. MinUI → Allium) renames `Roms/` subfolders to the new UI's naming convention via the shared `roms/mappings` table (also consumed by the preloaded-ROM installer).
+5. Reboots the device.
 
-The target IP is read from `target_ip` in `deploy.cfg` unless passed explicitly.
+There is no host-side OTA push (`just update`). Arbitrary local file uploads use `just upload`; the generic push-and-apply helper [scripts/update-device.sh](../../scripts/update-device.sh) remains for locally built packages (boot-profiler instrumented initramfs).
 
 #### Full image flash (`just deploy`)
 
 `just deploy <os> <board> <ui> [disk]` fetches the latest `minime-<os>-<board>-<ui>.img.zst` and flashes it to the SD card (`dd` / `diskutil`), optionally injecting `wifi.cfg`. It also accepts an explicit image path for flashing a specific build. The `deploy.cfg` `minime`-label guard prevents accidental writes to non-Minime cards.
 
-#### Version check (`just check-version`)
+#### Version check
 
-`just check-version <os> <board> <ui> [ip]` fetches the latest testing OTA and reads the device's `.minime/manifest.json` (build identity written by `mkupdate.sh`) to report whether the installed image matches the latest build.
+The device's installed build is read from `/mnt/sdcard/.minime/manifest.json` (build identity written by `mkupdate.sh`) via `just remote "cat /mnt/sdcard/.minime/manifest.json"`. `update.sh` performs the same comparison internally and reports "already up to date" when nothing is pending.
 
-#### Deprecated: `just fetch`
+#### Deprecated: `just fetch` / `just update` / `just check-version`
 
-`just fetch` and `just fetch-update` are removed. `just deploy` and `just update` fetch the latest testing asset on demand; there is no longer a separate "download all images" step.
+`just fetch`, `just fetch-update`, `just update`, and `just check-version` are removed. `just deploy` fetches the latest testing image on demand; OTA updates are applied on-device via `/usr/bin/update.sh`. There is no longer a separate "download all images" step.
 
 ### 4. User Data Ownership
 

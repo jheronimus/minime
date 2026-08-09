@@ -88,13 +88,20 @@ if [ -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" ]; then
 	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/collect-diagnostics.sh"
 fi
 
-# 7. OpenRC SysV Cleanup
+# 7. Install the shared preloaded-ROM folder mapping (used by update.sh to
+#    rename Roms/ subfolders when switching UIs).
+if [ -f "${MINIME_ROOT}/roms/mappings" ]; then
+	mkdir -p "${TARGET_DIR}/usr/share/minime"
+	cp -f "${MINIME_ROOT}/roms/mappings" "${TARGET_DIR}/usr/share/minime/rom-mappings"
+fi
+
+# 8. OpenRC SysV Cleanup
 # Clean up legacy SysV scripts created by some packages, as we use pure OpenRC
 TARGET_INITD="${TARGET_DIR}/etc/init.d"
 TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
 rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs" 2>/dev/null || true
 
-# Touch a marker file to represent the absolute latest timestamp in the rootfs.
+# 9. Touch a marker file to represent the absolute latest timestamp in the rootfs.
 touch "${TARGET_DIR}/.build_time"
 
 echo "Buildroot post-build stage complete."

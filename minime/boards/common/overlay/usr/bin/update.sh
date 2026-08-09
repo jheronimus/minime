@@ -1,16 +1,21 @@
 #!/bin/sh
 # shellcheck shell=sh
-# minime-update: self-update Minime from the GitHub "testing" release.
+# update: self-update Minime from the GitHub "testing" release.
 #
-# Usage: minime-update <minui|allium>
+# Usage: update <minui|allium>
 #
 # Detects board (h700/rk3326/rk3566) and target (alpine/buildroot) on-device,
 # downloads the matching OTA archive directly with curl, compares it against
 # the installed manifest, and installs it (clean-replace .system, overlay
-# .minime), then removes the archive and reboots.
+# .minime).  When the requested UI differs from the installed UI, Roms/
+# subfolders are renamed to the new UI's naming convention using the shared
+# /usr/share/minime/rom-mappings table (the same source as the preloaded-ROM
+# installer).  User data (ROMs content, Saves/, Bios/, .userdata/) is never
+# touched beyond those Roms/ folder renames.
 #
-# The archive is staged in /mnt/sdcard/.minime/update/ (NOT /tmp — /tmp is a
-# tiny tmpfs). The staging dir is removed before rebooting.
+# The script detaches from the invoking shell by default (telnet-safe) and
+# logs to the SD card, so it survives the session dropping.  It reboots the
+# device when the update has been applied.
 
 set -eu
 
@@ -19,9 +24,13 @@ set -eu
 REPO="jheronimus/minime"
 RELEASE="testing"
 SDCARD="/mnt/sdcard"
-STAGE_DIR="${SDCARD}/.minime/update"
+UPDATE_DIR="${SDCARD}/.minime/update"
+LOG_FILE="${UPDATE_DIR}/update.log"
+PID_FILE="${UPDATE_DIR}/update.pid"
 INSTALLED_MANIFEST="${SDCARD}/.minime/manifest.json"
+UI_ENV_FILE="${SDCARD}/.minime/ui.env"
 TRAITS_FILE="${SDCARD}/.minime/traits"
+ROM_MAPPINGS="/usr/share/minime/rom-mappings"
 
 # --- Helpers --------------------------------------------------------------
 
@@ -31,12 +40,26 @@ usage() {
 }
 
 log() {
-	echo "[minime-update] $*"
+	echo "[update] $*"
 }
 
 die() {
 	log "ERROR: $*" >&2
 	exit 1
+}
+
+# Detach from the invoking shell (telnet-safe): re-run ourselves under setsid
+# with output redirected to the SD-card log, then return immediately.
+detach() {
+	mkdir -p "${UPDATE_DIR}"
+	if [ -f "${PID_FILE}" ] && kill -0 "$(cat "${PID_FILE}" 2>/dev/null)" 2>/dev/null; then
+		echo "[update] ERROR: already running (pid $(cat "${PID_FILE}" 2>/dev/null))" >&2
+		exit 1
+	fi
+	echo "[update] starting in background; log: ${LOG_FILE}"
+	UPDATE_DETACHED=1 setsid /bin/sh "$0" "$@" </dev/null >>"${LOG_FILE}" 2>&1 &
+	echo $! >"${PID_FILE}"
+	exit 0
 }
 
 # Detect the board (h700/rk3326/rk3566) from the kernel compatible string,
@@ -76,27 +99,80 @@ detect_target() {
 	fi
 }
 
+# Normalized (lowercase) UI name of the currently installed payload.
+installed_ui() {
+	[ -f "${UI_ENV_FILE}" ] || return 0
+	grep '^UI_NAME=' "${UI_ENV_FILE}" 2>/dev/null | head -n1 |
+		cut -d= -f2- | tr -d '"' | tr 'A-Z' 'a-z'
+}
+
+# Rename Roms/ subfolders from the old UI's naming to the new UI's naming.
+# Only the shared preloaded systems (rom-mappings) are handled; a rename is
+# skipped when the target folder already exists (never nest or clobber).
+rename_roms() {
+	from="$1"
+	to="$2"
+	[ "${from}" = "${to}" ] && return 0
+	[ -n "${from}" ] && [ -n "${to}" ] || {
+		log "installed UI unknown; skipping Roms rename"
+		return 0
+	}
+	[ -f "${ROM_MAPPINGS}" ] || {
+		log "missing ${ROM_MAPPINGS}; skipping Roms rename"
+		return 0
+	}
+	renamed=0
+	while IFS='|' read -r short minui_name allium_name || [ -n "${short}" ]; do
+		case "${short}" in "" | \#*) continue ;; esac
+		[ -n "${minui_name}" ] || continue
+		[ -n "${allium_name}" ] || continue
+		if [ "${from}" = "minui" ]; then
+			old="${minui_name}"
+			new="${allium_name}"
+		else
+			old="${allium_name}"
+			new="${minui_name}"
+		fi
+		[ "${old}" = "${new}" ] && continue
+		if [ -d "${SDCARD}/Roms/${old}" ] && [ ! -e "${SDCARD}/Roms/${new}" ]; then
+			mv "${SDCARD}/Roms/${old}" "${SDCARD}/Roms/${new}"
+			log "Roms: '${old}' -> '${new}'"
+			renamed=$((renamed + 1))
+		fi
+	done <"${ROM_MAPPINGS}"
+	log "Roms rename complete (${renamed} folder(s) renamed)"
+}
+
 # --- Main -----------------------------------------------------------------
 
 UI="${1:-}"
 [ -n "${UI}" ] || usage
+UI="$(echo "${UI}" | tr 'A-Z' 'a-z')"
 case "${UI}" in
 minui | allium) ;;
 *) die "unsupported UI '${UI}' (expected minui or allium)" ;;
 esac
 
+if [ "${UPDATE_DETACHED:-0}" != "1" ]; then
+	detach "$UI"
+fi
+
+echo $$ >"${PID_FILE}"
+trap 'rm -f "${PID_FILE}"' EXIT
+
 BOARD="$(detect_board)"
 TARGET="$(detect_target)"
-log "board=${BOARD} target=${TARGET} ui=${UI}"
+FROM_UI="$(installed_ui)"
+log "board=${BOARD} target=${TARGET} ui=${UI} installed_ui=${FROM_UI:-unknown}"
 
 [ -x /usr/bin/curl ] || die "curl is not available on this image"
 [ -d "${SDCARD}" ] || die "no SD card at ${SDCARD}"
 
-ARCHIVE="${STAGE_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
+ARCHIVE="${UPDATE_DIR}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
 URL="https://github.com/${REPO}/releases/download/${RELEASE}/minime-${TARGET}-${BOARD}-${UI}.tar.zst"
 
 log "Checking ${URL}"
-mkdir -p "${STAGE_DIR}"
+mkdir -p "${UPDATE_DIR}"
 
 # Download. curl with -L follows the release redirect; --fail surfaces HTTP errors.
 if ! curl -L --fail --show-error -o "${ARCHIVE}" "${URL}"; then
@@ -119,7 +195,7 @@ if [ -n "${REMOTE_MANIFEST}" ] && [ -f "${INSTALLED_MANIFEST}" ]; then
 		[ -n "${rem_min}" ] && [ "${rem_min}" != "unknown" ]; then
 		log "already up to date (${rem_min}/${rem_ui})"
 		rm -f "${ARCHIVE}"
-		rmdir "${STAGE_DIR}" 2>/dev/null || true
+		rmdir "${UPDATE_DIR}" 2>/dev/null || true
 		exit 0
 	fi
 fi
@@ -139,9 +215,11 @@ unzstd -c "${ARCHIVE}" | tar -xf - -C "${SDCARD}"
 [ -f "${SDCARD}/.system/version.txt" ] ||
 	die "install incomplete: .system/version.txt missing; leaving archive at ${ARCHIVE}"
 
-# Clean up the archive and stage dir before rebooting.
+# Rename Roms/ subfolders when the UI changed (uses the pre-switch installed UI).
+rename_roms "${FROM_UI}" "${UI}"
+
+# Clean up the archive before rebooting.
 rm -f "${ARCHIVE}"
-rmdir "${STAGE_DIR}" 2>/dev/null || true
 
 log "update installed; rebooting"
 sync

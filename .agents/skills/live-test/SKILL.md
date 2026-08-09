@@ -1,6 +1,6 @@
 ---
 name: live-test
-description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers `just update`/`just check-version`/`just remote`/`just upload`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, OTA extraction log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
+description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers the on-device updater (`update.sh`), `just remote`/`just upload`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, update log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
 ---
 
 # Live Testing on Physical Hardware
@@ -16,7 +16,7 @@ Minime's [On-Device Live Verification](../../../AGENTS.md) directive requires th
 ## Prerequisites
 
 - Device is powered on and on the same LAN as the dev machine.
-- `deploy.cfg` exists in the repo root with `target_ip=...` (and `disk_device=...` for reflashing). Copy `deploy_sample.cfg` if missing.
+- `deploy.cfg` exists in the repo root with `target_ip=...` (and `disk_device=...` for reflashing). Copy `deploy_sample.cfg` if missing. Devices announce themselves over mDNS, so `target_ip=minime.local` works (a second device that conflicts becomes `minime-2.local`).
 - A push to `main` has triggered a successful `Build Minime` run and updated the `testing` GitHub Release (check `gh run list` and the release asset timestamps).
 
 ---
@@ -24,35 +24,40 @@ Minime's [On-Device Live Verification](../../../AGENTS.md) directive requires th
 ## 1. Confirm the device is current
 
 ```sh
-just check-version alpine h700 minui     # <os> <board> <ui> [ip]
+just remote "cat /mnt/sdcard/.minime/manifest.json"     # minime_commit / ui_commit / timestamp
 ```
 
-- Prints `The device is up to date, running commit <sha>` (exit 0) or `out of date` (exit 1).
-- Reads the device's `/mnt/sdcard/.minime/manifest.json` (`minime_commit` / `ui_commit`) vs the latest testing OTA.
-- If the device lacks a manifest (pre-build-identity install), it exits 1 with a note — you must update or reflash.
+The installed build identity is the device's `/mnt/sdcard/.minime/manifest.json` (written by the OTA packager). Let `update.sh` decide whether an update is pending — it diffs the archive manifest against this file itself and reports "already up to date" when nothing changed.
 
 ## 2. Deploy updated binaries OTA
 
+The device updates itself from the GitHub `testing` release:
+
 ```sh
-just update alpine h700 minui            # <os> <board> <ui> [ip]
+just remote "update.sh minui"     # or: update.sh allium — switch UI without reflashing
 ```
 
-What it does (see `scripts/update-device.sh`):
+What it does (see `minime/boards/common/overlay/usr/bin/update.sh`):
 
-1. **Stops the UI** on target (`/etc/init.d/ui stop`, kills `minui.elf`/`minarch.elf`/`keymon.elf`).
-2. **Uploads** the OTA archive `minime-<os>-<board>-<ui>.tar.xz` (fetched from `testing` via `scripts/fetch-asset.sh`) over FTP as `minime-ota.tar.xz`.
-3. **Applies** it on the device: `tar -xJf` (the `-J` is required — busybox tar does not auto-detect xz) into `/mnt/sdcard`, in the background with a completion marker `minime-ota.tar.xz.minime-ok`.
-4. **Waits** (up to ~5 min) for extraction.
-5. **Reboots** the device.
+1. **Self-detects** board (`/proc/device-tree/compatible`) and target (`/etc/os-release`) — no os/board/ip needed from the host.
+2. **Detaches** (`setsid`) so it survives the telnet session dropping; logs to `/mnt/sdcard/.minime/update/update.log`.
+3. **Downloads** `minime-<target>-<board>-<ui>.tar.zst` from the `testing` release with curl.
+4. **Compares** the archive's `.minime/manifest.json` against the installed one; exits early if already current.
+5. **Stops the UI**, clean-replaces `.system/` (UI payload), overlays `.minime/` (device state kept).
+6. **Renames `Roms/` subfolders** to the new UI's naming when switching UIs (shared `roms/mappings` table).
+7. **Reboots** the device.
+
+Watch progress / confirm afterwards:
+
+```sh
+just remote "tail -n 40 /mnt/sdcard/.minime/update/update.log"
+just remote "cat /mnt/sdcard/.minime/manifest.json"     # new minime_commit / ui_commit
+```
 
 Delivery semantics:
-- `.system/` is **clean-replaced** (`rm -rf` then extract) — the UI payload, avoids stale files.
-- `.minime/` is **overlaid** (`tar -xf`) — device state (`config/`, `traits`, dtb) is preserved.
-- **User data is never touched** (`Bios/`, `Roms/`, `Saves/`, `.userdata/`, `.minime/config`).
-
-Notes:
-- `just update` from the Mac often **times out** at the reboot-wait step even though delivery succeeds — verify with a follow-up `just check-version` / `just remote "uptime"` rather than assuming failure.
-- If the archive is large, the telnet session may close during extraction; the background task + marker handles this.
+- `.system/` is **clean-replaced** — the UI payload, avoids stale files.
+- `.minime/` is **overlaid** — device state (`config/`, `traits`, dtb) is preserved.
+- **User data is never touched** (`Bios/`, `Roms/`, `Saves/`, `.userdata/`) except the Roms/ folder-name rename when switching UIs.
 
 ## 3. Inspect the device
 
@@ -90,7 +95,7 @@ Collect logs via `just remote "cat <path>"` or `just remote "tail -n 100 <path>"
 | Per-system emulator logs | `/mnt/sdcard/.userdata/minime/logs/<TAG>.txt` | `minarch.elf` output per console, e.g. `FC.txt` (NES), `GBA.txt`, `PS.txt`, `SMS.txt`, `MD.txt`, `GG.txt`, `NGP.txt`, `PCE.txt`. Contains `rom_path`, core version, `aspect_ratio`, `selectScaler`, ALSA errors, **`Error relocating ... symbol not found` / `Segmentation fault`** on dlopen failure. |
 | UI runtime log | `/tmp/ui.log` | Current UI session (empty when fine). |
 | WiFi diagnostics | `/tmp/wifi.diagnostics` (copied to `/mnt/sdcard/wifi.diagnostics` on failure) | Written by the wifi OpenRC service on startup failure: interface presence, SDIO devices, `wpa_cli status`. |
-| OTA extraction log | `/tmp/ota-extract.log` | `tar` output during OTA apply; `No space left on device` / `done` at the end. |
+| OTA update log | `/mnt/sdcard/.minime/update/update.log` | `update.sh` progress: board/target/UI detection, download size, manifest compare, install + Roms rename. Written detached (survives reboot — `/tmp` is tmpfs). |
 | Build identity | `/mnt/sdcard/.minime/manifest.json` | `minime_commit`, `ui_commit`, `timestamp` — verify which build is running. |
 
 Example: a broken core shows this in `<TAG>.txt`:

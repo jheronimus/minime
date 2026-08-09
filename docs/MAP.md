@@ -67,6 +67,7 @@ Cross-distro OpenRC init scripts copied into the rootfs of both targets at build
 - `ftpd`: Lightweight FTP server service.
 - `gpudriver`: Dynamically loads Mali GPU kernel modules and sets device permissions.
 - `logger`: Persistent per-boot kernel + syslog capture under `.minime/logs/`; hosts the thermal monitor worker (derives thresholds from the zone's `trip_point_*`, ADR 0014).
+- `mdns`: Announces the device as `minime.local` over mDNS (mdnsd) with DNS-SD records for telnet/FTP/SSH; auto-renames to `minime-2.local` on name conflict.
 - `modules`: Loads kernel modules specified in `/etc/modules`.
 - `telnetd`: Remote debug shell daemon.
 - `traits`: Emits the merged device traits file at `/mnt/sdcard/.minime/traits` (cascades `platform.ini` + device `parent=` chain) for UIs to consume.

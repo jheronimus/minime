@@ -351,47 +351,6 @@ deploy os="" board="" ui="" disk_device="":
     # Push desktop notification (OSC 9) and audio bell chime (\a)
     printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
 
-# Download and deliver the latest testing OTA for a target to the device.
-# Usage:
-#   just update <os> <board> <ui> [ip]
-# Example:
-#   just update alpine h700 minui
-update os="" board="" ui="" ip="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    if [ -z "{{os}}" ] || [ -z "{{board}}" ] || [ -z "{{ui}}" ]; then
-        echo "ERROR: just update requires <os> <board> <ui>." >&2
-        echo "Usage: just update <os> <board> <ui> [ip]" >&2
-        exit 1
-    fi
-
-    target_ip="{{ip}}"
-    if [ -z "${target_ip}" ]; then
-        if [ -f "deploy.cfg" ]; then
-            target_ip=$(grep -E '^\s*target_ip=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\r')
-        fi
-    fi
-
-    if [ -z "${target_ip}" ]; then
-        echo "ERROR: No target IP specified and target_ip not found in deploy.cfg." >&2
-        echo "Usage: just update <os> <board> <ui> [ip]" >&2
-        exit 1
-    fi
-
-    asset="minime-{{os}}-{{board}}-{{ui}}.tar.zst"
-    target_pkg=$(./scripts/fetch-asset.sh "${asset}")
-
-    ./scripts/update-device.sh "${target_pkg}" "${target_ip}"
-
-# Check the device's running build against the latest testing OTA
-# Usage:
-#   just check-version <os> <board> <ui> [ip]
-check-version os="" board="" ui="" ip="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ./scripts/check-version.sh "{{os}}" "{{board}}" "{{ui}}" "{{ip}}"
-
 # Execute a remote shell command on target device over telnet
 # Usage:
 #   just remote "ps aux" [ip]

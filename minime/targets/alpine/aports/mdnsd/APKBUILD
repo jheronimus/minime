@@ -1,0 +1,31 @@
+# shellcheck shell=sh disable=SC2034,SC2154,SC3043
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=mdnsd
+pkgver=1.1
+pkgrel=0
+pkgdesc="Embeddable Multicast DNS (mDNS/DNS-SD) daemon for Minime .local discovery"
+url="https://github.com/troglobit/mdnsd"
+arch="aarch64"
+license="BSD-3-Clause"
+options="!strip !check"
+makedepends="
+	pkgconf
+"
+source="mdnsd-$pkgver.tar.gz::https://github.com/troglobit/mdnsd/releases/download/v$pkgver/mdnsd-$pkgver.tar.gz"
+sha512sums="31a3d0f6ccabe383ffd01a30374b17d502664107bc50fdaaba15a9a854b02ca18b819bae133be96b7d6626bbb1f28367b9095a2cfdce2c7553eee525edc72213  mdnsd-1.1.tar.gz"
+
+build() {
+	./configure \
+		--build="$CBUILD" \
+		--host="$CHOST" \
+		--prefix=/usr \
+		--sbindir=/usr/sbin \
+		--libdir=/usr/lib \
+		--without-mquery
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}

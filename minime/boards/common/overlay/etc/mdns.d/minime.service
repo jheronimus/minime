@@ -1,0 +1,5 @@
+# Minime device advertisement (custom DNS-SD type for discovery).
+# Browsing: avahi-browse -t _minime._tcp / dns-sd -B _minime
+name Minime
+type _minime._tcp
+port 23

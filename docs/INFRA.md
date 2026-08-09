@@ -49,9 +49,8 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`scripts/check-firmware.sh`**: Verifies all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
 - **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
-- **`scripts/update-device.sh`**: Uploads OTA update packages over FTP/telnet and reboots target device.
+- **`scripts/update-device.sh`**: Generic push-and-apply OTA helper (stop UI → FTP upload → apply → reboot) for locally built update packages, e.g. the boot-profiler's instrumented initramfs packages. Normal OTA updates run **on-device** via `/usr/bin/update.sh`.
 - **`scripts/fetch-asset.sh`**: Downloads a named release asset (`.img.zst` or `.tar.zst`) from the latest `testing` GitHub Release.
-- **`scripts/check-version.sh`**: Reads the device's `.minime/manifest.json` and compares it against the latest testing OTA for a target.
 - **`scripts/remote-cmd.sh`**: Executes arbitrary shell commands on target device over telnet using `target_ip` from `deploy.cfg`.
 - **`scripts/remote-upload.sh`**: Uploads a local file to the target device over FTP.
 
@@ -75,12 +74,10 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.sh` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
 | `check-git` | Git staged diff | `git diff --check` | Catches whitespace errors and unresolved merge conflict markers. |
 | `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.zst`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
-| `just update <os> <board> <ui> [ip]` | Deliver latest OTA to device | `fetch-asset.sh` + `scripts/update-device.sh` | Fetches the latest `minime-<os>-<board>-<ui>.tar.zst`, applies it over FTP/telnet (clean-replaces `.system`, overlays `.minime`), reboots device. Uses `target_ip` in `deploy.cfg`. |
-| `just check-version <os> <board> <ui> [ip]` | Verify device build is current | `scripts/check-version.sh` | Fetches the latest testing OTA, reads the device's `.minime/manifest.json`, reports up-to-date or out-of-date. |
-| `just remote <cmd> [ip]` | Run remote telnet command | `scripts/remote-cmd.sh` | Executes shell command on target device via telnet. Uses `target_ip` in `deploy.cfg`. |
+| `just remote <cmd> [ip]` | Run remote telnet command | `scripts/remote-cmd.sh` | Executes shell command on target device via telnet. Uses `target_ip` in `deploy.cfg`. The OTA update path is the **on-device** `/usr/bin/update.sh <minui|allium>` (e.g. `just remote "update.sh minui"`). |
 | `just upload <file> [remote_filename] [ip]` | Upload a file to device | `scripts/remote-upload.sh` | Uploads a local file to the target device over FTP. |
 | `just build-allium [target=musl]` | Build Allium locally | `cargo build` | Builds Allium binaries for `musl` (default) or `glibc`. |
 | `just build-minui [target=musl]` | Build MinUI locally | `make system cores package` | Builds the MinUI binaries/cores for the `minime` platform. |
 | `just install-hooks` | Git pre-commit hook | `.git/hooks/pre-commit` | Installs hook to run `just validate` before every commit. |
 
-> `just fetch` and `just fetch-update` are deprecated and removed. `just deploy` and `just update` now fetch the latest testing asset for a target on demand via `scripts/fetch-asset.sh`.
+> `just fetch`, `just fetch-update`, `just update`, and `just check-version` are removed. OTA updates run **on-device** via `/usr/bin/update.sh <minui|allium>` (see the `live-test` skill). `just deploy` fetches the latest testing image on demand via `scripts/fetch-asset.sh`.

@@ -1,0 +1,4 @@
+# Minime telnet (passwordless remote shell, TCP 23)
+name Minime Telnet
+type _telnet._tcp
+port 23

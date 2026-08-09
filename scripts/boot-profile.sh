@@ -499,7 +499,7 @@ cmd_restore() {
 		curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"
 	fi
 	remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh /mnt/sdcard/.boot-profiler-debug /mnt/sdcard/boot-profiler.trace; sync; reboot" >/dev/null 2>&1 || true
-	log "rebooting with stock initramfs (profiler removed). Verify with: just check-version $OS $BOARD $UI"
+	log "rebooting with stock initramfs (profiler removed). Verify with: just remote \"cat /mnt/sdcard/.minime/manifest.json\""
 }
 
 print_help() {
