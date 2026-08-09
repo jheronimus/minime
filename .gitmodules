@@ -6,7 +6,7 @@
 	path = minime/ui/minui
 	url = https://github.com/jheronimus/MinUI
 	branch = main
-[submodule "src/libretro-yabasanshiro"]
-	path = src/libretro-yabasanshiro
+[submodule "src/yabause"]
+	path = src/yabause
 	url = https://github.com/jheronimus/yabause
 	branch = main
