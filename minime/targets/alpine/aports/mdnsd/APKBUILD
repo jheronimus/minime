@@ -28,4 +28,5 @@ build() {
 
 package() {
 	make DESTDIR="$pkgdir" install
+	rm -rf "${pkgdir:?}/usr/share"
 }
