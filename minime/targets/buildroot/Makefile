@@ -2,7 +2,7 @@ MINIME_ROOT := $(abspath $(CURDIR)/../../..)
 PODMAN_CMD ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo podman)
 PODMAN_TTY := $(shell [ -t 0 ] && echo "-it" || echo "-i")
 
-SUPPORTED_BOARDS := rk3566 h700
+SUPPORTED_BOARDS := rk3326 rk3566 h700
 BOARD ?= rk3566
 UI ?= minui
 

@@ -40,19 +40,13 @@
 
 - [ ] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
   - [THEORY] Either load `.minime/devices/${device}` when set, or drop the resolution entirely; RK3326 `first-boot-probe.sh` currently writes `device.cfg` that nothing consumes.
-- [ ] RK3326 bringup (make `rk3326` a supported board in `minime/targets/*/Makefile` + CI matrix)
 - [ ] Add RG353M support end-to-end (U-Boot rgxx3 FDT fixup + traits already added in `rg353m.ini`)
 
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](research/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.
 - [ ] Implement U-Boot SPL dual DRAM training fallback for H700 (LPDDR4 -> LPDDR3)
   - [THEORY] Modify `dram_sunxi_h616.c` in U-Boot SPL to attempt LPDDR4 training first and fallback to LPDDR3 timing if training fails, enabling a single U-Boot binary across all H700 RAM variants.
-- [ ] Implement init script to clear Mac metadata files (`._*`, `.DS_Store`)
 - [ ] Review and trim init scripts; start wireless services (`wpa_supplicant`, `bluetoothd`) on demand
-- [ ] Research and implement a way for devices to announce their hostname on the network so `just update` could work without a hardcoded `target_ip`
-  - [THEORY] e.g. mDNS/`avahi` publishing, or a hostname-based address; would let `just update`/`just check-version`/`just remote` resolve the device without `deploy.cfg`.
-- [ ] Investigate why OTA uploads take too long (just update times out at the reboot-wait step even though delivery succeeds)
-  - [THEORY] FTP upload of the OTA archive and/or the post-upload reboot-wait could be slow; measure upload throughput and extraction time to find the bottleneck.
 - [ ] Optimize Wi-Fi connection speed
 
 - [ ] Compile patched DTB → decompile in CI and compare geometry/keycodes/names/refresh to the traits files (deeper variant of the cross-reference; needs the kernel build env)
@@ -63,26 +57,14 @@
 
 ## Completed
 
-- [x] CPU thermal stability policy + qualification procedure ([ADR 0014](adr/0014-cpu-performance-and-thermal-policy.md))
-  - [x] RK3566 DTS thermal trips raised to 83/88 °C CPU, 80/88 °C GPU passive (`0017-arm64-dts-rockchip-rk356x-update-thermal-trips.patch`); TSADC 95 °C hardware shutdown untouched
-  - [x] Default `cpu_clock_performance` 1800 → 1608 MHz in RK3566 traits; 1800 MHz now requires opt-in undervolt
-  - [x] Thermal monitoring merged into the `logger` service (thresholds derived from `trip_point_*` sysfs, throttle telemetry, `syslogd -l` keeps it off the framebuffer); standalone `thermal-watchdog` service removed
-  - [x] `stress-ng` + `memtester` behind a `TEST_PACKAGES=1` build-time opt-in (Alpine `world-test` fragment, Buildroot `test.config`)
-- [x] Comprehensive audit of traits system to expose all hardware controls needed for UIs
-  - [x] Sectioned schema + layered cascade (`platform.ini` → `parent=` chain → device) per ADR 0012
-  - [x] Standardize HDMI state paths via DRM connector (`gpu_hdmi_state_path`), ALSA audio routing helpers
-  - [x] Expose power supply and battery status paths (`power_battery_sysfs`, `power_charger_online_path`)
-  - [x] Expose LED sysfs control paths (`power_led_path`, charging indicators)
-  - [x] Expose input traits and hardware mode toggles (RG ARC touch, d-pad/left-stick swap)
-  - [x] Cross-referenced every trait against mainline DTS + Rocknix sources (clone review): keycodes, touch devices (ARC goodix gt927, RG353 hynitron cst340), audio cards/mixers, eMMC topology, HDMI wiring, GPU OPPs, thermal zones
-  - [x] Add DTB↔traits cross-reference to `check-traits.sh` (every shipped DTB has a traits file and vice-versa; U-Boot FDT-fixup compatibles allowed)
-  - [x] `gpu_hdmi_connector` = stable connector id (e.g. `HDMI-A-1`); `cardN` prefix resolved at init by traits.c/traits.rs (DRM minor index is first-come-first-serve, not static)
-  - [x] Rumble: `input_rumble_device_name` input-FF model (pwm-vibrator) — RK3566 + H700 40XX/CubeXX; verify PWM on hardware
-  - [x] RG353P/M/V touch: `CONFIG_TOUCHSCREEN_HYNITRON_CSTXXX` enabled in `tiny-rk3566.config` (both targets)
-  - [x] ARC-D/S HDMI: already wired via the `rgxx3.dtsi` include (hdmi-con, &hdmi, &hdmi_sound, vp0→HDMI0) — traits set `gpu_hdmi_connector=HDMI-A-1`; no kernel change needed
-  - [x] Verify exact H700 mixer control on-device: `audio_mixer=Line Out` is the correct simple-mixer control (`amixer sset 'Line Out' <pct>% unmute` works, volume + mute toggle). The H700/H616 codec ALSO exposes a raw numid control (`Line Out Playback Volume`, numid=2, INTEGER 0-31) that is NOT a simple control — `sset` can't see it and `cset '<name>'` fails; only `cset numid=2 <val>` works. The numid control must NOT be used as `audio_mixer`. (Earlier traits used `Line Out Playback Volume`/`Master Playback Volume` — corrected to `Line Out` on all boards.)
+- [x] CPU thermal stability + qualification (ADR 0014): RK3566 trips 83/88 °C CPU, 80/88 °C GPU passive; default perf 1800→1608 MHz; telemetry folded into `logger`; `stress-ng`/`memtester` behind `TEST_PACKAGES=1`
+- [x] Comprehensive traits audit (ADR 0012): sectioned schema + cascade; HDMI/battery/LED/input traits; DTB↔traits cross-check in `check-traits.sh`; H700 mixer = `Line Out`
 - [x] Optimize U-Boot boot speed
 - [x] Reorganize board defconfigs and shared package base between Alpine and Buildroot
 - [x] Enable CPU/GPU overclock (up to 2.0 GHz) and undervolt support for RK3566 via DTS overlays/bootloader options
-- [x] Fix power button on RG35xxSP not waking the device up from sleep
+- [x] Fix power button on RG35xxSP not waking the device from sleep
 - [x] Update the MinUI `README.txt` shipped on the card
+- [x] Implement init script to clear Mac metadata files (`._*`, `.DS_Store`) — `dotclean` OpenRC service runs on boot over every card under `/mnt`
+- [x] Device hostname announcement on the network — every device advertises `minime.local` via mdnsd (ADR 0018); `just remote` resolves without a hardcoded `target_ip`
+- [x] OTA upload / reboot-wait timeout — resolved by replacing host-push `just update` with the detached on-device `update.sh` (ADR 0017); the reboot-wait problem no longer exists
+- [x] RK3326 bringup — supported in the CI matrix and both `minime/targets/*/Makefile` boards
