@@ -63,7 +63,7 @@
 
 ## Completed
 
-- [x] CPU thermal stability policy + qualification procedure ([ADR 0014](adr/0014-cpu-thermal-stability-and-testing.md))
+- [x] CPU thermal stability policy + qualification procedure ([ADR 0014](adr/0014-cpu-performance-and-thermal-policy.md))
   - [x] RK3566 DTS thermal trips raised to 83/88 °C CPU, 80/88 °C GPU passive (`0017-arm64-dts-rockchip-rk356x-update-thermal-trips.patch`); TSADC 95 °C hardware shutdown untouched
   - [x] Default `cpu_clock_performance` 1800 → 1608 MHz in RK3566 traits; 1800 MHz now requires opt-in undervolt
   - [x] Thermal monitoring merged into the `logger` service (thresholds derived from `trip_point_*` sysfs, throttle telemetry, `syslogd -l` keeps it off the framebuffer); standalone `thermal-watchdog` service removed
