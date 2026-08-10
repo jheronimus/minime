@@ -6,12 +6,13 @@
 #
 # Detects board (h700/rk3326/rk3566) and target (alpine/buildroot) on-device,
 # downloads the matching OTA archive directly with curl, compares it against
-# the installed manifest, and installs it (clean-replace .system, overlay
-# .minime).  When the requested UI differs from the installed UI, Roms/
-# subfolders are renamed to the new UI's naming convention using the shared
-# /usr/share/minime/rom-mappings table (the same source as the preloaded-ROM
-# installer).  User data (ROMs content, Saves/, Bios/, .userdata/) is never
-# touched beyond those Roms/ folder renames.
+# the installed manifest, and installs it (clean-replaces the active UI
+# payload — .system for MinUI, .ui/.allium/RetroArch/apps for Allium —
+# and overlays .minime).  When the requested UI differs from the installed
+# UI, Roms/ subfolders are renamed to the new UI's naming convention using
+# the shared /usr/share/minime/rom-mappings table (the same source as the
+# preloaded-ROM installer).  User data (ROMs content, Saves/, Bios/,
+# .userdata/) is never touched beyond those Roms/ folder renames.
 #
 # The script detaches from the invoking shell by default (telnet-safe) and
 # logs to the SD card, so it survives the session dropping.  It reboots the
@@ -207,13 +208,30 @@ log "installing ${SIZE} bytes (${rem_min:-?}/${rem_ui:-?})..."
 killall -9 minui.elf minarch.elf keymon.elf 2>/dev/null || true
 sleep 1
 
-# Apply: .system clean-replaced (UI payload), .minime overlaid (state kept).
-rm -rf "${SDCARD}/.system"
+# Apply: UI payload clean-replaced, .minime overlaid (state kept).
+# MinUI lives under .system/; Allium under .ui/ + .allium/ + RetroArch/ +
+# apps/ + Roms/ + Saves/ + BIOS/.  Remove the old UI's top-level dirs so a
+# UI switch does not leave stale binaries, then extract the whole archive.
+case "${FROM_UI:-}" in
+minui) rm -rf "${SDCARD}/.system" ;;
+allium)
+	rm -rf "${SDCARD}/.ui" "${SDCARD}/.allium" \
+		"${SDCARD}/RetroArch" "${SDCARD}/apps"
+	;;
+esac
 unzstd -c "${ARCHIVE}" | tar -xf - -C "${SDCARD}"
 
 # Verify the payload landed before removing the archive.
-[ -f "${SDCARD}/.system/version.txt" ] ||
-	die "install incomplete: .system/version.txt missing; leaving archive at ${ARCHIVE}"
+case "${UI}" in
+minui)
+	[ -f "${SDCARD}/.system/version.txt" ] ||
+		die "install incomplete: .system/version.txt missing; leaving archive at ${ARCHIVE}"
+	;;
+allium)
+	[ -x "${SDCARD}/.ui/bin/alliumd" ] ||
+		die "install incomplete: .ui/bin/alliumd missing; leaving archive at ${ARCHIVE}"
+	;;
+esac
 
 # Rename Roms/ subfolders when the UI changed (uses the pre-switch installed UI).
 rename_roms "${FROM_UI}" "${UI}"

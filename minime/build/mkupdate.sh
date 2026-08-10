@@ -112,16 +112,18 @@ else
 	fi
 fi
 
-# --- UI payload (.system/ + .minime/ui.env) --------------------------------
+# --- UI payload (whole staged tree + .minime/ui.env) -----------------------
+# genassets.sh stages the UI into ${INPUT_DIR}/ui before image assembly.
+# MinUI uses a `.system/` layout; Allium uses `.ui/` + `.allium/` +
+# `RetroArch/` + `apps/` + `Roms/` + `Saves/` + `BIOS/`.  Copy the entire
+# staged payload (same as mkimage.sh) so OTA switching works for both UIs.
 if [ -n "${UI}" ]; then
-	# genassets.sh stages the UI into ${INPUT_DIR}/ui before image assembly.
 	UI_STAGE="${INPUT_DIR}/ui"
-	if [ -d "${UI_STAGE}/.system" ]; then
-		cp -rf "${UI_STAGE}/.system" "${STAGE_DIR}/.system"
-	else
-		echo "ERROR: UI payload (.system) not found in ${UI_STAGE}" >&2
+	if [ ! -d "${UI_STAGE}" ]; then
+		echo "ERROR: UI payload not found in ${UI_STAGE}" >&2
 		exit 1
 	fi
+	cp -rf "${UI_STAGE}/." "${STAGE_DIR}/"
 	if [ -f "${UI_STAGE}/.minime/ui.env" ]; then
 		cp -f "${UI_STAGE}/.minime/ui.env" "${STAGE_DIR}/.minime/ui.env"
 	fi
