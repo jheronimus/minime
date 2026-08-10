@@ -79,8 +79,8 @@ start() {
 
 	export HOME=/mnt/sdcard
 	# Allium shells out to its bundled helpers (say/show/screenshot) which
-	# live in .tmp_update/bin; make them resolvable on PATH.
-	export PATH="/mnt/sdcard/.tmp_update/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"
+	# live in .ui/bin; make them resolvable on PATH.
+	export PATH="/mnt/sdcard/.ui/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"
 
 	for bl in /sys/class/backlight/*/brightness; do
 		[ -w "$bl" ] && echo 5 >"$bl" 2>/dev/null || true

@@ -98,7 +98,6 @@ elif [ "$UI" = "allium" ]; then
 	mkdir -p "$STAGE_DIR/.ui/state"
 	mkdir -p "$STAGE_DIR/.ui/themes"
 	mkdir -p "$STAGE_DIR/.ui/fonts"
-	mkdir -p "$STAGE_DIR/.tmp_update/bin"
 	mkdir -p "$STAGE_DIR/apps"
 	mkdir -p "$STAGE_DIR/RetroArch"
 	mkdir -p "$STAGE_DIR/Roms"
@@ -108,9 +107,9 @@ elif [ "$UI" = "allium" ]; then
 	cp $BUILD/alliumd "$STAGE_DIR/.ui/bin/"
 	cp $BUILD/allium-launcher "$STAGE_DIR/.ui/bin/"
 	cp $BUILD/allium-menu "$STAGE_DIR/.ui/bin/"
-	cp $BUILD/screenshot "$STAGE_DIR/.tmp_update/bin/"
-	cp $BUILD/say "$STAGE_DIR/.tmp_update/bin/"
-	cp $BUILD/show "$STAGE_DIR/.tmp_update/bin/"
+	cp $BUILD/screenshot "$STAGE_DIR/.ui/bin/"
+	cp $BUILD/say "$STAGE_DIR/.ui/bin/"
+	cp $BUILD/show "$STAGE_DIR/.ui/bin/"
 
 	cp $BUILD/activity-tracker "$STAGE_DIR/apps/Activity Tracker.pak/" || true
 	cp $BUILD/screenshot-viewer "$STAGE_DIR/apps/Screenshot Viewer.pak/" || true

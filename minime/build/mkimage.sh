@@ -146,9 +146,9 @@ if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 fi
 touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
 
-# 6. Stage UI Payload
-if [ -d "${INPUT_DIR}/ui" ]; then
-	cp -rp "${INPUT_DIR}/ui/." "${USERDATA_STAGE}/"
+# 6. Stage UI Payload (per-UI dir: out/<board>/ui-<ui>)
+if [ -d "${INPUT_DIR}/ui-${UI}" ]; then
+	cp -rp "${INPUT_DIR}/ui-${UI}/." "${USERDATA_STAGE}/"
 fi
 
 # 7. Stage Bootloaders
