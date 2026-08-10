@@ -63,6 +63,7 @@ The `minime/boards/` directory is the single source of truth for all hardware de
 Cross-distro OpenRC init scripts copied into the rootfs of both targets at build time:
 - `bluetooth`: Dual-stack BlueZ daemon and Bluetooth manager.
 - `dropbear`: SSH server (not enabled by default; opt-in via config marker).
+- `dotclean`: Removes macOS Finder metadata (`.DS_Store`, `._*`, `.Spotlight-V100`/`.Trashes`/`.fseventsd`) from every mounted card under `/mnt` on boot, as a detached background worker.
 - `fb-unblank`: Unblanks DRM/FB console and initializes display power.
 - `ftpd`: Lightweight FTP server service.
 - `gpudriver`: Dynamically loads Mali GPU kernel modules and sets device permissions.
