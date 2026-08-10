@@ -67,7 +67,7 @@ elif [ "$UI" = "allium" ]; then
             --bin activity-tracker --bin screenshot --bin screenshot-viewer \
             --bin say --bin show; \
             make retroarch-aarch64 CC=\"ccache gcc\" CXX=\"ccache g++\"; \
-            make tools-aarch64 AARCH64_TARGET=aarch64-unknown-linux-musl; \
+            make tools-aarch64; \
             chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/allium/target /workspace/minime/ui/allium/dist"
 
 		mkdir -p minime/ui/allium/target/${TARGET}
