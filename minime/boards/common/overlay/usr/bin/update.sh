@@ -239,6 +239,11 @@ rename_roms "${FROM_UI}" "${UI}"
 # Clean up the archive before rebooting.
 rm -f "${ARCHIVE}"
 
+# Mark this as a software-initiated reboot so the charger-triggered-boot
+# guard (init.d/charger) does not power the device back off when the charger
+# is connected (ADR 0020).  Cleared by the charger service on next boot.
+touch "${SDCARD}/.minime/config/.software_reboot"
+
 log "update installed; rebooting"
 sync
 reboot

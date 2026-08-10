@@ -1,0 +1,114 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# charger: power off when the device was turned on by plugging in a charger.
+#
+# These handhelds auto-power-on on AC insertion.  Without this, plugging in
+# to charge leaves the device running all night (battery drain) and a
+# software reboot during an OTA lands back in charger mode and never finishes
+# booting.  See docs/adr/0020-charger-triggered-boot.md.
+#
+# Behavior (UI-agnostic, runs before the UI):
+#   - Charger offline           -> boot normally.
+#   - .software_reboot marker   -> software-initiated boot (e.g. OTA reboot):
+#                                  clear marker, boot normally.
+#   - Charger online, no marker -> device was powered on by the charger:
+#                                  wait a short grace window for a power-button
+#                                  press; if pressed, boot normally (user
+#                                  wants to use it on AC); else poweroff.
+#   - power_charger_online_path = na / missing -> no charger detect, boot.
+#
+# Power off (never suspend): suspend leaves the SoC powered and drains the
+# battery (the bug class seen on Knulli/MuOS).  A full poweroff lets the
+# battery charge with the SoC off.
+
+description="Power off on charger-triggered boot"
+
+TRAITS_FILE="/mnt/sdcard/.minime/traits"
+MARKER="/mnt/sdcard/.minime/config/.software_reboot"
+GRACE_SECONDS=4
+
+# --- Helpers ---
+
+get_trait() {
+	key="$1"
+	[ -f "$TRAITS_FILE" ] || return 0
+	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true
+}
+
+# Poll the power key for up to $GRACE_SECONDS.  Returns 0 if pressed.
+wait_for_power_key() {
+	device_name="$(get_trait input_power_device_name)"
+	key_code="$(get_trait key_power)"
+	[ -n "$device_name" ] || return 0
+	[ -n "$key_code" ] || return 0
+
+	dev=""
+	for d in /sys/class/input/event*; do
+		[ -e "$d/device/name" ] || continue
+		if [ "$(cat "$d/device/name" 2>/dev/null)" = "$device_name" ]; then
+			dev="/dev/${d##*/}"
+			break
+		fi
+	done
+	[ -n "$dev" ] || return 0
+
+	# Read input events with a timeout using dd+timeout on a non-blocking fd.
+	deadline=$(( $(date +%s) + GRACE_SECONDS ))
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		# shellcheck disable=SC2016
+		if timeout 1 dd if="$dev" bs=24 count=1 of=/dev/null 2>/dev/null; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# --- OpenRC ---
+
+depend() {
+	after traits fb-unblank
+	before ui
+}
+
+start() {
+	# Ensure Allium never shows its built-in charging screen (ADR 0020).
+	seed_power_json
+
+	# Software-initiated reboot: clear marker and boot normally.
+	if [ -f "$MARKER" ]; then
+		rm -f "$MARKER" 2>/dev/null || true
+		return 0
+	fi
+
+	charger_online="$(get_trait power_charger_online_path)"
+	[ -n "$charger_online" ] && [ "$charger_online" != "na" ] || return 0
+	[ -f "$charger_online" ] || return 0
+
+	online="$(cat "$charger_online" 2>/dev/null | tr -d '[:space:]')"
+	[ "$online" = "1" ] || return 0
+
+	# Charger is connected and this was not a software reboot: the device
+	# was powered on by the charger.  Give the user a short window to press
+	# power if they actually want to boot.
+	if wait_for_power_key; then
+		return 0
+	fi
+
+	logger -t charger "charger-triggered boot with no power press; powering off" 2>/dev/null || true
+	poweroff -f
+	return 0
+}
+
+# Seed Allium's power.json with charging_screen=false so Allium never shows
+# its built-in charging screen (ADR 0020).  Only written when absent, so a
+# user's own power settings are never clobbered.
+seed_power_json() {
+	pjson="/mnt/sdcard/.allium/state/power.json"
+	[ -f "$pjson" ] && return 0
+	mkdir -p "$(dirname "$pjson")" 2>/dev/null || true
+	cat >"$pjson" <<'EOF'
+{"power_button_action":"Suspend","lid_close_action":"Shutdown","auto_sleep_when_charging":true,"auto_sleep_duration_minutes":5,"charging_screen":false}
+EOF
+}
+
+
