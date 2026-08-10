@@ -52,8 +52,10 @@ if [ -d "${BOARD_DIR}/overlay" ]; then
 	cp -a "${BOARD_DIR}/overlay/." "${TARGET_DIR}/"
 fi
 
-# 3. DNS symlink & SD card mount point
-ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
+# 3. DNS symlink & SD card mount point.
+#    /etc/resolv.conf points at openresolv's runtime output (iwd pushes the
+#    DHCP DNS servers to it via NameResolvingService=resolvconf).
+ln -sf /run/resolvconf/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 mkdir -p "${TARGET_DIR}/mnt/sdcard"
 
 # 4. Shared Realtek firmware

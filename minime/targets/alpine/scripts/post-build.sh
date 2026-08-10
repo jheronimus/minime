@@ -83,8 +83,9 @@ if [ -f "${MINIME_ROOT}/roms/mappings" ]; then
 	cp -f "${MINIME_ROOT}/roms/mappings" "${TARGET_DIR}/usr/share/minime/rom-mappings"
 fi
 
-# 6. Replace build-time resolv.conf with symlink to allow runtime DHCP DNS updates
-ln -sf /tmp/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
+# 6. Point /etc/resolv.conf at openresolv's runtime output (iwd pushes the
+#    DHCP DNS servers to it via NameResolvingService=resolvconf).
+ln -sf /run/resolvconf/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
 # 7. Touch a marker file to represent the absolute latest timestamp in the rootfs.
 touch "${TARGET_DIR}/.build_time"
