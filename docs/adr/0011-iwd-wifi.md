@@ -25,11 +25,12 @@ Transition Wi-Fi to **iwd (Internet Wireless Daemon)**:
   `BR2_PACKAGE_READLINE=y` enables the `iwctl` interactive tool.
 - **Standalone, no wpa_supplicant, no udhcpc**: iwd performs 802.11 + WPA
   natively and, with `EnableNetworkConfiguration=true` in `/etc/iwd/main.conf`,
-  provides its own DHCP client. `NameResolvingService` is unset, so iwd writes
-  the DHCP-provided DNS servers to `/etc/resolv.conf` (a symlink to
-  `/tmp/resolv.conf`, created by `post-build.sh`). This is required for
-  device-initiated downloads — the on-device updater (ADR 0017) fetches OTA
-  archives from GitHub over HTTPS.
+  provides its own DHCP client. `NameResolvingService=none` keeps iwd out of
+  DNS management — its backends (systemd-resolved, openresolv) are not present
+  on Minime. Instead, the wifi service writes the DHCP gateway as the
+  nameserver to `/etc/resolv.conf` (a symlink to `/tmp/resolv.conf`, created
+  by `post-build.sh`). This is required for device-initiated downloads — the
+  on-device updater (ADR 0017) fetches OTA archives from GitHub over HTTPS.
 - **State on the FAT partition**: iwd persists known networks as `.psk`
   profiles in `$STATE_DIRECTORY`. Because `/var/lib` is on the read-only EROFS
   rootfs, the wifi service starts iwd with

@@ -250,6 +250,15 @@ start() {
 	logger -t wifi "connection established" 2>/dev/null || true
 	log_boot "Connection established with IP"
 
+	# Write the DHCP gateway as the DNS nameserver.  iwd's DNS backends
+	# (systemd-resolved / openresolv) are not present on Minime, so this
+	# service owns resolv.conf; home routers proxy DNS on the gateway.
+	# Required for device-initiated downloads (on-device update.sh, ADR 0017).
+	gateway="$(ip route show default 2>/dev/null | awk '/default/ {print $3; exit}')"
+	if [ -n "${gateway}" ]; then
+		printf 'nameserver %s\n' "${gateway}" >/etc/resolv.conf 2>/dev/null || true
+	fi
+
 	# Start NTP daemon to sync time and fix clock skew.
 	if command -v ntpd >/dev/null 2>&1; then
 		killall ntpd 2>/dev/null || true
