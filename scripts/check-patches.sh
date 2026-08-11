@@ -11,6 +11,7 @@ errors=0
 PATCH_DIRS=(
     "${ROOT_DIR}/minime/boards"
     "${ROOT_DIR}/minime/uboot"
+    "${ROOT_DIR}/minime/build/cores"
     "${ROOT_DIR}/minime/targets/alpine/aports"
     "${ROOT_DIR}/minime/targets/buildroot/external/package"
 )
@@ -37,7 +38,7 @@ echo "Checking ${#patch_files[@]} patch file(s) for references in build manifest
 
 tmp_cache=$(mktemp)
 find "${ROOT_DIR}/minime" "${ROOT_DIR}/scripts" "${ROOT_DIR}/.github" -type f \
-    \( -name "APKBUILD" -o -name "Makefile" -o -name "series" -o -name "*.mk" -o -name "*.sh" -o -name "*.yml" -o -name "*.config" \) \
+    \( -name "APKBUILD" -o -name "Makefile" -o -name "series" -o -name "*.mk" -o -name "*.sh" -o -name "*.yml" -o -name "*.config" -o -name "manifest" \) \
     -exec cat {} + > "$tmp_cache" 2>/dev/null || true
 
 for p in "${patch_files[@]}"; do

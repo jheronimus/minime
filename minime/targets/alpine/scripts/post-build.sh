@@ -76,18 +76,11 @@ mkdir -p "${TARGET_DIR}/usr/share/minime/scripts"
 [ -f "${COMMON_DIR}/scripts/collect-diagnostics.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/collect-diagnostics.sh" \
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 
-# 5. Install the shared preloaded-ROM folder mapping (used by update.sh to
-#    rename Roms/ subfolders when switching UIs).
-if [ -f "${MINIME_ROOT}/roms/mappings" ]; then
-	mkdir -p "${TARGET_DIR}/usr/share/minime"
-	cp -f "${MINIME_ROOT}/roms/mappings" "${TARGET_DIR}/usr/share/minime/rom-mappings"
-fi
-
-# 6. Point /etc/resolv.conf at openresolv's runtime output (iwd pushes the
+# 5. Point /etc/resolv.conf at openresolv's runtime output (iwd pushes the
 #    DHCP DNS servers to it via NameResolvingService=resolvconf).
 ln -sf /run/resolvconf/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
-# 7. Touch a marker file used by initramfs-init.sh to advance system time on cold
+# 6. Touch a marker file used by initramfs-init.sh to advance system time on cold
 #    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 

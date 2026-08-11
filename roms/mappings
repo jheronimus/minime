@@ -1,22 +1,27 @@
 # Minime preloaded-ROM folder mapping (single source of truth).
 #
-# Format: short_name|minui_name|allium_name
+# Format: short_name|roms_dir
 #
-# Consumed at build time by roms/install.sh (per-UI preloaded-ROM staging) and
-# at runtime by /usr/bin/update.sh (renames Roms/ subfolders when switching
-# UIs).  Both use the same table so the two naming conventions never diverge.
+# short_name is the source dir inside roms/ that holds the actual preloaded
+# roms (e.g. roms/gb/).  roms_dir is the single canonical Roms/ folder name
+# used by BOTH UIs — it mirrors MinUI's canonical names exactly
+# (skeleton/BASE/Roms/ + skeleton/EXTRAS/Roms/ in the MinUI submodule).
+# Allium resolves roms by the (ABBREV) tag, so no per-UI naming is needed.
+#
+# Consumed at build time by roms/install.sh (preloaded-ROM staging, UI-agnostic).
 
-gb|Game Boy (GB)|GB
-gbc|Game Boy Color (GBC)|GBC
-gba|Game Boy Advance (GBA)|GBA
-nes|Nintendo Entertainment System (FC)|FC
-snes|Super Nintendo (SFC)|SFC
-md|Sega Genesis (MD)|MD
-gg|Game Gear (GG)|GG
-sms|Master System (SMS)|MS
-psx|Sony PlayStation (PS)|PS
-pce|PC Engine (PCE)|PCE
-saturn|Sega Saturn (SAT)|SAT
-lynx|Atari Lynx (LYNX)|LYNX
-ngp|Neo Geo Pocket (NGP)|NGP
-wswan|WonderSwan (WS)|WS
+gb|Game Boy (GB)
+gbc|Game Boy Color (GBC)
+gba|Game Boy Advance (GBA)
+nes|Nintendo Entertainment System (FC)
+snes|Super Nintendo Entertainment System (SFC)
+md|Sega Genesis (MD)
+gg|Sega Game Gear (GG)
+sms|Sega Master System (SMS)
+psx|Sony PlayStation (PS)
+pce|TurboGrafx-16 (PCE)
+saturn|Sega Saturn (SAT)
+lynx|Atari Lynx (LYNX)
+ngp|Neo Geo Pocket (NGP)
+wswan|WonderSwan (WS)
+nds|Nintendo DS (NDS)

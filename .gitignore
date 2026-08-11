@@ -53,3 +53,7 @@ card
 # Mac dot files
 **/.DS_Store
 **/._*
+
+# Shared cores build outputs
+minime/build/cores/out/
+minime/build/cores/src/

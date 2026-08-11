@@ -8,11 +8,8 @@
 # downloads the matching OTA archive directly with curl, compares it against
 # the installed manifest, and installs it (clean-replaces the active UI
 # payload — .system for MinUI, .ui/.allium/RetroArch/apps for Allium —
-# and overlays .minime).  When the requested UI differs from the installed
-# UI, Roms/ subfolders are renamed to the new UI's naming convention using
-# the shared /usr/share/minime/rom-mappings table (the same source as the
-# preloaded-ROM installer).  User data (ROMs content, Saves/, Bios/,
-# .userdata/) is never touched beyond those Roms/ folder renames.
+# and overlays .minime).  User data (ROMs content, Saves/, Bios/,
+# .userdata/) is never touched.
 #
 # The script detaches from the invoking shell by default (telnet-safe) and
 # logs to the SD card, so it survives the session dropping.  It reboots the
@@ -31,7 +28,6 @@ PID_FILE="${UPDATE_DIR}/update.pid"
 INSTALLED_MANIFEST="${SDCARD}/.minime/manifest.json"
 UI_ENV_FILE="${SDCARD}/.minime/ui.env"
 TRAITS_FILE="${SDCARD}/.minime/traits"
-ROM_MAPPINGS="/usr/share/minime/rom-mappings"
 
 # --- Helpers --------------------------------------------------------------
 
@@ -105,43 +101,6 @@ installed_ui() {
 	[ -f "${UI_ENV_FILE}" ] || return 0
 	grep '^UI_NAME=' "${UI_ENV_FILE}" 2>/dev/null | head -n1 |
 		cut -d= -f2- | tr -d '"' | tr 'A-Z' 'a-z'
-}
-
-# Rename Roms/ subfolders from the old UI's naming to the new UI's naming.
-# Only the shared preloaded systems (rom-mappings) are handled; a rename is
-# skipped when the target folder already exists (never nest or clobber).
-rename_roms() {
-	from="$1"
-	to="$2"
-	[ "${from}" = "${to}" ] && return 0
-	[ -n "${from}" ] && [ -n "${to}" ] || {
-		log "installed UI unknown; skipping Roms rename"
-		return 0
-	}
-	[ -f "${ROM_MAPPINGS}" ] || {
-		log "missing ${ROM_MAPPINGS}; skipping Roms rename"
-		return 0
-	}
-	renamed=0
-	while IFS='|' read -r short minui_name allium_name || [ -n "${short}" ]; do
-		case "${short}" in "" | \#*) continue ;; esac
-		[ -n "${minui_name}" ] || continue
-		[ -n "${allium_name}" ] || continue
-		if [ "${from}" = "minui" ]; then
-			old="${minui_name}"
-			new="${allium_name}"
-		else
-			old="${allium_name}"
-			new="${minui_name}"
-		fi
-		[ "${old}" = "${new}" ] && continue
-		if [ -d "${SDCARD}/Roms/${old}" ] && [ ! -e "${SDCARD}/Roms/${new}" ]; then
-			mv "${SDCARD}/Roms/${old}" "${SDCARD}/Roms/${new}"
-			log "Roms: '${old}' -> '${new}'"
-			renamed=$((renamed + 1))
-		fi
-	done <"${ROM_MAPPINGS}"
-	log "Roms rename complete (${renamed} folder(s) renamed)"
 }
 
 # --- Main -----------------------------------------------------------------
@@ -232,9 +191,6 @@ allium)
 		die "install incomplete: .ui/bin/alliumd missing; leaving archive at ${ARCHIVE}"
 	;;
 esac
-
-# Rename Roms/ subfolders when the UI changed (uses the pre-switch installed UI).
-rename_roms "${FROM_UI}" "${UI}"
 
 # Clean up the archive before rebooting.
 rm -f "${ARCHIVE}"

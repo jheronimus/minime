@@ -22,10 +22,10 @@ unresolved requirements remained:
 
 - **Switch UIs without reflashing.** MinUI and Allium are mutually exclusive
   UI payloads; switching meant reflashing the SD card.
-- **Per-UI ROM folder naming.** The same system uses different `Roms/`
-  subfolder names per UI — MinUI `"Game Boy (GB)"` vs Allium `"GB"`, per the
-  preloaded-ROM installer's mapping — so a UI switch leaves ROMs organized
-  for the old UI.
+- **Per-UI ROM folder naming.** The same system used different `Roms/`
+  subfolder names per UI — MinUI `"Game Boy (GB)"` vs Allium `"GB"` — so a
+  UI switch left ROMs organized for the old UI. **Resolved in 2026-08-11:**
+  both UIs share one canonical naming scheme (§4).
 
 ## Decision
 
@@ -61,21 +61,19 @@ invoking telnet session dropping — the previous host-side flow had to
 background the extraction and poll for a completion marker for the same
 reason (ADR 0006 §3).
 
-### 4. Roms/ subfolder rename on UI switch
+### 4. Roms/ folders use one canonical (MinUI) naming scheme
 
-The preloaded-ROM folder mapping was extracted into a single shared table
-[roms/mappings](../../roms/mappings) (`short|minui_name|allium_name`),
-consumed by both:
+Both UIs share a single set of `Roms/` folder names, mirroring MinUI's
+canonical names (`"Game Boy (GB)"`, `"Sega Master System (SMS)"`, …). The
+preloaded-ROM mapping [roms/mappings](../../roms/mappings) is therefore a
+two-column table (`short_name|roms_dir`) consumed only at build time by
+[roms/install.sh](../../roms/install.sh). Allium resolves roms by the
+`(ABBREV)` tag in the folder name, so it needs no separate naming scheme.
 
-- [roms/install.sh](../../roms/install.sh) at build time (per-UI ROM staging),
-- `update.sh` at runtime, via the copy baked into the rootfs as
-  `/usr/share/minime/rom-mappings` by both `post-build.sh` scripts.
-
-On a UI switch, `update.sh` renames each known `Roms/` subfolder to the new
-UI's name **only when the target name does not already exist** — it never
-nests or clobbers. Only the 14 preloaded systems are in the table; user-added
-folders are left untouched (Allium's mapper matches by substring, so most
-still resolve).
+Consequence: there is **no Roms rename on UI switch** — `update.sh` installs
+the payload and never touches `Roms/` folders. The on-device
+`/usr/share/minime/rom-mappings` table and the `rename_roms()` logic were
+removed from `update.sh` and both `post-build.sh` scripts.
 
 ### 5. Host-side OTA tooling removed
 
@@ -95,14 +93,13 @@ still resolve).
   ships curl + CA certificates on both targets.
 - The updater ships in the rootfs overlay and is itself replaced by the OTA
   payload it installs — no bootstrapping problem.
-- ROM renames cover preloaded systems only; switching preserves all user data
-  and per-UI private state (`.userdata/` vs `.allium/`) by never touching them.
+- Both UIs share one canonical `Roms/` naming, so switching preserves all user
+  data and per-UI private state (`.userdata/` vs `.allium/`) by never touching
+  them, and there is no rename step to get wrong.
 
 ## Reference
 
 - On-device updater: `minime/boards/common/overlay/usr/bin/update.sh`.
-- Shared mapping: `roms/mappings`, `roms/install.sh`,
-  `minime/targets/alpine/scripts/post-build.sh`,
-  `minime/targets/buildroot/external/scripts/post-build.sh`.
+- Shared mapping: `roms/mappings`, `roms/install.sh`.
 - Related: `docs/adr/0006-ota-updates.md` (archive format), `docs/adr/0013-network-services-passwordless.md`
   (telnet/FTP model), `docs/adr/0018-mDNS-self-announcement.md` (name resolution).

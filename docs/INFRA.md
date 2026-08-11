@@ -13,9 +13,10 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **Purpose**: Builds all bootloaders, UIs, OS images, and OTA update packages for all board/OS/UI combinations. Uploads final images to the `testing` GitHub Release on push to `main`.
 - **Jobs**:
   - `build-bootloader` — compiles U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64. Cached by hash of `minime/uboot/**`.
+  - `build-cores` (matrix: `musl` / `glibc`) — builds the shared RetroArch cores from `minime/build/cores/manifest` via `buildcores.sh`, once for both UIs. Uploads the flat `cores-{libc}` artifact; `build-ui` consumes it.
   - `build-ui` (matrix: `musl` / `glibc`) — compiles MinUI and Allium for both libc variants. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 with no container. Cached by hash of `minime/ui/**`.
   - `build-os` (matrix: `{alpine, buildroot}` × `{h700, rk3326, rk3566}` = 6 jobs) — runs `make components` then `make image update` (once per UI). Depends on both asset jobs. Uploads `.img.zst` and `.tar.zst` to the `testing` release.
-- **Caches**: `bootloader-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
+- **Caches**: `bootloader-*`, `cores-{libc}-*`, `ccache-cores-{libc}-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
 - **Rule**: Never dispatch this workflow manually (`gh workflow run`). Push to `main` is the only intended trigger. Manual dispatch causes concurrent runs that corrupt `testing` release assets.
 
 ### `containers.yml` — Build & Push Builder Images
@@ -36,7 +37,8 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ### Build Scripts (`minime/build/`)
 - **`minime/build/mkbootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
-- **`minime/build/mkui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
+- **`minime/build/cores/buildcores.sh`**: Builds all shared RetroArch cores from `minime/build/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
+- **`minime/build/mkui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui` job in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
 - **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
 - **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
 - **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.

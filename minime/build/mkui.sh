@@ -24,14 +24,19 @@ if [ "$UI" = "minui" ]; then
 			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			"ghcr.io/${OWNER}/minime-musl:latest" \
-			/bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"ccache \" PREFIX=/usr CC=\"ccache gcc\" CXX=\"ccache g++\" && cd .. && make CROSS_COMPILE=\"ccache \" PREFIX=/usr system cores PLATFORM=minime"
+			/bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"ccache \" PREFIX=/usr CC=\"ccache gcc\" CXX=\"ccache g++\" && cd .. && make CROSS_COMPILE=\"ccache \" PREFIX=/usr system PLATFORM=minime"
 	else
 		docker run --rm -u root \
 			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			"ghcr.io/${OWNER}/minime-glibc:latest" \
-			/bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" && cd .. && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr system cores PLATFORM=minime"
+			/bin/bash -c "export UNION_PLATFORM=minime && cd /workspace/minime/ui/minui/workspace && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr CC=\"ccache aarch64-linux-gnu-gcc\" CXX=\"ccache aarch64-linux-gnu-g++\" && cd .. && make CROSS_COMPILE=\"aarch64-linux-gnu-\" PREFIX=/usr system PLATFORM=minime"
 	fi
+
+	# Inject the shared cores (built once by build-cores) into the paks. The
+	# submodule `cores:` rule copies them from CORES_DIR into SYSTEM/minime/cores.
+	make -C "$ROOT_DIR/minime/ui/minui" cores PLATFORM=minime \
+		CORES_DIR="$ROOT_DIR/minime/build/cores/out"
 
 	# Native PICO-8 (P8-NATIVE.pak + Splore.pak) launches the official glibc
 	# pico8_64 binary (Raspberry Pi build). It cannot run on musl (Alpine),
@@ -126,6 +131,15 @@ elif [ "$UI" = "allium" ]; then
 		cp "$ROOT_DIR/minime/ui/allium/dist/RetroArch/retroarch" "$STAGE_DIR/RetroArch/retroarch"
 	else
 		echo "WARNING: retroarch binary not found — skipping injection" >&2
+	fi
+	# Inject the shared Minime cores (built once by build-cores) into RetroArch.
+	# Allium's retroarch launch.sh loads `-L RetroArch/.retroarch/cores/<name>_libretro.so`,
+	# so the flat artifact goes straight in, overwriting the committed stock cores.
+	if [ -d "$ROOT_DIR/minime/build/cores/out" ]; then
+		mkdir -p "$STAGE_DIR/RetroArch/.retroarch/cores"
+		cp "$ROOT_DIR/minime/build/cores/out/"*.so "$STAGE_DIR/RetroArch/.retroarch/cores/" || true
+	else
+		echo "WARNING: cores artifact not found — skipping core injection" >&2
 	fi
 	# Stage the .allium runtime tree (config/cores/locales/fonts/scripts/
 	# migrations) plus the bundled aarch64 tools (dufs/collie/syncthing)

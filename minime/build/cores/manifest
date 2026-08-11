@@ -1,0 +1,43 @@
+# Minime shared libretro cores manifest
+#
+# Single source of truth for every RetroArch core that Minime builds once and
+# ships in BOTH MinUI and Allium. buildcores.sh consumes this file.
+#
+# Format (pipe-separated, '#' comments):
+#   core       - recipe/core name (clone dir). Artifact is <core>_libretro.so
+#                unless core_so overrides it.
+#   repo       - git URL to clone.
+#   hash       - pinned commit. Empty = float at the repo's default branch.
+#                The update-cores bot bumps hashes for autobump=1 entries only.
+#   buildpath  - directory of the Makefile, relative to the CLONE root.
+#                Empty = the clone root itself.
+#   makefile   - Makefile filename to pass via `make -f`. Empty = Makefile.
+#   flags      - extra make variables passed verbatim to the build.
+#   patch      - patch file under patches/ applied before building. Empty = none.
+#   platform   - make `platform=` value. Empty = minime.
+#   core_so    - output .so basename. Empty = <core>_libretro.so.
+#   optional   - 1 = skip+warn on build failure (CI stays green), 0 = fail.
+#   autobump   - 1 = update-cores bot may bump hash, 0 = keep pinned forever.
+#
+# The 13 recipes below are carried over verbatim from the old MinUI build
+# (workspace/minime/cores/makefile); handy + mednafen_wswan cover the Atari
+# Lynx / WonderSwan Roms systems; yabasanshiro (Saturn, WIP) and drastic
+# (NDS, WIP, glibc-only) are jheronimus forks and stay pinned.
+
+fceumm|https://github.com/libretro/libretro-fceumm|||||fceumm.patch|minime||0|1
+gambatte|https://github.com/libretro/gambatte-libretro|||||gambatte.patch gambatte-export-dmg-grid.patch|minime||0|1
+gpsp|https://github.com/libretro/gpsp|||||gpsp.patch|minime||0|1
+pcsx_rearmed|https://github.com/libretro/pcsx_rearmed|99d2ce02c6a5836096ade6ced9f8ca23a1fbb7bd||Makefile.libretro|USE_MINIZ=0|pcsx_rearmed.patch|minime||0|1
+picodrive|https://github.com/irixxxx/picodrive|5f9e79f2177443939f21ab965b1c294edbef514c||Makefile.libretro||picodrive.patch|minime||0|1
+snes9x2005_plus|https://github.com/libretro/snes9x2005||||USE_BLARGG_APU=1|snes9x2005_plus.patch|minime||0|1
+mednafen_pce_fast|https://github.com/libretro/beetle-pce-fast-libretro|||||mednafen_pce_fast.patch|minime||0|1
+mednafen_vb|https://github.com/libretro/beetle-vb-libretro|||||mednafen_vb.patch|minime||0|1
+mednafen_supafaust|https://github.com/libretro/supafaust|||||mednafen_supafaust.patch|minime||0|1
+mgba|https://github.com/libretro/mgba|517e518c48e351def04042dc159064dd098830a9||||mgba.patch|minime||0|0
+pokemini|https://github.com/libretro/PokeMini|||Makefile.libretro||pokemini.patch pokemini-fix-resume-audio.patch|minime||0|1
+race|https://github.com/libretro/race|||||race.patch|minime||0|1
+fake-08|https://github.com/jtothebell/fake-08||fake-08/platform/libretro|||fake-08.patch|minime|fake08_libretro.so|0|1
+handy|https://github.com/libretro/libretro-handy|||||handy.patch|minime||0|1
+mednafen_wswan|https://github.com/libretro/beetle-wswan-libretro|||||mednafen_wswan.patch|minime||0|1
+yabasanshiro|https://github.com/jheronimus/yabause|6e7ad3d39c4fa1bb7ff0671b2d87cdaa5bd09e04|yabause/src/libretro|Makefile|||arm64||1|0
+drastic|https://github.com/jheronimus/drastic|de980eed58173d94d7a1b9afedd66ca28a6406c2|wrapper|Makefile|||minime||1|0

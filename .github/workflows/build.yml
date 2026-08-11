@@ -74,8 +74,79 @@ jobs:
           path: minime/uboot/out
           retention-days: 7
 
+  build-cores:
+    name: Build Cores (${{ matrix.libc }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libc: musl
+            runner: ubuntu-24.04-arm
+            container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
+            toolchain: export CROSS_COMPILE="ccache " CC="ccache gcc" CXX="ccache g++" AR="ar"
+          - libc: glibc
+            runner: ubuntu-latest
+            toolchain: export CROSS_COMPILE="ccache aarch64-linux-gnu-" CC="ccache aarch64-linux-gnu-gcc" CXX="ccache aarch64-linux-gnu-g++" AR="aarch64-linux-gnu-ar"
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore Cores Cache
+        id: cache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/**') }}
+
+      - name: Restore Cores CCache
+        id: ccache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cores-ccache-${{ matrix.libc }}
+          key: ccache-cores-${{ matrix.libc }}-${{ github.sha }}
+          restore-keys: |
+            ccache-cores-${{ matrix.libc }}-
+
+      - name: Build Cores
+        if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
+        run: |
+          docker run --rm -u root \
+            -v "$HOME/.cores-ccache-${{ matrix.libc }}:/root/.ccache" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            "${{ matrix.container }}" \
+            /bin/bash -c "${{ matrix.toolchain }} && minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+
+      - name: Save Cores Cache
+        if: always() && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
+        uses: actions/cache/save@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/**') }}
+
+      - name: Save Cores CCache
+        if: always() && steps.ccache-cores-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cores-ccache-${{ matrix.libc }}
+          key: ccache-cores-${{ matrix.libc }}-${{ github.sha }}
+
+      - name: Upload Cores Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: cores-${{ matrix.libc }}
+          path: minime/build/cores/out
+          retention-days: 7
+
   build-ui:
     name: Build UI (${{ matrix.libc }})
+    needs: [build-bootloader, build-cores]
     strategy:
       fail-fast: false
       matrix:
@@ -110,6 +181,12 @@ jobs:
           key: ccache-ui-${{ matrix.libc }}-${{ github.sha }}
           restore-keys: |
             ccache-ui-${{ matrix.libc }}-
+
+      - name: Download Cores
+        uses: actions/download-artifact@v8
+        with:
+          name: cores-${{ matrix.libc }}
+          path: minime/build/cores/out
 
       - name: Compile MinUI
         if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', matrix.libc)) == ''
