@@ -22,6 +22,9 @@
   - [THEORY] Also re-seed Allium `power.json` with `charging_screen:false` (was done by the removed script) if Allium's built-in charging screen is still disabled.
 - [ ] Implement Fake Suspend & Quick Resume across platforms (RK3566, RK3326, H700)
   - [THEORY] Offline non-boot CPU cores (or throttle CPU0 to 120MHz powersave), mute audio, disable LEDs, turn off Wi-Fi/audio rails, save emulator state, and start auto-shutdown timer.
+- [ ] Allium idle auto-sleep should mimic MinUI: suspend first, then auto-shutdown
+  - [DONE] Default `auto_sleep_when_charging` to `false` (Allium power.rs) so the 5-min idle timer no longer powers off while charging.
+  - [THEORY] Allium's idle timeout (`alliumd.rs` → `handle_quit()`) currently **powers off directly** — it never suspends first. MinUI (`api.c` `PWR_fauxSleep` → `PWR_waitForWake`) instead blanks the screen / suspends, and only auto-powers-off after ~2 min in sleep when **not** charging. Mirror that on Minime: on idle timeout call `handle_suspend()`, then if still idle & not charging, `handle_quit()`.
 - [ ] Qualify real kernel suspend and DTS regulator sleep states (RK3566, RK3326)
 - [ ] Calibrate voltage-based battery gauge with PMIC percentage fallback
 - [ ] Enhance LED support (green status LED, charging/battery level indicators, low-battery threshold disable)
