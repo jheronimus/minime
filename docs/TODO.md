@@ -1,29 +1,20 @@
 # Minime TODO
 
 ## CI
-- [x] Investigate why musl build of UI now takes 2x the time of glibc
-  - [DONE] Not a container error — both images pull/build fine. The gap appears only on UI-cache-miss runs: musl runs natively on the slower `ubuntu-24.04-arm` runner while glibc cross-compiles on `ubuntu-latest` (x86-64), and on a miss the full ~300-crate cargo tree + RetroArch recompile on the slow runner. Mitigation: cache the Allium cargo `target/` dirs (workspace + dufs/collie) keyed on their `Cargo.lock` files in `build-ui` (`allium-target-{libc}-*`).
+
 - [ ] Try switching between Alpine and Buildroot using update.sh
 
 ## UI
-- [x] Streamline the RetroArch cores between MinUI and Allium
-  - [DONE] Shared cores built once by the new `build-cores` CI job (matrix musl/glibc) from `minime/build/cores/manifest` (17 recipes: the 13 MinUI cores + handy + mednafen_wswan + yabasanshiro + drastic) with `buildcores.sh`; artifact `cores-<libc>` is consumed by both UIs (`build.yml`, `mkui.sh`). The MinUI submodule no longer builds cores (`cores:` target now injects the flat artifact into `SYSTEM/minime/cores`); all emulator paks moved to base SYSTEM (+ new LYNX/WS/SAT/NDS paks). Allium injects the `.so` files into `RetroArch/.retroarch/cores/`. `update-cores.yml` bumps `autobump=1` pins (mgba + WIP drastic/yabasanshiro stay pinned).
-  - [DONE] Q6 Roms naming: `roms/mappings` is now a single 2-column MinUI-canonical scheme (no Allium dual naming); `roms/install.sh`, `update.sh`, and both `post-build.sh` lost the rename machinery; MinUI skeleton Roms folders mirror the canonical names and resolve on Allium (added SMS/SAT/NGPC/P8/MGBA/SUPA patterns + race core for NGP/NGPC).
+
 - [ ] Allium: display proper console names for MinUI-style Roms folders (Option 1, deferred)
   - [THEORY] `ConsoleMapper::get_console_by_dir` (`crates/allium-launcher/src/consoles.rs`) is exact-match only, so a MinUI-named folder like `Game Boy (GB)` displays the raw folder name instead of the console name. Teach it to also match `(ABBREV)` like `get_console` already does. This is a shared-crate change (AGENTS.md minimal-intrusion exception), so it's deferred. **Accepted for now (Option 2): keep raw folder names as the display name.**
-- [x] Port the Wi-Fi / Bluetooth / Power menus and rewind from the MinUI fork's `IMPORT` branch (`jheronimus/MinUI`), isolated
-  - [THEORY] Implemented surgically in the MinUI submodule: `workspace/all/settings/` builds three standalone Tool PAKs (Wi-Fi/Bluetooth/Power) using `iwctl`/`bluetoothctl` backends (`common/generic_wifi.c`/`generic_bt.c`) behind a `WIFI_*`/`BT_*` API (`common/wireless.h`); power policy enforcement lives in `common/api.c`; rewind is inline in `minarch.c` via a `run_frame()` hook; shared `MenuList` (with badge/aux support) and on-screen keyboard extracted into `common/menu.c`/`common/keyboard.c`. See ADR 0024. Requires the firmware `wifi` service gate (`config/wifi/enabled`).
-  - [COMPAT] `wifi.cfg` is append/merge-based from MinUI (WIFI_connect appends only if the SSID is new), so it does not clobber other networks. Allium's minime `update_wpa_supplicant_conf()` still does `File::create` (overwrite) — if both UIs are used on one card, last-write-wins clobbers networks. Deferred until Allium adopts the same append convention.
-
+- [ ] Allium: adopt MinUI's append/merge `wifi.cfg` convention so saving from either UI does not clobber other networks
+  - [THEORY] Allium's minime `update_wpa_supplicant_conf()` uses `File::create` (overwrite); MinUI's `WIFI_connect` appends only when the SSID is new. Deferred until Allium adopts the same append convention.
 
 ## Kernel & Performance
 
 - [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards
   - [x] `CONFIG_ENERGY_MODEL=y` enabled in the shared kernel fragment (ADR 0014)
-- [x] Optimize kernel memory management and schedulers
-  - [x] `CONFIG_COMPACTION=y` enabled (CMA GPU heap pressure, ADR 0014)
-  - [x] MGLRU (`CONFIG_LRU_GEN`/`_ENABLED`), TEO idle governor, and schedutil enabled in `tiny-base.config`; VM sysctls in `00-minime.conf` (`vm.swappiness=30`, `vm.watermark_scale_factor=150`, `vm.page-cluster=0` — [reference gist](https://gist.github.com/aenertia/522cd8df6f0b68a0a2f59f73d5fe3af7))
-  - [x] EAS (`CONFIG_SCHED_ENERGY`) not applicable: no populated energy model on RK3566 (ADR 0014)
 - [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
@@ -57,19 +48,12 @@
 
 - [ ] Inspect Rocknix per-platform/device quirks for adoptable fixes (RK3566, RK3326, H700)
   - [THEORY] Boot-time scripts under `hardware/quirks/platforms/{RK3566,RK3326,H700}` and `hardware/quirks/devices/*` (per-DT-model override dirs) cover far more than power/thermal: thermal trips, governor/DVFS paths, turbo/boost, GPU floors, suspend/fake-suspend hooks, fan/LED/battery handling, audio latency/volume, input modifiers, UI service selection, WiFi/BT. Quirks are executed every boot by `/usr/bin/autostart` — platform (SoC) dir first, then device dir, then global `autostart/common`; they persist state via `/storage/.config/profile.d/NNN-*` files and are wired into suspend/resume via `sleep.d/{pre,post}/*`. Not all installed quirks run (device dir is installed for all models but only the matching DT-model subdir executes; some guard on settings/DT nodes). Sources: [RK3566 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3566), [RK3326 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3326), [H700 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/H700), [device quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/devices).
-
-- [x] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
-  - [DONE] `boot.cmd` now loads `.minime/devices/${device}` first (falling back to `.minime/dtb`), so the RK3326 `first-boot-probe.sh` result and per-panel `fdtfile` detection are actually honored.
-- [x] Add RG353M support end-to-end (U-Boot rgxx3 FDT fixup + traits already added in `rg353m.ini`)
-  - [DONE] RG353M boots the shared `rk3566-anbernic-rg353p.dtb` (upstream U-Boot rgxx3 detects ADC 517 and sets `fdtfile`, `ft_board_setup` patches `model` → "Anbernic RG353M"). `mkbootloader.sh` now applies `minime/boards/rk3566/patches/uboot/` (VO power-domain + root-DTB `fdtfile` alignment) so detection matches `.minime/devices/`. `rg353m.ini` `[match] compatible` corrected to `anbernic,rg353p` (the runtime compatible; only `model` is fixed up); `check-traits.sh` FIXUP mechanism removed.
-
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](research/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.
 - [ ] Implement U-Boot SPL dual DRAM training fallback for H700 (LPDDR4 -> LPDDR3)
   - [THEORY] Modify `dram_sunxi_h616.c` in U-Boot SPL to attempt LPDDR4 training first and fallback to LPDDR3 timing if training fails, enabling a single U-Boot binary across all H700 RAM variants.
 - [ ] Review and trim init scripts; start wireless services (`wpa_supplicant`, `bluetoothd`) on demand
 - [ ] Optimize Wi-Fi connection speed
-
 - [ ] Compile patched DTB → decompile in CI and compare geometry/keycodes/names/refresh to the traits files (deeper variant of the cross-reference; needs the kernel build env)
 - [ ] Revisit parser design: generic KV-store parser (loop over file into a `key→value` map) + thin typed accessor layer, instead of the hardcoded schema table in traits.c/traits.rs. Trade-off deferred: pure KV loses consumer type-safety/typo detection and missing-vs-zero distinction; schema table is the maintenance surface for renames but surfaces drift loudly. Unknown-key tolerance is already required (shared file carries OS-only keys like `gpu_driver`).
 - [ ] Review the traits system again
@@ -77,14 +61,21 @@
 
 ## Completed
 
-- [x] CPU thermal stability + qualification (ADR 0014): RK3566 trips 83/88 °C CPU, 80/88 °C GPU passive; default perf 1800→1608 MHz; telemetry folded into `logger`; `stress-ng`/`memtester` behind `TEST_PACKAGES=1`
-- [x] Comprehensive traits audit (ADR 0012): sectioned schema + cascade; HDMI/battery/LED/input traits; DTB↔traits cross-check in `check-traits.sh`; H700 mixer = `Line Out`
+- [x] Investigate why musl UI build is 2x slower: slow `ubuntu-24.04-arm` runner on cache-miss; mitigated by caching Allium cargo `target/` dirs keyed on `Cargo.lock`
+- [x] Shared RetroArch cores between MinUI and Allium via `build-cores` CI job and `cores-<libc>` artifact
+- [x] Unify Roms folder naming to a single MinUI-canonical scheme (`roms/mappings`) resolved by both UIs
+- [x] Port Wi-Fi / Bluetooth / Power menus and rewind to MinUI, isolated (ADR 0024)
+- [x] Optimize kernel memory management: COMPACTION, MGLRU, TEO, schedutil; VM sysctls applied via shared OpenRC sysctl service
+- [x] Fix dead DTB auto-detect path in `boot.cmd`: load `.minime/devices/${device}` with `.minime/dtb` fallback
+- [x] RG353M support end-to-end: rgxx3 U-Boot patches applied; traits match runtime compatible `anbernic,rg353p`
+- [x] CPU thermal stability + qualification (ADR 0014)
+- [x] Comprehensive traits audit (ADR 0012)
 - [x] Optimize U-Boot boot speed
 - [x] Reorganize board defconfigs and shared package base between Alpine and Buildroot
-- [x] Enable CPU/GPU overclock (up to 2.0 GHz) and undervolt support for RK3566 via DTS overlays/bootloader options
+- [x] Enable CPU/GPU overclock (up to 2.0 GHz) and undervolt support for RK3566
 - [x] Fix power button on RG35xxSP not waking the device from sleep
 - [x] Update the MinUI `README.txt` shipped on the card
-- [x] Implement init script to clear Mac metadata files (`._*`, `.DS_Store`) — `dotclean` OpenRC service runs on boot over every card under `/mnt`
-- [x] Device hostname announcement on the network — every device advertises `minime.local` via mdnsd (ADR 0018); `just remote` resolves without a hardcoded `target_ip`
-- [x] OTA upload / reboot-wait timeout — resolved by replacing host-push `just update` with the detached on-device `update.sh` (ADR 0017); the reboot-wait problem no longer exists
-- [x] RK3326 bringup — supported in the CI matrix and both `minime/targets/*/Makefile` boards
+- [x] `dotclean` OpenRC service clears Mac metadata files (`._*`, `.DS_Store`)
+- [x] Device hostname announcement via mdnsd (`minime.local`, ADR 0018)
+- [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0017)
+- [x] RK3326 bringup in CI matrix and both `minime/targets/*/Makefile` boards
