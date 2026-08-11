@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdalign.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 int __android_log_print(int prio, const char *tag, const char *fmt, ...) {
     (void)prio;
@@ -13,6 +15,7 @@ int __android_log_print(int prio, const char *tag, const char *fmt, ...) {
     int ret = vfprintf(stderr, fmt, ap);
     va_end(ap);
     fprintf(stderr, "\n");
+    fflush(stderr);
     return ret;
 }
 
@@ -21,12 +24,15 @@ int __android_log_vprint(int prio, const char *tag, const char *fmt, va_list ap)
     fprintf(stderr, "[DraStic-Log:%s] ", tag ? tag : "Core");
     int ret = vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    fflush(stderr);
     return ret;
 }
 
 int __android_log_write(int prio, const char *tag, const char *text) {
     (void)prio;
-    return fprintf(stderr, "[DraStic-Log:%s] %s\n", tag ? tag : "Core", text ? text : "");
+    int ret = fprintf(stderr, "[DraStic-Log:%s] %s\n", tag ? tag : "Core", text ? text : "");
+    fflush(stderr);
+    return ret;
 }
 
 void __android_log_assert(const char *cond, const char *tag, const char *fmt, ...) {
@@ -38,11 +44,13 @@ void __android_log_assert(const char *cond, const char *tag, const char *fmt, ..
         va_end(ap);
     }
     fprintf(stderr, "\n");
+    fflush(stderr);
     abort();
 }
 
 void android_set_abort_message(const char *msg) {
     fprintf(stderr, "[DraStic-ABORT] %s\n", msg ? msg : "");
+    fflush(stderr);
 }
 
 alignas(8) char __sF[768];
@@ -67,6 +75,7 @@ int slCreateEngine(void *pEngine, uint32_t numOptions, const void *pEngineOption
     (void)pInterfaceIds;
     (void)pInterfaceRequired;
     fprintf(stderr, "[DraStic-OpenSLES] slCreateEngine stub called\n");
+    fflush(stderr);
     return 0; /* SL_RESULT_SUCCESS */
 }
 
@@ -83,6 +92,11 @@ const SLInterfaceID SL_IID_ENGINE                   = &g_SL_IID_ENGINE;
 const SLInterfaceID SL_IID_PLAY                     = &g_SL_IID_PLAY;
 const SLInterfaceID SL_IID_RECORD                   = &g_SL_IID_RECORD;
 const SLInterfaceID SL_IID_VOLUME                   = &g_SL_IID_VOLUME;
+
+char *__strcpy_chk(char *dest, const char *src, size_t dest_len) {
+    (void)dest_len;
+    return strcpy(dest, src);
+}
 
 char *__strncpy_chk2(char *dest, const char *src, size_t n, size_t dest_len, size_t src_len) {
     (void)dest_len;
@@ -198,12 +212,14 @@ char *__stpncpy_chk(char *dest, const char *src, size_t n, size_t dest_len) {
 int __open_2(const char *path, int flags) {
     int res = open(path, flags);
     fprintf(stderr, "[Bionic-Shim] __open_2('%s', 0x%x) -> %d\n", path ? path : "", flags, res);
+    fflush(stderr);
     return res;
 }
 
 int __open64_2(const char *path, int flags) {
     int res = open(path, flags);
     fprintf(stderr, "[Bionic-Shim] __open64_2('%s', 0x%x) -> %d\n", path ? path : "", flags, res);
+    fflush(stderr);
     return res;
 }
 
@@ -211,6 +227,7 @@ ssize_t __read_chk(int fd, void *buf, size_t count, size_t buf_len) {
     (void)buf_len;
     ssize_t res = read(fd, buf, count);
     fprintf(stderr, "[Bionic-Shim] __read_chk(fd=%d, count=%zu) -> %zd\n", fd, count, res);
+    fflush(stderr);
     return res;
 }
 
@@ -218,12 +235,33 @@ ssize_t __write_chk(int fd, const void *buf, size_t count, size_t buf_len) {
     (void)buf_len;
     ssize_t res = write(fd, buf, count);
     fprintf(stderr, "[Bionic-Shim] __write_chk(fd=%d, count=%zu) -> %zd\n", fd, count, res);
+    fflush(stderr);
     return res;
 }
 
 ssize_t __recvfrom_chk(int fd, void *buf, size_t len, size_t buf_len, int flags, void *src_addr, void *addrlen) {
     (void)buf_len;
     return recvfrom(fd, buf, len, flags, (struct sockaddr*)src_addr, (socklen_t*)addrlen);
+}
+
+#include <sys/mman.h>
+#include <dlfcn.h>
+
+int mprotect(void *addr, size_t len, int prot) {
+    typedef int (*pfn_mprotect)(void *, size_t, int);
+    static pfn_mprotect real_mprotect = NULL;
+    if (!real_mprotect) {
+        real_mprotect = (pfn_mprotect)dlsym(RTLD_NEXT, "mprotect");
+    }
+    int res = real_mprotect ? real_mprotect(addr, len, prot) : 0;
+    fprintf(stderr, "[Bionic-Shim] mprotect(%p, %zu, 0x%x) -> %d\n", addr, len, prot, res);
+    fflush(stderr);
+    if (res != 0) {
+        fprintf(stderr, "[Bionic-Shim] WARNING: real mprotect failed (errno=%d), returning success stub for DraStic JIT\n", errno);
+        fflush(stderr);
+        return 0;
+    }
+    return res;
 }
 
 mode_t __umask_chk(mode_t mask) {

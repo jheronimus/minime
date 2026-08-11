@@ -28,7 +28,8 @@ pak: $(TARGET_SO) $(LIBLOG) $(LIBOPENSLES)
 	mkdir -p $(PAK_DIR)
 	cp $(TARGET_SO) $(LIBLOG) $(LIBOPENSLES) launch.sh default.cfg $(PAK_DIR)/
 	@chmod +x $(PAK_DIR)/launch.sh
-	@echo "[DraStic] NDS.pak created in $(PAK_DIR)/"
+	cd dist && zip -r -q NDS.pak.zip NDS.pak
+	@echo "[DraStic] NDS.pak payload created in $(PAK_DIR)/ and dist/NDS.pak.zip"
 
 clean:
 	rm -f $(OBJS) $(TARGET_SO) $(LIBLOG) $(LIBOPENSLES)

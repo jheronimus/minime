@@ -115,11 +115,15 @@ void retro_init(void) {
    }
 
    const char *dir = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir) {
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir && dir[0] == '/') {
       snprintf(g_system_dir, sizeof(g_system_dir), "%s", dir);
+   } else {
+      snprintf(g_system_dir, sizeof(g_system_dir), "/mnt/sdcard/Bios/NDS");
    }
-   if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir) && dir) {
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir) && dir && dir[0] == '/') {
       snprintf(g_save_dir, sizeof(g_save_dir), "%s", dir);
+   } else {
+      snprintf(g_save_dir, sizeof(g_save_dir), "/mnt/sdcard/Saves/NDS");
    }
 
    struct retro_input_descriptor desc[] = {
@@ -298,6 +302,13 @@ void retro_cheat_set(unsigned index, bool enabled, const char *code) {
 
 void retro_run(void) {
    if (!g_game_loaded) return;
+
+   static unsigned frame_count = 0;
+   frame_count++;
+   if (frame_count <= 10 || frame_count % 300 == 0) {
+      fprintf(stderr, "[DraStic-Trace] retro_run frame #%u\n", frame_count);
+      fflush(stderr);
+   }
 
    input_poll_cb();
 

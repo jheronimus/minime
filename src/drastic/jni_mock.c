@@ -13,15 +13,20 @@
 extern char g_system_dir[512];
 extern char g_save_dir[512];
 
+/* NativePathHandle layout matching libdrastic_arm64.so struct offsets:
+ * offset  0: char *filePath
+ * offset  8: char *fileName
+ * offset 16: int fileFd
+ */
 typedef struct {
-    char filePath[512];
-    char fileName[256];
+    char *filePath;
+    char *fileName;
     int fileFd;
 } MockPathHandle;
 
-static jfieldID g_field_fileFd = (jfieldID)0x301;
-static jfieldID g_field_filePath = (jfieldID)0x302;
-static jfieldID g_field_fileName = (jfieldID)0x303;
+static jfieldID g_field_filePath = (jfieldID)0;
+static jfieldID g_field_fileName = (jfieldID)8;
+static jfieldID g_field_fileFd   = (jfieldID)16;
 
 static jmethodID g_method_open = (jmethodID)0x401;
 static jmethodID g_method_rename = (jmethodID)0x402;
@@ -212,21 +217,16 @@ static jfieldID JNICALL mock_GetStaticFieldID(JNIEnv *env, jclass clazz, const c
 
 static jint JNICALL mock_GetIntField(JNIEnv *env, jobject obj, jfieldID fieldID) {
     (void)env;
-    if (fieldID == g_field_fileFd && obj) {
-        MockPathHandle *handle = (MockPathHandle*)obj;
-        return handle->fileFd;
+    if (obj) {
+        return *(jint*)((char*)obj + (uintptr_t)fieldID);
     }
     return 0;
 }
 
 static jobject JNICALL mock_GetObjectField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    if (fieldID == g_field_filePath && obj) {
-        MockPathHandle *handle = (MockPathHandle*)obj;
-        return mock_NewStringUTF(env, handle->filePath);
-    }
-    if (fieldID == g_field_fileName && obj) {
-        MockPathHandle *handle = (MockPathHandle*)obj;
-        return mock_NewStringUTF(env, handle->fileName);
+    if (obj) {
+        char *str = *(char**)((char*)obj + (uintptr_t)fieldID);
+        return mock_NewStringUTF(env, str);
     }
     return NULL;
 }
@@ -254,16 +254,30 @@ static jobject JNICALL mock_CallStaticObjectMethodV(JNIEnv *env, jclass clazz, j
             fd = open(fullpath, O_RDWR | O_CREAT, 0666);
         } else if (access(fullpath, F_OK) == 0) {
             fd = open(fullpath, O_RDONLY);
+        } else if (path) {
+            /* Try fallback paths */
+            char altpath[1024];
+            snprintf(altpath, sizeof(altpath), "/mnt/sdcard/Bios/NDS/%s", path);
+            if (access(altpath, F_OK) == 0) {
+                fd = open(altpath, O_RDONLY);
+                snprintf(fullpath, sizeof(fullpath), "%s", altpath);
+            } else {
+                snprintf(altpath, sizeof(altpath), "/mnt/sdcard/Emus/minime/NDS.pak/%s", path);
+                if (access(altpath, F_OK) == 0) {
+                    fd = open(altpath, O_RDONLY);
+                    snprintf(fullpath, sizeof(fullpath), "%s", altpath);
+                }
+            }
         }
 
         fprintf(stderr, "[JNI-Mock] DraSticPathCache.open('%s', '%s') -> fd=%d (fullpath=%s)\n",
                 path ? path : "", mode ? mode : "", fd, fullpath);
         fflush(stderr);
 
-        MockPathHandle *handle = (MockPathHandle*)malloc(sizeof(MockPathHandle));
+        MockPathHandle *handle = (MockPathHandle*)calloc(1, sizeof(MockPathHandle));
         if (handle) {
-            snprintf(handle->filePath, sizeof(handle->filePath), "%s", fullpath);
-            snprintf(handle->fileName, sizeof(handle->fileName), "%s", path ? path : "");
+            handle->filePath = strdup(fullpath);
+            handle->fileName = strdup(path ? path : "");
             handle->fileFd = fd;
         }
         return (jobject)handle;

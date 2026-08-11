@@ -59,7 +59,9 @@ extern const SLInterfaceID SL_IID_VOLUME;
 int slCreateEngine(void *pEngine, uint32_t numOptions, const void *pEngineOptions, uint32_t numInterfaces, const void *pInterfaceIds, const void *pInterfaceRequired);
 
 /* Bionic Fortify Stubs */
+int mprotect(void *addr, size_t len, int prot);
 mode_t __umask_chk(mode_t mask);
+char *__strcpy_chk(char *dest, const char *src, size_t dest_len);
 char *__strncpy_chk2(char *dest, const char *src, size_t n, size_t dest_len, size_t src_len);
 char *__strncpy_chk(char *dest, const char *src, size_t n, size_t dest_len);
 void *__memcpy_chk(void *dest, const void *src, size_t n, size_t dest_len);
