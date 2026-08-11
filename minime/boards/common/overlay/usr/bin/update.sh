@@ -103,6 +103,35 @@ installed_ui() {
 		cut -d= -f2- | tr -d '"' | tr 'A-Z' 'a-z'
 }
 
+# One-time forward migration of Roms folders renamed by the Q6 unification to
+# the single canonical MinUI scheme. For each legacy name whose canonical
+# counterpart now exists (the new preloads stage them), the legacy folder is a
+# duplicate and is dropped; if the canonical target is absent/empty the legacy
+# content is moved instead. Idempotent and safe — only ever touches the four
+# folders whose names changed.
+migrate_roms() {
+	roms="${SDCARD}/Roms"
+	[ -d "${roms}" ] || return 0
+	migrate_one "Game Gear (GG)" "Sega Game Gear (GG)"
+	migrate_one "Master System (SMS)" "Sega Master System (SMS)"
+	migrate_one "PC Engine (PCE)" "TurboGrafx-16 (PCE)"
+	migrate_one "Super Nintendo (SFC)" "Super Nintendo Entertainment System (SFC)"
+}
+
+migrate_one() {
+	legacy="$1"
+	canon="$2"
+	[ -d "${roms}/${legacy}" ] || return 0
+	if [ -d "${roms}/${canon}" ] && [ -n "$(ls -A "${roms}/${canon}" 2>/dev/null)" ]; then
+		log "dropping duplicate legacy Roms/${legacy} (canonical Roms/${canon} exists)"
+		rm -rf "${roms:?}/${legacy:?}"
+	else
+		log "migrating Roms/${legacy} -> ${canon}"
+		mkdir -p "${roms}"
+		mv "${roms}/${legacy}" "${roms}/${canon}"
+	fi
+}
+
 # --- Main -----------------------------------------------------------------
 
 UI="${1:-}"
@@ -191,6 +220,10 @@ allium)
 		die "install incomplete: .ui/bin/alliumd missing; leaving archive at ${ARCHIVE}"
 	;;
 esac
+
+# Migrate any pre-Q6 legacy Roms folder names to the canonical scheme
+# (safe: drops duplicates, moves when the canonical target is missing).
+migrate_roms
 
 # Clean up the archive before rebooting.
 rm -f "${ARCHIVE}"
