@@ -83,10 +83,17 @@ jobs:
           - libc: musl
             runner: ubuntu-24.04-arm
             container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
-            toolchain: export CROSS_COMPILE="ccache " CC="ccache gcc" CXX="ccache g++" AR="ar"
+            cross_compile: 'ccache '
+            cc: 'ccache gcc'
+            cxx: 'ccache g++'
+            ar: ar
           - libc: glibc
             runner: ubuntu-latest
-            toolchain: export CROSS_COMPILE="ccache aarch64-linux-gnu-" CC="ccache aarch64-linux-gnu-gcc" CXX="ccache aarch64-linux-gnu-g++" AR="aarch64-linux-gnu-ar"
+            container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
+            cross_compile: 'ccache aarch64-linux-gnu-'
+            cc: 'ccache aarch64-linux-gnu-gcc'
+            cxx: 'ccache aarch64-linux-gnu-g++'
+            ar: aarch64-linux-gnu-ar
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
@@ -115,13 +122,19 @@ jobs:
 
       - name: Build Cores
         if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
+        env:
+          CROSS_COMPILE: ${{ matrix.cross_compile }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          AR: ${{ matrix.ar }}
         run: |
           docker run --rm -u root \
             -v "$HOME/.cores-ccache-${{ matrix.libc }}:/root/.ccache" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace \
+            --env CROSS_COMPILE --env CC --env CXX --env AR \
             "${{ matrix.container }}" \
-            /bin/bash -c "${{ matrix.toolchain }} && minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+            /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
 
       - name: Save Cores Cache
         if: always() && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
