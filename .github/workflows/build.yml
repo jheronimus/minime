@@ -159,19 +159,10 @@ jobs:
           path: minime/build/cores/out
           retention-days: 7
 
-  build-ui:
-    name: Build UI (${{ matrix.libc }})
-    needs: [build-bootloader, build-cores]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - libc: musl
-            runner: ubuntu-24.04-arm
-            container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
-          - libc: glibc
-            runner: ubuntu-latest
-    runs-on: ${{ matrix.runner }}
+  build-ui-musl:
+    name: Build UI (musl)
+    needs: [build-cores]
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -186,16 +177,16 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+          key: ui-musl-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
         uses: actions/cache/restore@v6
         with:
-          path: ~/.ui-ccache-${{ matrix.libc }}
-          key: ccache-ui-${{ matrix.libc }}-${{ github.sha }}
+          path: ~/.ui-ccache-musl
+          key: ccache-ui-musl-${{ github.sha }}
           restore-keys: |
-            ccache-ui-${{ matrix.libc }}-
+            ccache-ui-musl-
 
       - name: Restore Allium Cargo Target
         id: cargo-target-restore
@@ -205,92 +196,161 @@ jobs:
             minime/ui/allium/target
             minime/ui/allium/third-party/dufs/target
             minime/ui/allium/third-party/collie/target
-          key: allium-target-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+          key: allium-target-musl-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
           restore-keys: |
-            allium-target-${{ matrix.libc }}-
+            allium-target-musl-
 
       - name: Download Cores
         uses: actions/download-artifact@v8
         with:
-          name: cores-${{ matrix.libc }}
+          name: cores-musl
           path: minime/build/cores/out
 
       - name: Compile MinUI
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', matrix.libc)) == ''
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'musl')) == ''
         run: |
-          minime/build/mkui.sh minui ${{ matrix.libc }}
+          minime/build/mkui.sh minui musl
 
       - name: Compile Allium
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', matrix.libc)) == ''
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == ''
         run: |
-          minime/build/mkui.sh allium ${{ matrix.libc }}
+          minime/build/mkui.sh allium musl
 
       - name: Save Allium Cargo Target
-        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', matrix.libc)) == '')
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == '')
         uses: actions/cache/save@v6
         with:
           path: |
             minime/ui/allium/target
             minime/ui/allium/third-party/dufs/target
             minime/ui/allium/third-party/collie/target
-          key: allium-target-${{ matrix.libc }}-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+          key: allium-target-musl-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save UI Cache
-        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', matrix.libc)) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', matrix.libc)) == '')
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'musl')) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == '')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-${{ matrix.libc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+          key: ui-musl-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
 
       - name: Save UI CCache
         if: always() && steps.ccache-ui-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: ~/.ui-ccache-${{ matrix.libc }}
-          key: ccache-ui-${{ matrix.libc }}-${{ github.sha }}
+          path: ~/.ui-ccache-musl
+          key: ccache-ui-musl-${{ github.sha }}
 
       - name: Upload UI Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: ui-${{ matrix.libc }}
+          name: ui-musl
           path: minime/ui/out
           retention-days: 7
 
-  build-os:
-    name: Build OS (${{ matrix.os }} / ${{ matrix.board }})
-    needs: [build-bootloader, build-ui]
+
+  build-ui-glibc:
+    name: Build UI (glibc)
+    needs: [build-cores]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore UI Cache
+        id: cache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/ui/out
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Restore UI CCache
+        id: ccache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-glibc-${{ github.sha }}
+          restore-keys: |
+            ccache-ui-glibc-
+
+      - name: Restore Allium Cargo Target
+        id: cargo-target-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+          restore-keys: |
+            allium-target-glibc-
+
+      - name: Download Cores
+        uses: actions/download-artifact@v8
+        with:
+          name: cores-glibc
+          path: minime/build/cores/out
+
+      - name: Compile MinUI
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh minui glibc
+
+      - name: Compile Allium
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh allium glibc
+
+      - name: Save Allium Cargo Target
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+
+      - name: Save UI Cache
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'glibc')) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
+        uses: actions/cache/save@v6
+        with:
+          path: minime/ui/out
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Save UI CCache
+        if: always() && steps.ccache-ui-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-glibc-${{ github.sha }}
+
+      - name: Upload UI Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-glibc
+          path: minime/ui/out
+          retention-days: 7
+
+
+  build-os-musl:
+    name: Build OS (alpine / ${{ matrix.board }})
+    needs: [build-bootloader, build-ui-musl]
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: alpine
-            board: h700
-            libc: musl
+          - board: h700
             runner: ubuntu-24.04-arm
-          - os: alpine
-            board: rk3326
-            libc: musl
+          - board: rk3326
             runner: ubuntu-24.04-arm
-          - os: alpine
-            board: rk3566
-            libc: musl
+          - board: rk3566
             runner: ubuntu-24.04-arm
-          - os: buildroot
-            board: rk3326
-            libc: glibc
-            runner: ubuntu-latest
-          - os: buildroot
-            board: rk3566
-            libc: glibc
-            runner: ubuntu-latest
     runs-on: ${{ matrix.runner }}
-    env:
-      # The arm runner's host podman (crun) rejects the arm64 builder image
-      # with "crun: unknown version specified", and GitHub's newer runner
-      # image blocks JS actions inside Alpine/ARM container jobs. Use the
-      # host's docker CLI (runc/containerd) instead of podman; the Makefile's
-      # PODMAN_CMD is overridable so this takes effect without code changes.
-      PODMAN_CMD: docker
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -306,7 +366,7 @@ jobs:
       - name: Download UI
         uses: actions/download-artifact@v8
         with:
-          name: ui-${{ matrix.libc }}
+          name: ui-musl
           path: minime/ui/out
 
       - name: Restore CCache
@@ -316,9 +376,9 @@ jobs:
           path: |
             ~/alpine-ccache
             ~/.buildroot-ccache
-          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ matrix.os }}-${{ matrix.board }}-
+            ccache-alpine-${{ matrix.board }}-
 
       - name: Restore DL Cache
         id: dl-os-restore
@@ -327,26 +387,26 @@ jobs:
           path: |
             ~/alpine-dl
             ~/.buildroot-dl
-          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
-            dl-${{ matrix.os }}-${{ matrix.board }}-
+            dl-alpine-${{ matrix.board }}-
 
       - name: Build Components
-        run: make -C minime/targets/${{ matrix.os }} components BOARD=${{ matrix.board }}
+        run: make -C minime/targets/alpine components BOARD=${{ matrix.board }}
 
       - name: Build Image for MinUI
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
           UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
           export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=minui
+          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=minui
 
       - name: Build Image for Allium
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
           UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
           export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
+          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
         if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
@@ -355,7 +415,7 @@ jobs:
           path: |
             ~/alpine-ccache
             ~/.buildroot-ccache
-          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
         if: always() && steps.dl-os-restore.outputs.cache-hit != 'true'
@@ -364,12 +424,108 @@ jobs:
           path: |
             ~/alpine-dl
             ~/.buildroot-dl
-          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
+          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
 
       - name: Upload to Testing Release
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.img.zst --clobber || true
-          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.tar.zst --clobber || true
+          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.tar.zst --clobber || true
+
+  build-os-glibc:
+    name: Build OS (buildroot / ${{ matrix.board }})
+    needs: [build-bootloader, build-ui-glibc]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: rk3326
+            runner: ubuntu-latest
+          - board: rk3566
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Download Bootloader
+        uses: actions/download-artifact@v8
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+      - name: Download UI
+        uses: actions/download-artifact@v8
+        with:
+          name: ui-glibc
+          path: minime/ui/out
+
+      - name: Restore CCache
+        id: ccache-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            ccache-buildroot-${{ matrix.board }}-
+
+      - name: Restore DL Cache
+        id: dl-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/alpine-dl
+            ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            dl-buildroot-${{ matrix.board }}-
+
+      - name: Build Components
+        run: make -C minime/targets/buildroot components BOARD=${{ matrix.board }}
+
+      - name: Build Image for MinUI
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=minui
+
+      - name: Build Image for Allium
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
+
+      - name: Save CCache
+        if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Save DL Cache
+        if: always() && steps.dl-os-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/alpine-dl
+            ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.tar.zst --clobber || true
+

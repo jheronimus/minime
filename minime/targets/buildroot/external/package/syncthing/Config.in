@@ -1,0 +1,11 @@
+config BR2_PACKAGE_SYNCTHING
+	bool "syncthing"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_GO
+	help
+	  Continuous file synchronization.
+
+	  https://github.com/syncthing/syncthing
+
+comment "syncthing needs a Go-supported target"
+	depends on !BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
