@@ -36,6 +36,21 @@ mkdir -p "$OUT_DIR" "$SRC_DIR"
 export CROSS_COMPILE CC CXX AR
 
 built=0
+clone_retry() {
+	# Retry clones a few times: unauthenticated git operations are prone to
+	# GitHub rate-limits / transient network failures in CI.
+	local tries=3 n=0
+	while [ "$n" -lt "$tries" ]; do
+		if "$@"; then
+			return 0
+		fi
+		n=$((n + 1))
+		echo "  clone attempt $n failed — retrying" >&2
+		sleep 3
+	done
+	return 1
+}
+
 # shellcheck disable=SC2034  # autobump is consumed by the update-cores bot
 while IFS='|' read -r core repo hash buildpath makefile flags patch platform core_so optional autobump; do
 	[ -n "$core" ] || continue
@@ -46,10 +61,17 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 	src="$SRC_DIR/$core"
 	if [ -n "$hash" ]; then
 		# Pinned core: full clone (some pins are old commits not reachable shallowly).
-		git clone --recursive "$repo" "$src"
-		(cd "$src" && git checkout "$hash")
+		if ! clone_retry git clone --recursive "$repo" "$src" || ! (cd "$src" && git checkout "$hash"); then
+			[ "$optional" = "1" ] && echo "WARNING: $core clone failed (optional) — skipping" >&2 && continue
+			echo "ERROR: $core clone failed" >&2
+			exit 1
+		fi
 	else
-		git clone --depth 1 --recursive --shallow-submodules "$repo" "$src"
+		if ! clone_retry git clone --depth 1 --recursive --shallow-submodules "$repo" "$src"; then
+			[ "$optional" = "1" ] && echo "WARNING: $core clone failed (optional) — skipping" >&2 && continue
+			echo "ERROR: $core clone failed" >&2
+			exit 1
+		fi
 	fi
 
 	# Apply the platform patch(es), in order (space-separated names in the
@@ -57,7 +79,11 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 	if [ -n "$patch" ]; then
 		for p in $patch; do
 			if [ -f "$PATCHES_DIR/$p" ]; then
-				(cd "$src" && git apply -p1 "$PATCHES_DIR/$p")
+				if ! (cd "$src" && git apply -p1 "$PATCHES_DIR/$p"); then
+					[ "$optional" = "1" ] && echo "WARNING: $core patch '$p' failed (optional) — skipping" >&2 && continue 2
+					echo "ERROR: $core patch '$p' failed" >&2
+					exit 1
+				fi
 			else
 				echo "WARNING: patch '$p' for $core not found — skipping" >&2
 			fi
@@ -83,6 +109,10 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 	# Collect the .so (+ drastic shims, which must sit next to the core).
 	so_name="${core_so:-${core}_libretro.so}"
 	if [ ! -f "$bdir/$so_name" ]; then
+		if [ "$optional" = "1" ]; then
+			echo "WARNING: $core produced no $so_name (optional) — skipping" >&2
+			continue
+		fi
 		echo "ERROR: expected $so_name in $bdir" >&2
 		exit 1
 	fi
