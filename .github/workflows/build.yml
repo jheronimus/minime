@@ -45,6 +45,7 @@ jobs:
             ccache-bootloader-
 
       - name: Compile Bootloader
+        id: compile-bootloader
         if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == ''
         run: |
           docker run --rm -u root \
@@ -56,14 +57,14 @@ jobs:
           sudo chown -R "$USER:$USER" minime/uboot/out
 
       - name: Save Bootloader Cache
-        if: always() && (steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == '')
+        if: always() && steps.compile-bootloader.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: minime/uboot/out
           key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
 
       - name: Save Bootloader CCache
-        if: always() && steps.ccache-bootloader-restore.outputs.cache-hit != 'true'
+        if: always() && steps.compile-bootloader.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: ~/.bootloader-ccache
@@ -123,6 +124,7 @@ jobs:
             ccache-cores-${{ matrix.libc }}-
 
       - name: Build Cores
+        id: build-cores-step
         if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
         env:
           CROSS_COMPILE: ${{ matrix.cross_compile }}
@@ -139,14 +141,14 @@ jobs:
             /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
 
       - name: Save Cores Cache
-        if: always() && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
+        if: always() && steps.build-cores-step.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: minime/build/cores/out
           key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save Cores CCache
-        if: always() && steps.ccache-cores-restore.outputs.cache-hit != 'true'
+        if: always() && steps.build-cores-step.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: ~/.cores-ccache-${{ matrix.libc }}
@@ -207,11 +209,13 @@ jobs:
           path: minime/build/cores/out
 
       - name: Compile MinUI
+        id: compile-minui
         if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'musl')) == ''
         run: |
           minime/build/mkui.sh minui musl
 
       - name: Compile Allium
+        id: compile-allium
         if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == ''
         run: |
           minime/build/mkui.sh allium musl
@@ -227,14 +231,14 @@ jobs:
           key: allium-target-musl-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save UI Cache
-        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'musl')) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == '')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
           key: ui-musl-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
 
       - name: Save UI CCache
-        if: always() && steps.ccache-ui-restore.outputs.cache-hit != 'true'
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-musl
@@ -296,11 +300,13 @@ jobs:
           path: minime/build/cores/out
 
       - name: Compile MinUI
+        id: compile-minui
         if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'glibc')) == ''
         run: |
           minime/build/mkui.sh minui glibc
 
       - name: Compile Allium
+        id: compile-allium
         if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == ''
         run: |
           minime/build/mkui.sh allium glibc
@@ -316,14 +322,14 @@ jobs:
           key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save UI Cache
-        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'glibc')) == '' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
           key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
 
       - name: Save UI CCache
-        if: always() && steps.ccache-ui-restore.outputs.cache-hit != 'true'
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-glibc
@@ -392,6 +398,7 @@ jobs:
             dl-alpine-${{ matrix.board }}-
 
       - name: Build Components
+        id: build-components
         run: make -C minime/targets/alpine components BOARD=${{ matrix.board }}
 
       - name: Build Image for MinUI
@@ -409,7 +416,7 @@ jobs:
           make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
-        if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
+        if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
@@ -418,7 +425,7 @@ jobs:
           key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
-        if: always() && steps.dl-os-restore.outputs.cache-hit != 'true'
+        if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
@@ -487,6 +494,7 @@ jobs:
             dl-buildroot-${{ matrix.board }}-
 
       - name: Build Components
+        id: build-components
         run: make -C minime/targets/buildroot components BOARD=${{ matrix.board }}
 
       - name: Build Image for MinUI
@@ -504,7 +512,7 @@ jobs:
           make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
-        if: always() && steps.ccache-os-restore.outputs.cache-hit != 'true'
+        if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
@@ -513,7 +521,7 @@ jobs:
           key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
-        if: always() && steps.dl-os-restore.outputs.cache-hit != 'true'
+        if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
