@@ -44,15 +44,21 @@ else
 	reset
 fi
 
-if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/dtb; then
-	echo "Loaded .minime/dtb"
+if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/devices/${device}; then
+	echo "Loaded .minime/devices/${device}"
 	mw.b 0x4ff00001 0x46
 else
-	echo "Failed to load .minime/dtb"
-	mw.b 0x4ff00001 0x66
-	fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 2
-	sleep 5
-	reset
+	echo "Device DTB not found, falling back to .minime/dtb"
+	if fatload ${bootdevtype} ${bootdevnum} ${fdt_addr_r} .minime/dtb; then
+		echo "Loaded .minime/dtb"
+		mw.b 0x4ff00001 0x46
+	else
+		echo "Failed to load .minime/dtb"
+		mw.b 0x4ff00001 0x66
+		fatwrite ${bootdevtype} ${bootdevnum} 0x4ff00000 .minime/boot.log 2
+		sleep 5
+		reset
+	fi
 fi
 
 if fatload ${bootdevtype} ${bootdevnum} ${ramdisk_addr_r} .minime/initramfs; then

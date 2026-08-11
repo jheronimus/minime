@@ -28,7 +28,7 @@ The archive is a **deliberate mirror of the on-SD payload layout**. It contains 
 | `.minime/initramfs` | `initramfs.img` | Initramfs CPIO archive containing early init logic |
 | `.minime/system` | `system.erofs` | Read-only compressed EROFS root filesystem |
 | `.minime/devices/*.dtb` | `*.dtb` | Device Tree Blobs for board hardware variants |
-| `.minime/dtb` | default DTB | The DTB the bootloader actually loads (`boot.cmd` `fatload`s `.minime/dtb`), chosen like `mkimage.sh` (`DEFAULT_DEVICE` from `boot.env`, else the first `devices/*.dtb`). Without this entry, DTS-affecting kernel changes silently never deploy over OTA |
+| `.minime/dtb` | default DTB | `boot.cmd`'s fallback DTB, used when `.minime/devices/${device}` is missing (`device` comes from `device.cfg`/U-Boot `fdtfile`; the default is chosen like `mkimage.sh` — `DEFAULT_DEVICE` from `boot.env`, else the first `devices/*.dtb`). Without this entry, DTS-affecting kernel changes silently never deploy over OTA |
 | `.minime/ui.env` | UI payload | UI contract manifest (only when a `--ui` is specified) |
 | `.minime/manifest.json` | Generated | Build identity: `target`, `board`, `ui`, `minime_commit`, `ui_commit`, `timestamp` |
 | `.system/` | UI payload staging | MinUI binaries (`minime/`, `res/`, `version.txt`, `commits.txt`) |

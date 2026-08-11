@@ -97,11 +97,6 @@ dtb_to_compatible() {
 	echo "${basename}" | sed -E 's/^(sun50i-h700|rk3326|rk3566|rk3568)-anbernic-/anbernic,/'
 }
 
-# Compatibles produced by U-Boot FDT fixups at runtime rather than by a
-# distinct shipped DTB. The rgxx3 defconfig renames rg353p.dtb to the
-# metal-shell RG353M, so no separate rg353m.dtb is built.
-FIXUP_COMPATIBLES="anbernic,rg353m"
-
 for board in h700 rk3326 rk3566; do
 	platform="${TRAITS_ROOT}/${board}/traits/platform.ini"
 	if [ ! -f "$platform" ]; then
@@ -160,8 +155,6 @@ for board in h700 rk3326 rk3566; do
 			shipped_ok=""
 			if [ -n "$compat" ]; then
 				if grep -Fxq "$compat" "$shipped_compat"; then
-					shipped_ok=1
-				elif echo "$FIXUP_COMPATIBLES" | grep -Fqx "$compat"; then
 					shipped_ok=1
 				fi
 			fi

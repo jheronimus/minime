@@ -204,6 +204,17 @@ depend() {
 start() {
 	ebegin "Starting Wi-Fi (iwd)"
 
+	# User-controlled enable gate (managed by the Wi-Fi settings PAK). Wi-Fi
+	# starts if the gate exists OR if wifi.cfg has any known networks, so an
+	# explicit "disable" (gate removed + no profiles) sticks across reboots
+	# while existing users keep out-of-the-box auto-connect.
+	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ] &&
+	   ! grep -q '^SSID=' "${wifi_config_file}" 2>/dev/null; then
+		einfo "Wi-Fi disabled by user"
+		eend 0
+		return 0
+	fi
+
 	if ! check_wifi_hardware; then
 		log_failure_diagnostics "missing-${wifi_interface}"
 		eend 1 "no ${wifi_interface} interface found"

@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/build/mkbootloader.sh') }}
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
 
       - name: Restore Bootloader CCache
         id: ccache-bootloader-restore
@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/build/mkbootloader.sh') }}
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
 
       - name: Save Bootloader CCache
         if: always() && steps.ccache-bootloader-restore.outputs.cache-hit != 'true'

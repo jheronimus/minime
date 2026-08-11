@@ -15,6 +15,7 @@ mkdir -p "$WORK_DIR"
 
 # Paths
 MINIME_UBOOT_DIR="$(pwd)/minime/uboot"
+MINIME_BOARD_DIR="$(pwd)/minime/boards/${BOARD}"
 OUT_BL_DIR="${MINIME_UBOOT_DIR}/out/${BOARD}"
 mkdir -p "$OUT_BL_DIR"
 
@@ -104,6 +105,17 @@ fi
 		curl -sSfL "https://github.com/ROCKNIX/distribution/raw/next/projects/Allwinner/patches/u-boot/0015-sunxi-mmc-increase-stabilization-delay-from-1ms-to-20ms.patch" |
 			git apply - || echo "WARNING: Failed to apply U-Boot MMC delay patch"
 	fi
+
+	# Apply board-specific U-Boot patches (e.g. rgxx3 fdtfile alignment so the
+	# detected DTB filename matches the .minime/devices boot partition paths).
+	for p in "${MINIME_BOARD_DIR}/patches/uboot/"*.patch; do
+		[ -f "$p" ] || continue
+		echo "Applying U-Boot board patch: $(basename "$p")"
+		git apply "$p" || {
+			echo "ERROR: failed to apply $(basename "$p")" >&2
+			exit 1
+		}
+	done
 
 	# Configure with default board defconfig
 	make "${UBOOT_DEFCONFIG}"
