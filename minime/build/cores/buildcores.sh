@@ -34,7 +34,6 @@ rm -rf "$OUT_DIR" "$SRC_DIR"
 mkdir -p "$OUT_DIR" "$SRC_DIR"
 
 export CROSS_COMPILE CC CXX AR
-export CCACHE_DISABLE=0
 
 built=0
 # shellcheck disable=SC2034  # autobump is consumed by the update-cores bot
