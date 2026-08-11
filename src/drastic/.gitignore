@@ -1,4 +1,0 @@
-*.o
-*.so
-dist/
-.DS_Store
