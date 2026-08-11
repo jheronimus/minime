@@ -10,3 +10,6 @@
 	path = src/yabause
 	url = https://github.com/jheronimus/yabause
 	branch = main
+[submodule "src/drastic"]
+	path = src/drastic
+	url = https://github.com/jheronimus/drastic
