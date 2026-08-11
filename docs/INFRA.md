@@ -14,9 +14,9 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **Jobs**:
   - `build-bootloader` — compiles U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64. Cached by hash of `minime/uboot/**`.
   - `build-cores` (matrix: `musl` / `glibc`) — builds the shared RetroArch cores from `minime/build/cores/manifest` via `buildcores.sh`, once for both UIs. Uploads the flat `cores-{libc}` artifact; `build-ui` consumes it.
-  - `build-ui` (matrix: `musl` / `glibc`) — compiles MinUI and Allium for both libc variants. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 with no container. Cached by hash of `minime/ui/**`.
+  - `build-ui` (matrix: `musl` / `glibc`) — compiles MinUI and Allium for both libc variants. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 with no container. Cached by hash of `minime/ui/**`; cargo `target/` dirs (Allium workspace + dufs/collie) are cached separately keyed on their `Cargo.lock` files.
   - `build-os` (matrix: `{alpine, buildroot}` × `{h700, rk3326, rk3566}` = 6 jobs) — runs `make components` then `make image update` (once per UI). Depends on both asset jobs. Uploads `.img.zst` and `.tar.zst` to the `testing` release.
-- **Caches**: `bootloader-*`, `cores-{libc}-*`, `ccache-cores-{libc}-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
+- **Caches**: `bootloader-*`, `cores-{libc}-*`, `ccache-cores-{libc}-*`, `ui-musl-*`, `ui-glibc-*`, `ccache-ui-{libc}-*`, `allium-target-{libc}-*`, `ccache-{os}-{board}-*`, `dl-{os}-{board}-*`.
 - **Rule**: Never dispatch this workflow manually (`gh workflow run`). Push to `main` is the only intended trigger. Manual dispatch causes concurrent runs that corrupt `testing` release assets.
 
 ### `containers.yml` — Build & Push Builder Images

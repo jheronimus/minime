@@ -1,7 +1,8 @@
 # Minime TODO
 
 ## CI
-- [ ] Investigate why musl build of UI now takes 2x the time of glibc
+- [x] Investigate why musl build of UI now takes 2x the time of glibc
+  - [DONE] Not a container error — both images pull/build fine. The gap appears only on UI-cache-miss runs: musl runs natively on the slower `ubuntu-24.04-arm` runner while glibc cross-compiles on `ubuntu-latest` (x86-64), and on a miss the full ~300-crate cargo tree + RetroArch recompile on the slow runner. Mitigation: cache the Allium cargo `target/` dirs (workspace + dufs/collie) keyed on their `Cargo.lock` files in `build-ui` (`allium-target-{libc}-*`).
 - [ ] Try switching between Alpine and Buildroot using update.sh
 
 ## UI
