@@ -36,7 +36,7 @@ mednafen_supafaust|https://github.com/libretro/supafaust|||||mednafen_supafaust.
 mgba|https://github.com/libretro/mgba|517e518c48e351def04042dc159064dd098830a9||||mgba.patch|minime||0|0
 pokemini|https://github.com/libretro/PokeMini|||Makefile.libretro||pokemini.patch pokemini-fix-resume-audio.patch|minime||0|1
 race|https://github.com/libretro/race|||||race.patch|minime||0|1
-fake-08|https://github.com/jtothebell/fake-08||fake-08/platform/libretro|||fake-08.patch|minime|fake08_libretro.so|0|1
+fake-08|https://github.com/jtothebell/fake-08||platform/libretro|||fake-08.patch|minime|fake08_libretro.so|0|1
 handy|https://github.com/libretro/libretro-handy|||||handy.patch|minime||0|1
 mednafen_wswan|https://github.com/libretro/beetle-wswan-libretro|||||mednafen_wswan.patch|minime||0|1
 yabasanshiro|https://github.com/jheronimus/yabause|6e7ad3d39c4fa1bb7ff0671b2d87cdaa5bd09e04|yabause/src/libretro|Makefile|||arm64||1|0
