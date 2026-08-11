@@ -16,6 +16,10 @@
 
 ## Power Management & Suspend
 
+- [ ] Re-implement charger-triggered boot handling (ADR 0020 superseded; script removed)
+  - [THEORY] Plugging in the charger while off auto-powers-on the device (rk817/RK809 treat AC insertion as power-on). We need appliance behavior: power off unless the user deliberately pressed power. The old `init.d/charger` grace-window approach was removed because it cannot detect the user's power press: the press that *boots* the device happens before evdev/pwrkey is up, so the grace-window evdev poll never sees it.
+  - [KEY FINDING] The RK817 PMIC exposes an `ON_SOURCE` register (0xF5, `RK817_ON_SOURCE_REG`; `OFF_SOURCE` 0xF6) that records why the PMIC powered on (PWRON key vs. USB/VDC plug-in vs. RTC alarm). This is the MuOS boot-source signal that ADR 0020 claimed was unavailable on RK3566 — it is readable, just not exported via sysfs. A small kernel patch (rk8xx-core.c / rk808.c) could expose it, or U-Boot's `ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON` option could power off at the bootloader level before the OS even starts. Until then, plugging in while off leaves the device running (overnight drain) and OTA reboots while charging lose the `.software_reboot` bypass.
+  - [THEORY] Also re-seed Allium `power.json` with `charging_screen:false` (was done by the removed script) if Allium's built-in charging screen is still disabled.
 - [ ] Implement Fake Suspend & Quick Resume across platforms (RK3566, RK3326, H700)
   - [THEORY] Offline non-boot CPU cores (or throttle CPU0 to 120MHz powersave), mute audio, disable LEDs, turn off Wi-Fi/audio rails, save emulator state, and start auto-shutdown timer.
 - [ ] Qualify real kernel suspend and DTS regulator sleep states (RK3566, RK3326)

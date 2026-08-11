@@ -101,7 +101,7 @@ elif [ "$UI" = "allium" ]; then
 	mkdir -p "$STAGE_DIR/apps"
 	mkdir -p "$STAGE_DIR/RetroArch"
 	mkdir -p "$STAGE_DIR/Roms"
-	mkdir -p "$STAGE_DIR/Saves"
+	mkdir -p "$STAGE_DIR/Saves/CurrentProfile"
 	mkdir -p "$STAGE_DIR/BIOS"
 
 	cp $BUILD/alliumd "$STAGE_DIR/.ui/bin/"
