@@ -111,7 +111,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/build/cores/out
-          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/**') }}
+          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore Cores CCache
         id: ccache-cores-restore
@@ -143,7 +143,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: minime/build/cores/out
-          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/**') }}
+          key: cores-${{ matrix.libc }}-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save Cores CCache
         if: always() && steps.ccache-cores-restore.outputs.cache-hit != 'true'
