@@ -87,7 +87,8 @@ fi
 #    DHCP DNS servers to it via NameResolvingService=resolvconf).
 ln -sf /run/resolvconf/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
-# 7. Touch a marker file to represent the absolute latest timestamp in the rootfs.
+# 7. Touch a marker file used by initramfs-init.sh to advance system time on cold
+#    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 
 echo "Alpine post-build stage complete."

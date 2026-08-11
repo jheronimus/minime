@@ -39,7 +39,7 @@ mDNSResponder.
 - **Buildroot**: `BR2_PACKAGE_MDNSD=y` was already in
   [common.config](../../minime/targets/buildroot/external/configs/common.config)
   but shipped no init service — its SysV `S50mdnsd` is removed by
-  `post-build.sh`. This ADR wires it up with the shared service below.
+  `post-build.sh` (ADR 0005). This ADR wires it up with the shared service below.
 - **Alpine**: built as a local aport
   [aports/mdnsd/APKBUILD](../../minime/targets/alpine/aports/mdnsd/APKBUILD)
   from the upstream release tarball and added to `world-common` + the

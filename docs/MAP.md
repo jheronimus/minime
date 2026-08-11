@@ -231,9 +231,8 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 ## Adding a new OpenRC service
 
 1. Create the script in `minime/boards/common/overlay/etc/init.d/<service>`
-2. Add the service to the `for svc in ...` loop in `minime/targets/buildroot/external/scripts/post-build.sh`
-3. Add runlevel symlinks as needed (boot vs default)
-4. Alpine automatically picks up everything from the common overlay
+2. Add runlevel symlinks under `minime/boards/common/overlay/etc/runlevels/` (for example `boot` or `default`)
+3. Both Alpine and Buildroot automatically pick up the service from the common overlay (ADR 0005)
 
 ## Adding a new package
 

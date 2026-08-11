@@ -49,3 +49,7 @@ minime/ui/out/
 
 # Mounted Minime SD card (symlink to /Volumes/minime)
 card
+
+# Mac dot files
+**/.DS_Store
+**/._*

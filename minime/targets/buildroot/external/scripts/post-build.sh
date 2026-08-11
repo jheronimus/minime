@@ -103,7 +103,8 @@ TARGET_INITD="${TARGET_DIR}/etc/init.d"
 TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
 rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs" 2>/dev/null || true
 
-# 9. Touch a marker file to represent the absolute latest timestamp in the rootfs.
+# 9. Touch a marker file used by initramfs-init.sh to advance system time on cold
+#    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 
 echo "Buildroot post-build stage complete."
