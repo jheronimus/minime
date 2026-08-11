@@ -4,11 +4,11 @@ Minime is a basic custom firmware for Anbernic handhelds (RK3326/H700/RK3566).
 
 ## Goals
 
-- Fast to build and test. Builds completely on Github Actions in under 30 minutes per image.
+- Fast to build and test. Builds completely on Github Actions in under 30 minutes for all images.
 - Wide compatibility. Comes in two versions: Alpine (smaller, faster to build), Buildroot (glibc, so compatible with closed source software like libmali, Drastic, Pico-8).
 - Automates as much as possible: tests, quality gates, builds, release process.
-- Strict separation between firmware and UI. Implements a trait system and a UI contract that makes it easy to add Minime support to existing projects (currently Allium and MinUI support Minime).
-- Clean modular architecture.
+- Clean modular architecture: strict separation between firmware and UI.
+- Implements a trait system: a single text file that describes each device and its specs and is read by the UI. This makes it easies to add Minime support to existing projects (currently Allium and MinUI support Minime).
 
 
 ## What's included
@@ -79,10 +79,10 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
   file, and may grow freely.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
-- **UI Submodules & CI Artifacts**: `minime/ui/allium` and `minime/ui/minui` are git submodules tracking fork branches. UI binaries are compiled by the `build-ui` job matrix inside `build.yml` (musl on ARM64, glibc on AMD64) and passed to `build-os` as ephemeral GitHub Actions run artifacts (`ui-musl`, `ui-glibc`). They are never committed to git and never uploaded to a GitHub Release. At packaging time `genassets.sh` extracts the matching archive from the downloaded artifact into `minime/ui/out/` (ephemeral runner path). Submodule SHAs in `minime` are bumped automatically by `update-submodules.yml` (daily cron + `repository_dispatch`).
+- **UI Submodules & CI Artifacts**: `minime/ui/allium` and `minime/ui/minui` are git submodules tracking fork branches. UI binaries are compiled by the `build-ui-musl` / `build-ui-glibc` jobs in `build.yml` (musl on ARM64, glibc on AMD64 cross) and passed to `build-os` as ephemeral GitHub Actions run artifacts (`ui-musl`, `ui-glibc`). They are never committed to git and never uploaded to a GitHub Release. At packaging time `genassets.sh` extracts the matching archive from the downloaded artifact into `minime/ui/out/` (ephemeral runner path). Submodule SHAs in `minime` are bumped automatically by `update-submodules.yml` (daily cron + `repository_dispatch`).
 - **Minimal UI Codebase Intrusion**: Unless implementing a user-requested feature, restrict UI code modifications strictly to the Minime platform port directory (e.g. `workspace/minime/` in MinUI, `src/platform/minime/` in Allium). Leave shared upstream launcher code untouched. Exceptions are permitted ONLY when:
   - Working around upstream behavior within the platform port directory is excessively complex or hacky (e.g. requiring dozens of lines of workaround vs. a clean one-line fix in shared code).
-  - The change objectively fixes crashes, memory corruption, thread deadlocks, or performance regressions across all targets.
+  - The change objectively fixes crashes, memory/data corruption, thread deadlocks, or performance regressions present in the original codebase.
 - **On-Device Live Verification**: After modifying any code and allowing CI to rebuild artifacts, AI agents must deploy and empirically verify changes on the live physical hardware target. Deliver the latest testing OTA with the on-device updater via `just remote "/usr/bin/update.sh <ui>"` (e.g. `just remote "update.sh minui"` — it self-detects SoC/target, detaches from the telnet session, and reboots when done), confirm the device is current with `just remote "cat /mnt/sdcard/.minime/manifest.json"`, and use `just remote <cmd>` for on-device inspection. For a full reflash, use `just deploy <os> <board> <ui> [disk]`. Follow the **`live-test` skill** for the full procedure (deploy, device log locations, and the 5 Whys debugging workflow).
 
 ## Device Card Mount (`card`)
