@@ -1,13 +1,14 @@
 diff --git a/Makefile b/Makefile
-index 878e147..f3279cc 100644
+index 878e147..3ef7f85 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -55,6 +55,17 @@ ifneq ($(GIT_VERSION)," unknown")
+@@ -55,6 +55,18 @@ ifneq ($(GIT_VERSION)," unknown")
     FLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
  endif
  
 +# Minime
 +ifeq ($(platform), minime)
++	override platform += unix
 +	TARGET := $(TARGET_NAME)_libretro.so
 +	CC = $(CROSS_COMPILE)gcc
 +	CXX = $(CROSS_COMPILE)g++

@@ -1,13 +1,14 @@
 diff --git a/Makefile b/Makefile
-index 088c344..49572ac 100644
+index 088c344..71fc75e 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -54,6 +54,18 @@ filter_out2 = $(call filter_out1,$(call filter_out1,$1))
+@@ -54,6 +54,19 @@ filter_out2 = $(call filter_out1,$(call filter_out1,$1))
  unixpath = $(subst \,/,$1)
  unixcygpath = /$(subst :,,$(call unixpath,$1))
  
 +# Minime
 +ifeq ($(platform), minime)
++	override platform += unix
 +	TARGET := $(TARGET_NAME)_libretro.so
 +	CC = $(CROSS_COMPILE)gcc
 +	CXX = $(CROSS_COMPILE)g++
