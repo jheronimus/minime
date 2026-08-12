@@ -47,6 +47,7 @@ check-scripts:
     failed=0
     find . -type f -name "*.sh" \
         -not -path "*/buildroot/buildroot/*" \
+        -not -path "*/build-bootloader-tmp/*" \
         -not -path "*/ui/*" \
         -not -path "*/.git/*" \
         -not -path "*/pkg/*" \
