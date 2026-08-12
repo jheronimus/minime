@@ -1,4 +1,3 @@
 # Minime FTP (anonymous-feel SD card access, TCP 21)
-name Minime FTP
 type _ftp._tcp
 port 21
