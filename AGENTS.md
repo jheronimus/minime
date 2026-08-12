@@ -103,3 +103,10 @@ All gates are defined in the root `Justfile` and must be run via `just`.
 - **CI-only gates**: `just validate-ci`
 - **Developer setup**: `just install-hooks`
 
+
+## BIOS ROMs
+
+The `bios/` directory is **not** part of this repository. Console BIOS ROMs used
+by the emulator cores live in the private Forgejo repo `jheronimus/console-bios`
+(never GitHub). To build a full image locally, check out that repo and place its
+contents at `bios/` inside this checkout (it is gitignored).

@@ -61,3 +61,7 @@ card
 # Shared cores build outputs
 minime/build/cores/out/
 minime/build/cores/src/
+
+# Console BIOS ROMs live in the private forgejo repo (jheronimus/console-bios)
+# They must never be committed here. Mount/copy them in for local builds only.
+bios/
