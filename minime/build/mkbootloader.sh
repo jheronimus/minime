@@ -23,8 +23,11 @@ echo "Building bootloader for ${BOARD} (U-Boot ${UBOOT_VERSION}, ATF ${ATF_VERSI
 
 case "$BOARD" in
 rk3326)
+	# Vendor Rockchip boot chain: rkbin DDR blob + miniloader + BL31 (the same
+	# chain ROCKNIX and the U-Boot docs use for px30). Upstream's source-built
+	# px30 TPL/SPL DDR init is unreliable on these handhelds, so it is not used.
 	UBOOT_DEFCONFIG="odroid-go2_defconfig"
-	ATF_PLAT="px30"
+	RKBIN_DIR="${MINIME_UBOOT_DIR}/out/rk3326/rkbin"
 	;;
 rk3566)
 	UBOOT_DEFCONFIG="anbernic-rgxx3-rk3566_defconfig"
@@ -68,6 +71,9 @@ if [ "$BOARD" = "rk3566" ]; then
 	echo "Using prebuilt BL31 and DDR init TPL for RK3566..."
 	BL31_PATH="${MINIME_UBOOT_DIR}/out/rk3566/rkbin/bl31.elf"
 	export ROCKCHIP_TPL="${MINIME_UBOOT_DIR}/out/rk3566/rkbin/rk3566_ddr_1056MHz_v1.25.bin"
+elif [ "$BOARD" = "rk3326" ]; then
+	echo "Using prebuilt BL31 for RK3326 (vendor boot chain)..."
+	BL31_PATH="${RKBIN_DIR}/rk3326_bl31_v1.34.elf"
 else
 	echo "Cloning and building ATF ${ATF_VERSION} for ${ATF_PLAT}..."
 	if [ ! -d "${WORK_DIR}/atf" ]; then
@@ -120,9 +126,16 @@ fi
 	# Configure with default board defconfig
 	make "${UBOOT_DEFCONFIG}"
 
-	# Apply our config fragment
-	echo "Applying config fragment..."
-	./scripts/kconfig/merge_config.sh -m .config "${MINIME_UBOOT_DIR}/config/uboot.config"
+	# Apply our config fragment(s). rk3326 adds a board fragment that forces
+	# TEXT_BASE to 0x00200000 (the miniloader load address); U-Boot >= 2026.07
+	# defaults it to 0x00800000 for the SPL/FIT maskrom path.
+	FRAGMENTS="${MINIME_UBOOT_DIR}/config/uboot.config"
+	if [ "$BOARD" = "rk3326" ]; then
+		FRAGMENTS="${FRAGMENTS} ${MINIME_UBOOT_DIR}/config/uboot-rk3326.config"
+	fi
+	echo "Applying config fragments: ${FRAGMENTS}"
+	# shellcheck disable=SC2086 # intentional word splitting of fragment paths
+	./scripts/kconfig/merge_config.sh -m .config ${FRAGMENTS}
 	make olddefconfig
 
 	# Compile
@@ -148,6 +161,36 @@ if [ "$BOARD" = "h700" ]; then
 		)
 		cp -f "${WORK_DIR}/uboot/u-boot-sunxi-with-spl.bin" "${OUT_BL_DIR}/u-boot-sunxi-with-spl-ddr3.bin"
 	fi
+elif [ "$BOARD" = "rk3326" ]; then
+	echo "Packing RK3326 vendor boot chain (idbloader + uboot + trust)..."
+	# idbloader.img = DDR init blob + miniloader, appended raw because mkimage
+	# cannot pack a second stage for rk3326 (mirrors ROCKNIX rkhelper / U-Boot
+	# "Package with Rockchip miniloader" docs).
+	"${WORK_DIR}/uboot/tools/mkimage" -n px30 -T rksd \
+		-d "${RKBIN_DIR}/rk3326_ddr_333MHz_v2.11.bin" "${WORK_DIR}/idbloader.img"
+	cat "${RKBIN_DIR}/rk3326_miniloader_v1.40.bin" >>"${WORK_DIR}/idbloader.img"
+	# uboot.img = U-Boot proper in Rockchip loaderimage format, loaded at 0x200000.
+	"${RKBIN_DIR}/tools/loaderimage" --pack --uboot \
+		"${WORK_DIR}/uboot/u-boot-dtb.bin" "${WORK_DIR}/uboot.img" 0x200000
+	# trust.img = BL31 packed by trust_merger.
+	cat >"${WORK_DIR}/trust.ini" <<EOF
+[BL30_OPTION]
+SEC=0
+[BL31_OPTION]
+SEC=1
+PATH=${RKBIN_DIR}/rk3326_bl31_v1.34.elf
+ADDR=0x00010000
+[BL32_OPTION]
+SEC=0
+[BL33_OPTION]
+SEC=0
+[OUTPUT]
+PATH=${WORK_DIR}/trust.img
+EOF
+	"${RKBIN_DIR}/tools/trust_merger" --verbose "${WORK_DIR}/trust.ini"
+	cp -f "${WORK_DIR}/idbloader.img" "${OUT_BL_DIR}/"
+	cp -f "${WORK_DIR}/uboot.img" "${OUT_BL_DIR}/"
+	cp -f "${WORK_DIR}/trust.img" "${OUT_BL_DIR}/"
 else
 	cp -f "${WORK_DIR}/uboot/idbloader.img" "${OUT_BL_DIR}/"
 	cp -f "${WORK_DIR}/uboot/u-boot.itb" "${OUT_BL_DIR}/"

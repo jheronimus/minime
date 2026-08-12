@@ -16,7 +16,7 @@ minime/
 │   ├── rk3326/         # RK3326 DTS, patches, traits, boot.env, genimage.cfg
 │   └── rk3566/         # RK3566 DTS, patches, traits, boot.env, genimage.cfg
 ├── uboot/              # Bootloader definitions & prebuilt binaries
-│   ├── config/         # uboot.config, ddr3.defconfig, bootloader-*.config
+│   ├── config/         # uboot.config, uboot-rk3326.config, ddr3.defconfig
 │   ├── patches/        # U-Boot & ATF patches
 │   └── out/            # Prebuilt bootloader binaries (h700, rk3326, rk3566, rkbin)
 ├── targets/            # Target Software Builders
@@ -34,7 +34,7 @@ src/                    # Shared Source Code Vaults
 
 roms/                   # Preloaded public domain ROMs package
 docs/                   # ADRs (adr/) and Research Specs (research/)
-.github/workflows/      # CI Workflows (alpine.yml, buildroot.yml, bootloader.yml, container.yml)
+.github/workflows/      # CI Workflows (build.yml, containers.yml, sync-kernel.yml, update-submodules.yml)
 ```
 
 ---
@@ -126,11 +126,11 @@ See `docs/adr/0012-traits-schema.md` for the full section/key reference.
 # Bootloaders (`minime/uboot/`)
 
 Contains U-Boot configurations, patches, and prebuilt binaries:
-- `config/`: U-Boot defconfigs (`uboot.config`, `ddr3.defconfig`, `bootloader-*.config`).
+- `config/`: U-Boot defconfigs (`uboot.config`, `uboot-rk3326.config`, `ddr3.defconfig`).
 - `patches/`: U-Boot and ARM Trusted Firmware (ATF) source patches.
 - `out/`: Prebuilt bootloader binaries:
   - `h700/`: `u-boot-sunxi-with-spl.bin`, `u-boot-sunxi-with-spl-ddr3.bin`
-  - `rk3326/`: `idbloader.img`, `u-boot.itb`
+  - `rk3326/`: `idbloader.img`, `uboot.img`, `trust.img`, `rkbin/{ddr,miniloader,bl31}` (vendor Rockchip boot chain)
   - `rk3566/`: `idbloader.img`, `u-boot.itb`, `rkbin/bl31.elf`, `rkbin/rk3566_ddr_1056MHz_v1.25.bin`
 
 ---

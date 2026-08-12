@@ -159,6 +159,15 @@ if [ "${BOARD}" = "h700" ]; then
 	fi
 	cp -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl.bin" "${BINARIES_DIR}/"
 	[ -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl-ddr3.bin" ] && cp -f "${UBOOT_OUT_DIR}/u-boot-sunxi-with-spl-ddr3.bin" "${USERDATA_STAGE}/.minime/u-boot-ddr3.bin"
+elif [ "${BOARD}" = "rk3326" ]; then
+	# Vendor Rockchip boot chain (idbloader.img + uboot.img + trust.img).
+	for f in idbloader.img uboot.img trust.img; do
+		if [ ! -f "${UBOOT_OUT_DIR}/${f}" ]; then
+			echo "ERROR: Bootloader binary missing: ${UBOOT_OUT_DIR}/${f}" >&2
+			exit 1
+		fi
+		cp -f "${UBOOT_OUT_DIR}/${f}" "${BINARIES_DIR}/"
+	done
 else
 	if [ ! -f "${UBOOT_OUT_DIR}/idbloader.img" ] || [ ! -f "${UBOOT_OUT_DIR}/u-boot.itb" ]; then
 		echo "ERROR: Bootloader binaries missing in ${UBOOT_OUT_DIR}" >&2

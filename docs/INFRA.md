@@ -12,7 +12,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **Trigger**: Push to `main` filtered to `minime/**`; pull request on `minime/**`; `workflow_dispatch`.
 - **Purpose**: Builds all bootloaders, UIs, OS images, and OTA update packages for all board/OS/UI combinations. Uploads final images to the `testing` GitHub Release on push to `main`.
 - **Jobs**:
-  - `build-bootloader` — compiles U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64. Cached by hash of `minime/uboot/**`.
+  - `build-bootloader` — builds U-Boot for all three boards (`rk3326`, `rk3566`, `h700`) inside `minime-glibc:latest` on AMD64; `rk3326`/`rk3566` use the vendor rkbin boot chain, `h700` builds ATF from source. Cached by hash of `minime/uboot/**`.
   - `build-cores` (matrix: `musl` / `glibc`) — builds the shared RetroArch cores from `minime/build/cores/manifest` via `buildcores.sh`, once for both UIs. Uploads the flat `cores-{libc}` artifact consumed by the UI jobs. Cached by a **source-only** key (`manifest` + `buildcores.sh` + `patches/**`) so unchanged cores reuse artifacts (~1 min vs 4–6 min).
   - `build-ui-musl` / `build-ui-glibc` — compile MinUI and Allium per libc **in parallel**. musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 (cross). Cached by submodule HEADs (allium, its nested RetroArch-patch/RetroArch, minui) + `minime/build/mkui.sh`; Allium cargo `target/` dirs (workspace + dufs/collie) cached separately keyed on their `Cargo.lock`.
   - `build-os-musl` (alpine × `{h700, rk3326, rk3566}`) / `build-os-glibc` (buildroot × `{rk3326, rk3566}`) — run `make components` then `make image update` (once per UI). Each depends on the bootloader **and only its own libc's UI job** — the buildroot leg no longer idles behind the slow musl UI. Uploads `.img.zst` / `.tar.zst` to the `testing` release.
@@ -36,7 +36,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 ## 2. Repository Scripts & Entrypoints
 
 ### Build Scripts (`minime/build/`)
-- **`minime/build/mkbootloader.sh`**: Compiles ATF and U-Boot for `h700`, `rk3326`, or `rk3566`. Invoked by the `build-bootloader` job in `build.yml`.
+- **`minime/build/mkbootloader.sh`**: Builds U-Boot for `h700`, `rk3326`, or `rk3566` (invoked by the `build-bootloader` job in `build.yml`). `rk3566` and `rk3326` use the vendor Rockchip boot chain (committed rkbin DDR/BL31 blobs; `rk3326` additionally packs `uboot.img` via `loaderimage` and `trust.img` via `trust_merger`); `h700` builds ATF and U-Boot from source.
 - **`minime/build/cores/buildcores.sh`**: Builds all shared RetroArch cores from `minime/build/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
 - **`minime/build/mkui.sh`**: Compiles MinUI and Allium for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui-musl` / `build-ui-glibc` jobs in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
 - **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.

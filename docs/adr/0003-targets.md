@@ -21,7 +21,7 @@ Maintaining two parallel distributions traditionally introduces overhead, especi
 
 We will enforce a unified `genimage` architecture and a shared boot payload structure for both Alpine and Buildroot targets. 
 
-1. **Shared Partition Layout**: Both distributions share the exact same `genimage.cfg` layouts (`alpine/board/common/genimage.cfg` and `alpine/board/h700/genimage.cfg`). The SD card layout consists solely of raw, out-of-partition U-Boot bootloader blobs (placed at precise offsets depending on the chipset) and a single, first-boot expandable FAT32 partition.
+1. **Shared Partition Layout**: Both distributions share the exact same `genimage.cfg` layouts (`minime/boards/common/genimage.cfg`, with per-board overrides for h700 and rk3326). The SD card layout consists solely of raw, out-of-partition U-Boot bootloader blobs (placed at precise offsets depending on the chipset) and a single, first-boot expandable FAT32 partition.
 2. **Unified Build Pipeline**: Both Alpine and Buildroot share the same image packaging scripts in `minime/build/`, invoked via the shared packager container.
 3. **File-Based OS Payload**: The entire OS is encapsulated into portable files located at the root of the FAT32 partition:
    - `system.erofs`: The immutable, compressed root filesystem.

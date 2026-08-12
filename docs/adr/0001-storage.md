@@ -20,7 +20,7 @@ When `mkdosfs -F 32 -s 32` was invoked on a `1024 MB` raw volume ($1,073,741,824
 3. Usable Data Sectors = $2,097,152 - 32 - 1024 = 2,096,096$ sectors.
 4. Usable Cluster Count = $2,096,096 / 32 = \mathbf{65,503\text{ clusters}}$.
 
-Because $65,503 < 65,525$, all OS filesystem drivers (macOS `msdos`, Linux `fs/fat`, U-Boot `fs/fat`) classify the volume as **FAT16**, while the BPB structure written by `mkdosfs -F 32` contains 32-bit FAT32 headers. This causes severe BPB/cluster mismatch, rendering the filesystem unreadable by U-Boot and host operating systems.
+Because $65,503 < 65,525$, all OS/U-Boot FAT drivers classify the volume as **FAT16** while `mkdosfs -F 32` writes FAT32 BPB headers — a fatal BPB/cluster mismatch that makes the filesystem unreadable by U-Boot and host OSes.
 
 ## Decision
 1. **Cluster Size**: Fixed to 16 KB (`mkdosfs -F 32 -s 32` -> 32 sectors per cluster @ 512B/sector).
@@ -30,7 +30,7 @@ At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clust
 
 ## Partition Mapping (H700 vs RK3326/RK3566)
 Minime must support heterogeneous SoC families with diverging partition table requirements:
-- **RK3326 / RK3566**: Requires a GPT partition table. Bootloader components (`idbloader.img`, `u-boot.itb`) reside in raw unpartitioned space before sector 32768, followed by `boot` and `userdata` GPT partitions.
+- **RK3326 / RK3566**: Requires a GPT partition table. Bootloader components reside in raw unpartitioned space before sector 32768, followed by `boot` and `userdata` GPT partitions. RK3566 uses the upstream chain (`idbloader.img`, `u-boot.itb`); RK3326 uses the vendor Rockchip chain (`idbloader.img` at 32K, `uboot.img` at 8M, `trust.img` at 12M — see `minime/boards/rk3326/genimage.cfg`).
 - **H700 / Allwinner**: Enforces a legacy MBR partition table. Bootloader (`u-boot-sunxi-with-spl.bin`) resides in unpartitioned space starting at sector 16, overlapping with standard GPT headers. `userdata` is an MBR partition.
 
 To unify infrastructure, `genimage.cfg` uses conditional includes. RK3326/RK3566 include `board/common/genimage.cfg` to emit GPT images, while H700 provides its own `board/h700/genimage.cfg` overriding to MBR.
@@ -47,14 +47,7 @@ The initramfs performs the following steps, mirroring the approach used by EmuEL
 5. Staged contents are restored, `.minime`/`.system` re-hidden, the `first_boot_expand` marker removed, and the device reboots.
 
 ### Why not `fatresize`
-FAT32 cannot be grown in place reliably. `fatresize` (used previously) has two failure modes on real device geometries:
-- Growing to the partition boundary hits `constraint_intersect_and_destroy()` returning NULL or `snap()` assertion failures (`fatresize.c:347`) because libparted's FAT resize constraint cannot end at the very last sector of the partition.
-- Growing a volume whose FAT tables must be enlarged (e.g. 1 GB -> 32 GB) requires relocating the FAT tables; the required slack is geometry-dependent (16 MB on some sizes, 64 MB on others), so no fixed target size works.
-
-These are documented in the reference projects: teslausb pads 64 KiB because "fatresize doesn't seem to like extending partitions to the very end", and Tails caps growth at `partition_size - 2 MiB` "due to bugs in fatresize". Recreating the volume with `mkfs.vfat` sidesteps these entirely and is the proven pattern for single-FAT32 firmware.
-
-### Historical note: the `-i` argument bug
-An earlier `fatresize` invocation `fatresize -f -s max -i "$PART_NUM" "$DISK_DEV"` mistook `-i` for `--info`, leaving the partition index and device as positional arguments, which made `fatresize` probe the whole parent disk. This was corrected with `-n "$PART_NUM"` before fatresize was ultimately removed in favor of the recreate approach above.
+FAT32 cannot be grown in place reliably: libparted cannot end a resize at the very last sector (assertion failures in `fatresize.c:347`), and growing a volume that needs FAT-table relocation requires geometry-dependent slack (16-64 MB). Reference projects hit the same wall (teslausb pads 64 KiB; Tails caps at `partition_size - 2 MiB`). Recreating with `mkfs.vfat` sidesteps this entirely and is the proven single-FAT32 firmware pattern. (An earlier `fatresize -i` flag misuse that probed the whole disk was also corrected to `-n` before fatresize was removed.)
 
 ## Rationale
 - **Hardware NAND Flash Alignment**: 16 KB cluster size matches 16 KB NAND flash page sizes on modern SD cards, preventing write amplification and minimizing random read latency.
