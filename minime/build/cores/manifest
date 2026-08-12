@@ -27,7 +27,7 @@
 fceumm|https://github.com/libretro/libretro-fceumm|||||fceumm.patch|minime||0|1
 gambatte|https://github.com/libretro/gambatte-libretro|||||gambatte.patch gambatte-export-dmg-grid.patch|minime||0|1
 gpsp|https://github.com/libretro/gpsp|||||gpsp.patch|minime||0|1
-pcsx_rearmed|https://github.com/libretro/pcsx_rearmed|99d2ce02c6a5836096ade6ced9f8ca23a1fbb7bd||Makefile.libretro|USE_MINIZ=0|pcsx_rearmed.patch|minime||0|1
+pcsx_rearmed|https://github.com/libretro/pcsx_rearmed|da2cb8ecd17fd0932ab6d94774c0522beebce6e3||Makefile.libretro|USE_MINIZ=0|pcsx_rearmed.patch|minime||0|1
 picodrive|https://github.com/irixxxx/picodrive|5f9e79f2177443939f21ab965b1c294edbef514c||Makefile.libretro||picodrive.patch|minime||0|1
 snes9x2005_plus|https://github.com/libretro/snes9x2005||||USE_BLARGG_APU=1|snes9x2005_plus.patch|minime||0|1
 mednafen_pce_fast|https://github.com/libretro/beetle-pce-fast-libretro|||||mednafen_pce_fast.patch|minime||0|1
