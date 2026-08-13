@@ -14,7 +14,7 @@ log_console() {
 
 log_card() {
 	echo "$*"
-	if mountpoint -q /mnt/card 2>/dev/null || grep -q "/mnt/card" /proc/mounts 2>/dev/null; then
+	if [ -w "${BOOT_LOG_DIR}" ] 2>/dev/null; then
 		echo "[INITRAMFS $(date -u +'%T' 2>/dev/null || date 2>/dev/null || true)] $*" >>"${BOOT_LOG_DIR}/boot.log" 2>/dev/null || true
 		sync 2>/dev/null || true
 	fi
@@ -98,11 +98,36 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	DISK_DEV="${CARD_DEV%p1}"
 	PART_NUM="${CARD_DEV##*p}"
 
+	# Stage all FAT contents into a RAM-backed tmpfs BEFORE resizing the
+	# partition. parted resizepart + partprobe re-read the partition table and
+	# invalidate a still-mounted vfat (the kernel flips it read-only), so the
+	# seed must be copied while the card is still healthy. FAT32 cannot be
+	# grown in place, so the volume is wiped and recreated at full size below.
+	STAGE=/tmp/stage
+	mkdir -p "$STAGE"
+	if ! mount -t tmpfs -o size=512M tmpfs "$STAGE" 2>/dev/null; then
+		log_card "ERROR: failed to mount staging tmpfs at $STAGE"
+		exec sh
+	fi
+	log_card "[INITRAMFS] Staging FAT contents into $STAGE..."
+	cp -a /mnt/card/. "$STAGE"/ 2>/dev/null || {
+		log_card "ERROR: failed to stage FAT contents"
+		exec sh
+	}
+
+	# Release the vfat mount before re-reading the partition table so partprobe
+	# re-reads the grown partition cleanly instead of invalidating the mount.
+	umount /mnt/card 2>/dev/null || true
+	# Point logging at the staged copy (which is restored onto the card below)
+	# so boot.log continuity is kept across the unmounted window.
+	BOOT_LOG_DIR="$STAGE"
+
 	# parted and mkfs.vfat are not in the initramfs to avoid dynamic linking
-	# complexity. We temporarily mount the EROFS system image and run them via
-	# chroot with the device nodes, proc, and sysfs bind-mounted.
+	# complexity. We mount the EROFS system image from the staged copy (it must
+	# survive the reformat) and run them via chroot with the device nodes,
+	# proc, and sysfs bind-mounted.
 	mkdir -p /mnt/system
-	if ! mount -t erofs -o loop,ro /mnt/card/.minime/system /mnt/system 2>/dev/null; then
+	if ! mount -t erofs -o loop,ro "$STAGE/.minime/system" /mnt/system 2>/dev/null; then
 		log_card "ERROR: failed to mount /mnt/system for partition expansion"
 		exec sh
 	fi
@@ -125,35 +150,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 		exec sh
 	fi
 
-	# Stage all FAT contents into a RAM-backed tmpfs before wiping the volume.
-	STAGE=/tmp/stage
-	mkdir -p "$STAGE"
-	if ! mount -t tmpfs -o size=512M tmpfs "$STAGE" 2>/dev/null; then
-		log_card "ERROR: failed to mount staging tmpfs at $STAGE"
-		exec sh
-	fi
-	log_card "[INITRAMFS] Staging FAT contents into $STAGE..."
-	cp -a /mnt/card/. "$STAGE"/ 2>/dev/null || {
-		log_card "ERROR: failed to stage FAT contents"
-		exec sh
-	}
-
-	# The EROFS loop mount still points at the card file we are about to wipe.
-	# Re-mount it from the staged copy so mkfs.vfat survives the reformat.
-	umount /mnt/system/dev
-	umount /mnt/system/proc
-	umount /mnt/system/sys
-	umount /mnt/system
-	if ! mount -t erofs -o loop,ro "$STAGE/.minime/system" /mnt/system 2>/dev/null; then
-		log_card "ERROR: failed to mount staged EROFS system"
-		exec sh
-	fi
-	mount --bind /dev /mnt/system/dev
-	mount --bind /proc /mnt/system/proc
-	mount --bind /sys /mnt/system/sys
-
 	# Wipe and recreate FAT32 at the full resized partition size.
-	umount /mnt/card 2>/dev/null || true
 	log_card "[INITRAMFS] Recreating FAT32 on $CARD_DEV..."
 	MKFS_OUT="$(chroot /mnt/system mkfs.vfat -F 32 -s 32 -n minime "$CARD_DEV" 2>&1)"
 	MKFS_RC=$?
@@ -173,6 +170,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 		log_card "ERROR: failed to restore FAT contents"
 		exec sh
 	}
+	BOOT_LOG_DIR="/mnt/card"
 
 	# Re-hide the system directories (mkfs.vfat resets the hidden attribute).
 	# Run via chroot into the EROFS system (its busybox has the fatattr applet).

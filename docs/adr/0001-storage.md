@@ -40,14 +40,18 @@ Minime ships a small seeded FAT32 (1040 MB floor, ~246 MB used) so the image fit
 
 The initramfs performs the following steps, mirroring the approach used by EmuELEC, dArkOS, and fraggod's RPi FAT32 resize script:
 
-1. `parted resizepart` grows the `userdata` partition to 100% of the SD card.
-2. All FAT contents (`.minime`, `.system`, `boot.scr`, config, etc. — ~246 MB) are staged into a RAM-backed tmpfs (`/tmp/stage`, 512 MB).
-3. The EROFS system image is re-mounted from the staged copy so the tools survive the wipe.
+1. All FAT contents (`.minime`, `.system`, `boot.scr`, config, etc. — ~246 MB) are staged into a RAM-backed tmpfs (`/tmp/stage`, 512 MB).
+2. The vfat is unmounted, then the EROFS system image is mounted from the staged copy so the resize tools survive the wipe.
+3. `parted resizepart` grows the `userdata` partition to 100% of the SD card, followed by `partprobe` to re-read the table.
 4. `mkfs.vfat -F 32 -s 32 -n minime` wipes and recreates the FAT32 at the full resized partition size.
 5. Staged contents are restored, `.minime`/`.system` re-hidden, the `first_boot_expand` marker removed, and the device reboots.
 
+Staging precedes resize: re-reading the partition table invalidates a mounted vfat (the kernel
+flips it read-only), which would fail the seed copy, so logging is re-pointed at the staged
+copy during the unmounted window.
+
 ### Why not `fatresize`
-FAT32 cannot be grown in place reliably: libparted cannot end a resize at the very last sector (assertion failures in `fatresize.c:347`), and growing a volume that needs FAT-table relocation requires geometry-dependent slack (16-64 MB). Reference projects hit the same wall (teslausb pads 64 KiB; Tails caps at `partition_size - 2 MiB`). Recreating with `mkfs.vfat` sidesteps this entirely and is the proven single-FAT32 firmware pattern. (An earlier `fatresize -i` flag misuse that probed the whole disk was also corrected to `-n` before fatresize was removed.)
+FAT32 cannot be grown in place reliably: libparted cannot end a resize at the very last sector (assertion failures in `fatresize.c:347`), and a volume needing FAT-table relocation requires geometry-dependent slack (16-64 MB). Recreating with `mkfs.vfat` sidesteps this and is the proven single-FAT32 firmware pattern. (Earlier flag misuse probing the whole disk was corrected to `-n` before fatresize removal.)
 
 ## Rationale
 - **Hardware NAND Flash Alignment**: 16 KB cluster size matches 16 KB NAND flash page sizes on modern SD cards, preventing write amplification and minimizing random read latency.
