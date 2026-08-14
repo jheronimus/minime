@@ -56,7 +56,14 @@ check-scripts:
         -not -path "*/src/yabause/yabause/*" \
         | sort | while read -r f; do
         echo "  sh: $f"
-        sh -n "$f"
+        # Syntax-check with the interpreter declared by the shebang: sh cannot
+        # parse bash scripts (arrays, here-strings), bash rejects sh-only -e/-u
+        # is fine, but bash-specific constructs must not be run through sh.
+        interpreter=$(head -n 1 "$f" | sed -n 's|^#!.*[ /]\([a-zA-Z0-9._-]*\) *$|\1|p' | head -n 1)
+        case "$interpreter" in
+        bash) bash -n "$f" ;;
+        *) sh -n "$f" ;;
+        esac
         shellcheck --severity=warning "$f"
         if head -n 1 "$f" | grep -q "^#!"; then
             if [ ! -x "$f" ]; then

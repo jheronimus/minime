@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Network OTA Update Delivery Script for Minime target devices.
 # Usage: ./scripts/update-device.sh <package> <ip>
 #
@@ -12,9 +12,9 @@
 #   - .system/  : clean-replaced (rm -rf then extract) — pure UI payload, avoids stale files
 #   - .minime/  : overlaid (tar -xf) — device state (config/, traits, dtb) preserved
 
-set -euo pipefail
+set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PKG_PATH="${1:-}"
 TARGET_IP="${2:-}"
 

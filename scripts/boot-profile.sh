@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# shellcheck shell=bash
+#!/bin/sh
+# shellcheck shell=sh
 # Minime boot profiler - host-side tool.
 #
 # Profiles the non-first boot of a live device WITHOUT rebuilding an image.
@@ -19,9 +19,9 @@
 # Optionally pass `--ota` to inject/restore to deliver via a rebuilt OTA
 # package instead of a direct FTP upload of the initramfs.
 
-set -euo pipefail
+set -eu
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPTS="$ROOT/scripts"
 OBSERVER="$ROOT/scripts/boot-profiler.sh"
 IP_FROM_CFG=""
@@ -47,18 +47,22 @@ OTA=0
 DEBUG=0
 
 parse_args() {
-	POS=()
+	npos=0
 	for a in "$@"; do
 		case "$a" in
 		--ota) OTA=1 ;;
 		--debug) DEBUG=1 ;;
 		[0-9]*.[0-9]*.[0-9]*.[0-9]*) IP="$a" ;;
-		*) POS+=("$a") ;;
+		*)
+			npos=$((npos + 1))
+			case "$npos" in
+			1) OS="$a" ;;
+			2) BOARD="$a" ;;
+			3) UI="$a" ;;
+			esac
+			;;
 		esac
 	done
-	[ "${#POS[@]}" -ge 1 ] && OS="${POS[0]}"
-	[ "${#POS[@]}" -ge 2 ] && BOARD="${POS[1]}"
-	[ "${#POS[@]}" -ge 3 ] && UI="${POS[2]}"
 	[ -z "$IP" ] && IP="$IP_FROM_CFG"
 	if [ -z "$IP" ]; then
 		die "no target IP (pass it or set target_ip= in deploy.cfg)"
@@ -78,39 +82,44 @@ remote() {
 # Stock OTA caching + initramfs extraction/instrumentation/repack.
 # --------------------------------------------------------------------------
 fetch_stock() {
-	local ws="$1"
-	local pkg="$ws/stock-ota.tar.zst"
-	if [ ! -f "$pkg" ]; then
-		log "fetching stock OTA minime-$(triple).tar.zst from testing..."
-		local fetched
-		fetched=$("$SCRIPTS/fetch-asset.sh" "minime-$(triple).tar.zst")
-		cp "$fetched" "$pkg"
-	else
-		log "reusing cached stock OTA $pkg"
-	fi
-	printf '%s\n' "$pkg"
+	(
+		ws="$1"
+		pkg="$ws/stock-ota.tar.zst"
+		if [ ! -f "$pkg" ]; then
+			log "fetching stock OTA minime-$(triple).tar.zst from testing..."
+			fetched=$("$SCRIPTS/fetch-asset.sh" "minime-$(triple).tar.zst")
+			cp "$fetched" "$pkg"
+		else
+			log "reusing cached stock OTA $pkg"
+		fi
+		printf '%s\n' "$pkg"
+	)
 }
 
 extract_stock_initramfs() {
-	local ws="$1" stock="$2"
-	rm -rf "$ws/stage" "$ws/initrd"
-	mkdir -p "$ws/stage" "$ws/initrd"
-	unzstd -c "$stock" | tar -xf - -C "$ws/stage"
-	if [ ! -f "$ws/stage/.minime/initramfs" ]; then
-		die "stock OTA has no .minime/initramfs"
-	fi
 	(
-		cd "$ws/initrd" &&
-			cpio -idm --quiet <"$ws/stage/.minime/initramfs"
-	) 2>/dev/null
-	[ -f "$ws/initrd/init" ] || die "initramfs has no /init"
+		ws="$1"
+		stock="$2"
+		rm -rf "$ws/stage" "$ws/initrd"
+		mkdir -p "$ws/stage" "$ws/initrd"
+		unzstd -c "$stock" | tar -xf - -C "$ws/stage"
+		if [ ! -f "$ws/stage/.minime/initramfs" ]; then
+			die "stock OTA has no .minime/initramfs"
+		fi
+		(
+			cd "$ws/initrd" &&
+				cpio -idm --quiet <"$ws/stage/.minime/initramfs"
+		) 2>/dev/null
+		[ -f "$ws/initrd/init" ] || die "initramfs has no /init"
+	)
 }
 
 instrument_initramfs() {
-	local ws="$1"
-	cp "$OBSERVER" "$ws/initrd/boot-profiler.sh"
-	chmod 755 "$ws/initrd/boot-profiler.sh"
-	python3 - "$ws/initrd/init" <<'PY'
+	(
+		ws="$1"
+		cp "$OBSERVER" "$ws/initrd/boot-profiler.sh"
+		chmod 755 "$ws/initrd/boot-profiler.sh"
+		python3 - "$ws/initrd/init" <<'PY'
 import sys
 
 path = sys.argv[1]
@@ -140,52 +149,59 @@ lines[idx + 1:idx + 1] = hook
 with open(path, "w", encoding="utf-8") as f:
     f.write("\n".join(lines))
 PY
-	sh -n "$ws/initrd/init" || die "patched /init failed sh -n"
+		sh -n "$ws/initrd/init" || die "patched /init failed sh -n"
+	)
 }
 
 repack_initramfs() {
-	local ws="$1"
-	local out="$ws/initramfs.instrumented"
 	(
-		cd "$ws/initrd" &&
-			find . | cpio -o -H newc --quiet
-	) >"$out" 2>/dev/null
-	printf '%s\n' "$out"
+		ws="$1"
+		out="$ws/initramfs.instrumented"
+		(
+			cd "$ws/initrd" &&
+				find . | cpio -o -H newc --quiet
+		) >"$out" 2>/dev/null
+		printf '%s\n' "$out"
+	)
 }
 
 # --------------------------------------------------------------------------
 # Delivery + reboot.
 # --------------------------------------------------------------------------
 push_initramfs() {
-	local ws="$1" initramfs="$2"
-	log "uploading instrumented initramfs ($(du -h "$initramfs" | cut -f1)) over FTP..."
-	if ! curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"; then
-		die "direct FTP upload failed - re-run with --ota for the OTA delivery path"
-	fi
+	(
+		ws="$1"
+		initramfs="$2"
+		log "uploading instrumented initramfs ($(du -h "$initramfs" | cut -f1)) over FTP..."
+		if ! curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"; then
+			die "direct FTP upload failed - re-run with --ota for the OTA delivery path"
+		fi
+	)
 }
 
 push_via_ota() {
-	local ws="$1"
-	local triple_str
-	triple_str="$(triple)"
-	local pkg="$ws/minime-${triple_str}-profiler.tar.zst"
-	log "rebuilding OTA from staged payload..."
-	cp "$ws/initramfs.instrumented" "$ws/stage/.minime/initramfs"
 	(
-		cd "$ws/stage" &&
-			tar -cf - . | zstd -q -9 >"$pkg"
+		ws="$1"
+		triple_str="$(triple)"
+		pkg="$ws/minime-${triple_str}-profiler.tar.zst"
+		log "rebuilding OTA from staged payload..."
+		cp "$ws/initramfs.instrumented" "$ws/stage/.minime/initramfs"
+		(
+			cd "$ws/stage" &&
+				tar -cf - . | zstd -q -9 >"$pkg"
+		)
+		log "delivering OTA via update-device.sh..."
+		"$SCRIPTS/update-device.sh" "$pkg" "$IP"
 	)
-	log "delivering OTA via update-device.sh..."
-	"$SCRIPTS/update-device.sh" "$pkg" "$IP"
 }
 
 reboot_and_wait() {
-	local ws="$1"
-	remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh; sync; reboot" >/dev/null 2>&1 || true
-	log "waiting for device to go down and come back..."
-	local wall
-	wall=$(
-		python3 - "$IP" <<'PY'
+	(
+		ws="$1"
+		remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh; sync; reboot" >/dev/null 2>&1 || true
+		log "waiting for device to go down and come back..."
+		wall=$(
+			python3 - "$IP" <<'PY'
 import socket, sys, time
 
 ip = sys.argv[1]
@@ -236,23 +252,28 @@ while time.monotonic() - t0 < 90:
         dev_up = -1
     print(f"{up:.1f} {up - down:.1f} {dev_up:.2f}")
 PY
-	) || die "device did not come back up"
-	local up net dev_up
-	read -r up net dev_up <<<"$wall"
-	printf '%s\n' "$net" >"$ws/wall-to-telnet.txt"
-	printf '%.2f\n' "$dev_up" >"$ws/device-uptime-at-connect.txt"
-	log "device back up: ${up}s after reboot trigger, boot took ~${net}s (host wall clock, device uptime ${dev_up}s)"
+		) || die "device did not come back up"
+		set -- $wall
+		up="$1"
+		net="$2"
+		dev_up="$3"
+		printf '%s\n' "$net" >"$ws/wall-to-telnet.txt"
+		printf '%.2f\n' "$dev_up" >"$ws/device-uptime-at-connect.txt"
+		log "device back up: ${up}s after reboot trigger, boot took ~${net}s (host wall clock, device uptime ${dev_up}s)"
+	)
 }
 
 # --------------------------------------------------------------------------
 # Report generation.
 # --------------------------------------------------------------------------
 generate_report() {
-	local ws="$1" profile="$2"
-	local awkfile="$ws/report.awk"
-	local wall=""
-	[ -f "$ws/wall-to-telnet.txt" ] && wall=$(cat "$ws/wall-to-telnet.txt")
-	cat >"$awkfile" <<'AWK'
+	(
+		ws="$1"
+		profile="$2"
+		awkfile="$ws/report.awk"
+		wall=""
+		[ -f "$ws/wall-to-telnet.txt" ] && wall=$(cat "$ws/wall-to-telnet.txt")
+		cat >"$awkfile" <<'AWK'
 function strip_log_time(s) {
     sub(/^log /, "", s)
     sub(/^\[[A-Za-z0-9_-]+ [0-9:]{8}\] /, "", s)
@@ -377,15 +398,18 @@ END {
     if (shown == 0) print "  none"
 }
 AWK
-	local dev_up=""
-	[ -f "$ws/device-uptime-at-connect.txt" ] && dev_up=$(cat "$ws/device-uptime-at-connect.txt")
-	awk -v wall="$wall" -v dev_up="$dev_up" -f "$awkfile" "$profile"
+		dev_up=""
+		[ -f "$ws/device-uptime-at-connect.txt" ] && dev_up=$(cat "$ws/device-uptime-at-connect.txt")
+		awk -v wall="$wall" -v dev_up="$dev_up" -f "$awkfile" "$profile"
+	)
 }
 
 report_bootlog_last() {
-	local ws="$1" bootlog="$2"
-	local awkfile="$ws/bootlog-report.awk"
-	cat >"$awkfile" <<'AWK'
+	(
+		ws="$1"
+		bootlog="$2"
+		awkfile="$ws/bootlog-report.awk"
+		cat >"$awkfile" <<'AWK'
 function hm2sec(s, a) {
     split(s, a, ":")
     return a[1] * 3600 + a[2] * 60 + a[3]
@@ -412,94 +436,98 @@ END {
     }
 }
 AWK
-	awk -f "$awkfile" "$bootlog"
+		awk -f "$awkfile" "$bootlog"
+	)
 }
 
 # --------------------------------------------------------------------------
 # Commands.
 # --------------------------------------------------------------------------
 cmd_baseline() {
-	local ws
-	ws="$(workspace)"
-	mkdir -p "$ws"
-	log "baseline: parsing existing boot.log on device (no injection, no reboot)"
-	if ! curl -s -u root: "ftp://$IP/boot.log" -o "$ws/boot.log"; then
-		die "could not fetch boot.log from $IP"
-	fi
-	report_bootlog_last "$ws" "$ws/boot.log"
-	log "for exact uptime-based timings run: ./scripts/boot-profile.sh inject"
+	(
+		ws="$(workspace)"
+		mkdir -p "$ws"
+		log "baseline: parsing existing boot.log on device (no injection, no reboot)"
+		if ! curl -s -u root: "ftp://$IP/boot.log" -o "$ws/boot.log"; then
+			die "could not fetch boot.log from $IP"
+		fi
+		report_bootlog_last "$ws" "$ws/boot.log"
+		log "for exact uptime-based timings run: ./scripts/boot-profile.sh inject"
+	)
 }
 
 cmd_inject() {
-	local ws stock initramfs
-	ws="$(workspace)"
-	mkdir -p "$ws"
-	stock="$(fetch_stock "$ws")"
-	log "extracting stock initramfs..."
-	extract_stock_initramfs "$ws" "$stock"
-	log "instrumenting /init + adding observer..."
-	instrument_initramfs "$ws"
-	initramfs="$(repack_initramfs "$ws")"
-	[ -f "$OBSERVER" ] || die "observer missing at $OBSERVER"
-	log "instrumented initramfs ready ($(du -h "$initramfs" | cut -f1))"
-	if [ "$OTA" -eq 1 ]; then
-		push_via_ota "$ws"
-	else
-		push_initramfs "$ws" "$initramfs"
-	fi
-	if [ "$DEBUG" -eq 1 ]; then
-		log "placing .boot-profiler-debug marker (observer will run under sh -x)"
-		touch "$ws/debug.marker"
-		curl -s -S -u root: -T "$ws/debug.marker" "ftp://$IP/.boot-profiler-debug"
-		remote "sync" >/dev/null 2>&1 || true
-	fi
-	reboot_and_wait "$ws"
-	log "done. Collect results with: ./scripts/boot-profile.sh collect $IP"
+	(
+		ws="$(workspace)"
+		mkdir -p "$ws"
+		stock="$(fetch_stock "$ws")"
+		log "extracting stock initramfs..."
+		extract_stock_initramfs "$ws" "$stock"
+		log "instrumenting /init + adding observer..."
+		instrument_initramfs "$ws"
+		initramfs="$(repack_initramfs "$ws")"
+		[ -f "$OBSERVER" ] || die "observer missing at $OBSERVER"
+		log "instrumented initramfs ready ($(du -h "$initramfs" | cut -f1))"
+		if [ "$OTA" -eq 1 ]; then
+			push_via_ota "$ws"
+		else
+			push_initramfs "$ws" "$initramfs"
+		fi
+		if [ "$DEBUG" -eq 1 ]; then
+			log "placing .boot-profiler-debug marker (observer will run under sh -x)"
+			touch "$ws/debug.marker"
+			curl -s -S -u root: -T "$ws/debug.marker" "ftp://$IP/.boot-profiler-debug"
+			remote "sync" >/dev/null 2>&1 || true
+		fi
+		reboot_and_wait "$ws"
+		log "done. Collect results with: ./scripts/boot-profile.sh collect $IP"
+	)
 }
 
 cmd_collect() {
-	local ws
-	ws="$(workspace)"
-	mkdir -p "$ws"
-	log "pulling boot-profile.log from $IP..."
-	if ! curl -s -u root: "ftp://$IP/boot-profile.log" -o "$ws/boot-profile.log"; then
-		die "could not fetch boot-profile.log"
-	fi
-	if [ ! -s "$ws/boot-profile.log" ]; then
-		die "boot-profile.log is empty - the device was not booted with an instrumented initramfs (run inject)"
-	fi
-	curl -s -u root: "ftp://$IP/boot.log" -o "$ws/boot.log" || true
-	generate_report "$ws" "$ws/boot-profile.log"
-	if curl -s -u root: "ftp://$IP/boot-profiler.trace" -o "$ws/boot-profiler.trace"; then
-		log "fetched boot-profiler.trace ($(wc -l <"$ws/boot-profiler.trace") lines)"
-	fi
+	(
+		ws="$(workspace)"
+		mkdir -p "$ws"
+		log "pulling boot-profile.log from $IP..."
+		if ! curl -s -u root: "ftp://$IP/boot-profile.log" -o "$ws/boot-profile.log"; then
+			die "could not fetch boot-profile.log"
+		fi
+		if [ ! -s "$ws/boot-profile.log" ]; then
+			die "boot-profile.log is empty - the device was not booted with an instrumented initramfs (run inject)"
+		fi
+		curl -s -u root: "ftp://$IP/boot.log" -o "$ws/boot.log" || true
+		generate_report "$ws" "$ws/boot-profile.log"
+		if curl -s -u root: "ftp://$IP/boot-profiler.trace" -o "$ws/boot-profiler.trace"; then
+			log "fetched boot-profiler.trace ($(wc -l <"$ws/boot-profiler.trace") lines)"
+		fi
+	)
 }
 
 cmd_restore() {
-	local ws stock
-	ws="$(workspace)"
-	mkdir -p "$ws"
-	stock="$(fetch_stock "$ws")"
-	log "extracting stock initramfs..."
-	extract_stock_initramfs "$ws" "$stock"
-	initramfs="$(repack_initramfs "$ws")"
-	if [ "$OTA" -eq 1 ]; then
-		cp "$initramfs" "$ws/stage/.minime/initramfs"
-		local triple_str
-		triple_str="$(triple)"
-		local pkg="$ws/minime-${triple_str}-stock.tar.zst"
-		(
-			cd "$ws/stage" &&
-				tar -cf - . | zstd -q -9 >"$pkg"
-		)
-		log "delivering stock OTA via update-device.sh..."
-		"$SCRIPTS/update-device.sh" "$pkg" "$IP"
-	else
-		log "uploading stock initramfs over FTP..."
-		curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"
-	fi
-	remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh /mnt/sdcard/.boot-profiler-debug /mnt/sdcard/boot-profiler.trace; sync; reboot" >/dev/null 2>&1 || true
-	log "rebooting with stock initramfs (profiler removed). Verify with: just remote \"cat /mnt/sdcard/.minime/manifest.json\""
+	(
+		ws="$(workspace)"
+		mkdir -p "$ws"
+		stock="$(fetch_stock "$ws")"
+		log "extracting stock initramfs..."
+		extract_stock_initramfs "$ws" "$stock"
+		initramfs="$(repack_initramfs "$ws")"
+		if [ "$OTA" -eq 1 ]; then
+			cp "$initramfs" "$ws/stage/.minime/initramfs"
+			triple_str="$(triple)"
+			pkg="$ws/minime-${triple_str}-stock.tar.zst"
+			(
+				cd "$ws/stage" &&
+					tar -cf - . | zstd -q -9 >"$pkg"
+			)
+			log "delivering stock OTA via update-device.sh..."
+			"$SCRIPTS/update-device.sh" "$pkg" "$IP"
+		else
+			log "uploading stock initramfs over FTP..."
+			curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"
+		fi
+		remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh /mnt/sdcard/.boot-profiler-debug /mnt/sdcard/boot-profiler.trace; sync; reboot" >/dev/null 2>&1 || true
+		log "rebooting with stock initramfs (profiler removed). Verify with: just remote \"cat /mnt/sdcard/.minime/manifest.json\""
+	)
 }
 
 print_help() {

@@ -1,10 +1,10 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Fetch a diagnostics bundle from the target device.
 #  1. Runs collect-diagnostics.sh on the device (via telnet) to build a tarball.
 #  2. Pulls it over FTP (device runs ftpd serving /mnt/sdcard).
 # Usage: ./scripts/get-logs.sh [ip]
 
-set -euo pipefail
+set -eu
 
 IP="${1:-}"
 

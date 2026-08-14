@@ -1,80 +1,106 @@
-#!/bin/bash
+#!/bin/sh
 # Validate SHA-256 and SHA-512 hashes in Buildroot and Alpine configurations
 # Max SLOC: 100
 
-set -euo pipefail
+set -eu
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 errors=0
 
+is_hex_len() {
+    [ "${#1}" -eq "$2" ] || return 1
+    case "$1" in
+    *[!0-9a-fA-F]*) return 1 ;;
+    esac
+    return 0
+}
+
 check_buildroot_hash() {
-    local file="$1"
+    file="$1"
     while IFS= read -r line || [ -n "$line" ]; do
-        [[ -z "$line" || "$line" == \#* ]] && continue
-        local algo hash_val _rest
-        read -r algo hash_val _rest <<< "$line"
+        case "$line" in ""|\#*) continue ;; esac
+        set -- $line
+        algo="${1:-}"
+        hash_val="${2:-}"
         algo=$(echo "$algo" | tr '[:upper:]' '[:lower:]')
-        
-        if [ "$algo" = "sha256" ]; then
-            if ! [[ "$hash_val" =~ ^[0-9a-fA-F]{64}$ ]]; then
+
+        case "$algo" in
+        sha256)
+            if ! is_hex_len "$hash_val" 64; then
                 echo "  [ERROR] $file: Invalid SHA-256 hash length/format '$hash_val'"
-                ((errors++))
+                errors=$((errors + 1))
             fi
-        elif [ "$algo" = "sha512" ]; then
-            if ! [[ "$hash_val" =~ ^[0-9a-fA-F]{128}$ ]]; then
+            ;;
+        sha512)
+            if ! is_hex_len "$hash_val" 128; then
                 echo "  [ERROR] $file: Invalid SHA-512 hash length/format '$hash_val'"
-                ((errors++))
+                errors=$((errors + 1))
             fi
-        fi
+            ;;
+        esac
     done < "$file"
 }
 
 check_apkbuild() {
-    local file="$1"
-    local hash_lines
+    file="$1"
     hash_lines=$(grep -oE '(sha256sums|sha512sums)="[^"]+"' "$file" || true)
-    
-    while IFS= read -r line; do
+
+    tmp_lines=$(mktemp)
+    tmp_hashes=$(mktemp)
+    trap 'rm -f "$tmp_lines" "$tmp_hashes"' EXIT
+    printf '%s\n' "$hash_lines" > "$tmp_lines"
+
+    while IFS= read -r line || [ -n "$line" ]; do
         [ -z "$line" ] && continue
-        local algo="${line%%=*}"
-        local hashes="${line#*=\"}"
+        algo="${line%%=*}"
+        hashes="${line#*=\"}"
         hashes="${hashes%\"}"
-        
+
+        printf '%s\n' "$hashes" > "$tmp_hashes"
         while IFS= read -r hline || [ -n "$hline" ]; do
-            local hash_val="" _rest=""
-            read -r hash_val _rest <<< "$hline"
+            set -- $hline
+            hash_val="${1:-}"
             [ -z "$hash_val" ] || [ "$hash_val" = "SKIP" ] && continue
-            
-            if [ "$algo" = "sha256sums" ]; then
-                if ! [[ "$hash_val" =~ ^[0-9a-fA-F]{64}$ ]]; then
+
+            case "$algo" in
+            sha256sums)
+                if ! is_hex_len "$hash_val" 64; then
                     echo "  [ERROR] $file: Invalid SHA-256 string '$hash_val'"
-                    ((errors++))
+                    errors=$((errors + 1))
                 fi
-            elif [ "$algo" = "sha512sums" ]; then
-                if ! [[ "$hash_val" =~ ^[0-9a-fA-F]{128}$ ]]; then
+                ;;
+            sha512sums)
+                if ! is_hex_len "$hash_val" 128; then
                     echo "  [ERROR] $file: Invalid SHA-512 string '$hash_val'"
-                    ((errors++))
+                    errors=$((errors + 1))
                 fi
-            fi
-        done <<< "$hashes"
-    done <<< "$hash_lines"
+                ;;
+            esac
+        done < "$tmp_hashes"
+    done < "$tmp_lines"
+    rm -f "$tmp_lines" "$tmp_hashes"
 }
 
-shopt -s nullglob
-br_hashes=("${ROOT_DIR}"/minime/targets/buildroot/external/package/*/*.hash)
-echo "Checking ${#br_hashes[@]} Buildroot package .hash file(s)..."
-for bh in "${br_hashes[@]}"; do
-    check_buildroot_hash "$bh"
-done
+tmp_br=$(mktemp)
+tmp_ak=$(mktemp)
+trap 'rm -f "$tmp_br" "$tmp_ak"' EXIT
 
-apkbuilds=("${ROOT_DIR}"/minime/targets/alpine/aports/*/APKBUILD)
-echo "Checking ${#apkbuilds[@]} Alpine APKBUILD file(s)..."
-for ak in "${apkbuilds[@]}"; do
-    check_apkbuild "$ak"
-done
+find "${ROOT_DIR}/minime/targets/buildroot/external/package" -type f -name '*.hash' > "$tmp_br"
+br_count=$(wc -l < "$tmp_br")
+echo "Checking $br_count Buildroot package .hash file(s)..."
+while IFS= read -r bh || [ -n "$bh" ]; do
+    [ -n "$bh" ] && check_buildroot_hash "$bh"
+done < "$tmp_br"
+
+find "${ROOT_DIR}/minime/targets/alpine/aports" -type f -name 'APKBUILD' > "$tmp_ak"
+ak_count=$(wc -l < "$tmp_ak")
+echo "Checking $ak_count Alpine APKBUILD file(s)..."
+while IFS= read -r ak || [ -n "$ak" ]; do
+    [ -n "$ak" ] && check_apkbuild "$ak"
+done < "$tmp_ak"
 
 if [ "$errors" -gt 0 ]; then
-    echo -e "\n[ERROR] Found $errors hash validation error(s)."
+    printf '\n[ERROR] Found %s hash validation error(s).\n' "$errors"
     exit 1
 fi
 

@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Execute a remote shell command on target device over telnet
 # Usage: ./scripts/remote-cmd.sh <command> [ip]
 
-set -euo pipefail
+set -eu
 
 CMD="${1:-}"
 IP="${2:-}"

@@ -1,28 +1,27 @@
-#!/bin/bash
+#!/bin/sh
 # Check kernel configuration fragments for duplicates and missing vendors
 # Max SLOC: 100
 
-set -euo pipefail
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+set -eu
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 errors=0
 warnings=0
 
-CONFIG_PAIRS=(
-    "h700 minime/boards/common/tiny-base.config minime/boards/h700/tiny-h700.config"
-    "rk3326 minime/boards/common/tiny-base.config minime/boards/rk3326/tiny-rk3326.config"
-    "rk3566 minime/boards/common/tiny-base.config minime/boards/rk3566/tiny-rk3566.config"
-)
-
 echo "Checking kernel configuration fragments..."
 
-for pair in "${CONFIG_PAIRS[@]}"; do
-    read -r label files <<< "$pair"
-    file_args=()
+for pair in \
+    "h700 minime/boards/common/tiny-base.config minime/boards/h700/tiny-h700.config" \
+    "rk3326 minime/boards/common/tiny-base.config minime/boards/rk3326/tiny-rk3326.config" \
+    "rk3566 minime/boards/common/tiny-base.config minime/boards/rk3566/tiny-rk3566.config"
+do
+    label="${pair%% *}"
+    files="${pair#* }"
+    set --
     for f in $files; do
-        [ -f "${ROOT_DIR}/$f" ] && file_args+=("${ROOT_DIR}/$f")
+        [ -f "${ROOT_DIR}/$f" ] && set -- "$@" "${ROOT_DIR}/$f"
     done
-    [ ${#file_args[@]} -eq 0 ] && continue
+    [ $# -eq 0 ] && continue
 
     out=$(awk -v label="$label" '
         { sub(/^[ \t]+/, ""); sub(/[ \t]+$/, "") }
@@ -72,20 +71,20 @@ for pair in "${CONFIG_PAIRS[@]}"; do
                 }
             }
         }
-    ' "${file_args[@]}")
+    ' "$@")
 
     if [ -n "$out" ]; then
         # Use sed syntax that works everywhere
         echo "$out" | sed 's/^/  [/' | sed 's/ERROR \[/ERROR\] \[/' | sed 's/WARN \[/WARN\] \[/'
         e_cnt=$(echo "$out" | grep -c "^ERROR" || true)
         w_cnt=$(echo "$out" | grep -c "^WARN" || true)
-        ((errors += e_cnt))
-        ((warnings += w_cnt))
+        errors=$((errors + e_cnt))
+        warnings=$((warnings + w_cnt))
     fi
 done
 
 if [ "$errors" -gt 0 ]; then
-    echo -e "\nKernel config validation failed with $errors error(s) and $warnings warning(s)."
+    printf '\nKernel config validation failed with %s error(s) and %s warning(s).\n' "$errors" "$warnings"
     exit 1
 fi
 echo "Kernel config validation passed cleanly ($warnings warning(s))."

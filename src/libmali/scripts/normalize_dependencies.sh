@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
 # We require lief
 if ! python3 -c "import lief"; then
-	echo -e "\e[35mNeeds lief:\e[0m"
+	printf '\033[35mNeeds lief:\033[0m\n'
 	echo "pip3 install lief"
 fi
 
@@ -16,7 +16,7 @@ version=$(patchelf --version 2>&1 | cut -d' ' -f2 || echo 0)
 major=$(echo "$version" | cut -d. -f1)
 minor=$(echo "$version" | cut -d. -f2)
 
-if [ $major -gt $major_min ]; then
+if [ "$major" -gt "$major_min" ]; then
 	exit 0
 fi
 
@@ -24,7 +24,7 @@ if [ "$major" -eq "$major_min" ] && [ "$minor" -ge "$minor_min" ]; then
 	exit 0
 fi
 
-echo -e "\e[35mNeeds patchelf >= 0.10:\e[0m"
+printf '\033[35mNeeds patchelf >= 0.10:\033[0m\n'
 echo "git clone https://github.com/NixOS/patchelf.git"
 echo "cd patchelf"
 echo "git checkout 0.10"

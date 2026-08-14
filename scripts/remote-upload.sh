@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Upload a file to target device over FTP
 # Usage: ./scripts/remote-upload.sh <local_file> [remote_filename] [ip]
 
-set -euo pipefail
+set -eu
 
 LOCAL_FILE="${1:-}"
 REMOTE_FILE="${2:-}"

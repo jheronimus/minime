@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ARCH=${1:-aarch64}
 GPU=${2:-midgard-t86x}
@@ -11,11 +11,11 @@ OPTIMIZE=${6:-O3}
 { [ "${ARCH}" = 'armv8' ] || [ "${ARCH}" = 'arm64' ]; } && ARCH=aarch64
 
 # Normalize platform variable
-PLATFORM=$(scripts/parse_name.sh --platform $PLATFORM)
+PLATFORM=$(scripts/parse_name.sh --platform "$PLATFORM")
 
-if [ ${SUBVERSION} = 'none' ]; then
+if [ "${SUBVERSION}" = 'none' ]; then
 	LIB="libmali-${GPU}-${VERSION}-${PLATFORM}"
-elif [ ${SUBVERSION} = 'all' ]; then
+elif [ "${SUBVERSION}" = 'all' ]; then
 	LIB="libmali-${GPU}-${VERSION}\(-[rg][0-9]+p[0-9]+\)*-${PLATFORM}"
 else
 	LIB="libmali-${GPU}-${VERSION}-${SUBVERSION}-${PLATFORM}"

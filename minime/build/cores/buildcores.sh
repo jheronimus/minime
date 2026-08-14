@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 # Shared libretro core builder for Minime.
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 #   CC / CXX / AR  (used by cores whose Makefile does not branch on CROSS_COMPILE)
 #   JOBS           (default: nproc)
 
-CORES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CORES_DIR="$(cd "$(dirname "$0")" && pwd)"
 MANIFEST="$CORES_DIR/manifest"
 PATCHES_DIR="$CORES_DIR/patches"
 SRC_DIR="$CORES_DIR/src"
@@ -39,7 +39,8 @@ built=0
 clone_retry() {
 	# Retry clones a few times: unauthenticated git operations are prone to
 	# GitHub rate-limits / transient network failures in CI.
-	local tries=3 n=0
+	tries=3
+	n=0
 	while [ "$n" -lt "$tries" ]; do
 		if "$@"; then
 			return 0
@@ -92,12 +93,12 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 
 	# Build.
 	bdir="$src${buildpath:+/$buildpath}"
-	mk_args=()
-	[ -n "$makefile" ] && mk_args+=(-f "$makefile")
-	[ -n "$CROSS_COMPILE" ] && mk_args+=(CROSS_COMPILE="$CROSS_COMPILE")
-	mk_args+=(CC="$CC" CXX="$CXX" AR="$AR")
+	set -- make
+	[ -n "$makefile" ] && set -- "$@" -f "$makefile"
+	[ -n "$CROSS_COMPILE" ] && set -- "$@" CROSS_COMPILE="$CROSS_COMPILE"
+	set -- "$@" CC="$CC" CXX="$CXX" AR="$AR" platform="${platform:-minime}"
 	# shellcheck disable=SC2086
-	if ! (cd "$bdir" && make "${mk_args[@]}" platform="${platform:-minime}" $flags -j"$JOBS"); then
+	if ! (cd "$bdir" && "$@" $flags -j"$JOBS"); then
 		if [ "$optional" = "1" ]; then
 			echo "WARNING: $core build failed (optional) — skipping" >&2
 			continue

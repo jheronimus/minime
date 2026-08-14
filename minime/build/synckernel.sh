@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # Sync kernel version from Alpine stable to local APKBUILD and Buildroot
 # Max SLOC: 100
 
-set -euo pipefail
+set -eu
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 APKBUILD_PATH="${ROOT_DIR}/minime/targets/alpine/aports/tinykernel/APKBUILD"
 CONFIG_PATH="${ROOT_DIR}/minime/targets/buildroot/external/configs/common.config"
 ALPINE_URL="https://gitlab.alpinelinux.org/alpine/aports/-/raw/master/community/linux-stable/APKBUILD"

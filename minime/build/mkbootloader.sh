@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 BOARD="${1:-}"
 UBOOT_VERSION="${2:-}"
