@@ -108,3 +108,6 @@ zlib
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 # fatresize        FAT32 expansion
+
+# remote diagnostics & input simulation
+remote

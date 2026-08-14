@@ -1,0 +1,152 @@
+---
+name: remote-diagnostics
+description: Live on-device screenshot capture, visual inspection, and keypress emulation for Minime firmware, launcher UIs, and emulators.
+---
+
+# Remote Diagnostics & Live Visual Inspection
+
+The `remote` tool on Minime targets (`/usr/bin/remote`) allows AI agents and developers to capture live screenshots directly from the framebuffer without writing to flash storage and simulate keypresses across launchers and emulators.
+
+---
+
+## 1. Fast Command Reference
+
+All commands run from the workspace root against the live test device (IP resolved from `deploy.cfg` or passed explicitly):
+
+```sh
+# 1. Capture screenshot to local file
+just screenshot [output.png] [ip]
+
+# 2. Simulate single keypress (default hold: 50ms)
+just press <key> [duration_ms] [ip]
+
+# 3. Simulate timed keypress sequence
+just key-seq "<sequence>" [ip]
+
+# 4. Direct low-level execution via telnet
+just remote "remote screenshot --base64"
+just remote "remote press A --duration 100"
+just remote "remote combo MENU,X"
+just remote "remote info"
+```
+
+---
+
+## 2. Screen Capture & Visual Inspection Workflow
+
+Screenshots are extracted straight from `/dev/fb0` memory, automatically rotated to match physical screen orientation according to device traits (`screen_rotation`), encoded to PNG in RAM, and streamed to the host.
+
+### Step-by-Step Inspection Procedure:
+1. **Capture current screen:**
+   ```sh
+   just screenshot screenshot.png
+   ```
+2. **Inspect visually in the environment:**
+   Use `view_file` on `screenshot.png` or embed into an artifact markdown report:
+   ```markdown
+   ![Current Device State](/home/agent/projects/minime/screenshot.png)
+   ```
+3. **Inspect hardware traits & orientation:**
+   ```sh
+   just remote "remote info"
+   ```
+
+---
+
+## 3. Logical Button Identifiers
+
+The `remote` tool automatically maps logical button names to the device's evdev keycodes using `/mnt/sdcard/.minime/traits`:
+
+| Category | Logical Names | Fallback Linux Keycodes |
+| :--- | :--- | :--- |
+| **D-Pad** | `UP`, `DOWN`, `LEFT`, `RIGHT` | `KEY_UP` (103), `KEY_DOWN` (108), `KEY_LEFT` (105), `KEY_RIGHT` (106) |
+| **Action Buttons** | `A`, `B`, `X`, `Y`, `C`, `Z` | `BTN_EAST` (305), `BTN_SOUTH` (304), `BTN_NORTH` (307), `BTN_WEST` (308) |
+| **Shoulder Buttons** | `L1`, `R1`, `L2`, `R2`, `L3`, `R3` | `BTN_TL` (310), `BTN_TR` (311), `BTN_TL2` (312), `BTN_TR2` (313) |
+| **System & Media** | `START`, `SELECT`, `MENU`, `POWER` | `BTN_START` (315), `BTN_SELECT` (314), `BTN_MODE` (316), `KEY_POWER` (116) |
+| **Volume** | `VOL_UP`, `VOL_DOWN` | `KEY_VOLUMEUP` (115), `KEY_VOLUMEDOWN` (114) |
+| **Raw Codes** | Numeric values (e.g. `304`) | Any numeric Linux `KEY_*` code |
+
+---
+
+## 4. Input Emulation Modes
+
+### A. Single Keypress
+Simulates button down, sleeps for duration, then button up:
+```sh
+just press A            # 50ms press
+just press START 150    # 150ms press
+```
+
+### B. Discrete State (Holds & Releases)
+For charging moves, long presses, or holding down buttons:
+```sh
+just remote "remote down A"
+# ... wait or perform other checks ...
+just remote "remote up A"
+```
+
+### C. Simultaneous Combos
+Presses all keys, emits `EV_SYN`, waits duration, and releases in reverse order:
+```sh
+just remote "remote combo MENU,X"
+just remote "remote combo L1,R1,START,SELECT --duration 100"
+```
+
+### D. Scripted Sequences
+Executes comma-separated timed macros (`KEY:DURATION`, `WAIT:DURATION`, `COMBO:DURATION`):
+```sh
+# Navigate launcher menu and open first game
+just key-seq "DOWN:100,WAIT:200,DOWN:100,WAIT:200,A:100"
+
+# In-game state save and exit
+just key-seq "MENU:100,WAIT:300,DOWN:100,WAIT:100,A:50"
+```
+
+---
+
+## 5. Automated Verification & Diagnostic Recipes
+
+### Recipe 1: UI Navigation & Layout Validation
+Verify launcher rendering, text alignment, and carousel scrolling:
+```sh
+# 1. Capture initial launcher screen
+just screenshot step1_launcher.png
+
+# 2. Scroll through lists
+just key-seq "RIGHT:100,WAIT:300,RIGHT:100,WAIT:300,RIGHT:100"
+just screenshot step2_carousel.png
+
+# 3. Open settings menu
+just press SELECT
+just screenshot step3_settings.png
+```
+
+### Recipe 2: Emulator Launch & Framebuffer Rendering Test
+Verify core initialization and graphical output:
+```sh
+# 1. Launch selected game
+just press A
+# 2. Allow core to boot and present initial frames
+sleep 3
+# 3. Capture running game frame
+just screenshot game_frame.png
+# 4. Open in-game menu
+just press MENU
+sleep 1
+just screenshot game_menu.png
+# 5. Quit back to launcher
+just key-seq "DOWN:100,WAIT:100,DOWN:100,WAIT:100,A:100"
+```
+
+### Recipe 3: Diagnosing Screen Orientation & Rotation Glitches
+If the screen appears upside down or sideways:
+1. Compare raw framebuffer vs trait rotation:
+   ```sh
+   just screenshot rotated_default.png
+   just remote "remote screenshot --raw --base64" > raw.b64
+   just remote "remote info"
+   ```
+2. Verify `screen_rotation` in `/mnt/sdcard/.minime/traits`:
+   * $0^\circ$: H700, RK3326, RG503
+   * $90^\circ$: RG Arc-D, RG Arc-S
+   * $270^\circ$: RG353 family (RG353V/P/M)

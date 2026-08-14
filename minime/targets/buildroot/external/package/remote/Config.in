@@ -1,0 +1,4 @@
+config BR2_PACKAGE_REMOTE
+	bool "remote"
+	help
+	  Minime remote screenshot and input simulation tool.

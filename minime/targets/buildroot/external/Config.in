@@ -5,3 +5,5 @@ source "$BR2_EXTERNAL_MINIME_PATH/package/mali-kbase/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 
 source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse-miyoo-bezels/Config.in"
+
+source "$BR2_EXTERNAL_MINIME_PATH/package/remote/Config.in"

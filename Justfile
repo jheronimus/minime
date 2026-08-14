@@ -382,3 +382,27 @@ get-logs ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/get-logs.sh "{{ip}}"
+
+# Capture a live screenshot from the target device without disk writes
+# Usage:
+#   just screenshot [output_path] [ip]
+screenshot out="screenshot.png" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-screenshot.sh "{{out}}" "{{ip}}"
+
+# Simulate a key press on target device
+# Usage:
+#   just press <key> [duration_ms] [ip]
+press key duration="50" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-cmd.sh "remote press {{key}} --duration {{duration}}" "{{ip}}"
+
+# Simulate a timed key sequence on target device
+# Usage:
+#   just key-seq "<sequence>" [ip]
+key-seq sequence ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-cmd.sh "remote sequence '{{sequence}}'" "{{ip}}"
