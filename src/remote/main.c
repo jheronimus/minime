@@ -9,7 +9,6 @@
 #include "traits.h"
 #include "fb.h"
 #include "drm.h"
-#include "rotate.h"
 #include "png_enc.h"
 #include "base64.h"
 #include "uinput.h"
@@ -21,7 +20,6 @@ static void print_usage(const char *prog) {
             "  %s screenshot [options]\n"
             "      --out <path>       Save PNG to file (default: write to stdout)\n"
             "      --base64           Output Base64-encoded PNG string\n"
-            "      --raw              Do not apply traits screen_rotation\n"
             "      --backend <mode>   Capture backend: auto (default), drm, fb\n"
             "      --device <path>    Override device path (/dev/dri/card0 or /dev/fb0)\n"
             "\n"
@@ -61,7 +59,6 @@ typedef enum {
 static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
     const char *out_path = NULL;
     int use_base64 = 0;
-    int raw = 0;
     capture_backend_t backend = BACKEND_AUTO;
     const char *device_path = NULL;
 
@@ -70,8 +67,6 @@ static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
             out_path = argv[++i];
         } else if (strcmp(argv[i], "--base64") == 0) {
             use_base64 = 1;
-        } else if (strcmp(argv[i], "--raw") == 0) {
-            raw = 1;
         } else if (strcmp(argv[i], "--backend") == 0 && i + 1 < argc) {
             const char *b = argv[++i];
             if (strcasecmp(b, "drm") == 0) {
@@ -130,22 +125,6 @@ static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
     int final_w = raw_w;
     int final_h = raw_h;
 
-    // Apply inverse rotation to restore portrait panel scanout back to upright landscape
-    int rot = 0;
-    if (!raw && traits->screen_rotation != 0) {
-        rot = (360 - (traits->screen_rotation % 360)) % 360;
-    }
-
-    if (rot != 0) {
-        uint8_t *rot_rgb = NULL;
-        int rot_w = 0, rot_h = 0;
-        if (image_rotate_rgb(raw_rgb, raw_w, raw_h, rot, &rot_rgb, &rot_w, &rot_h) == 0) {
-            free(raw_rgb);
-            final_rgb = rot_rgb;
-            final_w = rot_w;
-            final_h = rot_h;
-        }
-    }
 
     int ret = 0;
     if (use_base64) {
