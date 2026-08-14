@@ -13,3 +13,4 @@
 [submodule "src/drastic"]
 	path = src/drastic
 	url = https://github.com/jheronimus/drastic
+	branch = main
