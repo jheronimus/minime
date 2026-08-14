@@ -1,7 +1,7 @@
 # shellcheck shell=sh disable=SC2034,SC2154,SC3043
 pkgname=remote
 pkgver=1.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Minime remote screenshot and input simulation tool"
 url="https://github.com/jheronimus/minime"
 arch="aarch64"
