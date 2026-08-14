@@ -1,21 +1,87 @@
 name: Build Minime
 
+env:
+  # FAST PATH: the only target built on every push to main.
+  # Active development device. To switch devices, change THIS line.
+  FAST_PATH_TARGET: alpine/rk3566
+
+concurrency:
+  group: minime-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
     paths:
       - 'minime/**'
       - '.github/workflows/build.yml'
-  pull_request:
-    paths:
-      - 'minime/**'
-      - '.github/workflows/build.yml'
+  schedule:
+    # 04:00 UTC = 07:00 GMT+3 — nightly full-matrix rebuild + regression check.
+    - cron: '0 4 * * *'
   workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Comma-separated targets, e.g. "alpine/rk3566, buildroot/rk3326". "all" (default) builds every supported combo.'
+        type: string
+        default: all
 
 permissions:
   contents: write
 
 jobs:
+  setup:
+    name: Compute Targets
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.compute.outputs.targets }}
+      os_list: ${{ steps.compute.outputs.os_list }}
+    steps:
+      - name: Compute Target Matrix
+        id: compute
+        env:
+          FAST_PATH_TARGET: ${{ env.FAST_PATH_TARGET }}
+          DISPATCH_TARGETS: ${{ github.event.inputs.targets }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          ALL_TARGETS = [
+              {"os": "alpine", "board": "rk3326", "libc": "musl", "runner": "ubuntu-24.04-arm",
+               "ccache_dir": "~/alpine-ccache", "dl_dir": "~/alpine-dl"},
+              {"os": "alpine", "board": "h700", "libc": "musl", "runner": "ubuntu-24.04-arm",
+               "ccache_dir": "~/alpine-ccache", "dl_dir": "~/alpine-dl"},
+              {"os": "alpine", "board": "rk3566", "libc": "musl", "runner": "ubuntu-24.04-arm",
+               "ccache_dir": "~/alpine-ccache", "dl_dir": "~/alpine-dl"},
+              {"os": "buildroot", "board": "rk3326", "libc": "glibc", "runner": "ubuntu-latest",
+               "ccache_dir": "~/.buildroot-ccache", "dl_dir": "~/.buildroot-dl"},
+              {"os": "buildroot", "board": "rk3566", "libc": "glibc", "runner": "ubuntu-latest",
+               "ccache_dir": "~/.buildroot-ccache", "dl_dir": "~/.buildroot-dl"},
+          ]
+
+          event = os.environ.get("GITHUB_EVENT_NAME", "")
+          if event == "schedule":
+              targets = ALL_TARGETS
+          elif event == "workflow_dispatch":
+              selected = [s.strip() for s in os.environ.get("DISPATCH_TARGETS", "").split(",") if s.strip()]
+              if not selected or "all" in selected:
+                  targets = ALL_TARGETS
+              else:
+                  valid = {f"{t['os']}/{t['board']}" for t in ALL_TARGETS}
+                  unknown = [s for s in selected if s not in valid]
+                  if unknown:
+                      raise SystemExit(f"error: unknown target(s): {', '.join(unknown)}")
+                  targets = [t for t in ALL_TARGETS if f"{t['os']}/{t['board']}" in selected]
+          else:  # push
+              fast = os.environ.get("FAST_PATH_TARGET", "alpine/rk3566")
+              os_, board = fast.split("/", 1)
+              targets = [t for t in ALL_TARGETS if t["os"] == os_ and t["board"] == board]
+
+          os_list = sorted({t["os"] for t in targets})
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"targets={json.dumps(targets)}\n")
+              f.write(f"os_list={json.dumps(os_list)}\n")
+          PY
+
   build-bootloader:
     name: Build Bootloader
     runs-on: ubuntu-latest
@@ -79,11 +145,13 @@ jobs:
 
   build-cores:
     name: Build Cores (${{ matrix.libc }})
+    needs: [setup]
     strategy:
       fail-fast: false
       matrix:
         include:
           - libc: musl
+            needed_for: alpine
             runner: ubuntu-24.04-arm
             container: ghcr.io/${{ github.repository_owner }}/minime-musl:latest
             cross_compile: 'ccache '
@@ -91,6 +159,7 @@ jobs:
             cxx: 'ccache g++'
             ar: ar
           - libc: glibc
+            needed_for: buildroot
             runner: ubuntu-latest
             container: ghcr.io/${{ github.repository_owner }}/minime-glibc:latest
             cross_compile: 'ccache aarch64-linux-gnu-'
@@ -125,7 +194,7 @@ jobs:
 
       - name: Build Cores
         id: build-cores-step
-        if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
+        if: (contains(fromJSON(needs.setup.outputs.os_list), matrix.needed_for)) && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
         env:
           CROSS_COMPILE: ${{ matrix.cross_compile }}
           CC: ${{ matrix.cc }}
@@ -155,6 +224,7 @@ jobs:
           key: ccache-cores-${{ matrix.libc }}-${{ github.sha }}
 
       - name: Upload Cores Artifacts
+        if: contains(fromJSON(needs.setup.outputs.os_list), matrix.needed_for)
         uses: actions/upload-artifact@v7
         with:
           name: cores-${{ matrix.libc }}
@@ -163,7 +233,8 @@ jobs:
 
   build-ui-musl:
     name: Build UI (musl)
-    needs: [build-cores]
+    needs: [setup, build-cores]
+    if: contains(fromJSON(needs.setup.outputs.os_list), 'alpine')
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Code
@@ -254,7 +325,8 @@ jobs:
 
   build-ui-glibc:
     name: Build UI (glibc)
-    needs: [build-cores]
+    needs: [setup, build-cores]
+    if: contains(fromJSON(needs.setup.outputs.os_list), 'buildroot')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -343,19 +415,14 @@ jobs:
           retention-days: 7
 
 
-  build-os-musl:
-    name: Build OS (alpine / ${{ matrix.board }})
-    needs: [build-bootloader, build-ui-musl]
+  build-os:
+    name: Build OS (${{ matrix.os }} / ${{ matrix.board }})
+    needs: [setup, build-bootloader, build-ui-musl, build-ui-glibc]
+    if: ${{ !cancelled() && !failure() }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - board: h700
-            runner: ubuntu-24.04-arm
-          - board: rk3326
-            runner: ubuntu-24.04-arm
-          - board: rk3566
-            runner: ubuntu-24.04-arm
+        include: ${{ fromJSON(needs.setup.outputs.targets) }}
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
@@ -372,168 +439,64 @@ jobs:
       - name: Download UI
         uses: actions/download-artifact@v8
         with:
-          name: ui-musl
+          name: ui-${{ matrix.libc }}
           path: minime/ui/out
 
       - name: Restore CCache
         id: ccache-os-restore
         uses: actions/cache/restore@v6
         with:
-          path: |
-            ~/alpine-ccache
-            ~/.buildroot-ccache
-          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
+          path: ${{ matrix.ccache_dir }}
+          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
-            ccache-alpine-${{ matrix.board }}-
+            ccache-${{ matrix.os }}-${{ matrix.board }}-
 
       - name: Restore DL Cache
         id: dl-os-restore
         uses: actions/cache/restore@v6
         with:
-          path: |
-            ~/alpine-dl
-            ~/.buildroot-dl
-          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+          path: ${{ matrix.dl_dir }}
+          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
           restore-keys: |
-            dl-alpine-${{ matrix.board }}-
+            dl-${{ matrix.os }}-${{ matrix.board }}-
 
       - name: Build Components
         id: build-components
-        run: make -C minime/targets/alpine components BOARD=${{ matrix.board }}
+        run: make -C minime/targets/${{ matrix.os }} components BOARD=${{ matrix.board }}
 
       - name: Build Image for MinUI
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
           UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
           export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=minui
+          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=minui
 
       - name: Build Image for Allium
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
           UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
           export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=allium
+          make -C minime/targets/${{ matrix.os }} image update BOARD=${{ matrix.board }} UI=allium
 
       - name: Save CCache
         if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: |
-            ~/alpine-ccache
-            ~/.buildroot-ccache
-          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
+          path: ${{ matrix.ccache_dir }}
+          key: ccache-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
 
       - name: Save DL Cache
         if: always() && steps.build-components.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: |
-            ~/alpine-dl
-            ~/.buildroot-dl
-          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+          path: ${{ matrix.dl_dir }}
+          key: dl-${{ matrix.os }}-${{ matrix.board }}-${{ github.sha }}
 
       - name: Upload to Testing Release
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.img.zst --clobber || true
-          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.tar.zst --clobber || true
-
-  build-os-glibc:
-    name: Build OS (buildroot / ${{ matrix.board }})
-    needs: [build-bootloader, build-ui-glibc]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - board: rk3326
-            runner: ubuntu-latest
-          - board: rk3566
-            runner: ubuntu-latest
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
-
-      - name: Download Bootloader
-        uses: actions/download-artifact@v8
-        with:
-          name: bootloader-out
-          path: minime/uboot/out
-
-      - name: Download UI
-        uses: actions/download-artifact@v8
-        with:
-          name: ui-glibc
-          path: minime/ui/out
-
-      - name: Restore CCache
-        id: ccache-os-restore
-        uses: actions/cache/restore@v6
-        with:
-          path: |
-            ~/alpine-ccache
-            ~/.buildroot-ccache
-          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
-          restore-keys: |
-            ccache-buildroot-${{ matrix.board }}-
-
-      - name: Restore DL Cache
-        id: dl-os-restore
-        uses: actions/cache/restore@v6
-        with:
-          path: |
-            ~/alpine-dl
-            ~/.buildroot-dl
-          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
-          restore-keys: |
-            dl-buildroot-${{ matrix.board }}-
-
-      - name: Build Components
-        id: build-components
-        run: make -C minime/targets/buildroot components BOARD=${{ matrix.board }}
-
-      - name: Build Image for MinUI
-        run: |
-          MINIME_COMMIT="$(git rev-parse --short HEAD)"
-          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
-          export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=minui
-
-      - name: Build Image for Allium
-        run: |
-          MINIME_COMMIT="$(git rev-parse --short HEAD)"
-          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
-          export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
-
-      - name: Save CCache
-        if: always() && steps.build-components.outcome == 'success'
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            ~/alpine-ccache
-            ~/.buildroot-ccache
-          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
-
-      - name: Save DL Cache
-        if: always() && steps.build-components.outcome == 'success'
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            ~/alpine-dl
-            ~/.buildroot-dl
-          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
-
-      - name: Upload to Testing Release
-        if: github.ref == 'refs/heads/main'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.img.zst --clobber || true
-          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.tar.zst --clobber || true
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/${{ matrix.os }}/out/${{ matrix.board }}/*.tar.zst --clobber || true
 
