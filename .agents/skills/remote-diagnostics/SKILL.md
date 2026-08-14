@@ -5,7 +5,7 @@ description: Live on-device screenshot capture, visual inspection, and keypress 
 
 # Remote Diagnostics & Live Visual Inspection
 
-The `remote` tool on Minime targets (`/usr/bin/remote`) allows AI agents and developers to capture live screenshots directly from the framebuffer without writing to flash storage and simulate keypresses across launchers and emulators.
+The `remote` tool on Minime targets (`/usr/bin/remote`) allows AI agents and developers to capture live screenshots directly from DRM/KMS hardware planes or the legacy framebuffer without writing to flash storage and simulate keypresses across launchers and emulators.
 
 ---
 
@@ -14,7 +14,7 @@ The `remote` tool on Minime targets (`/usr/bin/remote`) allows AI agents and dev
 All commands run from the workspace root against the live test device (IP resolved from `deploy.cfg` or passed explicitly):
 
 ```sh
-# 1. Capture screenshot to local file
+# 1. Capture screenshot to local file (auto-detects DRM with FB fallback)
 just screenshot [output.png] [ip]
 
 # 2. Simulate single keypress (default hold: 50ms)
@@ -24,7 +24,8 @@ just press <key> [duration_ms] [ip]
 just key-seq "<sequence>" [ip]
 
 # 4. Direct low-level execution via telnet
-just remote "remote screenshot --base64"
+just remote "remote screenshot --backend drm --base64"
+just remote "remote screenshot --backend fb --base64"
 just remote "remote press A --duration 100"
 just remote "remote combo MENU,X"
 just remote "remote info"
@@ -34,7 +35,12 @@ just remote "remote info"
 
 ## 2. Screen Capture & Visual Inspection Workflow
 
-Screenshots are extracted straight from `/dev/fb0` memory, automatically rotated to match physical screen orientation according to device traits (`screen_rotation`), encoded to PNG in RAM, and streamed to the host.
+Screenshots are extracted from active DRM/KMS CRTC/planes (`/dev/dri/card0`) or legacy framebuffer (`/dev/fb0`), automatically rotated to match the human player's upright perspective using device traits (`screen_rotation`), encoded to PNG in RAM, and streamed to the host.
+
+### Capture Backends (`--backend <auto|drm|fb>`):
+- **`auto` (Default)**: Probes DRM/KMS first to grab hardware-accelerated SDL2/Panfrost/Mesa frames. If no active DRM plane is found, falls back to `/dev/fb0`.
+- **`drm`**: Forces capture from `/dev/dri/card0` via DMA-BUF PRIME export. Used for Panfrost, Mali, and KMSDRM launchers.
+- **`fb`**: Forces capture from `/dev/fb0`. Used for software-rendered launchers or kernel console inspection.
 
 ### Step-by-Step Inspection Procedure:
 1. **Capture current screen:**

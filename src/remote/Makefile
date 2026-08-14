@@ -5,7 +5,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 TARGET = remote
-SRCS = main.c traits.c fb.c rotate.c png_enc.c base64.c uinput.c
+SRCS = main.c traits.c fb.c drm.c rotate.c png_enc.c base64.c uinput.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
