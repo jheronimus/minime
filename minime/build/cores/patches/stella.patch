@@ -1,7 +1,10 @@
 diff --git a/src/os/libretro/Makefile b/src/os/libretro/Makefile
+index 0b5f0cd..2a1dcae 100644
 --- a/src/os/libretro/Makefile
 +++ b/src/os/libretro/Makefile
-@@ -69,6 +69,18 @@ endif
+@@ -58,8 +58,19 @@ ifneq ($(GIT_VERSION)," unknown")
+ endif
+ 
  GET_STATIC_ARG=$(if $(filter $(shell $(CXX) -print-file-name=$1.a),$1.a),,-static-$1)
 +# Minime
 +ifeq ($(platform), minime)
@@ -19,3 +22,4 @@ diff --git a/src/os/libretro/Makefile b/src/os/libretro/Makefile
 +else ifneq (,$(findstring unix,$(platform)))
     CXXFLAGS += $(LTO)
     LDFLAGS += $(LTO) $(PTHREAD_FLAGS) $(call GET_STATIC_ARG,libgcc) $(call GET_STATIC_ARG,libstdc++)
+    TARGET := $(TARGET_NAME)_libretro.so
