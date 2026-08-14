@@ -3,9 +3,16 @@
 ## CI
 
 - [ ] Try switching between Alpine and Buildroot using update.sh
+- [ ] Check if we can package the kernel for Alpine, making the build even faster (the kernel is almost the only thing we build in the Alpine build job)
+- [ ] Review the remote tool done by Gemini, probably slop
+- [ ] Review the current delta between forks and upstream for MinUI and Allium, trim slop
 
 ## UI
 
+- [ ] Debug Wi-Fi, BT and Power PAKs in MinUI, make sure everything works well
+- [ ] Add boxart support and maybe a scraper PAK (Allium is implementing its own scraper these days)?
+- [ ] Write a MinUI-native frontend to PortMaster (depends on the boxart support to display screenshots)
+- [ ] Reimplement the multi-version ROM feature in MinUI
 - [ ] Allium: display proper console names for MinUI-style Roms folders (Option 1, deferred)
   - [THEORY] `ConsoleMapper::get_console_by_dir` (`crates/allium-launcher/src/consoles.rs`) is exact-match only, so a MinUI-named folder like `Game Boy (GB)` displays the raw folder name instead of the console name. Teach it to also match `(ABBREV)` like `get_console` already does. This is a shared-crate change (AGENTS.md minimal-intrusion exception), so it's deferred. **Accepted for now (Option 2): keep raw folder names as the display name.**
 - [ ] Allium: adopt MinUI's append/merge `wifi.cfg` convention so saving from either UI does not clobber other networks
@@ -39,7 +46,7 @@
 
 ## Display, Audio & Input
 
-- [ ] Implement driver/DTS level screen rotation instead of per-application handling
+- [ ] Check that display rotation is consistent throughout the os (framebuffer, UI) and relies on traits. Check if remote tool needs to perform its own rotation instead of reading the traits file or doing nothing.
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 - [ ] Implement the bootsplash ([ADR 0019](adr/0019-bootsplash.md)): `MINIME` framebuffer art + looping gradient bar across initramfs/rootfs, volume-key TTY reveal, `ui`-service failure handoff, single-owner boot brightness
@@ -55,6 +62,8 @@
 - [ ] Revisit parser design: generic KV-store parser (loop over file into a `key→value` map) + thin typed accessor layer, instead of the hardcoded schema table in traits.c/traits.rs. Trade-off deferred: pure KV loses consumer type-safety/typo detection and missing-vs-zero distinction; schema table is the maintenance surface for renames but surfaces drift loudly. Unknown-key tolerance is already required (shared file carries OS-only keys like `gpu_driver`).
 - [ ] Review the traits system again
   - [THEORY] Traits hand-copy values that already live in the DTS (freqs, keycodes, thermal trips, GPU OPPs) — every repetition is a drift risk. Explore generating trait values from the compiled DTB at build time (DTS as single source of truth) so hand-authored copies cannot silently diverge; hand-author only true device facts (identity, geometry) that the DTS does not expose.
+- [ ] Add MTP support
+- [ ] Add dual SD card support
 
 ## Completed
 
