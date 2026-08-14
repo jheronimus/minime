@@ -8,10 +8,8 @@
 #include <sys/mman.h>
 #include <drm/drm.h>
 #include <drm/drm_mode.h>
+#include <drm/drm_fourcc.h>
 
-/* Find the active FB_ID on a plane via object property walk.
- * Rockchip uses atomic modesetting: GETCRTC.fb_id is always 0,
- * but the primary plane's FB_ID property holds the scanout buffer. */
 static uint32_t plane_fb_id_from_props(int fd, uint32_t plane_id) {
     struct drm_mode_obj_get_properties req = {0};
     req.obj_id = plane_id;
@@ -54,49 +52,82 @@ static uint32_t plane_fb_id_from_props(int fd, uint32_t plane_id) {
 }
 
 static int map_and_convert_fb(int fd, uint32_t fb_id,
-                               uint8_t **out_rgb, int *out_w, int *out_h) {
-    struct drm_mode_fb_cmd fb = {0};
-    fb.fb_id = fb_id;
-    if (ioctl(fd, DRM_IOCTL_MODE_GETFB, &fb) < 0 ||
-        fb.width == 0 || fb.height == 0 || fb.pitch == 0)
-        return -1;
+                              uint8_t **out_rgb, int *out_w, int *out_h) {
+    uint32_t width = 0, height = 0, pitch = 0, handle = 0, format = 0;
+    int bpp = 32;
 
-    size_t map_size = (size_t)fb.pitch * fb.height;
+    /* Try GETFB2 first (standard modern DRM interface for cross-process handles) */
+    struct drm_mode_fb_cmd2 fb2 = {0};
+    fb2.fb_id = fb_id;
+    if (ioctl(fd, DRM_IOCTL_MODE_GETFB2, &fb2) == 0 && fb2.width && fb2.height && fb2.handles[0]) {
+        width = fb2.width;
+        height = fb2.height;
+        pitch = fb2.pitches[0];
+        handle = fb2.handles[0];
+        format = fb2.pixel_format;
+        if (format == DRM_FORMAT_RGB565 || format == DRM_FORMAT_BGR565) {
+            bpp = 16;
+        } else if (format == DRM_FORMAT_RGB888 || format == DRM_FORMAT_BGR888) {
+            bpp = 24;
+        } else {
+            bpp = 32;
+        }
+    } else {
+        /* Fallback to legacy GETFB */
+        struct drm_mode_fb_cmd fb = {0};
+        fb.fb_id = fb_id;
+        if (ioctl(fd, DRM_IOCTL_MODE_GETFB, &fb) < 0 || fb.width == 0 || fb.height == 0 || fb.pitch == 0)
+            return -1;
+        width = fb.width;
+        height = fb.height;
+        pitch = fb.pitch;
+        handle = fb.handle;
+        bpp = (int)fb.bpp;
+    }
+
+    size_t map_size = (size_t)pitch * height;
     void *map = MAP_FAILED;
 
-    struct drm_mode_map_dumb mreq = {0};
-    mreq.handle = fb.handle;
-    if (ioctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq) == 0)
-        map = mmap(NULL, map_size, PROT_READ, MAP_SHARED, fd, mreq.offset);
+    /* 1. Try PRIME DMA-BUF export */
+    struct drm_prime_handle prime = {0};
+    prime.handle = handle;
+    prime.flags = DRM_CLOEXEC | DRM_RDWR;
+    if (ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime) == 0) {
+        map = mmap(NULL, map_size, PROT_READ, MAP_SHARED, prime.fd, 0);
+        close(prime.fd);
+    }
 
+    /* 2. Fallback to dumb buffer mapping */
     if (map == MAP_FAILED || map == NULL) {
-        struct drm_prime_handle prime = {0};
-        prime.handle = fb.handle;
-        prime.flags = DRM_CLOEXEC | DRM_RDWR;
-        if (ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime) == 0) {
-            map = mmap(NULL, map_size, PROT_READ, MAP_SHARED, prime.fd, 0);
-            close(prime.fd);
+        struct drm_mode_map_dumb mreq = {0};
+        mreq.handle = handle;
+        if (ioctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq) == 0) {
+            map = mmap(NULL, map_size, PROT_READ, MAP_SHARED, fd, mreq.offset);
         }
     }
 
-    if (map == MAP_FAILED || map == NULL)
+    if (map == MAP_FAILED || map == NULL) {
+        struct drm_gem_close cl = { .handle = handle };
+        ioctl(fd, DRM_IOCTL_GEM_CLOSE, &cl);
         return -1;
+    }
 
-    size_t rgb_size = (size_t)fb.width * fb.height * 3;
+    size_t rgb_size = (size_t)width * height * 3;
     uint8_t *rgb = malloc(rgb_size);
     if (!rgb) {
         munmap(map, map_size);
+        struct drm_gem_close cl = { .handle = handle };
+        ioctl(fd, DRM_IOCTL_GEM_CLOSE, &cl);
         return -1;
     }
 
     const uint8_t *src = (const uint8_t *)map;
-    int bpp = (int)fb.bpp;
-    int w = (int)fb.width;
-    int h = (int)fb.height;
-    int pitch = (int)fb.pitch;
+    int w = (int)width;
+    int h = (int)height;
+    int p = (int)pitch;
 
     for (int y = 0; y < h; y++) {
-        const uint8_t *row = src + (size_t)y * pitch;
+        const uint8_t *row = src + (size_t)y * p;
         uint8_t *dst_row = rgb + (size_t)y * w * 3;
 
         if (bpp == 32) {
@@ -132,6 +163,8 @@ static int map_and_convert_fb(int fd, uint32_t fb_id,
     }
 
     munmap(map, map_size);
+    struct drm_gem_close cl = { .handle = handle };
+    ioctl(fd, DRM_IOCTL_GEM_CLOSE, &cl);
 
     *out_rgb = rgb;
     *out_w = w;
@@ -149,9 +182,37 @@ int drm_capture_rgb(const char *device_path, uint8_t **out_rgb, int *out_w, int 
     int fd = open(path, O_RDWR | O_CLOEXEC);
     if (fd < 0) return -1;
 
-    /* First, try legacy GETCRTC.fb_id (works on simple KMS drivers) */
+    /* Enable universal planes and atomic properties so primary planes and FB_IDs are exposed */
+    struct drm_set_client_cap cap_univ = { .capability = DRM_CLIENT_CAP_UNIVERSAL_PLANES, .value = 1 };
+    ioctl(fd, DRM_IOCTL_SET_CLIENT_CAP, &cap_univ);
+
+    struct drm_set_client_cap cap_atomic = { .capability = DRM_CLIENT_CAP_ATOMIC, .value = 1 };
+    ioctl(fd, DRM_IOCTL_SET_CLIENT_CAP, &cap_atomic);
+
     uint32_t active_fb = 0;
-    {
+
+    /* 1. Walk planes for active FB_ID */
+    struct drm_mode_get_plane_res pres = {0};
+    ioctl(fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres);
+    if (pres.count_planes > 0) {
+        uint32_t *plane_ids = calloc(pres.count_planes, sizeof(uint32_t));
+        pres.plane_id_ptr = (uint64_t)(uintptr_t)plane_ids;
+        if (ioctl(fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0) {
+            for (uint32_t i = 0; i < pres.count_planes && !active_fb; i++) {
+                struct drm_mode_get_plane plane = {0};
+                plane.plane_id = plane_ids[i];
+                if (ioctl(fd, DRM_IOCTL_MODE_GETPLANE, &plane) == 0 && plane.fb_id) {
+                    active_fb = plane.fb_id;
+                } else {
+                    active_fb = plane_fb_id_from_props(fd, plane_ids[i]);
+                }
+            }
+        }
+        free(plane_ids);
+    }
+
+    /* 2. If plane walk found nothing, check CRTCs */
+    if (!active_fb) {
         struct drm_mode_card_res res = {0};
         ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res);
         if (res.count_crtcs > 0) {
@@ -167,30 +228,6 @@ int drm_capture_rgb(const char *device_path, uint8_t **out_rgb, int *out_w, int 
                 }
             }
             free(crtc_ids);
-        }
-    }
-
-    /* If legacy path found nothing, use atomic plane property walk (Rockchip/SDL2 KMSDRM) */
-    if (!active_fb) {
-        struct drm_mode_get_plane_res pres = {0};
-        ioctl(fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres);
-        if (pres.count_planes > 0) {
-            uint32_t *plane_ids = calloc(pres.count_planes, sizeof(uint32_t));
-            pres.plane_id_ptr = (uint64_t)(uintptr_t)plane_ids;
-            if (ioctl(fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0) {
-                for (uint32_t i = 0; i < pres.count_planes && !active_fb; i++) {
-                    /* First try the fast path: plane.fb_id from GETPLANE */
-                    struct drm_mode_get_plane plane = {0};
-                    plane.plane_id = plane_ids[i];
-                    if (ioctl(fd, DRM_IOCTL_MODE_GETPLANE, &plane) == 0 && plane.fb_id) {
-                        active_fb = plane.fb_id;
-                    } else {
-                        /* Atomic path: walk object properties for FB_ID */
-                        active_fb = plane_fb_id_from_props(fd, plane_ids[i]);
-                    }
-                }
-            }
-            free(plane_ids);
         }
     }
 
