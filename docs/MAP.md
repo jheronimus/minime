@@ -34,7 +34,7 @@ src/                    # Shared Source Code Vaults
 
 roms/                   # Preloaded public domain ROMs package
 docs/                   # ADRs (adr/) and Research Specs (research/)
-.github/workflows/      # CI Workflows (build.yml, containers.yml, sync-kernel.yml, update-submodules.yml)
+.github/workflows/      # CI Workflows (build-musl.yml, build-glibc.yml, build-bootloader.yml, containers.yml, sync-kernel.yml, update-submodules.yml)
 ```
 
 ---

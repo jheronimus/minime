@@ -1,0 +1,290 @@
+name: Build Minime (glibc / buildroot)
+
+concurrency:
+  group: minime-build-glibc-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    # 04:00 UTC = 07:00 GMT+3 — nightly buildroot rebuild + regression check.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Comma-separated buildroot boards, e.g. "rk3326, rk3566". "all" (default) builds every buildroot board.'
+        type: string
+        default: all
+
+permissions:
+  contents: write
+
+jobs:
+  bootloader:
+    name: Bootloader
+    uses: ./.github/workflows/build-bootloader.yml
+
+  setup:
+    name: Compute Boards
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.compute.outputs.boards }}
+    steps:
+      - name: Compute Board Matrix
+        id: compute
+        env:
+          DISPATCH_TARGETS: ${{ github.event.inputs.targets }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          ALL_BOARDS = ["rk3326", "rk3566"]
+
+          selected = [s.strip() for s in os.environ.get("DISPATCH_TARGETS", "").split(",") if s.strip()]
+          boards = ALL_BOARDS if (not selected or "all" in selected) else selected
+          unknown = [b for b in boards if b not in ALL_BOARDS]
+          if unknown:
+              raise SystemExit(f"error: unknown board(s): {', '.join(unknown)}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"boards={json.dumps(boards)}\n")
+          PY
+
+  build-cores-glibc:
+    name: Build Cores (glibc)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore Cores Cache
+        id: cache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-glibc-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Restore Cores CCache
+        id: ccache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cores-ccache-glibc
+          key: ccache-cores-glibc-${{ github.sha }}
+          restore-keys: |
+            ccache-cores-glibc-
+
+      - name: Build Cores
+        id: build-cores-step
+        if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
+        env:
+          CROSS_COMPILE: 'ccache aarch64-linux-gnu-'
+          CC: 'ccache aarch64-linux-gnu-gcc'
+          CXX: 'ccache aarch64-linux-gnu-g++'
+          AR: aarch64-linux-gnu-ar
+        run: |
+          docker run --rm -u root \
+            -v "$HOME/.cores-ccache-glibc:/root/.ccache" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            --env CROSS_COMPILE --env CC --env CXX --env AR \
+            "ghcr.io/${{ github.repository_owner }}/minime-glibc:latest" \
+            /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+
+      - name: Save Cores Cache
+        if: always() && steps.build-cores-step.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-glibc-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Save Cores CCache
+        if: always() && steps.build-cores-step.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cores-ccache-glibc
+          key: ccache-cores-glibc-${{ github.sha }}
+
+      - name: Upload Cores Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: cores-glibc
+          path: minime/build/cores/out
+          retention-days: 7
+
+  build-ui-glibc:
+    name: Build UI (glibc)
+    needs: [build-cores-glibc]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore UI Cache
+        id: cache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/ui/out
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Restore UI CCache
+        id: ccache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-glibc-${{ github.sha }}
+          restore-keys: |
+            ccache-ui-glibc-
+
+      - name: Restore Allium Cargo Target
+        id: cargo-target-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+          restore-keys: |
+            allium-target-glibc-
+
+      - name: Download Cores
+        uses: actions/download-artifact@v8
+        with:
+          name: cores-glibc
+          path: minime/build/cores/out
+
+      - name: Compile MinUI
+        id: compile-minui
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh minui glibc
+
+      - name: Compile Allium
+        id: compile-allium
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh allium glibc
+
+      - name: Save Allium Cargo Target
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+
+      - name: Save UI Cache
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        uses: actions/cache/save@v6
+        with:
+          path: minime/ui/out
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Save UI CCache
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-glibc-${{ github.sha }}
+
+      - name: Upload UI Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-glibc
+          path: minime/ui/out
+          retention-days: 7
+
+  build-os:
+    name: Build OS (buildroot / ${{ matrix.board }})
+    needs: [bootloader, setup, build-ui-glibc]
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.setup.outputs.boards) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Download Bootloader
+        uses: actions/download-artifact@v8
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+      - name: Download UI
+        uses: actions/download-artifact@v8
+        with:
+          name: ui-glibc
+          path: minime/ui/out
+
+      - name: Restore CCache
+        id: ccache-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            ccache-buildroot-${{ matrix.board }}-
+
+      - name: Restore DL Cache
+        id: dl-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            dl-buildroot-${{ matrix.board }}-
+
+      - name: Build Components
+        id: build-components
+        run: make -C minime/targets/buildroot components BOARD=${{ matrix.board }}
+
+      - name: Build Image for MinUI
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=minui
+
+      - name: Build Image for Allium
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
+
+      - name: Save CCache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Save DL Cache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/buildroot/out/${{ matrix.board }}/*.tar.zst --clobber || true

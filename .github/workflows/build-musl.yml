@@ -1,0 +1,306 @@
+name: Build Minime (musl / alpine)
+
+env:
+  # FAST PATH: the only target built on every push to main.
+  # Active development device. To switch devices, change THIS line.
+  FAST_PATH_TARGET: rk3566
+
+concurrency:
+  group: minime-build-musl-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'minime/**'
+      - '.github/workflows/build-musl.yml'
+      - '.github/workflows/build-bootloader.yml'
+  schedule:
+    # 04:00 UTC = 07:00 GMT+3 — nightly alpine rebuild + regression check.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Comma-separated alpine boards, e.g. "rk3566, h700". "all" (default) builds every alpine board.'
+        type: string
+        default: all
+
+permissions:
+  contents: write
+
+jobs:
+  bootloader:
+    name: Bootloader
+    uses: ./.github/workflows/build-bootloader.yml
+
+  setup:
+    name: Compute Boards
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.compute.outputs.boards }}
+    steps:
+      - name: Compute Board Matrix
+        id: compute
+        env:
+          FAST_PATH_TARGET: ${{ env.FAST_PATH_TARGET }}
+          DISPATCH_TARGETS: ${{ github.event.inputs.targets }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          ALL_BOARDS = ["rk3326", "h700", "rk3566"]
+
+          event = os.environ.get("GITHUB_EVENT_NAME", "")
+          if event == "workflow_dispatch":
+              selected = [s.strip() for s in os.environ.get("DISPATCH_TARGETS", "").split(",") if s.strip()]
+              boards = ALL_BOARDS if (not selected or "all" in selected) else selected
+          else:  # schedule or push
+              boards = [os.environ.get("FAST_PATH_TARGET", "rk3566")] if event == "push" else ALL_BOARDS
+          unknown = [b for b in boards if b not in ALL_BOARDS]
+          if unknown:
+              raise SystemExit(f"error: unknown board(s): {', '.join(unknown)}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"boards={json.dumps(boards)}\n")
+          PY
+
+  build-cores-musl:
+    name: Build Cores (musl)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore Cores Cache
+        id: cache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-musl-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Restore Cores CCache
+        id: ccache-cores-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cores-ccache-musl
+          key: ccache-cores-musl-${{ github.sha }}
+          restore-keys: |
+            ccache-cores-musl-
+
+      - name: Build Cores
+        id: build-cores-step
+        if: steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == ''
+        env:
+          CROSS_COMPILE: 'ccache '
+          CC: 'ccache gcc'
+          CXX: 'ccache g++'
+          AR: ar
+        run: |
+          docker run --rm -u root \
+            -v "$HOME/.cores-ccache-musl:/root/.ccache" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            --env CROSS_COMPILE --env CC --env CXX --env AR \
+            "ghcr.io/${{ github.repository_owner }}/minime-musl:latest" \
+            /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+
+      - name: Save Cores Cache
+        if: always() && steps.build-cores-step.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: minime/build/cores/out
+          key: cores-musl-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Save Cores CCache
+        if: always() && steps.build-cores-step.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cores-ccache-musl
+          key: ccache-cores-musl-${{ github.sha }}
+
+      - name: Upload Cores Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: cores-musl
+          path: minime/build/cores/out
+          retention-days: 7
+
+  build-ui-musl:
+    name: Build UI (musl)
+    needs: [build-cores-musl]
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore UI Cache
+        id: cache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/ui/out
+          key: ui-musl-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Restore UI CCache
+        id: ccache-ui-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ui-ccache-musl
+          key: ccache-ui-musl-${{ github.sha }}
+          restore-keys: |
+            ccache-ui-musl-
+
+      - name: Restore Allium Cargo Target
+        id: cargo-target-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-musl-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+          restore-keys: |
+            allium-target-musl-
+
+      - name: Download Cores
+        uses: actions/download-artifact@v8
+        with:
+          name: cores-musl
+          path: minime/build/cores/out
+
+      - name: Compile MinUI
+        id: compile-minui
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', 'musl')) == ''
+        run: |
+          minime/build/mkui.sh minui musl
+
+      - name: Compile Allium
+        id: compile-allium
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == ''
+        run: |
+          minime/build/mkui.sh allium musl
+
+      - name: Save Allium Cargo Target
+        if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'musl')) == '')
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            minime/ui/allium/target
+            minime/ui/allium/third-party/dufs/target
+            minime/ui/allium/third-party/collie/target
+          key: allium-target-musl-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+
+      - name: Save UI Cache
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        uses: actions/cache/save@v6
+        with:
+          path: minime/ui/out
+          key: ui-musl-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+
+      - name: Save UI CCache
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ui-ccache-musl
+          key: ccache-ui-musl-${{ github.sha }}
+
+      - name: Upload UI Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-musl
+          path: minime/ui/out
+          retention-days: 7
+
+  build-os:
+    name: Build OS (alpine / ${{ matrix.board }})
+    needs: [bootloader, setup, build-ui-musl]
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.setup.outputs.boards) }}
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Download Bootloader
+        uses: actions/download-artifact@v8
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+      - name: Download UI
+        uses: actions/download-artifact@v8
+        with:
+          name: ui-musl
+          path: minime/ui/out
+
+      - name: Restore CCache
+        id: ccache-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/alpine-ccache
+          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            ccache-alpine-${{ matrix.board }}-
+
+      - name: Restore DL Cache
+        id: dl-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/alpine-dl
+          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            dl-alpine-${{ matrix.board }}-
+
+      - name: Build Components
+        id: build-components
+        run: make -C minime/targets/alpine components BOARD=${{ matrix.board }}
+
+      - name: Build Image for MinUI
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/minui)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=minui
+
+      - name: Build Image for Allium
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/alpine image update BOARD=${{ matrix.board }} UI=allium
+
+      - name: Save CCache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/alpine-ccache
+          key: ccache-alpine-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Save DL Cache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/alpine-dl
+          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.img.zst --clobber || true
+          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.tar.zst --clobber || true

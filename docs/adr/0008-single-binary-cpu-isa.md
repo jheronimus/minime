@@ -57,5 +57,5 @@ Runtime, traits-driven performance tuning is unaffected by the single-binary con
 
 - Upstream per-device core patches: `workspace/rgb30/cores/patches/*.patch` (RK3566), `workspace/magicmini/cores/patches/*.patch` (RK3326).
 - Toolchain default: `gcc -march=armv8-a` (musl and glibc build containers).
-- Single-binary pipeline: `.github/workflows/build.yml` (`build-ui` artifact consumed by `build-os` for all boards).
+- Single-binary pipeline: `.github/workflows/build-musl.yml` / `build-glibc.yml` (`build-ui` artifact consumed by `build-os` for all boards).
 - Runtime governor/clocks: `docs/adr/0014-cpu-performance-and-thermal-policy.md`.

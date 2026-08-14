@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Minime produces raw bootable SD card images (`.img.zst`) and OTA update packages (`.tar.zst`) in the single CI workflow `build.yml`.
+Minime produces raw bootable SD card images (`.img.zst`) and OTA update packages (`.tar.zst`) in the CI pipelines `build-musl.yml` / `build-glibc.yml`.
 
 Questions arose regarding OTA behavior and delivery:
 

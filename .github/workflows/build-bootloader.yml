@@ -1,0 +1,69 @@
+name: Build Bootloader
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build-bootloader:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore Bootloader Cache
+        id: cache-bootloader-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/uboot/out
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
+
+      - name: Restore Bootloader CCache
+        id: ccache-bootloader-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.bootloader-ccache
+          key: ccache-bootloader-${{ github.sha }}
+          restore-keys: |
+            ccache-bootloader-
+
+      - name: Compile Bootloader
+        id: compile-bootloader
+        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == ''
+        run: |
+          docker run --rm -u root \
+            -v "$HOME/.bootloader-ccache:/root/.ccache" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            "ghcr.io/${{ github.repository_owner }}/minime-glibc:latest" \
+            /bin/bash -c "minime/build/mkbootloader.sh rk3326 2026.07 && minime/build/mkbootloader.sh rk3566 2026.07 && minime/build/mkbootloader.sh h700 2026.07 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/uboot/out"
+          sudo chown -R "$USER:$USER" minime/uboot/out
+
+      - name: Save Bootloader Cache
+        if: always() && steps.compile-bootloader.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: minime/uboot/out
+          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
+
+      - name: Save Bootloader CCache
+        if: always() && steps.compile-bootloader.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.bootloader-ccache
+          key: ccache-bootloader-${{ github.sha }}
+
+      - name: Upload Bootloader Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+          retention-days: 7
