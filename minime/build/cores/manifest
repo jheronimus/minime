@@ -21,8 +21,8 @@
 #
 # The 13 recipes below are carried over verbatim from the old MinUI build
 # (workspace/minime/cores/makefile); handy + mednafen_wswan cover the Atari
-# Lynx / WonderSwan Roms systems; yabasanshiro (Saturn, WIP) and drastic
-# (NDS, WIP, glibc-only) are jheronimus forks and stay pinned.
+# Lynx / WonderSwan Roms systems; yabasanshiro (Saturn, WIP, pinned) and
+# drastic (NDS, WIP; public wrapper only, proprietary core stays private).
 
 fceumm|https://github.com/libretro/libretro-fceumm|||||fceumm.patch|minime||0|1
 gambatte|https://github.com/libretro/gambatte-libretro|||||gambatte.patch gambatte-export-dmg-grid.patch|minime||0|1
@@ -40,5 +40,5 @@ fake-08|https://github.com/jtothebell/fake-08||platform/libretro|||fake-08.patch
 handy|https://github.com/libretro/libretro-handy|||||handy.patch|minime||0|1
 mednafen_wswan|https://github.com/libretro/beetle-wswan-libretro|||||mednafen_wswan.patch|minime||0|1
 yabasanshiro|https://github.com/jheronimus/yabause|6e7ad3d39c4fa1bb7ff0671b2d87cdaa5bd09e04|yabause/src/libretro|Makefile|||arm64||1|0
-drastic|https://github.com/jheronimus/drastic|de980eed58173d94d7a1b9afedd66ca28a6406c2|wrapper|Makefile|||minime||1|0
+drastic|https://github.com/jheronimus/drastic|be11014bcda3afd8e5aa004043cd07a44d2590a4|wrapper|Makefile|||minime||1|0
 stella|https://github.com/libretro/stella2023||src/os/libretro|Makefile||stella.patch|minime|stella_libretro.so|0|1
