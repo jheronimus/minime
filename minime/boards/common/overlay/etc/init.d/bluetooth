@@ -1,39 +1,31 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# bluetooth: unified Bluetooth stack (dbus + bluetoothd + bluealsa).
+# bluetooth: unified Bluetooth stack (bluetoothd + bluealsa).
 # Only started when the user has enabled Bluetooth under
 # /mnt/sdcard/.minime/config/bluetooth/enabled.
 
-description="Bluetooth stack (dbus + bluetoothd + bluealsa)"
+description="Bluetooth stack (bluetoothd + bluealsa)"
 
 depend() {
-	need modules
+	need dbus modules
 	before ui
 	after fb-unblank
 }
 
 start() {
+	# Enable on first boot if no config directory exists yet
+	if [ ! -f /mnt/sdcard/.minime/config/bluetooth/enabled ] && [ ! -d /mnt/sdcard/.minime/config/bluetooth ]; then
+		mkdir -p /mnt/sdcard/.minime/config/bluetooth
+		echo 1 >/mnt/sdcard/.minime/config/bluetooth/enabled
+	fi
+
 	if [ ! -f /mnt/sdcard/.minime/config/bluetooth/enabled ]; then
 		einfo "Bluetooth disabled by user"
 		return 0
 	fi
 	ebegin "Starting Bluetooth stack"
 
-	# 1. D-Bus — clean up any stale pidfile/socket left by a previous
-	#    partial stop so dbus-daemon can always start.
-	mkdir -p /run/dbus
-	if [ -f /run/dbus/dbus.pid ] && ! kill -0 "$(cat /run/dbus/dbus.pid 2>/dev/null)" 2>/dev/null; then
-		rm -f /run/dbus/dbus.pid
-	fi
-	rm -f /run/dbus/system_bus_socket
-	dbus-uuidgen --ensure
-	dbus-daemon --system --fork
-	if [ $? -ne 0 ]; then
-		eend 1 "dbus-daemon failed to start"
-		return 1
-	fi
-
-	# 2. bluetoothd
+	# 1. bluetoothd
 	mkdir -p /var/lib/bluetooth
 	chmod 700 /var/lib/bluetooth 2>/dev/null || true
 	start-stop-daemon -S -q -b -m \
@@ -44,7 +36,7 @@ start() {
 		return 1
 	fi
 
-	# 3. BlueALSA
+	# 2. BlueALSA
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluealsa.pid \
 		-x /usr/bin/bluealsa -- -p a2dp-sink -p a2dp-source
@@ -60,11 +52,6 @@ stop() {
 
 	start-stop-daemon -k -q -p /run/bluetoothd.pid 2>/dev/null || true
 	rm -f /run/bluetoothd.pid
-
-	# dbus-daemon --fork writes /run/dbus/dbus.pid (not /run/dbus/pid).
-	# Kill by the correct pidfile and clear stale state for a clean start.
-	start-stop-daemon -k -q -p /run/dbus/dbus.pid 2>/dev/null || true
-	rm -f /run/dbus/dbus.pid /run/dbus/system_bus_socket
 
 	eend 0
 }

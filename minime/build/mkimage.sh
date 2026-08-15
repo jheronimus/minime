@@ -145,6 +145,8 @@ if [ -f "${BOARD_DIR}/first-boot-probe.sh" ]; then
 	touch "${USERDATA_STAGE}/.minime/config/first_boot_probe"
 fi
 touch "${USERDATA_STAGE}/.minime/config/first_boot_expand"
+mkdir -p "${USERDATA_STAGE}/.minime/config/bluetooth"
+echo 1 >"${USERDATA_STAGE}/.minime/config/bluetooth/enabled"
 
 # 6. Stage UI Payload (per-UI dir: out/<board>/ui-<ui>)
 if [ -d "${INPUT_DIR}/ui-${UI}" ]; then

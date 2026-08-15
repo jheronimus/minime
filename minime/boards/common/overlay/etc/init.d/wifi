@@ -25,25 +25,6 @@ log_boot() {
 	/usr/share/minime/scripts/log-boot.sh WIFI "$@" 2>/dev/null || true
 }
 
-start_dbus() {
-	# /etc/machine-id is baked into the rootfs, so dbus needs no on-disk uuid.
-	# Use dbus-daemon's own --fork (it writes /run/dbus/dbus.pid), NOT
-	# pgrep -f (matches this service's own shell) and NOT start-stop-daemon
-	# (conflicts with dbus's self-managed pidfile).
-	[ -d /run/dbus ] || mkdir -p /run/dbus
-	if ! [ -f /run/dbus/dbus.pid ] || ! kill -0 "$(cat /run/dbus/dbus.pid 2>/dev/null)" 2>/dev/null; then
-		rm -f /run/dbus/dbus.pid 2>/dev/null || true
-		dbus-daemon --system --fork 2>/dev/null || true
-	fi
-}
-
-stop_dbus() {
-	# Only stop dbus if bluetooth isn't using it.
-	if [ -f /run/dbus/dbus.pid ]; then
-		kill "$(cat /run/dbus/dbus.pid)" >/dev/null 2>&1 || true
-		rm -f /run/dbus/dbus.pid
-	fi
-}
 
 profile_file_for() {
 	# iwd profile filename encoding (iwd.network(5)): the SSID is used
@@ -70,8 +51,8 @@ load_wifi_cfg_profiles() {
 
 	while IFS='=' read -r key val || [ -n "$key" ]; do
 		[ -n "$key" ] || continue
-		key=$(printf '%s' "$key" | tr -d '\r')
-		val=$(printf '%s' "$val" | tr -d '\r')
+		key=$(printf '%s' "$key" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+		val=$(printf '%s' "$val" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^"//;s/"$//')
 		case "$key" in
 		\#*) continue ;;
 		SSID)
@@ -196,20 +177,23 @@ log_failure_diagnostics() {
 # --- OpenRC service ---
 
 depend() {
-	need localmount
-	need modules
+	need localmount modules dbus
 	after fb-unblank
 }
 
 start() {
 	ebegin "Starting Wi-Fi (iwd)"
 
-	# User-controlled enable gate (managed by the Wi-Fi settings PAK). Wi-Fi
-	# starts if the gate exists OR if wifi.cfg has any known networks, so an
-	# explicit "disable" (gate removed + no profiles) sticks across reboots
-	# while existing users keep out-of-the-box auto-connect.
-	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ] &&
-	   ! grep -q '^SSID=' "${wifi_config_file}" 2>/dev/null; then
+	# User-controlled enable gate (managed by the Wi-Fi settings PAK).
+	# Auto-create gate on first boot if wifi.cfg exists and no gate directory exists yet.
+	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ] && [ ! -d /mnt/sdcard/.minime/config/wifi ]; then
+		if grep -q '^SSID=' "${wifi_config_file}" 2>/dev/null; then
+			mkdir -p /mnt/sdcard/.minime/config/wifi
+			echo 1 >/mnt/sdcard/.minime/config/wifi/enabled
+		fi
+	fi
+
+	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ]; then
 		einfo "Wi-Fi disabled by user"
 		eend 0
 		return 0
@@ -220,8 +204,6 @@ start() {
 		eend 1 "no ${wifi_interface} interface found"
 		return 1
 	fi
-
-	start_dbus
 
 	mkdir -p "${iwd_state_dir}"
 	load_wifi_cfg_profiles
