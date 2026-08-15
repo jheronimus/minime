@@ -1,15 +1,25 @@
 #!/bin/sh
 # Execute a remote shell command on target device over SSH (dropbear,
-# blank-password root login). Prefer this over telnet for reliable sessions.
-# Usage: ./scripts/ssh-cmd.sh <command> [ip]
+# blank-password root login). The command is read from $REMOTE_CMD_FILE (set by
+# `just rsh`) so arbitrary shell metacharacters survive; a positional command
+# is supported as a fallback.
+# Usage: ./scripts/ssh-cmd.sh [ip]   (command read from $REMOTE_CMD_FILE)
+#        ./scripts/ssh-cmd.sh <command> [ip]
 
 set -eu
 
-CMD="${1:-}"
-IP="${2:-}"
+IP="${1:-}"
+CMD="${REMOTE_CMD_FILE:-}"
+
+if [ -n "$CMD" ]; then
+	CMD="$(cat "$CMD")"
+elif [ $# -ge 1 ]; then
+	IP="${1:-}"
+	CMD="${2:-}"
+fi
 
 if [ -z "$CMD" ]; then
-	echo "Usage: $0 <command> [ip]" >&2
+	echo "Usage: $0 <command> [ip], or set REMOTE_CMD_FILE" >&2
 	exit 1
 fi
 

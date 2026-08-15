@@ -359,13 +359,17 @@ deploy os="" board="" ui="" disk_device="":
     # Push desktop notification (OSC 9) and audio bell chime (\a)
     printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
 
-# Execute a remote shell command on target device over telnet
+# Execute a remote shell command on target device (SSH if dropbear is up, else telnet)
 # Usage:
 #   just remote "ps aux" [ip]
 remote cmd="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
-    ./scripts/remote-cmd.sh "{{cmd}}" "{{ip}}"
+    tmp=$(mktemp)
+    printf '%s\n' '{{cmd}}' > "$tmp"
+    export REMOTE_CMD_FILE="$tmp"
+    ./scripts/remote-cmd.sh "{{ip}}"
+    rm -f "$tmp"
 
 # Execute a remote shell command on target device over SSH (dropbear, blank-password root)
 # Usage:
@@ -373,7 +377,11 @@ remote cmd="" ip="":
 rsh cmd="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
-    ./scripts/ssh-cmd.sh "{{cmd}}" "{{ip}}"
+    tmp=$(mktemp)
+    printf '%s\n' '{{cmd}}' > "$tmp"
+    export REMOTE_CMD_FILE="$tmp"
+    ./scripts/ssh-cmd.sh "{{ip}}"
+    rm -f "$tmp"
 
 # Upload a file to target device over FTP
 # Usage:
@@ -382,6 +390,14 @@ upload file="" remote_filename="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/remote-upload.sh "{{file}}" "{{remote_filename}}" "{{ip}}"
+
+# Copy a local file to target device over SSH/scp (can write any path as root)
+# Usage:
+#   just scp <local_file> <remote_path> [ip]
+scp file="" remote="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/scp-upload.sh "{{file}}" "{{remote}}" "{{ip}}"
 
 # Fetch a diagnostics bundle from the target device (logs + dmesg + config)
 # Usage:

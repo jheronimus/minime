@@ -1,5 +1,8 @@
 #!/bin/sh
-# Retrieve a live screenshot from the target device over network without writing to device storage
+# Retrieve a live screenshot from the target device over the network without
+# writing to device storage. Prefers SSH (dropbear) over telnet, and falls
+# back from the DRM plane to the framebuffer when the display is owned by an
+# SDL/kmsdrm app.
 # Usage: ./scripts/remote-screenshot.sh [output_file.png] [ip]
 
 set -eu
@@ -8,101 +11,90 @@ OUT_PATH="${1:-screenshot.png}"
 IP="${2:-}"
 
 if [ -z "$IP" ]; then
-    if [ -f "deploy.cfg" ]; then
-        IP=$(grep -E '^\s*target_ip=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\r')
-    fi
+	if [ -f "deploy.cfg" ]; then
+		IP=$(grep -E '^\s*target_ip=' deploy.cfg | head -n1 | cut -d'=' -f2- | tr -d ' "\r')
+	fi
 fi
 
 if [ -z "$IP" ]; then
-    echo "ERROR: No target IP address specified and target_ip not found in deploy.cfg." >&2
-    exit 1
+	echo "ERROR: No target IP address specified and target_ip not found in deploy.cfg." >&2
+	exit 1
 fi
 
-python3 - "$IP" "$OUT_PATH" <<'PYEOF'
-import socket, sys, time, base64
+python3 - "$OUT_PATH" "$IP" <<'PYEOF'
+import socket, sys, time, base64, subprocess
 
-ip = sys.argv[1]
-out_path = sys.argv[2]
+out_path = sys.argv[1]
+ip = sys.argv[2]
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(15)
-try:
-    s.connect((ip, 23))
-except Exception as e:
-    sys.stderr.write(f"ERROR: Failed to connect to {ip}:23 (telnet): {e}\n")
-    sys.exit(1)
+SSH_OPTS = ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", "-o", "LogLevel=ERROR"]
 
-# Wait for initial telnet banner/prompt
-time.sleep(0.3)
-try:
-    s.recv(4096)
-except Exception:
-    pass
-
-# Execute remote screenshot with base64 encoding
-cmd = b"remote screenshot --base64\n"
-s.sendall(cmd)
-
-data_chunks = []
-start_time = time.time()
-while True:
+def parse_png(raw):
+    lines = raw.splitlines()
+    b64 = []
+    for l in lines:
+        l = l.strip()
+        if not l or l.startswith("remote") or l.startswith("#") or l.startswith("/"):
+            continue
+        if l.endswith("#") or l.endswith("$") or l.endswith(">"):
+            continue
+        clean = "".join(c for c in l if c.isalnum() or c in "+/=")
+        if len(clean) > 32:
+            b64.append(clean)
+    if not b64:
+        return None
     try:
-        chunk = s.recv(65536)
-        if not chunk:
-            break
-        data_chunks.append(chunk)
-        if b"\n" in chunk and time.time() - start_time > 0.5:
-            # Check if we have received a full base64 payload and trailing prompt
-            combined = b"".join(data_chunks)
-            if combined.count(b"\n") >= 2:
-                # Give a small margin for remaining bytes
-                time.sleep(0.2)
-                try:
-                    extra = s.recv(65536)
-                    if extra:
-                        data_chunks.append(extra)
-                except Exception:
-                    pass
-                break
-    except socket.timeout:
-        break
+        data = base64.b64decode("".join(b64))
+    except Exception:
+        return None
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return data
+    return None
 
-s.close()
+def via_ssh(backend):
+    cmd = ["remote screenshot", "--backend", backend, "--base64"] if backend else ["remote screenshot", "--base64"]
+    proc = subprocess.run(["ssh"] + SSH_OPTS + ["root@" + ip] + [" ".join(cmd)],
+                          capture_output=True, timeout=20)
+    if proc.returncode != 0:
+        return None
+    return parse_png(proc.stdout.decode(errors="ignore"))
 
-raw_output = b"".join(data_chunks).decode("ascii", errors="ignore")
-lines = [l.strip() for l in raw_output.splitlines() if l.strip()]
+def via_telnet(backend):
+    try:
+        s = socket.create_connection((ip, 23), timeout=10)
+        s.settimeout(5)
+        time.sleep(0.3)
+        try:
+            s.recv(4096)
+        except Exception:
+            pass
+        cmdline = "remote screenshot --backend %s --base64\n" % backend if backend else "remote screenshot --base64\n"
+        s.sendall(cmdline.encode())
+        chunks = []
+        try:
+            while True:
+                c = s.recv(65536)
+                if not c:
+                    break
+                chunks.append(c)
+        except socket.timeout:
+            pass
+        s.close()
+        return parse_png(b"".join(chunks).decode(errors="ignore"))
+    except Exception:
+        return None
 
-b64_lines = []
-for l in lines:
-    if l.startswith("remote screenshot") or l.startswith("#") or l.startswith("/"):
-        continue
-    # Filter out telnet prompt strings like "~ #" or "minime:/#"
-    if l.endswith("#") or l.endswith("$") or l.endswith(">"):
-        continue
-    # Valid base64 chars only
-    clean = "".join(c for c in l if c.isalnum() or c in "+/=")
-    if len(clean) > 32:
-        b64_lines.append(clean)
+# DRM first, then FB; SSH first, then telnet.
+for kind, chan in (("ssh", via_ssh), ("telnet", via_telnet)):
+    for backend in ("drm", "fb"):
+        png = chan(backend)
+        if png:
+            with open(out_path, "wb") as f:
+                f.write(png)
+            print(f"Screenshot successfully captured: {out_path} ({len(png)} bytes) via {kind}/{backend}")
+            sys.exit(0)
 
-if not b64_lines:
-    sys.stderr.write("ERROR: No valid base64 image data received from device.\n")
-    sys.stderr.write(f"Device output was:\n{raw_output[:500]}\n")
-    sys.exit(1)
-
-b64_data = "".join(b64_lines)
-
-try:
-    png_bytes = base64.b64decode(b64_data)
-except Exception as e:
-    sys.stderr.write(f"ERROR: Failed to decode base64 screenshot data: {e}\n")
-    sys.exit(1)
-
-if len(png_bytes) < 8 or png_bytes[:8] != b"\x89PNG\r\n\x1a\n":
-    sys.stderr.write("ERROR: Captured stream is not a valid PNG image.\n")
-    sys.exit(1)
-
-with open(out_path, "wb") as f:
-    f.write(png_bytes)
-
-print(f"Screenshot successfully captured: {out_path} ({len(png_bytes)} bytes)")
+sys.stderr.write("ERROR: Failed to capture a screenshot via any channel/backend.\n")
+sys.exit(1)
 PYEOF

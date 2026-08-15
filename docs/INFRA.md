@@ -80,7 +80,8 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.zst`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
 | `just remote <cmd> [ip]` | Run remote telnet command | `scripts/remote-cmd.sh` | Executes shell command on target device via telnet. Uses `target_ip` in `deploy.cfg`. The OTA update path is the **on-device** `/usr/bin/update.sh <minui|allium>` (e.g. `just remote "update.sh minui"`). |
 | `just rsh <cmd> [ip]` | Run remote command over SSH | `scripts/ssh-cmd.sh` | Same as `just remote` but via dropbear SSH (blank-password root, enabled by default). Preferred over telnet for reliable sessions. |
-| `just upload <file> [remote_filename] [ip]` | Upload a file to device | `scripts/remote-upload.sh` | Uploads a local file to the target device over FTP. |
+| `just upload <file> [remote_filename] [ip]` | Upload a file to device | `scripts/remote-upload.sh` | Uploads a local file to the target device over FTP (root = `/mnt/sdcard`). |
+| `just scp <local_file> <remote_path> [ip]` | Copy a file to device over SSH | `scripts/scp-upload.sh` | Copies a local file to any path on the target as root over SSH (`ssh 'cat >'`; dropbear ships no scp). |
 | `just build-allium [target=musl]` | Build Allium locally | `cargo build` | Builds Allium binaries for `musl` (default) or `glibc`. |
 | `just build-minui [target=musl]` | Build MinUI locally | `make system cores package` | Builds the MinUI binaries/cores for the `minime` platform. |
 | `just install-hooks` | Git pre-commit hook | `.git/hooks/pre-commit` | Installs hook to run `just validate` before every commit. |
