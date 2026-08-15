@@ -62,24 +62,46 @@ double bench_compute_overall_index(const bench_result_t *results, int count) {
 	return exp(log_sum / total_weight);
 }
 
+static void format_metric(char *buf, size_t sz, double val, const char *unit) {
+	if (strcmp(unit, "ops/s") == 0) {
+		if (val >= 1000000.0) {
+			snprintf(buf, sz, "%.2f Mops/s", val / 1000000.0);
+			return;
+		} else if (val >= 1000.0) {
+			snprintf(buf, sz, "%.1f kops/s", val / 1000.0);
+			return;
+		}
+	} else if (strcmp(unit, "IOPS") == 0) {
+		if (val >= 1000.0) {
+			snprintf(buf, sz, "%.1f kIOPS", val / 1000.0);
+			return;
+		}
+	}
+	if (val >= 1000.0) {
+		snprintf(buf, sz, "%.1f %s", val, unit);
+	} else {
+		snprintf(buf, sz, "%.2f %s", val, unit);
+	}
+}
+
 void bench_print_table(const bench_result_t *results, int count, double index_score) {
 	printf("\n");
 	printf("================================================================================\n");
 	printf("                   MINIME PERFORMANCE BENCHMARK REPORT                         \n");
 	printf("================================================================================\n");
-	printf("%-26s | %10s | %10s | %10s | %s\n", "Benchmark Test", "Raw Result", "Baseline", "Score", "Category");
-	printf("---------------------------+------------+------------+------------+---------\n");
+	printf("%-26s | %15s | %14s | %9s | %s\n", "Benchmark Test", "Raw Result", "Baseline", "Score", "Cat");
+	printf("---------------------------+-----------------+----------------+-----------+-----\n");
 
 	for (int i = 0; i < count; i++) {
 		if (results[i].skipped) {
-			printf("%-26s | %10s | %10s | %10s | %8s\n",
+			printf("%-26s | %15s | %14s | %9s | %-3s\n",
 				results[i].name, "SKIPPED", "N/A", "N/A", bench_category_tag(results[i].category));
 		} else {
 			char raw_str[32], base_str[32];
-			snprintf(raw_str, sizeof(raw_str), "%.2f %s", results[i].raw_value, results[i].unit);
-			snprintf(base_str, sizeof(base_str), "%.2f %s", results[i].baseline_value, results[i].unit);
+			format_metric(raw_str, sizeof(raw_str), results[i].raw_value, results[i].unit);
+			format_metric(base_str, sizeof(base_str), results[i].baseline_value, results[i].unit);
 
-			printf("%-26s | %14s | %14s | %10.1f | %8s\n",
+			printf("%-26s | %15s | %14s | %9.1f | %-3s\n",
 				results[i].name, raw_str, base_str, results[i].normalized_score, bench_category_tag(results[i].category));
 		}
 	}
@@ -88,10 +110,10 @@ void bench_print_table(const bench_result_t *results, int count, double index_sc
 	printf("CATEGORY SCORES:\n");
 	for (int c = 0; c < BENCH_CAT_COUNT; c++) {
 		double s = bench_compute_category_score(results, count, (bench_category_t)c);
-		printf("  • %-26s: %7.1f pts\n", bench_category_name((bench_category_t)c), s);
+		printf("  • %-26s : %7.1f pts\n", bench_category_name((bench_category_t)c), s);
 	}
 	printf("--------------------------------------------------------------------------------\n");
-	printf("  ★ MINIME OVERALL INDEX: %7.1f pts (Higher is better, Baseline = 1000.0)\n", index_score);
+	printf("  ★ MINIME OVERALL INDEX     : %7.1f pts (Higher is better, Baseline = 1000.0)\n", index_score);
 	printf("================================================================================\n\n");
 }
 
