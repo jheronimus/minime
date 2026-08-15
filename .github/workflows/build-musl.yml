@@ -260,10 +260,14 @@ jobs:
         id: dl-os-restore
         uses: actions/cache/restore@v6
         with:
+          # Shared across boards: the downloaded distfiles (minirootfs,
+          # kernel tarball) are board-independent, so only one board job
+          # downloads them per run instead of all of them hitting the CDN
+          # concurrently.
           path: ~/alpine-dl
-          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+          key: dl-alpine-${{ github.sha }}
           restore-keys: |
-            dl-alpine-${{ matrix.board }}-
+            dl-alpine-
 
       - name: Build Components
         id: build-components
@@ -295,7 +299,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ~/alpine-dl
-          key: dl-alpine-${{ matrix.board }}-${{ github.sha }}
+          key: dl-alpine-${{ github.sha }}
 
       - name: Upload to Testing Release
         if: github.ref == 'refs/heads/main'

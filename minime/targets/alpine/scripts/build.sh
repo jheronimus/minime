@@ -183,6 +183,42 @@ build_local_apks() {
 	done
 }
 
+# Prime the kernel source tarball into $SRCDEST (=$ALPINE_DL_DIR) with a
+# retrying curl before abuild sees it.  abuild-fetch performs a single
+# download attempt with no retry and aborts the whole build when a transient
+# CDN truncation fails the sha512 check; pre-downloading and verifying here
+# makes that failure mode self-healing.  abuild then finds the file already
+# present and only re-verifies the checksum.
+ensure_kernel_tarball() {
+	local tk_sha url name dest tries
+	tk_sha=$(sed -n 's/^sha512sums="\([0-9a-f]\{128\}\).*/\1/p' "${TK_APKB}")
+	[ -n "${tk_sha}" ] || die "tinykernel APKBUILD has no sha512sums"
+	name="linux-${tk_ver}.tar.xz"
+	url="https://cdn.kernel.org/pub/linux/kernel/v${tk_ver%%.*}.x/${name}"
+	dest="${ALPINE_DL_DIR}/${name}"
+	mkdir -p "${ALPINE_DL_DIR}"
+
+	if [ -f "${dest}" ] && printf '%s  %s\n' "${tk_sha}" "${dest}" | sha512sum -c - >/dev/null 2>&1; then
+		log "kernel tarball cached: ${name}"
+		return 0
+	fi
+
+	tries=0
+	while [ "${tries}" -lt 4 ]; do
+		tries=$((tries + 1))
+		log "downloading ${url} (attempt ${tries}/4)"
+		if curl -fL --retry 3 --retry-all-errors --retry-delay 2 -o "${dest}.part" "${url}" &&
+			printf '%s  %s\n' "${tk_sha}" "${dest}.part" | sha512sum -c - >/dev/null 2>&1; then
+			mv -f "${dest}.part" "${dest}"
+			log "kernel tarball verified: ${name}"
+			return 0
+		fi
+		rm -f "${dest}.part"
+		log "kernel tarball download/checksum failed; retrying"
+	done
+	die "could not download ${name} (sha512 ${tk_sha})"
+}
+
 build_tinykernel() {
 	TK_APKB="${ALPINE_DIR}/aports/tinykernel/APKBUILD"
 	[ -f "${TK_APKB}" ] || die "missing aports/tinykernel/APKBUILD"
@@ -211,6 +247,7 @@ build_tinykernel() {
 		log "Found pre-built tinykernel APK in cache: ${apk_file}"
 	else
 		log "abuild: tinykernel"
+		ensure_kernel_tarball
 		JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
 			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
 	fi
