@@ -108,6 +108,8 @@ libpng
 zlib
 # libstdc++: C++ runtime for closed-source cores (e.g. DraStic DT_NEEDED)
 libstdc++
+# mimalloc: high-performance memory allocator for musl
+mimalloc
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 # fatresize        FAT32 expansion
