@@ -214,20 +214,30 @@ int drm_capture_rgb(const char *device_path, uint8_t **out_rgb, int *out_w, int 
     /* 2. If plane walk found nothing, check CRTCs */
     if (!active_fb) {
         struct drm_mode_card_res res = {0};
-        ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res);
-        if (res.count_crtcs > 0) {
+        if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) == 0 && res.count_crtcs > 0) {
             uint32_t *crtc_ids = calloc(res.count_crtcs, sizeof(uint32_t));
-            res.crtc_id_ptr = (uint64_t)(uintptr_t)crtc_ids;
-            if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) == 0) {
-                for (uint32_t i = 0; i < res.count_crtcs && !active_fb; i++) {
-                    struct drm_mode_crtc crtc = {0};
-                    crtc.crtc_id = crtc_ids[i];
-                    if (ioctl(fd, DRM_IOCTL_MODE_GETCRTC, &crtc) == 0 &&
-                        crtc.mode_valid && crtc.fb_id)
-                        active_fb = crtc.fb_id;
+            uint32_t *conn_ids = calloc(res.count_connectors, sizeof(uint32_t));
+            uint32_t *enc_ids = calloc(res.count_encoders, sizeof(uint32_t));
+            uint32_t *fb_ids = calloc(res.count_fbs, sizeof(uint32_t));
+            if (crtc_ids && conn_ids && enc_ids && fb_ids) {
+                res.crtc_id_ptr = (uint64_t)(uintptr_t)crtc_ids;
+                res.connector_id_ptr = (uint64_t)(uintptr_t)conn_ids;
+                res.encoder_id_ptr = (uint64_t)(uintptr_t)enc_ids;
+                res.fb_id_ptr = (uint64_t)(uintptr_t)fb_ids;
+                if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) == 0) {
+                    for (uint32_t i = 0; i < res.count_crtcs && !active_fb; i++) {
+                        struct drm_mode_crtc crtc = {0};
+                        crtc.crtc_id = crtc_ids[i];
+                        if (ioctl(fd, DRM_IOCTL_MODE_GETCRTC, &crtc) == 0 &&
+                            crtc.mode_valid && crtc.fb_id)
+                            active_fb = crtc.fb_id;
+                    }
                 }
             }
             free(crtc_ids);
+            free(conn_ids);
+            free(enc_ids);
+            free(fb_ids);
         }
     }
 

@@ -129,12 +129,41 @@ static int find_prop(int fd, uint32_t obj_id, uint32_t obj_type,
 	return found;
 }
 
+/* Full two-call card-resources enumeration. The second call must provide
+ * buffers for every populated array (crtcs/connectors/encoders/fbs), or the
+ * kernel fails the ioctl on the first NULL pointer with a non-zero count.
+ */
+static int get_card_resources(int fd, struct drm_mode_card_res *res,
+			      uint32_t **crtcs, uint32_t **conns, uint32_t **encs, uint32_t **fbs) {
+	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, res) < 0)
+		return -1;
+	*crtcs = calloc(res->count_crtcs, sizeof(uint32_t));
+	*conns = calloc(res->count_connectors, sizeof(uint32_t));
+	*encs = calloc(res->count_encoders, sizeof(uint32_t));
+	*fbs = calloc(res->count_fbs, sizeof(uint32_t));
+	if (!*crtcs || !*conns || !*encs || !*fbs) {
+		free(*crtcs); free(*conns); free(*encs); free(*fbs);
+		return -1;
+	}
+	res->crtc_id_ptr = (uint64_t)(uintptr_t)*crtcs;
+	res->connector_id_ptr = (uint64_t)(uintptr_t)*conns;
+	res->encoder_id_ptr = (uint64_t)(uintptr_t)*encs;
+	res->fb_id_ptr = (uint64_t)(uintptr_t)*fbs;
+	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, res) < 0) {
+		free(*crtcs); free(*conns); free(*encs); free(*fbs);
+		return -1;
+	}
+	return 0;
+}
+
 /* Get the CRTC bound to a connector, trying its current encoder first and
- * falling back to its encoders[] list (some drivers leave the current
- * encoder unset until the full connector ioctl is issued). */
+ * falling back to its encoders[] list. */
 static int connector_crtc(int fd, uint32_t conn_id, uint32_t *crtc_id_out) {
 	struct drm_mode_get_connector conn = {0};
-	uint32_t *enc_ids = NULL;
+	struct drm_mode_modeinfo *modes;
+	uint32_t *enc_ids;
+	uint32_t *props;
+	uint64_t *prop_vals;
 	struct drm_mode_get_encoder enc = {0};
 	int found = -1;
 
@@ -142,12 +171,20 @@ static int connector_crtc(int fd, uint32_t conn_id, uint32_t *crtc_id_out) {
 	if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0 || conn.count_encoders == 0)
 		return -1;
 
+	modes = calloc(conn.count_modes, sizeof(struct drm_mode_modeinfo));
 	enc_ids = calloc(conn.count_encoders, sizeof(uint32_t));
-	if (!enc_ids)
+	props = calloc(conn.count_props, sizeof(uint32_t));
+	prop_vals = calloc(conn.count_props, sizeof(uint64_t));
+	if (!modes || !props || !enc_ids || !prop_vals) {
+		free(modes); free(props); free(enc_ids); free(prop_vals);
 		return -1;
+	}
+	conn.modes_ptr = (uint64_t)(uintptr_t)modes;
+	conn.props_ptr = (uint64_t)(uintptr_t)props;
 	conn.encoders_ptr = (uint64_t)(uintptr_t)enc_ids;
+	conn.prop_values_ptr = (uint64_t)(uintptr_t)prop_vals;
 	if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0) {
-		free(enc_ids);
+		free(modes); free(props); free(enc_ids); free(prop_vals);
 		return -1;
 	}
 
@@ -166,73 +203,59 @@ static int connector_crtc(int fd, uint32_t conn_id, uint32_t *crtc_id_out) {
 			found = 0;
 		}
 	}
-	free(enc_ids);
+	free(modes); free(props); free(enc_ids); free(prop_vals);
 	return found;
 }
 
 static int find_internal_connector(int fd, uint32_t *conn_id_out, uint32_t *crtc_id_out) {
 	struct drm_mode_card_res res = {0};
-	uint32_t *ids;
+	uint32_t *crtcs = NULL, *conns = NULL, *encs = NULL, *fbs = NULL;
 	int found = -1;
 
-	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0 || res.count_connectors == 0)
+	if (get_card_resources(fd, &res, &crtcs, &conns, &encs, &fbs) < 0)
 		return -1;
-	ids = calloc(res.count_connectors, sizeof(uint32_t));
-	if (!ids)
-		return -1;
-	res.connector_id_ptr = (uint64_t)(uintptr_t)ids;
-	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
-		free(ids);
-		return -1;
-	}
 
 	for (uint32_t i = 0; i < res.count_connectors; i++) {
 		struct drm_mode_get_connector conn = {0};
 
-		conn.connector_id = ids[i];
+		conn.connector_id = conns[i];
 		if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0)
 			continue;
 		if (conn.connection != DRM_MODE_CONNECTED || !is_internal(conn.connector_type))
 			continue;
-		if (connector_crtc(fd, ids[i], crtc_id_out) < 0)
+		if (connector_crtc(fd, conns[i], crtc_id_out) < 0)
 			continue;
 
-		*conn_id_out = ids[i];
+		*conn_id_out = conns[i];
 		found = 0;
 		break;
 	}
-	free(ids);
+	free(crtcs); free(conns); free(encs); free(fbs);
 	return found;
 }
 
 static void dump_connectors(int fd) {
 	struct drm_mode_card_res res = {0};
-	uint32_t *ids;
+	uint32_t *crtcs = NULL, *conns = NULL, *encs = NULL, *fbs = NULL;
 
-	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0 || res.count_connectors == 0) {
+	if (get_card_resources(fd, &res, &crtcs, &conns, &encs, &fbs) < 0 ||
+	    res.count_connectors == 0) {
 		printf("connectors: none\n");
-		return;
-	}
-	ids = calloc(res.count_connectors, sizeof(uint32_t));
-	if (!ids)
-		return;
-	res.connector_id_ptr = (uint64_t)(uintptr_t)ids;
-	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
-		free(ids);
+		free(crtcs); free(conns); free(encs); free(fbs);
 		return;
 	}
 	for (uint32_t i = 0; i < res.count_connectors; i++) {
 		struct drm_mode_get_connector conn = {0};
-		conn.connector_id = ids[i];
+		conn.connector_id = conns[i];
 		if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0) {
-			printf("connector %u: ioctl failed\n", ids[i]);
+			printf("connector %u: ioctl failed\n", conns[i]);
 			continue;
 		}
 		printf("connector %u: type=%s conn=%u encoders=%u encoder_id=%u\n",
-		       ids[i], connector_name(conn.connector_type), conn.connection,
+		       conns[i], connector_name(conn.connector_type), conn.connection,
 		       conn.count_encoders, conn.encoder_id);
 	}
-	free(ids);
+	free(crtcs); free(conns); free(encs); free(fbs);
 }
 
 static int find_primary_plane(int fd, uint32_t crtc_id, uint32_t *plane_id_out) {
