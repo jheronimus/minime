@@ -300,24 +300,32 @@ static int plane_supports_rotation(int fd, uint32_t prop_id, uint64_t want) {
 	struct drm_mode_get_property prop = {0};
 	struct drm_mode_property_enum *enums;
 	int ok = 0;
+	int have_enums = 0;
 
 	prop.prop_id = prop_id;
 	if (ioctl(fd, DRM_IOCTL_MODE_GETPROPERTY, &prop) < 0)
-		return 0;
-	enums = calloc(prop.count_enum_blobs, sizeof(struct drm_mode_property_enum));
-	if (!enums)
-		return 0;
-	prop.enum_blob_ptr = (uint64_t)(uintptr_t)enums;
-	if (ioctl(fd, DRM_IOCTL_MODE_GETPROPERTY, &prop) == 0) {
-		for (uint32_t i = 0; i < prop.count_enum_blobs; i++) {
-			if (enums[i].value == want) {
-				ok = 1;
-				break;
+		return 1;
+
+	/* The kernel exposes the supported rotations as the property's enum
+	 * values. Field name/layout differs across header versions, so if we
+	 * cannot read them we let the atomic commit be the arbiter. */
+	if (prop.count_enum_blobs > 0) {
+		enums = calloc(prop.count_enum_blobs, sizeof(*enums));
+		if (enums) {
+			prop.enum_blob_ptr = (uint64_t)(uintptr_t)enums;
+			if (ioctl(fd, DRM_IOCTL_MODE_GETPROPERTY, &prop) == 0) {
+				have_enums = 1;
+				for (uint32_t i = 0; i < prop.count_enum_blobs; i++) {
+					if (enums[i].value == want) {
+						ok = 1;
+						break;
+					}
+				}
 			}
+			free(enums);
 		}
 	}
-	free(enums);
-	return ok;
+	return have_enums ? ok : 1;
 }
 
 static int set_plane_rotation(int fd, uint32_t plane_id, uint32_t prop_id, uint64_t want) {
