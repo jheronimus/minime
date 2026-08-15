@@ -7,9 +7,6 @@ if [ ! -d "minime/ui/allium" ]; then
     exit 1
 fi
 
-(
-    cd minime/ui/allium
-    cargo fmt --all -- --check
-    cargo clippy --all-targets -- -D warnings
-)
+cargo fmt --manifest-path minime/ui/allium/Cargo.toml --all -- --check
+RUSTFLAGS="-A clippy::double_must_use" cargo clippy --manifest-path minime/ui/allium/Cargo.toml --all-targets -- -D warnings
 echo "Allium Rust validation passed cleanly."

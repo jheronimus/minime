@@ -114,3 +114,4 @@ libstdc++
 
 # remote diagnostics & input simulation
 remote
+benchmark

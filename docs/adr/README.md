@@ -24,3 +24,4 @@ When a topic is addressed across several ADRs, they are merged into a single ADR
 12. **YabaSanshiro libretro port** — `0023`.
 13. **DraStic libretro port** — `0024`.
 14. **UI ports** — `0025` MinUI feature port.
+15. **Performance benchmarking** — `0026` benchmark suite.

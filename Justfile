@@ -424,3 +424,14 @@ key-seq sequence ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/remote-cmd.sh "remote sequence '{{sequence}}'" "{{ip}}"
+
+# Run on-device performance benchmark suite
+# Usage:
+#   just benchmark [args] [ip]
+#   just benchmark "--quick"
+#   just benchmark "--save /mnt/sdcard/baseline.json"
+#   just benchmark "--compare /mnt/sdcard/baseline.json"
+benchmark args="--all" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/remote-cmd.sh "benchmark {{args}}" "{{ip}}"

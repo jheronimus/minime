@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BENCHMARK
+	bool "benchmark"
+	help
+	  Minime performance benchmark suite.
