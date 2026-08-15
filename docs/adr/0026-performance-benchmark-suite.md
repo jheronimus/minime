@@ -17,26 +17,23 @@ Implement a self-contained, firmware- and UI-agnostic C99 benchmarking tool (`/u
    - Zero external runtime dependencies; builds identically for Alpine (`musl`) and Buildroot (`glibc`).
    - Supports standalone micro-benchmarks, subprocess orchestration for RetroArch / MinUI, and automated output generation.
 
-2. **Comprehensive Workload Matrix**:
-   - **Memory & Allocator**: Multi-threaded `malloc`/`free` throughput, small-object churn (64 B to 4 KB), large-block latency, cross-thread freeing, and heap lock contention.
-   - **Emulator Cores**: Headless unthrottled RetroArch / libretro benchmark runs (`pcsx_rearmed`, `mgba`, `picodrive`) measuring average FPS and execution duration.
-   - **Launcher Operations**: MinUI startup duration, game list scrolling/rendering, and `minarch` core handover latency.
-   - **System & Compute**: Integer math, SIMD NEON vector compute, memory bandwidth (`memcpy`/`memset`), and filesystem I/O.
+2. **Comprehensive Hardware Workload Matrix**:
+   - **CPU (20% weight)**: Single-threaded and 4-thread multi-core integer ALU and bit-tree compression throughput (MIPS).
+   - **Memory (20% weight)**: Tinymembench-style `memcpy`/`memset` bandwidth (MB/s), dynamic allocation churn (ops/s), and pointer-chasing random access latency (ns).
+   - **GPU (20% weight)**: Direct DRM/KMS plane flip frame rate (`/dev/dri/card0`), OpenGL ES shader and texture geometry rasterization (FPS), and Vulkan ICD probe.
+   - **Storage (20% weight)**: Direct I/O sequential write/read bandwidth (MB/s) and random 4 KB IOPS latency on target filesystem (`/mnt/sdcard`).
+   - **Network (20% weight)**: Full-duplex socket stream throughput and network stack bandwidth (MB/s).
 
 3. **Composite Scoring System ("Minime Index")**:
-   - Computes a single "higher is better" index score using a SPEC/Geekbench-style weighted geometric mean of normalized sub-scores against a 1000-point reference baseline:
-     - **Emulation**: 40% weight
-     - **Memory & Allocator**: 25% weight
-     - **Launcher UI**: 20% weight
-     - **System & I/O**: 15% weight
+   - Computes a single "higher is better" index score using a SPEC/Geekbench-style geometric mean of normalized sub-scores against a 1000-point reference baseline (20% per category).
 
 4. **CLI Interface & Comparison Mode**:
-   - Flags: `--all`, `--category <cat>`, `--quick`, `--json`, `--markdown`, `--save <file.json>`, `--compare <baseline.json>`.
+   - Flags: `--all`, `--category <cpu|mem|gpu|storage|net>`, `--quick`, `--json`, `--markdown`, `--save <file.json>`, `--compare <baseline.json>`.
    - Comparison mode loads a saved baseline JSON and outputs delta percentages (+X.X%) and overall index speedup.
 
 5. **Dual-Distro Packaging**:
-   - Alpine: `minime/targets/alpine/aports/benchmark/APKBUILD`.
-   - Buildroot: `minime/targets/buildroot/external/package/benchmark/`.
+   - Alpine: `minime/targets/alpine/aports/minime-benchmark/APKBUILD` (binary installed to `/usr/bin/benchmark`).
+   - Buildroot: `minime/targets/buildroot/external/package/benchmark/` (binary installed to `/usr/bin/benchmark`).
    - Host Justfile recipe: `just benchmark [ip]`.
 
 ## Consequences

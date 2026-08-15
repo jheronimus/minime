@@ -167,7 +167,7 @@ build_local_apks() {
 	# the SD payload, so the rootfs list is everything else.
 	rm -rf "${ALPINE_OUTPUT_DIR}/boot/ui" 2>/dev/null || true
 
-	ALPINE_PKGS="fatresize mdnsd remote benchmark"
+	ALPINE_PKGS="fatresize mdnsd remote minime-benchmark"
 
 	for ALPINE_PKG in ${ALPINE_PKGS}; do
 		[ -d "${ALPINE_DIR}/aports/${ALPINE_PKG}" ] || die "missing aports/${ALPINE_PKG}"

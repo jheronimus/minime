@@ -1,5 +1,5 @@
 # shellcheck shell=sh disable=SC2034,SC2154,SC3043
-pkgname=benchmark
+pkgname=minime-benchmark
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Minime performance benchmark suite"

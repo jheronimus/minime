@@ -5,14 +5,15 @@
 #include <stdint.h>
 #include <time.h>
 
-#define BENCH_VERSION "1.0.0"
+#define BENCH_VERSION "2.0.0"
 
 typedef enum {
-	BENCH_CAT_EMU = 0,
+	BENCH_CAT_CPU = 0,
 	BENCH_CAT_MEM = 1,
-	BENCH_CAT_UI = 2,
-	BENCH_CAT_SYS = 3,
-	BENCH_CAT_COUNT = 4
+	BENCH_CAT_GPU = 2,
+	BENCH_CAT_STORAGE = 3,
+	BENCH_CAT_NET = 4,
+	BENCH_CAT_COUNT = 5
 } bench_category_t;
 
 typedef struct {
@@ -23,17 +24,19 @@ typedef struct {
 	double baseline_value;
 	double normalized_score;
 	int lower_is_better;
+	int skipped;
 } bench_result_t;
 
 #define MAX_BENCH_RESULTS 64
 
-/* Category weights summing to 1.0 */
-#define WEIGHT_EMU 0.40
-#define WEIGHT_MEM 0.25
-#define WEIGHT_UI  0.20
-#define WEIGHT_SYS 0.15
+/* Equal category weights (20% each) summing to 1.0 */
+#define WEIGHT_CPU     0.20
+#define WEIGHT_MEM     0.20
+#define WEIGHT_GPU     0.20
+#define WEIGHT_STORAGE 0.20
+#define WEIGHT_NET     0.20
 
-/* High resolution timer helper (monotonic nanoseconds) */
+/* High resolution monotonic nanoseconds */
 static inline uint64_t bench_get_time_ns(void) {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -49,15 +52,16 @@ static inline double bench_ns_to_s(uint64_t ns) {
 }
 
 /* Category runner prototypes */
+int run_bench_cpu(bench_result_t *results, int max_results, int quick_mode);
 int run_bench_mem(bench_result_t *results, int max_results, int quick_mode);
-int run_bench_sys(bench_result_t *results, int max_results, int quick_mode);
-int run_bench_emu(bench_result_t *results, int max_results, int quick_mode);
-int run_bench_ui(bench_result_t *results, int max_results, int quick_mode);
+int run_bench_gpu(bench_result_t *results, int max_results, int quick_mode);
+int run_bench_storage(bench_result_t *results, int max_results, int quick_mode);
+int run_bench_net(bench_result_t *results, int max_results, int quick_mode);
 
 /* Scoring and reporting */
 const char *bench_category_name(bench_category_t cat);
 double bench_compute_category_score(const bench_result_t *results, int count, bench_category_t cat);
-double bench_compute_minime_index(const bench_result_t *results, int count);
+double bench_compute_overall_index(const bench_result_t *results, int count);
 
 void bench_print_table(const bench_result_t *results, int count, double index_score);
 void bench_print_markdown(const bench_result_t *results, int count, double index_score);

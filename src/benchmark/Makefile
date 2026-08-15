@@ -1,12 +1,11 @@
-CC ?= gcc
-CFLAGS ?= -O2 -Wall -Wextra -std=c99 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+CC ?= cc
+CFLAGS ?= -O2 -Wall -Wextra -std=c99
+CFLAGS += -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 LDFLAGS ?=
-LDLIBS ?= -pthread -lm
-PREFIX ?= /usr
-DESTDIR ?=
+LDLIBS ?= -pthread -lm -ldl
 
 TARGET = benchmark
-SRCS = main.c bench_mem.c bench_sys.c bench_emu.c bench_ui.c score.c
+SRCS = main.c bench_cpu.c bench_mem.c bench_gpu.c bench_storage.c bench_net.c score.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
@@ -14,13 +13,10 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
-%.o: %.c
+%.o: %.c bench.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-install: $(TARGET)
-	install -D -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
-
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) benchmark_aarch64
 
-.PHONY: all install clean
+.PHONY: all clean
