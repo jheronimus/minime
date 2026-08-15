@@ -24,7 +24,14 @@ dl_url="https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${version}.tar
 dl_filename="linux-${version}.tar.xz"
 
 echo "Downloading and computing sha512 hash for $dl_url..."
-sha512=$(curl -sSfL "$dl_url" | sha512sum | awk '{print $1}')
+# Download to a temp file first so set -e aborts on a truncated transfer:
+# a pipe would mask curl's exit status, since sha512sum still succeeds on the
+# partial bytes it received and the wrong hash would be written to the
+# APKBUILD (the failure that broke the 2026-08-15 builds).
+tmpfile="${dl_filename}.tmp"
+curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 -o "${tmpfile}" "$dl_url"
+sha512=$(sha512sum "${tmpfile}" | awk '{print $1}')
+rm -f "${tmpfile}"
 
 if [ -z "$sha512" ]; then
     echo "Failed to compute sha512 hash." >&2
