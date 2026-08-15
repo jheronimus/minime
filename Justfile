@@ -359,10 +359,11 @@ deploy os="" board="" ui="" disk_device="":
     # Push desktop notification (OSC 9) and audio bell chime (\a)
     printf '\033]9;Minime: Deployment Complete (%s)\007\a' "${device}" 2>/dev/null || true
 
-# Execute a remote shell command on target device (SSH if dropbear is up, else telnet)
+# Run a shell command on the target device (SSH by default; pass --telnet first to force telnet)
 # Usage:
-#   just remote "ps aux" [ip]
-remote cmd="" ip="":
+#   just shell "ps aux" [ip]
+#   just shell --telnet "ps aux"
+shell cmd="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
     tmp=$(mktemp)
@@ -371,33 +372,26 @@ remote cmd="" ip="":
     ./scripts/remote-cmd.sh "{{ip}}"
     rm -f "$tmp"
 
-# Execute a remote shell command on target device over SSH (dropbear, blank-password root)
+# Copy a file to the target device (scp/SSH by default, writes any path as root;
+# pass --ftp first to use FTP, which is limited to the /mnt/sdcard root)
 # Usage:
-#   just rsh "ps aux" [ip]
-rsh cmd="" ip="":
+#   just upload <local_file> [remote_path] [ip]
+#   just upload --ftp <local_file> [remote_filename] [ip]
+upload file="" remote="" ip="":
     #!/usr/bin/env bash
     set -euo pipefail
-    tmp=$(mktemp)
-    printf '%s\n' '{{cmd}}' > "$tmp"
-    export REMOTE_CMD_FILE="$tmp"
-    ./scripts/ssh-cmd.sh "{{ip}}"
-    rm -f "$tmp"
-
-# Upload a file to target device over FTP
-# Usage:
-#   just upload <file> [remote_filename] [ip]
-upload file="" remote_filename="" ip="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ./scripts/remote-upload.sh "{{file}}" "{{remote_filename}}" "{{ip}}"
-
-# Copy a local file to target device over SSH/scp (can write any path as root)
-# Usage:
-#   just scp <local_file> <remote_path> [ip]
-scp file="" remote="" ip="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ./scripts/scp-upload.sh "{{file}}" "{{remote}}" "{{ip}}"
+    MODE="scp"; F=""; R=""; I=""
+    for a in "{{file}}" "{{remote}}" "{{ip}}"; do
+        if [ "$a" = "--ftp" ]; then MODE="ftp"; continue; fi
+        if [ -z "$F" ]; then F="$a"; continue; fi
+        if [ -z "$R" ]; then R="$a"; continue; fi
+        I="$a"
+    done
+    if [ "$MODE" = "ftp" ]; then
+        ./scripts/remote-upload.sh "$F" "$R" "$I"
+    else
+        ./scripts/scp-upload.sh "$F" "$R" "$I"
+    fi
 
 # Fetch a diagnostics bundle from the target device (logs + dmesg + config)
 # Usage:

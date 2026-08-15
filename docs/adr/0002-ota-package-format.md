@@ -54,7 +54,7 @@ OTA updates do not trigger SD card partition expansion:
 
 #### Device-side updates (`/usr/bin/update.sh`)
 
-OTA updates are applied **on the device** by `/usr/bin/update.sh <minui|allium>` (baked into the rootfs overlay). It is invoked over telnet/SSH (e.g. `just remote "update.sh minui"`) and detaches itself so it survives the session:
+OTA updates are applied **on the device** by `/usr/bin/update.sh <minui|allium>` (baked into the rootfs overlay). It is invoked over telnet/SSH (e.g. `just shell "update.sh minui"`) and detaches itself so it survives the session:
 
 1. Self-detects board (`/proc/device-tree/compatible`) and target (`/etc/os-release`).
 2. Downloads `minime-<target>-<board>-<ui>.tar.zst` from the `testing` GitHub Release with curl.
@@ -73,7 +73,7 @@ There is no host-side OTA push (`just update`). Arbitrary local file uploads use
 
 #### Version check
 
-The device's installed build is read from `/mnt/sdcard/.minime/manifest.json` (build identity written by `mkupdate.sh`) via `just remote "cat /mnt/sdcard/.minime/manifest.json"`. `update.sh` performs the same comparison internally and reports "already up to date" when nothing is pending.
+The device's installed build is read from `/mnt/sdcard/.minime/manifest.json` (build identity written by `mkupdate.sh`) via `just shell "cat /mnt/sdcard/.minime/manifest.json"`. `update.sh` performs the same comparison internally and reports "already up to date" when nothing is pending.
 
 #### Deprecated: `just fetch` / `just update` / `just check-version`
 

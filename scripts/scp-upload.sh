@@ -31,6 +31,14 @@ if [ -z "$IP" ]; then
 	exit 1
 fi
 
+# A relative remote path defaults to the SD card root, matching the old FTP
+# behavior (`just upload file.sh` -> /mnt/sdcard/file.sh); absolute paths go
+# anywhere as root.
+case "$REMOTE_PATH" in
+/*) ;;
+*) REMOTE_PATH="/mnt/sdcard/$REMOTE_PATH" ;;
+esac
+
 echo "Uploading '$LOCAL_FILE' -> root@$IP:$REMOTE_PATH ..."
 
 exec ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \

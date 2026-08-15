@@ -8,7 +8,7 @@
 
 ## Context & Problem Statement
 
-Remote tooling (`just remote`, `just deploy`, the on-device updater of
+Remote tooling (`just shell`, `just deploy`, the on-device updater of
 ADR 0003) needs to reach the device by **name or IP**. IPs come from DHCP and
 change; hardcoding them in `deploy.cfg` (`target_ip=...`) is fragile and
 breaks the moment more than one device is on the network.
@@ -83,7 +83,7 @@ an mDNS-aware resolver (avahi + nss-mdns).
 
 ## Consequences
 
-- Stable, DHCP-independent device reachability for `just remote` / the
+- Stable, DHCP-independent device reachability for `just shell` / the
   on-device updater, no SoC-specific names needed.
 - `.local` resolution is client-dependent: macOS/Windows work out of the box;
   Linux needs nss-mdns.

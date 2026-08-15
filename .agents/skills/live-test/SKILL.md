@@ -1,6 +1,6 @@
 ---
 name: live-test
-description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers the on-device updater (`update.sh`), `just remote`/`just rsh`/`just upload`/`just scp`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, update log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
+description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers the on-device updater (`update.sh`), `just shell`/`just upload`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, update log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
 ---
 
 # Live Testing on Physical Hardware
@@ -24,7 +24,7 @@ Minime's [On-Device Live Verification](../../../AGENTS.md) directive requires th
 ## 1. Confirm the device is current
 
 ```sh
-just remote "cat /mnt/sdcard/.minime/manifest.json"     # minime_commit / ui_commit / timestamp
+just shell "cat /mnt/sdcard/.minime/manifest.json"     # minime_commit / ui_commit / timestamp
 ```
 
 The installed build identity is the device's `/mnt/sdcard/.minime/manifest.json` (written by the OTA packager). Let `update.sh` decide whether an update is pending — it diffs the archive manifest against this file itself and reports "already up to date" when nothing changed.
@@ -34,7 +34,7 @@ The installed build identity is the device's `/mnt/sdcard/.minime/manifest.json`
 The device updates itself from the GitHub `testing` release:
 
 ```sh
-just remote "update.sh minui"     # or: update.sh allium — switch UI without reflashing
+just shell "update.sh minui"     # or: update.sh allium — switch UI without reflashing
 ```
 
 What it does (see `minime/boards/common/overlay/usr/bin/update.sh`):
@@ -50,8 +50,8 @@ What it does (see `minime/boards/common/overlay/usr/bin/update.sh`):
 Watch progress / confirm afterwards:
 
 ```sh
-just remote "tail -n 40 /mnt/sdcard/.minime/update/update.log"
-just remote "cat /mnt/sdcard/.minime/manifest.json"     # new minime_commit / ui_commit
+just shell "tail -n 40 /mnt/sdcard/.minime/update/update.log"
+just shell "cat /mnt/sdcard/.minime/manifest.json"     # new minime_commit / ui_commit
 ```
 
 Delivery semantics:
@@ -62,9 +62,9 @@ Delivery semantics:
 ## 3. Inspect the device
 
 ```sh
-just remote "uptime"                     # device reachable, fresh boot
-just remote "cat /mnt/sdcard/.minime/manifest.json"
-just remote "ps | grep -E 'minui|minarch|keymon' | grep -v grep"
+just shell "uptime"                     # device reachable, fresh boot
+just shell "cat /mnt/sdcard/.minime/manifest.json"
+just shell "ps | grep -E 'minui|minarch|keymon' | grep -v grep"
 ```
 
 - After an OTA, `uptime` should be low (fresh reboot).
@@ -86,7 +86,7 @@ just deploy ./downloads/minime-alpine-h700-minui.img
 
 ## 5. Device log locations
 
-Collect logs via `just remote "cat <path>"` or `just remote "tail -n 100 <path>"`.
+Collect logs via `just shell "cat <path>"` or `just shell "tail -n 100 <path>"`.
 
 | Log | Path | Contents |
 |---|---|---|
@@ -108,8 +108,8 @@ Segmentation fault
 ## 6. Upload files to the device
 
 ```sh
-just upload ./local/script.sh script.sh   # copies to the FTP root
-just remote "cp /mnt/sdcard/script.sh /tmp/ && sh /tmp/script.sh"
+just upload ./local/script.sh script.sh   # copies to /mnt/sdcard (scp default)
+just shell "cp /mnt/sdcard/script.sh /tmp/ && sh /tmp/script.sh"
 ```
 
 Uploads land in the FTP root (`/mnt/sdcard/`). To run a multi-line or quoting-sensitive script, write it locally, upload it, copy to `/tmp`, and execute there — inline commands over telnet mangle quotes/spaces.

@@ -75,7 +75,7 @@ under memory pressure, needed by both GPU heap backends). EAS is deliberately
 
 ### 7. Two-phase stability test (physical device)
 
-CI cannot exercise thermals; the reproducibility contract is a `just remote`
+CI cannot exercise thermals; the reproducibility contract is a `just shell`
 procedure. **Phase 1** per config (~15-20 min): idle → CPU sweep → GPU burn →
 memory → combined → **transition-storm** (rapid load on/off; covers the gist's
 dominant crash classes). Pass: no reset, throttle engages at the passive trip,

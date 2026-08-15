@@ -24,11 +24,11 @@ just press <key> [duration_ms] [ip]
 just key-seq "<sequence>" [ip]
 
 # 4. Direct low-level execution via telnet
-just remote "remote screenshot --backend drm --base64"
-just remote "remote screenshot --backend fb --base64"
-just remote "remote press A --duration 100"
-just remote "remote combo MENU,X"
-just remote "remote info"
+just shell "remote screenshot --backend drm --base64"
+just shell "remote screenshot --backend fb --base64"
+just shell "remote press A --duration 100"
+just shell "remote combo MENU,X"
+just shell "remote info"
 ```
 
 ---
@@ -54,7 +54,7 @@ Screenshots are extracted from active DRM/KMS CRTC/planes (`/dev/dri/card0`) or 
    ```
 3. **Inspect hardware traits & orientation:**
    ```sh
-   just remote "remote info"
+   just shell "remote info"
    ```
 
 ---
@@ -86,16 +86,16 @@ just press START 150    # 150ms press
 ### B. Discrete State (Holds & Releases)
 For charging moves, long presses, or holding down buttons:
 ```sh
-just remote "remote down A"
+just shell "remote down A"
 # ... wait or perform other checks ...
-just remote "remote up A"
+just shell "remote up A"
 ```
 
 ### C. Simultaneous Combos
 Presses all keys, emits `EV_SYN`, waits duration, and releases in reverse order:
 ```sh
-just remote "remote combo MENU,X"
-just remote "remote combo L1,R1,START,SELECT --duration 100"
+just shell "remote combo MENU,X"
+just shell "remote combo L1,R1,START,SELECT --duration 100"
 ```
 
 ### D. Scripted Sequences
@@ -149,8 +149,8 @@ If the screen appears upside down or sideways:
 1. Compare raw framebuffer vs trait rotation:
    ```sh
    just screenshot rotated_default.png
-   just remote "remote screenshot --raw --base64" > raw.b64
-   just remote "remote info"
+   just shell "remote screenshot --raw --base64" > raw.b64
+   just shell "remote info"
    ```
 2. Verify `screen_rotation` in `/mnt/sdcard/.minime/traits`:
    * $0^\circ$: H700, RK3326, RG503

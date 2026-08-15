@@ -1,26 +1,29 @@
 #!/bin/sh
 # Execute a remote shell command on target device.
-# Prefers SSH (dropbear, enabled by default) and falls back to telnet for
-# devices that haven't updated yet. SSH avoids telnet's fragile pty sessions
-# and command mangling.
+# Defaults to SSH (dropbear, blank-password root). Pass --telnet as the first
+# argument to force telnet. The command is read from $REMOTE_CMD_FILE (set by
+# `just shell`) so arbitrary shell metacharacters survive; when --telnet is the
+# first arg, just shifts the real command into the [ip] slot.
 # Usage: ./scripts/remote-cmd.sh [ip]   (command read from $REMOTE_CMD_FILE)
-#        ./scripts/remote-cmd.sh <command> [ip]
 
 set -eu
 
-IP="${1:-}"
-CMD="${REMOTE_CMD_FILE:-}"
+IP_ARG="${1:-}"
+CMD="$(cat "${REMOTE_CMD_FILE:-}" 2>/dev/null || true)"
 
-if [ -n "$CMD" ]; then
-	# command arrives in a file so arbitrary shell metacharacters survive
-	CMD="$(cat "$CMD")"
-elif [ $# -ge 1 ]; then
-	IP="${1:-}"
-	CMD="${2:-}"
+MODE="ssh"
+IP="$IP_ARG"
+if [ "$CMD" = "--telnet" ]; then
+	MODE="telnet"
+	CMD="$IP_ARG"
+	IP=""
+elif [ "$IP_ARG" = "--telnet" ]; then
+	MODE="telnet"
+	IP=""
 fi
 
 if [ -z "$CMD" ]; then
-	echo "Usage: $0 <command> [ip], or set REMOTE_CMD_FILE" >&2
+	echo "ERROR: REMOTE_CMD_FILE is empty or unset." >&2
 	exit 1
 fi
 
@@ -35,16 +38,15 @@ if [ -z "$IP" ]; then
 	exit 1
 fi
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=4 -o BatchMode=yes -o LogLevel=ERROR"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR"
 
-# Probe SSH availability first so the command runs exactly once.
-if command -v ssh >/dev/null 2>&1 && ssh $SSH_OPTS root@"$IP" true 2>/dev/null; then
+if [ "$MODE" = "ssh" ]; then
 	exec ssh $SSH_OPTS root@"$IP" "$CMD"
 fi
 
-# Fall back to telnet.
+# Telnet transport.
 python3 - "$IP" "$CMD" <<'EOF'
-import socket, sys, time
+import socket, sys, time, re
 
 ip = sys.argv[1]
 cmd = sys.argv[2]
@@ -69,8 +71,6 @@ s.close()
 
 text = out.decode(errors="ignore")
 lines = text.splitlines()
-# Drop the echoed command and trailing prompt (including busybox's \x1b[6n)
-import re
 def clean_line(l):
     return re.sub(r"\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07", "", l).strip()
 if lines and (clean_line(lines[0]) == cmd or cmd in lines[0]):

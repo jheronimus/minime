@@ -83,12 +83,12 @@ removed from `update.sh` and both `post-build.sh` scripts.
   as a generic push-and-apply helper for locally built packages (the
   boot-profiler's instrumented initramfs, `scripts/boot-profile.sh`).
 - `just upload` (FTP) is the arbitrary-file upload path.
-- Verify a device is current with `just remote "cat /mnt/sdcard/.minime/manifest.json"`.
+- Verify a device is current with `just shell "cat /mnt/sdcard/.minime/manifest.json"`.
 
 ## Consequences
 
 - No IP/hardcoding needed for updates: reach the device by mDNS name
-  (`minime.local`, ADR 0017) or IP via `just remote`.
+  (`minime.local`, ADR 0017) or IP via `just shell`.
 - The device must reach GitHub over HTTPS to download the archive; it already
   ships curl + CA certificates on both targets.
 - The updater ships in the rootfs overlay and is itself replaced by the OTA
