@@ -113,7 +113,7 @@ int run_bench_gpu(bench_result_t *results, int max_results, int quick_mode) {
 	results[idx].category = BENCH_CAT_GPU;
 	results[idx].raw_value = gles_fps;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "FPS");
-	results[idx].baseline_value = 85.0; /* 85 FPS baseline */
+	results[idx].baseline_value = 650.0; /* 650 FPS RK3566 GPU baseline */
 	results[idx].lower_is_better = 0;
 	results[idx].skipped = 0;
 	results[idx].normalized_score = (gles_fps / results[idx].baseline_value) * 1000.0;

@@ -153,7 +153,7 @@ int run_bench_mem(bench_result_t *results, int max_results, int quick_mode) {
 	results[idx].category = BENCH_CAT_MEM;
 	results[idx].raw_value = churn_ops;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "ops/s");
-	results[idx].baseline_value = 1000000.0; /* 1M ops/s baseline */
+	results[idx].baseline_value = 130000.0; /* 130k ops/s stock musl baseline */
 	results[idx].lower_is_better = 0;
 	results[idx].skipped = 0;
 	results[idx].normalized_score = (churn_ops / results[idx].baseline_value) * 1000.0;
@@ -165,7 +165,7 @@ int run_bench_mem(bench_result_t *results, int max_results, int quick_mode) {
 	results[idx].category = BENCH_CAT_MEM;
 	results[idx].raw_value = latency_ns;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "ns");
-	results[idx].baseline_value = 85.0; /* 85 ns DDR random latency */
+	results[idx].baseline_value = 205.0; /* 205 ns DDR random latency baseline */
 	results[idx].lower_is_better = 1;
 	results[idx].skipped = 0;
 	results[idx].normalized_score = (results[idx].baseline_value / latency_ns) * 1000.0;

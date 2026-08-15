@@ -112,7 +112,7 @@ int run_bench_storage(bench_result_t *results, int max_results, int quick_mode) 
 	results[idx].category = BENCH_CAT_STORAGE;
 	results[idx].raw_value = write_mb;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "MB/s");
-	results[idx].baseline_value = 35.0; /* 35 MB/s SD card write baseline */
+	results[idx].baseline_value = 22.0; /* 22 MB/s SD card write baseline */
 	results[idx].lower_is_better = 0;
 	results[idx].skipped = (write_mb <= 0.0) ? 1 : 0;
 	results[idx].normalized_score = (write_mb > 0.0) ? ((write_mb / results[idx].baseline_value) * 1000.0) : 0.0;
@@ -124,7 +124,7 @@ int run_bench_storage(bench_result_t *results, int max_results, int quick_mode) 
 	results[idx].category = BENCH_CAT_STORAGE;
 	results[idx].raw_value = read_mb;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "MB/s");
-	results[idx].baseline_value = 75.0; /* 75 MB/s SD card read baseline */
+	results[idx].baseline_value = 500.0; /* 500 MB/s cache/direct read baseline */
 	results[idx].lower_is_better = 0;
 	results[idx].skipped = (read_mb <= 0.0) ? 1 : 0;
 	results[idx].normalized_score = (read_mb > 0.0) ? ((read_mb / results[idx].baseline_value) * 1000.0) : 0.0;
@@ -136,7 +136,7 @@ int run_bench_storage(bench_result_t *results, int max_results, int quick_mode) 
 	results[idx].category = BENCH_CAT_STORAGE;
 	results[idx].raw_value = iops;
 	snprintf(results[idx].unit, sizeof(results[idx].unit), "IOPS");
-	results[idx].baseline_value = 1500.0; /* 1500 IOPS baseline */
+	results[idx].baseline_value = 65000.0; /* 65k IOPS baseline */
 	results[idx].lower_is_better = 0;
 	results[idx].skipped = (iops <= 0.0) ? 1 : 0;
 	results[idx].normalized_score = (iops > 0.0) ? ((iops / results[idx].baseline_value) * 1000.0) : 0.0;
