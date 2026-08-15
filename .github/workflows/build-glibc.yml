@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -189,7 +189,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save UI CCache
         if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
