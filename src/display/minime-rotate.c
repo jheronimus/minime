@@ -129,6 +129,47 @@ static int find_prop(int fd, uint32_t obj_id, uint32_t obj_type,
 	return found;
 }
 
+/* Get the CRTC bound to a connector, trying its current encoder first and
+ * falling back to its encoders[] list (some drivers leave the current
+ * encoder unset until the full connector ioctl is issued). */
+static int connector_crtc(int fd, uint32_t conn_id, uint32_t *crtc_id_out) {
+	struct drm_mode_get_connector conn = {0};
+	uint32_t *enc_ids = NULL;
+	struct drm_mode_get_encoder enc = {0};
+	int found = -1;
+
+	conn.connector_id = conn_id;
+	if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0 || conn.count_encoders == 0)
+		return -1;
+
+	enc_ids = calloc(conn.count_encoders, sizeof(uint32_t));
+	if (!enc_ids)
+		return -1;
+	conn.encoders_ptr = (uint64_t)(uintptr_t)enc_ids;
+	if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0) {
+		free(enc_ids);
+		return -1;
+	}
+
+	if (conn.encoder_id != 0) {
+		enc.encoder_id = conn.encoder_id;
+		if (ioctl(fd, DRM_IOCTL_MODE_GETENCODER, &enc) == 0 && enc.crtc_id != 0) {
+			*crtc_id_out = enc.crtc_id;
+			found = 0;
+		}
+	}
+
+	for (uint32_t i = 0; i < conn.count_encoders && found < 0; i++) {
+		enc.encoder_id = enc_ids[i];
+		if (ioctl(fd, DRM_IOCTL_MODE_GETENCODER, &enc) == 0 && enc.crtc_id != 0) {
+			*crtc_id_out = enc.crtc_id;
+			found = 0;
+		}
+	}
+	free(enc_ids);
+	return found;
+}
+
 static int find_internal_connector(int fd, uint32_t *conn_id_out, uint32_t *crtc_id_out) {
 	struct drm_mode_card_res res = {0};
 	uint32_t *ids;
@@ -147,27 +188,51 @@ static int find_internal_connector(int fd, uint32_t *conn_id_out, uint32_t *crtc
 
 	for (uint32_t i = 0; i < res.count_connectors; i++) {
 		struct drm_mode_get_connector conn = {0};
-		struct drm_mode_get_encoder enc = {0};
 
 		conn.connector_id = ids[i];
 		if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0)
 			continue;
 		if (conn.connection != DRM_MODE_CONNECTED || !is_internal(conn.connector_type))
 			continue;
-
-		enc.encoder_id = conn.encoder_id;
-		if (ioctl(fd, DRM_IOCTL_MODE_GETENCODER, &enc) < 0)
-			continue;
-		if (enc.crtc_id == 0)
+		if (connector_crtc(fd, ids[i], crtc_id_out) < 0)
 			continue;
 
 		*conn_id_out = ids[i];
-		*crtc_id_out = enc.crtc_id;
 		found = 0;
 		break;
 	}
 	free(ids);
 	return found;
+}
+
+static void dump_connectors(int fd) {
+	struct drm_mode_card_res res = {0};
+	uint32_t *ids;
+
+	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0 || res.count_connectors == 0) {
+		printf("connectors: none\n");
+		return;
+	}
+	ids = calloc(res.count_connectors, sizeof(uint32_t));
+	if (!ids)
+		return;
+	res.connector_id_ptr = (uint64_t)(uintptr_t)ids;
+	if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
+		free(ids);
+		return;
+	}
+	for (uint32_t i = 0; i < res.count_connectors; i++) {
+		struct drm_mode_get_connector conn = {0};
+		conn.connector_id = ids[i];
+		if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0) {
+			printf("connector %u: ioctl failed\n", ids[i]);
+			continue;
+		}
+		printf("connector %u: type=%s conn=%u encoders=%u encoder_id=%u\n",
+		       ids[i], connector_name(conn.connector_type), conn.connection,
+		       conn.count_encoders, conn.encoder_id);
+	}
+	free(ids);
 }
 
 static int find_primary_plane(int fd, uint32_t crtc_id, uint32_t *plane_id_out) {
@@ -258,6 +323,7 @@ static int query(int fd, const char *dev) {
 
 	if (find_internal_connector(fd, &conn_id, &crtc_id) < 0) {
 		fprintf(stderr, "minime-rotate: no active internal panel connector on %s\n", dev);
+		dump_connectors(fd);
 		return 1;
 	}
 	conn.connector_id = conn_id;
