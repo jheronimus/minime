@@ -40,5 +40,5 @@ fake-08|https://github.com/jtothebell/fake-08||platform/libretro|||fake-08.patch
 handy|https://github.com/libretro/libretro-handy|||||handy.patch|minime||0|1
 mednafen_wswan|https://github.com/libretro/beetle-wswan-libretro|||||mednafen_wswan.patch|minime||0|1
 yabasanshiro|https://github.com/jheronimus/yabause|6e7ad3d39c4fa1bb7ff0671b2d87cdaa5bd09e04|yabause/src/libretro|Makefile|||arm64||1|0
-drastic|https://github.com/jheronimus/drastic|be11014bcda3afd8e5aa004043cd07a44d2590a4|wrapper|Makefile|||minime||1|0
+drastic|https://github.com/jheronimus/drastic|aca7a6c8ad6b9ae50c6824ec8df7d6a14cdeaa7a|wrapper|Makefile|||minime||1|0
 stella|https://github.com/libretro/stella2023||src/os/libretro|Makefile||stella.patch|minime|stella_libretro.so|0|1
