@@ -48,10 +48,10 @@ Alpine and Buildroot targets are built from their respective directories in `min
 
 ### Build Convention
 
-Both targets follow the same pattern:
+Both targets follow the same two-step pattern via the shared `minime/targets/common.mk` (included by both target Makefiles). The packaging scripts (`genassets.sh`, `mkimage.sh`, `mkupdate.sh`) are shared in `minime/build/`, but each target runs them in its own container image — `minime-musl` (Alpine, arm64) or `minime-glibc` (Buildroot, amd64):
 ```
-make components  →  build.sh  (compilation in container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in shared container)
+make components  →  build.sh  (compilation in the target's own container)
+make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
 ```
 
 **Rules:**
@@ -66,7 +66,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 ## Agent Directives
 
 - **Build Pipeline Trigger Model**: The build pipeline is split into two per-libc workflows that both feed the `testing` release. **`build-musl.yml`** (alpine) triggers on every push to `main` filtered to `minime/**` (fast path: the alpine board in the `FAST_PATH_TARGET` env at the top of the file, default `rk3566`, for both UIs), a daily cron at 04:00 UTC (`0 4 * * *`, = 07:00 GMT+3) that rebuilds every alpine board to refresh `testing` images and catch regressions, and `workflow_dispatch` (comma-separated `targets` input of alpine boards, `all` = everything). **`build-glibc.yml`** (buildroot) has **no push trigger** — it runs on the same daily cron and `workflow_dispatch` (buildroot boards) only. Both call the shared **`build-bootloader.yml`** reusable workflow (U-Boot for all three boards, cache-hit cheap). Each workflow has its own `concurrency` group (`cancel-in-progress: true`) keyed on `github.ref` — **the newest run wins** within a workflow; musl and glibc runs may run concurrently since they upload disjoint `testing` assets. **If your run was cancelled, that is not an error**: a newer commit, dispatch, or the nightly cron superseded it. Do not retry or re-dispatch the cancelled run; look at the newest run instead. Only the fast-path alpine board can be rerouted by editing `FAST_PATH_TARGET` in `build-musl.yml` — nothing else needs to change.
-- **Architecture & Optimization Knowledge**: Store all architectural decisions, filesystem/kernel performance optimizations, and design rationale in Architecture Decision Records under `docs/adr/` (e.g. `docs/adr/0001-fat32-cluster-and-image-sizing.md`).
+- **Architecture & Optimization Knowledge**: Store all architectural decisions, filesystem/kernel performance optimizations, and design rationale in Architecture Decision Records under `docs/adr/` (e.g. `docs/adr/0013-storage.md`).
 - **No Temporary Workarounds**: Fix local/runner states directly in the environment. Never add temporary configs, scripts, or hooks to build logic.
 - **Single Source of Truth (no duplicated docs)**: Documentation in the repo must not duplicate information. For any given fact or workflow, there must be exactly **one** canonical location — be it `AGENTS.md`, an ADR under `docs/adr/`, a standalone markdown file, or the code itself (e.g. `.github/workflows/*.yml`). Before writing or editing docs, `grep` for existing coverage; update the canonical source rather than adding a parallel description elsewhere. When one file must reference another, link to it instead of restating its content. Never reference a file or fact that does not exist (e.g. a named doc that was never created) — if it is needed, create it or point the reference at the real source.
 - **Doc Size Limit (5 KB)**: No markdown doc in this repo may exceed **5 KB**.

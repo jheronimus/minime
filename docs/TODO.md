@@ -21,7 +21,7 @@
 ## Kernel & Performance
 
 - [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards
-  - [x] `CONFIG_ENERGY_MODEL=y` enabled in the shared kernel fragment (ADR 0014)
+  - [x] `CONFIG_ENERGY_MODEL=y` enabled in the shared kernel fragment (ADR 0018)
 - [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
@@ -55,7 +55,7 @@
 
 - [ ] Inspect Rocknix per-platform/device quirks for adoptable fixes (RK3566, RK3326, H700)
   - [THEORY] Boot-time scripts under `hardware/quirks/platforms/{RK3566,RK3326,H700}` and `hardware/quirks/devices/*` (per-DT-model override dirs) cover far more than power/thermal: thermal trips, governor/DVFS paths, turbo/boost, GPU floors, suspend/fake-suspend hooks, fan/LED/battery handling, audio latency/volume, input modifiers, UI service selection, WiFi/BT. Quirks are executed every boot by `/usr/bin/autostart` — platform (SoC) dir first, then device dir, then global `autostart/common`; they persist state via `/storage/.config/profile.d/NNN-*` files and are wired into suspend/resume via `sleep.d/{pre,post}/*`. Not all installed quirks run (device dir is installed for all models but only the matching DT-model subdir executes; some guard on settings/DT nodes). Sources: [RK3566 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3566), [RK3326 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/RK3326), [H700 quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/platforms/H700), [device quirks](https://github.com/ROCKNIX/distribution/tree/next/projects/ROCKNIX/packages/hardware/quirks/devices).
-- [ ] H700 device auto-detection: first-boot probe (MIPI display ID, SARADC sticks, Wi-Fi, lid) + device-selector fallback; ship all panel firmware ([ADR 0025](adr/0025-h700-device-detection.md))
+- [ ] H700 device auto-detection: first-boot probe (MIPI display ID, SARADC sticks, Wi-Fi, lid) + device-selector fallback; ship all panel firmware ([ADR 0012](adr/0012-h700-device-detection.md))
 - [ ] Review and trim init scripts; start wireless services (`wpa_supplicant`, `bluetoothd`) on demand
 - [ ] Optimize Wi-Fi connection speed
 - [ ] Compile patched DTB → decompile in CI and compare geometry/keycodes/names/refresh to the traits files (deeper variant of the cross-reference; needs the kernel build env)
@@ -70,18 +70,18 @@
 - [x] Investigate why musl UI build is 2x slower: slow `ubuntu-24.04-arm` runner on cache-miss; mitigated by caching Allium cargo `target/` dirs keyed on `Cargo.lock`
 - [x] Shared RetroArch cores between MinUI and Allium via `build-cores` CI job and `cores-<libc>` artifact
 - [x] Unify Roms folder naming to a single MinUI-canonical scheme (`roms/mappings`) resolved by both UIs
-- [x] Port Wi-Fi / Bluetooth / Power menus and rewind to MinUI, isolated (ADR 0024)
+- [x] Port Wi-Fi / Bluetooth / Power menus and rewind to MinUI, isolated (ADR 0025)
 - [x] Optimize kernel memory management: COMPACTION, MGLRU, TEO, schedutil; VM sysctls applied via shared OpenRC sysctl service
 - [x] Fix dead DTB auto-detect path in `boot.cmd`: load `.minime/devices/${device}` with `.minime/dtb` fallback
 - [x] RG353M support end-to-end: rgxx3 U-Boot patches applied; traits match runtime compatible `anbernic,rg353p`
-- [x] CPU thermal stability + qualification (ADR 0014)
-- [x] Comprehensive traits audit (ADR 0012)
+- [x] CPU thermal stability + qualification (ADR 0018)
+- [x] Comprehensive traits audit (ADR 0011)
 - [x] Optimize U-Boot boot speed
 - [x] Reorganize board defconfigs and shared package base between Alpine and Buildroot
 - [x] Enable CPU/GPU overclock (up to 2.0 GHz) and undervolt support for RK3566
 - [x] Fix power button on RG35xxSP not waking the device from sleep
 - [x] Update the MinUI `README.txt` shipped on the card
 - [x] `dotclean` OpenRC service clears Mac metadata files (`._*`, `.DS_Store`)
-- [x] Device hostname announcement via mdnsd (`minime.local`, ADR 0018)
-- [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0017)
+- [x] Device hostname announcement via mdnsd (`minime.local`, ADR 0017)
+- [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0003)
 - [x] RK3326 bringup in CI matrix and both `minime/targets/*/Makefile` boards

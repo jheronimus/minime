@@ -22,7 +22,7 @@ Both targets follow a two-step build convention:
 
 ```
 make components  →  build.sh  (compilation in builder container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in shared packager container)
+make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
 ```
 
 ### Responsibilities
@@ -30,8 +30,8 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 | Script | Responsibility | Runs |
 |--------|---------------|------|
 | `build.sh` | Compilation only (minirootfs, APKs, rootfs, erofs, initramfs) | In builder container |
-| `mkimage.sh` | SD card image assembly (FAT32, bootloaders, genimage) | In shared packager container |
-| `mkupdate.sh` | Update archive generation | In shared packager container |
+| `mkimage.sh` | SD card image assembly (FAT32, bootloaders, genimage) | In target's own container |
+| `mkupdate.sh` | Update archive generation | In target's own container |
 
 ### Rules
 
@@ -44,12 +44,12 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 
 - **Failure recovery**: If packaging fails, only the short packaging step needs to rerun, not the full compilation.
 - **Shared packaging**: Both targets use the same `mkimage.sh`/`mkupdate.sh` scripts.
-- **No host tooling**: Packaging runs in the shared packager container — no genimage/mtools needed on the host.
+- **No host tooling**: Packaging runs in the target's own container — no genimage/mtools needed on the host.
 - **Clear boundaries**: Each script has a single responsibility.
 
 ## Consequences
 
 - Alpine's `build.sh` lost the `all` and `image` subcommands; `components` now includes erofs+initramfs.
-- Buildroot's `system-image.sh` no longer calls genimage; that responsibility moved to the shared packager container.
-- A new shared packager container (`minime/build/container/Dockerfile`) provides genimage/mtools for both targets.
+- Buildroot's `system-image.sh` no longer calls genimage; that responsibility moved to the target's own container.
+- Each target's builder container (`minime/targets/alpine/container/` / `minime/targets/buildroot/container/`) ships genimage/mtools, so packaging runs in the target's own image.
 - CI workflows no longer need host tools (mtools, genimage, u-boot-tools) for the `make image` step.

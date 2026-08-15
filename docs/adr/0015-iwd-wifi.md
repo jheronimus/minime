@@ -1,4 +1,4 @@
-# 0011: Wi-Fi via iwd (replace wpa_supplicant)
+# ADR 0015: Wi-Fi via iwd (replace wpa_supplicant)
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
@@ -30,7 +30,7 @@ Transition Wi-Fi to **iwd (Internet Wireless Daemon)**:
   (`NameResolvingService=resolvconf`), and `/etc/resolv.conf` is a symlink to
   `/run/resolvconf/resolv.conf` (created by `post-build.sh`). This resolves
   correctly on any network (home router, phone hotspot, public WiFi) and is
-  required for device-initiated downloads — the on-device updater (ADR 0017)
+  required for device-initiated downloads — the on-device updater (ADR 0003)
   fetches OTA archives from GitHub over HTTPS.
 - **State on the FAT partition**: iwd persists known networks as `.psk`
   profiles in `$STATE_DIRECTORY`. Because `/var/lib` is on the read-only EROFS
@@ -83,4 +83,4 @@ Transition Wi-Fi to **iwd (Internet Wireless Daemon)**:
 - iwd storage/config dirs: `iwd.network(5)` — `$STATE_DIRECTORY` defaults to
   `/var/lib/iwd`, overridden per-daemon.
 - Boot profile (pre-change): WPA handshake ~5.9s, DHCP ~4s.
-- Related logging ADR: `docs/adr/0010-logging-and-diagnostics.md`.
+- Related logging ADR: `docs/adr/0007-logging-and-diagnostics.md`.

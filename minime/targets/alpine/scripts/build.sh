@@ -306,7 +306,7 @@ assemble_rootfs() {
 	WORLD_PKGS="$(cat "${WORLD_COMMON}" "${WORLD_BOARD}" | grep -v '^#' | tr '\n' ' ')"
 	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
 
-	# Optional diagnostic/stress tooling (ADR 0014 stability test).  Release
+	# Optional diagnostic/stress tooling (ADR 0018 stability test).  Release
 	# images stay lean; only TEST_PACKAGES=1 builds carry these.
 	if [ "${TEST_PACKAGES:-0}" = "1" ]; then
 		WORLD_TEST="${ALPINE_DIR}/configs/world-test"

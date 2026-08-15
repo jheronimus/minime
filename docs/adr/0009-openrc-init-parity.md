@@ -1,4 +1,4 @@
-# 0005: OpenRC Cross-Distro Init Parity & Buildroot SysV Pruning
+# ADR 0009: OpenRC Cross-Distro Init Parity & Buildroot SysV Pruning
 
 - **Status**: Accepted
 - **Date**: 2026-07-28

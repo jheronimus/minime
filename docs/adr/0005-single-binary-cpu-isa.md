@@ -1,4 +1,4 @@
-# 0008: Single Shared Binaries Omit RK3566 CPU Optimizations
+# ADR 0005: Single Shared Binaries Omit RK3566 CPU Optimizations
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
@@ -40,7 +40,7 @@ These come from upstream's `rgb30` (RK3566) core patches. H700 (Cortex-A53) and 
 
 ### Per-board tuning that *is* retained
 
-Runtime, traits-driven performance tuning is unaffected by the single-binary constraint and remains in place (see ADR 0014):
+Runtime, traits-driven performance tuning is unaffected by the single-binary constraint and remains in place (see ADR 0018):
 - Per-board CPU **governor** (`schedutil` / `performance`) and **max clock** (`cpu_clock_menu/powersave/normal/performance` traits).
 - Per-core **dynarec** configuration that is arch-correct for the shared aarch64 binary (gpsp `arm64`, pcsx_rearmed `ari64`, picodrive `aarch64`).
 
@@ -58,4 +58,4 @@ Runtime, traits-driven performance tuning is unaffected by the single-binary con
 - Upstream per-device core patches: `workspace/rgb30/cores/patches/*.patch` (RK3566), `workspace/magicmini/cores/patches/*.patch` (RK3326).
 - Toolchain default: `gcc -march=armv8-a` (musl and glibc build containers).
 - Single-binary pipeline: `.github/workflows/build-musl.yml` / `build-glibc.yml` (`build-ui` artifact consumed by `build-os` for all boards).
-- Runtime governor/clocks: `docs/adr/0014-cpu-performance-and-thermal-policy.md`.
+- Runtime governor/clocks: `docs/adr/0018-cpu-performance-and-thermal-policy.md`.

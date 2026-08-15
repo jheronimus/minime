@@ -1,4 +1,4 @@
-# ADR 0006: OTA Update Package Format and Delivery Workflow
+# ADR 0002: OTA Update Package Format and Delivery Workflow
 
 ## Status
 

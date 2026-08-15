@@ -1,4 +1,4 @@
-# ADR 0022: DraStic Android Shared Library to Libretro Core Conversion
+# ADR 0024: DraStic Android Shared Library to Libretro Core Conversion
 
 ## Status
 Accepted — implementation in progress (wrapper functional; core render path blocked)

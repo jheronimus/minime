@@ -1,9 +1,9 @@
-# 0014: CPU Performance, Governor, and Thermal Policy
+# ADR 0018: CPU Performance, Governor, and Thermal Policy
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
 * **Date**: 2026-08-10
-* **Consolidates**: former `0005` (governor + frequency traits) and `0014` (thermal)
+* **Consolidates**: former `0005` (governor + frequency traits) and former `0014` (thermal)
 
 ---
 
@@ -100,5 +100,5 @@ via `just get-logs`.
 - Traits: `minime/boards/{h700,rk3326,rk3566}/traits/platform.ini`.
 - DTS trips patch: `minime/boards/rk3566/patches/linux/`.
 - aenertia, *RK3566 Power Profiling* gist (`522cd8df6f0b68a0a2f59f73d5fe3af7`).
-- `docs/research/rk3566-undervolt.md`, `docs/adr/0010-logging-and-diagnostics.md`,
-  `docs/adr/0012-traits-schema.md`.
+- `docs/research/rk3566-undervolt.md`, `docs/adr/0007-logging-and-diagnostics.md`,
+  `docs/adr/0011-traits-schema.md`.

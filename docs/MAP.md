@@ -67,7 +67,7 @@ Cross-distro OpenRC init scripts copied into the rootfs of both targets at build
 - `fb-unblank`: Unblanks DRM/FB console and initializes display power.
 - `ftpd`: Lightweight FTP server service.
 - `gpudriver`: Dynamically loads Mali GPU kernel modules and sets device permissions.
-- `logger`: Persistent per-boot kernel + syslog capture under `.minime/logs/`; hosts the thermal monitor worker (derives thresholds from the zone's `trip_point_*`, ADR 0014).
+- `logger`: Persistent per-boot kernel + syslog capture under `.minime/logs/`; hosts the thermal monitor worker (derives thresholds from the zone's `trip_point_*`, ADR 0018).
 - `mdns`: Announces the device as `minime.local` over mDNS (mdnsd) with DNS-SD records for telnet/FTP/SSH; auto-renames to `minime-2.local` on name conflict.
 - `modules`: Loads kernel modules specified in `/etc/modules`.
 - `telnetd`: Remote debug shell daemon.
@@ -119,7 +119,7 @@ Immutable hardware capability profiles copied to `/usr/share/minime/traits/`:
 - `devices/<device>.ini`: Per-device traits (identity, screen geometry, HDMI, touch, rumble, wireless). Panel-revision variants inherit from a base device via a `parent=` key.
 - At boot `init.d/traits` merges `platform.ini` → parent chain → device file into `/mnt/sdcard/.minime/traits` (last-wins for duplicated keys).
 
-See `docs/adr/0012-traits-schema.md` for the full section/key reference.
+See `docs/adr/0011-traits-schema.md` for the full section/key reference.
 
 ---
 
@@ -189,13 +189,13 @@ Both Alpine and Buildroot follow a two-step build convention:
 
 ```
 make components  →  build.sh  (compilation in builder container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in shared packager container)
+make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
 ```
 
 | Step | Alpine | Buildroot | Runs |
 |------|--------|-----------|------|
 | `make components` | `build.sh components` | `build.sh components` | In builder container |
-| `make image` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | In shared packager container |
+| `make image` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | In target's own container |
 
 **Rules:**
 - `build.sh` does compilation only. No image packaging.
@@ -232,7 +232,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (packaging in sha
 
 1. Create the script in `minime/boards/common/overlay/etc/init.d/<service>`
 2. Add runlevel symlinks under `minime/boards/common/overlay/etc/runlevels/` (for example `boot` or `default`)
-3. Both Alpine and Buildroot automatically pick up the service from the common overlay (ADR 0005)
+3. Both Alpine and Buildroot automatically pick up the service from the common overlay (ADR 0009)
 
 ## Adding a new package
 

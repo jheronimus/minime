@@ -1,4 +1,4 @@
-# 0007: H700 AXP PMIC — RSB Bus Driver Panics on Boot
+# ADR 0021: H700 AXP PMIC — RSB Bus Driver Panics on Boot
 
 * **Status**: Accepted (Revert)
 * **Deciders**: Minime Core Architecture Team

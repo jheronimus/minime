@@ -1,4 +1,4 @@
-# 0019: Bootsplash — framebuffer logo across the whole boot
+# ADR 0019: Bootsplash — framebuffer logo across the whole boot
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team

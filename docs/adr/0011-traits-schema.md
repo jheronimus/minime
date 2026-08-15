@@ -1,4 +1,4 @@
-# 0012: Minime Traits Schema & Cascade
+# ADR 0011: Minime Traits Schema & Cascade
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
@@ -197,5 +197,5 @@ flags or resolution logic.
 
 - `docs/research/traits.c` / `traits.h` — reference parser implementation.
 - `minime/boards/*/traits/` — the trait files themselves (source of truth).
-- `docs/adr/0014-cpu-performance-and-thermal-policy.md` — CPU clock semantics.
-- `docs/adr/0025-h700-device-detection.md` — DTB detection & selection.
+- `docs/adr/0018-cpu-performance-and-thermal-policy.md` — CPU clock semantics.
+- `docs/adr/0012-h700-device-detection.md` — DTB detection & selection.

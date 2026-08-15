@@ -12,7 +12,7 @@
 # re-start never spawns duplicates: the kmsg drain and the thermal monitor.
 # The thermal worker reads trip_point_* from the zone dir (located via the
 # cpu_thermal_path trait) so the kernel's step_wise governor and the log
-# thresholds can never disagree (ADR 0014).
+# thresholds can never disagree (ADR 0018).
 
 description="Persistent per-boot logger + thermal monitor"
 
@@ -99,7 +99,7 @@ start() {
 			-b "${SYSLOG_KEEP}" 2>/dev/null || true
 	fi
 
-	# Second worker: thermal monitor (ADR 0014).  The zone dir comes from the
+	# Second worker: thermal monitor (ADR 0018).  The zone dir comes from the
 	# cpu_thermal_path trait (stripped of /temp); thresholds are derived from
 	# the zone's trip_point_* files at worker start.  If no passive trip exists
 	# the worker falls back to critical-only ("throttle-detection only").
@@ -113,7 +113,7 @@ start() {
 	if [ -n "${THERMAL_ZONE_DIR}" ] && [ -r "${THERMAL_ZONE_DIR}/temp" ]; then
 		cat > "${THERMAL_WORKER}" <<'THERMAL_EOF'
 #!/bin/sh
-# Thermal monitor worker spawned by the logger service (ADR 0014).
+# Thermal monitor worker spawned by the logger service (ADR 0018).
 # $1 = thermal zone dir, $2 = poll interval (s).
 set -eu
 

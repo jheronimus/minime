@@ -1,6 +1,4 @@
-# 3. Dual-Distro Architecture & Path Resolution Contract
-
-Date: 2026-07-27
+# ADR 0001: Dual-Distro Architecture & Path Resolution Contract
 
 ## Status
 

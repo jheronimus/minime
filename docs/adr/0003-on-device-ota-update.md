@@ -1,4 +1,4 @@
-# 0017: On-Device OTA Update Tool
+# ADR 0003: On-Device OTA Update Tool
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
@@ -47,7 +47,7 @@ installed one (exits early when already current), stops the UI, applies
 ### 2. UI switching without reflashing
 
 The OTA archive carries `.minime/ui.env` and the UI payload `.system/`
-(ADR 0006). `update.sh allium` on a MinUI device therefore installs the
+(ADR 0002). `update.sh allium` on a MinUI device therefore installs the
 Allium payload and, on next boot, `init.d/ui` reads the overlaid `ui.env`
 and launches Allium. `update.sh` reads the *pre-switch* installed UI from
 `ui.env` before applying, since the archive overwrites it.
@@ -59,7 +59,7 @@ and launches Allium. `update.sh` reads the *pre-switch* installed UI from
 immediately. A pidfile guards against concurrent runs. This survives the
 invoking telnet session dropping — the previous host-side flow had to
 background the extraction and poll for a completion marker for the same
-reason (ADR 0006 §3).
+reason (ADR 0002 §3).
 
 ### 4. Roms/ folders use one canonical (MinUI) naming scheme
 
@@ -88,7 +88,7 @@ removed from `update.sh` and both `post-build.sh` scripts.
 ## Consequences
 
 - No IP/hardcoding needed for updates: reach the device by mDNS name
-  (`minime.local`, ADR 0018) or IP via `just remote`.
+  (`minime.local`, ADR 0017) or IP via `just remote`.
 - The device must reach GitHub over HTTPS to download the archive; it already
   ships curl + CA certificates on both targets.
 - The updater ships in the rootfs overlay and is itself replaced by the OTA
@@ -101,5 +101,5 @@ removed from `update.sh` and both `post-build.sh` scripts.
 
 - On-device updater: `minime/boards/common/overlay/usr/bin/update.sh`.
 - Shared mapping: `roms/mappings`, `roms/install.sh`.
-- Related: `docs/adr/0006-ota-updates.md` (archive format), `docs/adr/0013-network-services-passwordless.md`
-  (telnet/FTP model), `docs/adr/0018-mDNS-self-announcement.md` (name resolution).
+- Related: `docs/adr/0002-ota-package-format.md` (archive format), `docs/adr/0016-network-services-passwordless.md`
+  (telnet/FTP model), `docs/adr/0017-mdns-self-announcement.md` (name resolution).

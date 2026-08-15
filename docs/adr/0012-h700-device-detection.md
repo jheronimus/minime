@@ -1,4 +1,4 @@
-# ADR 0025: H700 Device Detection
+# ADR 0012: H700 Device Detection
 
 ## Status
 

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This research evaluates the technical feasibility of decoupling **muOS** ([MustardOS](https://github.com/MustardOS)) from its native Buildroot OS foundations and porting its user interface frontend to run on top of **Minime**, fully conforming to [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0002-contracts.md).
+This research evaluates the technical feasibility of decoupling **muOS** ([MustardOS](https://github.com/MustardOS)) from its native Buildroot OS foundations and porting its user interface frontend to run on top of **Minime**, fully conforming to [ADR 0010: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0010-ui-contract-and-traits.md).
 
 ### Core Principles & Architecture Strategy
 1. **Surgical Isolation & Low Code Churn**: Upstream `MustardOS/frontend` is actively developed. All changes must be strictly isolated (via conditional macro overrides, thin shims, and environment fallbacks) to ensure effortless upstream rebase and tracking.
@@ -44,11 +44,11 @@ The `frontend` repository ([MustardOS/frontend](https://github.com/MustardOS/fro
 | **muOS C Binaries** | muOS Payload | `/mnt/sdcard/MUOS/bin/` | Compiled `MustardOS/frontend` binaries (`muxfrontend`, `mubattery`, `muhotkey`, `mulog`, `libmustage.so`) |
 | **muOS Launcher Scripts** | muOS Payload | `/mnt/sdcard/MUOS/script/` | Lightweight orchestration scripts (`frontend.sh`, `launch.sh`, `quit.sh`, `func.sh`) |
 | **muOS UI Assets** | muOS Payload | `/mnt/sdcard/MUOS/share/` | Fonts, themes, language bundles, gamecontrollerdb |
-| **Active UI Manifest** | muOS Payload | `/mnt/sdcard/.minime/ui.env` | ADR 0002 contract file describing muOS entrypoint |
+| **Active UI Manifest** | muOS Payload | `/mnt/sdcard/.minime/ui.env` | ADR 0010 contract file describing muOS entrypoint |
 
 ---
 
-## Implementing the Minime UI Contract (ADR 0002 Compliance)
+## Implementing the Minime UI Contract (ADR 0010 Compliance)
 
 ### 1. Active UI Manifest (`.minime/ui.env`)
 The muOS payload archive bundles `.minime/ui.env` at the root of the zip archive:
@@ -92,7 +92,7 @@ GET_TRAIT() {
 
 ### 4. Power & Lifecycle Management
 - **Start**: `/etc/init.d/ui` reads `.minime/ui.env` and executes `/mnt/sdcard/MUOS/launch.sh` via `start-stop-daemon`.
-- **Shutdown / Reboot**: `script/mux/quit.sh` calls `poweroff` or `reboot` directly (fully ADR 0002 compliant).
+- **Shutdown / Reboot**: `script/mux/quit.sh` calls `poweroff` or `reboot` directly (fully ADR 0010 compliant).
 - **Stop / Teardown**: Minime OS sends `SIGTERM` to `launch.sh` process group, followed by `killall -9 UI_PROCESSES`.
 
 ---
@@ -133,6 +133,6 @@ To keep `MustardOS/frontend` easily updateable from upstream:
 
 ## Primary Sources & References
 
-- [ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0002-contracts.md)
+- [ADR 0010: UI Decoupling, Contract Manifest & Hardware Traits Architecture](../adr/0010-ui-contract-and-traits.md)
 - [MustardOS/internal Repository](https://github.com/MustardOS/internal) (`script/init/S99muos.sh`, `script/mux/frontend.sh`, `script/var/func.sh`)
 - [MustardOS/frontend Repository](https://github.com/MustardOS/frontend) (`Makefile`, `common/options.h`, `common/config.c`, `module/muxfrontend.c`)

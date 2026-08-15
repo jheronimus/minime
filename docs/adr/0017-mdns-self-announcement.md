@@ -1,4 +1,4 @@
-# 0018: mDNS Self-Announcement (`minime.local`)
+# ADR 0017: mDNS Self-Announcement (`minime.local`)
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
@@ -9,7 +9,7 @@
 ## Context & Problem Statement
 
 Remote tooling (`just remote`, `just deploy`, the on-device updater of
-ADR 0017) needs to reach the device by **name or IP**. IPs come from DHCP and
+ADR 0003) needs to reach the device by **name or IP**. IPs come from DHCP and
 change; hardcoding them in `deploy.cfg` (`target_ip=...`) is fragile and
 breaks the moment more than one device is on the network.
 
@@ -18,7 +18,7 @@ A per-SoC naming scheme was considered (`minime.rk3566`, `minime.h700`,
 (RFC 6762) — `minime.rk3566.local` would register only `minime` as the
 hostname and collide with every other Minime. The SoC is also no longer
 needed in the name, because the device identifies itself during updates
-(ADR 0017). The remaining question is therefore just: how does every Minime
+(ADR 0003). The remaining question is therefore just: how does every Minime
 announce a stable, unique, resolvable name?
 
 ## Decision
@@ -39,7 +39,7 @@ mDNSResponder.
 - **Buildroot**: `BR2_PACKAGE_MDNSD=y` was already in
   [common.config](../../minime/targets/buildroot/external/configs/common.config)
   but shipped no init service — its SysV `S50mdnsd` is removed by
-  `post-build.sh` (ADR 0005). This ADR wires it up with the shared service below.
+  `post-build.sh` (ADR 0009). This ADR wires it up with the shared service below.
 - **Alpine**: built as a local aport
   [aports/mdnsd/APKBUILD](../../minime/targets/alpine/aports/mdnsd/APKBUILD)
   from the upstream release tarball and added to `world-common` + the
@@ -57,7 +57,7 @@ runlevel) runs `mdnsd -n -s -H minime`:
 
 - `-n` keeps mdnsd in the foreground so `start-stop-daemon` tracks the pid
   correctly (mdnsd daemonizes by default otherwise).
-- `-s` routes logs to syslog (captured by the `logger` service, ADR 0010).
+- `-s` routes logs to syslog (captured by the `logger` service, ADR 0007).
 - `-H minime` fixes the advertised hostname, independent of the OS hostname
   service.
 - The pidfile is managed by `start-stop-daemon --make-pidfile`, so mdnsd's
@@ -70,7 +70,7 @@ runlevel) runs `mdnsd -n -s -H minime`:
 
 [`/etc/mdns.d/`](../../minime/boards/common/overlay/etc/mdns.d/) ships four
 DNS-SD records — `_minime._tcp` (custom discovery type) plus `_telnet._tcp`,
-`_ftp._tcp`, `_ssh._tcp` for the remote-access daemons (ADR 0013). These
+`_ftp._tcp`, `_ssh._tcp` for the remote-access daemons (ADR 0016). These
 records are what make mdnsd register the `minime.local` A/AAAA records in the
 first place, and make devices browseable in `avahi-browse`/Bonjour.
 
@@ -91,7 +91,7 @@ an mDNS-aware resolver (avahi + nss-mdns).
   device gets which is not predictable.
 - mDNS is link-local and unauthenticated; it exposes only a hostname and
   service/port presence, consistent with the development-phase security
-  posture of ADR 0013.
+  posture of ADR 0016.
 - Alpine's mdnsd builds from source in CI (Buildroot's was already building).
 
 ## Reference
@@ -103,5 +103,5 @@ an mDNS-aware resolver (avahi + nss-mdns).
   `minime/targets/alpine/configs/world-common`, `minime/targets/alpine/scripts/build.sh`,
   `minime/targets/buildroot/external/configs/common.config`.
 - Client docs: `deploy_sample.cfg`, `.agents/skills/live-test/SKILL.md`.
-- Related: `docs/adr/0017-on-device-ota-update-tool.md` (the update path the
-  name serves), `docs/adr/0013-network-services-passwordless.md`.
+- Related: `docs/adr/0003-on-device-ota-update.md` (the update path the
+  name serves), `docs/adr/0016-network-services-passwordless.md`.

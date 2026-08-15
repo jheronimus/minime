@@ -1,4 +1,4 @@
-# 0020: Charger-triggered boot — power off unless software or user-initiated
+# ADR 0020: Charger-triggered boot — power off unless software or user-initiated
 
 * **Status**: Superseded
 * **Deciders**: Minime Core Architecture Team
@@ -33,7 +33,7 @@ These handhelds **auto-power-on when the charger is plugged in** while off
 
 1. **Overnight drain**: a user plugs in to charge before bed; the device
    boots, stays running, and is low/dead by morning.
-2. **OTA reboot stall**: the on-device updater (ADR 0017) applies an update
+2. **OTA reboot stall**: the on-device updater (ADR 0003) applies an update
    and `reboot`s. If the charger is connected, the reboot lands back in
    "charger mode" — a boot state where only a charging screen is shown and
    the OS never finishes starting. The OTA appears to hang and the update is

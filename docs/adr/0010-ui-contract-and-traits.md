@@ -1,4 +1,4 @@
-# ADR 0002: UI Decoupling, Contract Manifest & Hardware Traits Architecture
+# ADR 0010: UI Decoupling, Contract Manifest & Hardware Traits Architecture
 
 ## Status
 Accepted

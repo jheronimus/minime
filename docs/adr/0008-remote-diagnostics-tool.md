@@ -1,4 +1,4 @@
-# 0026. Remote Diagnostics & Input Simulation Tool
+# ADR 0008: Remote Diagnostics & Input Simulation Tool
 
 ## Context
 

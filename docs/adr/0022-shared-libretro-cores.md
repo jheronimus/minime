@@ -1,4 +1,4 @@
-# ADR 0023: Shared RetroArch Core Build
+# ADR 0022: Shared RetroArch Core Build
 
 ## Status
 
@@ -54,7 +54,7 @@ Build every core **once** in CI and let both UIs consume the flat output.
 ## Consequences
 
 - One build, one toolchain, zero Makefile drift between UIs; the shared
-  `-march=armv8-a+crc -ffast-math` baseline (ADR 0008/0009) is applied to every
+  `-march=armv8-a+crc -ffast-math` baseline (ADR 0005/0006) is applied to every
   core in both UIs.
 - CI is green even while drastic/yabasanshiro are incomplete (`optional=1`).
 - Pinned cores with unapplying patches fail loudly and are caught by
@@ -63,8 +63,8 @@ Build every core **once** in CI and let both UIs consume the flat output.
 
 ## References
 
-- ADR 0008/0009: single-binary CPU ISA and core build optimization flags.
+- ADR 0005/0006: single-binary CPU ISA and core build optimization flags.
 - ADR 0004: target build convention (this ADR covers UI cores, not target
   rootfs; `buildcores.sh` is a separate `minime/build/` component).
-- ADR 0015 (yabasanshiro port) and ADR 0022 (drastic conversion) describe the
+- ADR 0023 (yabasanshiro port) and ADR 0024 (drastic conversion) describe the
   two WIP cores.

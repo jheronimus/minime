@@ -1,4 +1,4 @@
-# 0013: Passwordless Network Services During Development
+# ADR 0016: Passwordless Network Services During Development
 
 * **Status**: Accepted (interim, for the active development/debugging stage)
 * **Deciders**: Minime Core Architecture Team
@@ -79,5 +79,5 @@ project is in the heavy development/debugging stage. Specifically:
 - Init services: `minime/boards/common/overlay/etc/init.d/{telnetd,ftpd,dropbear,wifi}`.
 - Empty-password build steps: `minime/targets/alpine/scripts/build.sh`,
   `minime/targets/buildroot/external/configs/common.config`.
-- Related: `docs/adr/0010-logging-and-diagnostics.md` (log capture over these
-  services), `docs/adr/0011-iwd-wifi.md` (Wi-Fi stack).
+- Related: `docs/adr/0007-logging-and-diagnostics.md` (log capture over these
+  services), `docs/adr/0015-iwd-wifi.md` (Wi-Fi stack).

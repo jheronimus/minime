@@ -1,4 +1,4 @@
-# ADR 0024: MinUI feature port — rewind, Wi-Fi, Bluetooth, Power as surgical additions
+# ADR 0025: MinUI feature port — rewind, Wi-Fi, Bluetooth, Power as surgical additions
 
 ## Status
 Accepted
@@ -12,7 +12,7 @@ snapshot model, generic UI widgets) — the "change half of MinUI" churn we
 avoid on `main`.
 
 The firmware on `main` differs from what IMPORT targeted: Wi-Fi is
-`iwd`/`iwctl` ([ADR 0011](0011-iwd-wifi.md)), not wpa_supplicant; Bluetooth is
+`iwd`/`iwctl` ([ADR 0015](0015-iwd-wifi.md)), not wpa_supplicant; Bluetooth is
 a single `/etc/init.d/bluetooth` gated by `config/bluetooth/enabled`; the
 toolchain containers ship no libdbus dev headers; `device.sh` + `boot.cmd`
 already enforce CPU undervolt from `config/device.cfg`.
@@ -85,7 +85,7 @@ to existing code, preserving IMPORT/NextUI behavior.
 - Verification: on-device live test per AGENTS.md (OTA, manifest check, logs).
 
 ## References
-- [ADR 0011](0011-iwd-wifi.md) — iwd/wifi service (gate change)
+- [ADR 0015](0015-iwd-wifi.md) — iwd/wifi service (gate change)
 - `minime/ui/minui/workspace/all/settings/`, `common/menu.c|keyboard.c|generic_wifi.c|generic_bt.c|wireless.h`
 - `minarch/minarch.c` (rewind + `run_frame`), `common/api.c` (power policy)
 - `minime/boards/common/overlay/etc/init.d/wifi` (enable gate)

@@ -1,4 +1,4 @@
-# ADR 0001: FAT32 Cluster Sizing & Image Sizing Floor
+# ADR 0013: Storage — FAT32 Cluster Sizing & Image Sizing Floor
 
 ## Status
 Accepted

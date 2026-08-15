@@ -1,4 +1,4 @@
-# 0010: Persistent Per-Boot Logging and On-Demand Diagnostics
+# ADR 0007: Persistent Per-Boot Logging and On-Demand Diagnostics
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team

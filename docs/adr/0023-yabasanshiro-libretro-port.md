@@ -1,4 +1,4 @@
-# 0015: YabaSanshiro libretro core port
+# ADR 0023: YabaSanshiro libretro core port
 
 * **Status**: Accepted
 * **Deciders**: Minime Core Architecture Team
