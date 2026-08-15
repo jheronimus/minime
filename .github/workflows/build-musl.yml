@@ -14,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'minime/**'
+      - 'src/**'
       - '.github/workflows/build-musl.yml'
       - '.github/workflows/build-bootloader.yml'
   schedule:
