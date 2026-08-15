@@ -1,6 +1,6 @@
 ---
 name: live-test
-description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers the on-device updater (`update.sh`), `just remote`/`just upload`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, update log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
+description: Use when deploying updated Minime binaries to the physical handheld over OTA, verifying a change on real hardware, collecting device logs, or debugging an on-device failure. Covers the on-device updater (`update.sh`), `just remote`/`just rsh`/`just upload`/`just deploy`, the device log locations (boot.log, per-system emulator logs, ui.log, wifi diagnostics, update log), and the 5 Whys debugging workflow. Triggers: "deploy to device", "test on hardware", "does it work on the device", "verify on-device", "collect logs from the device", "why doesn't X work on the device".
 ---
 
 # Live Testing on Physical Hardware

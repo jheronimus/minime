@@ -367,6 +367,14 @@ remote cmd="" ip="":
     set -euo pipefail
     ./scripts/remote-cmd.sh "{{cmd}}" "{{ip}}"
 
+# Execute a remote shell command on target device over SSH (dropbear, blank-password root)
+# Usage:
+#   just rsh "ps aux" [ip]
+rsh cmd="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/ssh-cmd.sh "{{cmd}}" "{{ip}}"
+
 # Upload a file to target device over FTP
 # Usage:
 #   just upload <file> [remote_filename] [ip]

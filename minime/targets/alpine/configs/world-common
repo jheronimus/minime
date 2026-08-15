@@ -54,8 +54,9 @@ lz4-libs
 iproute2
 iputils
 iproute2-minimal
-# dropbear SSH server (started on demand, not enabled by default; see
-# /etc/init.d/dropbear).  Provides an encrypted remote shell alongside telnet.
+# dropbear SSH server (enabled by default via the boot runlevel; touch
+# /mnt/sdcard/.minime/config/ssh/disabled to stop it).  Provides an encrypted
+# remote shell alongside telnet.
 dropbear
 # ── DNS / mDNS ───────────────────────────────────────────────────────────
 # openresolv: iwd hands the DHCP DNS servers to it (NameResolvingService=resolvconf).

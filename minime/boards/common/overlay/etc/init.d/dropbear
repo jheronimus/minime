@@ -1,8 +1,8 @@
 #!/sbin/openrc-run
 # shellcheck disable=SC2034
-# dropbear: SSH server (encrypted remote shell).  Not enabled by default —
-# start it by touching /mnt/sdcard/.minime/config/ssh/enabled and rebooting,
-# or start it on demand with `rc-service dropbear start`.
+# dropbear: SSH server (encrypted remote shell).  Enabled by default — touch
+# /mnt/sdcard/.minime/config/ssh/disabled to stop it on boot, or stop it on
+# demand with `rc-service dropbear stop`.
 # Host keys persist on the FAT partition so they survive rootfs updates.
 
 description="SSH server (dropbear)"
@@ -10,7 +10,7 @@ description="SSH server (dropbear)"
 DB_PIDFILE="/run/dropbear.pid"
 DB_HOSTKEY_DIR="/mnt/sdcard/.minime/config/ssh"
 DB_HOSTKEY="${DB_HOSTKEY_DIR}/dropbear_host_key"
-DB_ENABLED="${DB_HOSTKEY_DIR}/enabled"
+DB_DISABLED="${DB_HOSTKEY_DIR}/disabled"
 DB_CONFIG="${DB_HOSTKEY_DIR}/config"
 DB_PORT="22"
 
@@ -29,12 +29,8 @@ keygen() {
 	chmod 600 "${DB_HOSTKEY}" 2>/dev/null || true
 }
 
-is_enabled() {
-	[ -f "${DB_ENABLED}" ]
-}
-
 start() {
-	if ! is_enabled; then
+	if [ -f "${DB_DISABLED}" ]; then
 		einfo "dropbear disabled by user"
 		return 0
 	fi

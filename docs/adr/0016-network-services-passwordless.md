@@ -41,11 +41,10 @@ project is in the heavy development/debugging stage. Specifically:
   persisted on the FAT partition (`/mnt/sdcard/.minime/config/ssh/`), so
   `ssh <host>` connects as root without prompting — behaviourally identical
   to `telnet <host>`.
-- **SSH is not enabled by default**: the `dropbear` service has no boot
-  runlevel entry; it starts only when the user enables it
-  (`/mnt/sdcard/.minime/config/ssh/enabled` + `rc-update add dropbear default`)
-  or on demand (`rc-service dropbear start`). telnet/FTP remain the default
-  no-auth access paths.
+- **SSH is enabled by default**: the `dropbear` service is in the `boot`
+  runlevel alongside telnet/FTP. To disable it on a device, touch
+  `/mnt/sdcard/.minime/config/ssh/disabled` and reboot (or
+  `rc-service dropbear stop`).
 
 ### Rationale
 
