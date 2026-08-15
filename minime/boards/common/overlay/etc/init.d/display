@@ -1,0 +1,57 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# display: apply the display rotation that Minime owns outside the UI, and
+# report which layer enforces orientation for this device.
+#
+# Most devices rotate in the UI via the `screen_rotation` trait: the H700 and
+# RK3326 display controllers have no rotation unit and their panels do not
+# self-rotate (verified against the panel-firmware-generator init sequences).
+# On RK3566 the VOP2 can rotate in hardware at scanout: a device opts in by
+# setting `screen_rotation_kernel=<deg>` in its traits, in which case the UI
+# must use `screen_rotation=0` (see docs/adr/0026-display-rotation.md).
+
+description="Apply display rotation (KMS plane)"
+
+TRAITS_FILE="/mnt/sdcard/.minime/traits"
+
+depend() {
+	need modules traits
+	before ui
+	after fb-unblank gpudriver
+}
+
+get_trait() {
+	key="$1"
+	[ -f "$TRAITS_FILE" ] || return 0
+	grep "^${key}=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r' || true
+}
+
+log_boot() {
+	/usr/share/minime/scripts/log-boot.sh DISPLAY "$@" 2>/dev/null || true
+}
+
+start() {
+	kernel_rotation=$(get_trait screen_rotation_kernel)
+	if [ -n "$kernel_rotation" ] && [ "$kernel_rotation" != "0" ] && [ -x /usr/bin/minime-rotate ]; then
+		ebegin "Applying kernel display rotation (${kernel_rotation} deg)"
+		if /usr/bin/minime-rotate "$kernel_rotation" >/dev/null 2>&1; then
+			log_boot "Kernel rotation applied: ${kernel_rotation} deg"
+			eend 0
+			return 0
+		fi
+		eend 1 "hardware rotation failed"
+		return 1
+	fi
+
+	rotation=$(get_trait screen_rotation)
+	ebegin "Display orientation (UI-driven, screen_rotation=${rotation:-0} deg)"
+	if [ -x /usr/bin/minime-rotate ]; then
+		/usr/bin/minime-rotate --query 2>/dev/null || true
+	fi
+	log_boot "UI-driven rotation: ${rotation:-0} deg"
+	eend 0
+}
+
+stop() {
+	return 0
+}

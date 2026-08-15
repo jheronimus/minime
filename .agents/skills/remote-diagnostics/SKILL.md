@@ -153,6 +153,7 @@ If the screen appears upside down or sideways:
    just shell "remote info"
    ```
 2. Verify `screen_rotation` in `/mnt/sdcard/.minime/traits`:
-   * $0^\circ$: H700, RK3326, RG503
-   * $90^\circ$: RG Arc-D, RG Arc-S
-   * $270^\circ$: RG353 family (RG353V/P/M)
+   * $0^\circ$: landscape panels (most H700, RK3326 RG351P/M/MP, RG503, RG DS)
+   * $90^\circ$: RG Arc-D, RG Arc-S, RG40XX-V, RG351V (verify on-device)
+   * $270^\circ$: RG353 family (RG353V/P/M), RG28XX (verify on-device)
+   Panel firmware blobs (H700) and the display overlay are described in [ADR 0027](/docs/adr/0027-display-rotation.md).

@@ -46,7 +46,9 @@
 
 ## Display, Audio & Input
 
-- [ ] Check that display rotation is consistent throughout the os (framebuffer, UI) and relies on traits. Check if remote tool needs to perform its own rotation instead of reading the traits file or doing nothing.
+- [ ] On-device verify display orientation per device with `just shell "remote screenshot --raw"` ([ADR 0027](adr/0027-display-rotation.md)): confirm RG28XX (270) / RG40XX-V (90) / RG351V (90) directions and correct any that are 180° off. Confirm the newly-shipped H700 panel firmware blobs bring the rg28xx/rg34xx/rg40xx/rgcubexx panels up upright.
+- [ ] Source panel init sequences (`.panel` blobs) for the H700 v2/sp panel variants (rg34xx-sp, rg35xx-sp-v2, rg40xx-v2) — no firmware presets exist yet, so those devices have no display.
+- [ ] Enable `screen_rotation_kernel` (VOP2 hardware rotation via init.d/display) on RK3566: requires dropping UI rotation (`screen_rotation=0`) and verifying the fbdev (Allium) path, whose framebuffer is allocated at native mode dimensions (kernel fbdev 90/270 rotation TODO).
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 - [ ] Implement the bootsplash ([ADR 0019](adr/0019-bootsplash.md)): `MINIME` framebuffer art + looping gradient bar across initramfs/rootfs, volume-key TTY reveal, `ui`-service failure handoff, single-owner boot brightness

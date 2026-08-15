@@ -7,4 +7,5 @@ source "$BR2_EXTERNAL_MINIME_PATH/package/fatresize/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/drkhrse-miyoo-bezels/Config.in"
 
 source "$BR2_EXTERNAL_MINIME_PATH/package/remote/Config.in"
+source "$BR2_EXTERNAL_MINIME_PATH/package/minime-rotate/Config.in"
 source "$BR2_EXTERNAL_MINIME_PATH/package/benchmark/Config.in"

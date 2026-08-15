@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MINIME_ROTATE
+	bool "minime-rotate"
+	help
+	  Minime display overlay helper: set/query the DRM/KMS primary-plane
+	  rotation (RK3566 VOP2 hardware rotation) from the device traits.

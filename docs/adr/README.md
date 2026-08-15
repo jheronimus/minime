@@ -25,3 +25,4 @@ When a topic is addressed across several ADRs, they are merged into a single ADR
 13. **DraStic libretro port** — `0024`.
 14. **UI ports** — `0025` MinUI feature port.
 15. **Performance benchmarking** — `0026` benchmark suite.
+16. **Display rotation ownership** — `0027` display overlay, panel firmware, traits.

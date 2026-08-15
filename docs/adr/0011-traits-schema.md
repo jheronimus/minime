@@ -61,6 +61,7 @@ headers are documentation and ignored by parsers.
 [screen]    screen_width, screen_height, screen_rotation, screen_aspect,
             screen_refresh_rate, screen_backlight_path, screen_backlight_max,
             screen_blank_path,
+            screen_rotation_kernel, (optional, read by init.d/display)
             screen2_width, screen2_height, screen2_rotation,
             screen2_backlight_path, screen2_blank_path,
             screen2_touch, screen2_touch_device_name
@@ -156,15 +157,22 @@ Rocknix sources (cloned, not web-searched) plus on-device checks:
   (See `docs/research/traits.c` for the reference HAL.)
 - `screen_rotation` is the userspace UI rotation in degrees (0/90/180/270),
   consumed by `platform.c`/the Allium port to rotate the SDL renderer. It is
-  the single source of truth for UI orientation. On RK3326 it is 0: the DTS
-  panel `rotation` property (e.g. `rk3326-anbernic-rg351p.dts`) is applied by
-  the DRM driver, so the framebuffer presented to userspace is already
-  upright. RK3566 devices rely on the trait instead (ARC=90, RG353 family=270,
-  RG503/RG DS=0); their kernel DTS/panel drivers do not rotate. The kernel
-  fbcon boot-console rotation (`fbcon=rotate:1` in `rk3566/boot.env`) is a
-  separate layer that only affects the transient pre-UI console and is
-  documented there; it is not trait-derived because bootargs are baked at
-  image build time and cannot read the runtime traits file.
+  the single source of truth for UI orientation. **No kernel/panel driver
+  rotates the scanout from it**: `panel-simple` and the H700 generic panel
+  driver only map it to the connector `panel-orientation` hint (a hint to
+  userspace, not a rotation), and the H700/RK3326 display controllers have no
+  rotation unit. RK3566 devices rely on the trait (ARC=90, RG353 family=270,
+  RG503/RG DS=0); their kernel DTS/panel drivers do not rotate. RK3326 and
+  H700 use `screen_rotation=0` for landscape panels; portrait-mounted panels
+  carry the real angle (e.g. RG28XX=270) so the UI rotates them. The optional
+  `screen_rotation_kernel` key (0/90/180/270) lets `init.d/display` apply
+  rotation in hardware on RK3566 VOP2 via `minime-rotate`; when set, the UI
+  must use `screen_rotation=0` (see [ADR 0027](0027-display-rotation.md)).
+  The kernel fbcon boot-console rotation (`fbcon=rotate:1` in
+  `rk3566/boot.env`) is a separate layer that only affects the transient
+  pre-UI console and is documented there; it is not trait-derived because
+  bootargs are baked at image build time and cannot read the runtime traits
+  file.
 
 ### 4. Strict parser contract
 
