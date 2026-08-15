@@ -97,9 +97,19 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
 All checks must pass before committing. Do not suppress/bypass warnings.
 All gates are defined in the root `Justfile` and must be run via `just`.
 
+The gate is **enforced by CI, not by convention**: `.github/workflows/validate.yml`
+runs the full `just validate` on every push to `main` and every PR, and the
+build pipelines (`build-musl.yml` / `build-glibc.yml`) gate image/OTA uploads on
+a `validate-static` job. A commit that fails validation is a red CI run and
+**cannot ship an image or OTA**. Local `pre-commit`/`pre-push` hooks
+(`just install-hooks`) are convenience only — never claim "it passed locally" in
+place of the CI verdict, and never use `git commit/push --no-verify` to bypass
+the gate. (`docs/INFRA.md` documents enforcement; branch protection should mark
+the `Validate` check required on `main`.)
 
 - **Fast gates (pre-commit)**: `just validate`
 - **CI-only gates**: `just validate-ci`
+- **Static gate (CI build gate)**: `just validate-static`
 - **Developer setup**: `just install-hooks`
 
 

@@ -8,6 +8,11 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ## 1. GitHub Actions Workflows (`.github/workflows/`)
 
+### `validate.yml` — Mandatory Validation Gate
+- **Trigger**: Every push to `main` (all paths, not just `minime/**`) and every pull request.
+- **Purpose**: Runs the full `just validate` quality gate in CI (just, shellcheck, actionlint, clang-format via `.mise.toml`; Rust via rustup for `check-allium`). This is the authoritative verdict — a commit that fails validation is a red run, regardless of what local hooks reported.
+- **Enforcement**: (a) the `build-musl.yml` / `build-glibc.yml` pipelines gate their image/OTA uploads on a `validate` job running `just validate-static` — a validation failure means nothing ships; (b) repo owners should mark this workflow's `Validate` check as **required** in branch protection for `main`, which hard-blocks PR merges and re-pushes of failed commits. Local `pre-commit`/`pre-push` hooks (`just install-hooks`) are convenience; `git commit/push --no-verify` can always bypass them, which is why CI enforcement exists. GitHub.com has no pre-receive hooks, so a deliberately bypassed push can land but will fail CI validation and cannot ship.
+
 ### `build-musl.yml` / `build-glibc.yml` — Main Build Pipelines
 - **Trigger**: `build-musl.yml` (alpine): push to `main` filtered to `minime/**`; daily cron at 04:00 UTC (`0 4 * * *`, = 07:00 GMT+3); `workflow_dispatch` (comma-separated `targets` input of alpine boards, default `all`). `build-glibc.yml` (buildroot): same daily cron and `workflow_dispatch` (buildroot boards); **no push trigger**.
 - **Purpose**: Builds bootloaders, UIs, OS images, and OTA update packages. Push to `main` builds only the fast-path alpine board (`FAST_PATH_TARGET` env at the top of `build-musl.yml`, default `rk3566`); the daily cron and `all` dispatch rebuild every board of that distro. Uploads `.img.zst` / `.tar.zst` to the `testing` GitHub Release on any main-branch run.

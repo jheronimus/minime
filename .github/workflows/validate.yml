@@ -1,0 +1,59 @@
+name: Validate
+
+# The authoritative validation gate. Runs `just validate` (the full pre-commit
+# quality gate) on every push to main and on pull requests. A failing run makes
+# the push's required `validate` branch-protection check fail, and the build
+# workflows (`build-musl.yml` / `build-glibc.yml`) gate their image/OTA uploads
+# on a validation step, so a commit that fails validation can never ship.
+#
+# This workflow triggers on ALL paths (not just `minime/**`) so a broken root
+# script or workflow file is caught even when no image build is triggered.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: minime-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install mise
+        run: |
+          curl -fsSL https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: "Install tools (mise: just, shellcheck, actionlint, clang-format)"
+        run: mise install
+
+      - name: Install Rust (for check-allium)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            minime/ui/allium/target
+          key: validate-cargo-${{ hashFiles('minime/ui/allium/Cargo.lock') }}
+          restore-keys: |
+            validate-cargo-
+
+      - name: Run validation
+        run: mise exec -- just validate

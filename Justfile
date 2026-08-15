@@ -3,7 +3,12 @@ default: validate
 # ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
 
 # Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes, UI submodules)
-validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-git check-build-flow check-allium check-minui check-yabause
+validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-package-lists check-git check-build-flow check-allium check-minui check-yabause
+
+# Fast static gate (no cargo/clang toolchains): the subset of `validate` that
+# CI build workflows run to gate image/OTA shipping. `validate` is the full
+# pre-commit gate; `validate-ci` adds check-defconfigs + check-packages.
+validate-static: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-package-lists check-git check-build-flow
 
 # Validate Allium Rust code formatting (cargo fmt) and lints (cargo clippy)
 check-allium:
@@ -36,6 +41,11 @@ check-patches:
 # Validate SHA-256 and SHA-512 hash formats in package manifests
 check-hashes:
     ./scripts/check-hashes.sh
+
+# Cross-check local package lists (Alpine ALPINE_PKGS/world-common, Buildroot
+# common.config/external packages) so every referenced package is built.
+check-package-lists:
+    ./scripts/check-package-lists.sh
 
 # ── Shell script validation ───────────────────────────────────────────────────
 
@@ -227,6 +237,11 @@ install-hooks:
     printf '#!/usr/bin/env sh\n# Auto-installed by `just install-hooks`. Run `just validate` manually.\nset -eu\necho "==> pre-commit: running just validate"\nexec just validate\n' > "$hook"
     chmod +x "$hook"
     echo "Installed pre-commit hook at $hook"
+
+    hook=".git/hooks/pre-push"
+    printf '#!/usr/bin/env sh\n# Auto-installed by `just install-hooks`. Run `just validate` before pushing.\nset -eu\necho "==> pre-push: running just validate"\nexec just validate\n' > "$hook"
+    chmod +x "$hook"
+    echo "Installed pre-push hook at $hook"
 
 # ── Image Management ──────────────────────────────────────────────────────────
 
