@@ -105,6 +105,8 @@ ffmpeg
 # ── Minime firmware pieces (libpng/zlib are SDL_image deps) ─────────────
 libpng
 zlib
+# libstdc++: C++ runtime for closed-source cores (e.g. DraStic DT_NEEDED)
+libstdc++
 # ── Local Minime packages (built by alpine/aports/*) ─────────────────────
 # minui / allium   UI frontends (mutually exclusive, fetch-prebuilt)
 # fatresize        FAT32 expansion
