@@ -47,10 +47,10 @@ start() {
 stop() {
 	ebegin "Stopping Bluetooth stack"
 
-	start-stop-daemon -k -q -p /run/bluealsa.pid 2>/dev/null || true
+	start-stop-daemon -K -q -p /run/bluealsa.pid 2>/dev/null || true
 	rm -f /run/bluealsa.pid
 
-	start-stop-daemon -k -q -p /run/bluetoothd.pid 2>/dev/null || true
+	start-stop-daemon -K -q -p /run/bluetoothd.pid 2>/dev/null || true
 	rm -f /run/bluetoothd.pid
 
 	eend 0
