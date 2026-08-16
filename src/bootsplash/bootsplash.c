@@ -5,6 +5,7 @@
  * gradient progress bar. Listens to evdev volume keys to toggle between
  * bootsplash (KD_GRAPHICS) and console log (KD_TEXT). Watches OpenRC UI
  * lifecycle to perform smooth handoff or reveal errors on failure.
+ * Reads screen_rotation trait to automatically rotate on portrait panels.
  */
 
 #define _GNU_SOURCE
@@ -111,26 +112,52 @@ static uint32_t pack_pixel(const struct fb_ctx *fb, uint8_t r, uint8_t g, uint8_
 	       ((uint32_t)b << fb->blue.offset);
 }
 
-static void fill_rect(const struct fb_ctx *fb, uint32_t x0, uint32_t y0,
-		      uint32_t w, uint32_t h, uint32_t color)
+static inline void map_coords(const struct fb_ctx *fb, uint32_t lx, uint32_t ly,
+			      uint32_t *px, uint32_t *py, int rot)
 {
-	if (x0 >= fb->xres || y0 >= fb->yres)
-		return;
-	if (x0 + w > fb->xres)
-		w = fb->xres - x0;
-	if (y0 + h > fb->yres)
-		h = fb->yres - y0;
+	switch (rot) {
+	case 90:
+		*px = (fb->xres - 1) - ly;
+		*py = lx;
+		break;
+	case 180:
+		*px = (fb->xres - 1) - lx;
+		*py = (fb->yres - 1) - ly;
+		break;
+	case 270:
+		*px = ly;
+		*py = (fb->yres - 1) - lx;
+		break;
+	case 0:
+	default:
+		*px = lx;
+		*py = ly;
+		break;
+	}
+}
 
-	for (uint32_t y = y0; y < y0 + h; y++) {
-		uint8_t *dst = fb->mem + (y * fb->line_length);
-		if (fb->bpp == 16) {
-			uint16_t *line = (uint16_t *)(dst + (x0 * 2));
-			for (uint32_t x = 0; x < w; x++)
-				line[x] = (uint16_t)color;
-		} else if (fb->bpp == 32) {
-			uint32_t *line = (uint32_t *)(dst + (x0 * 4));
-			for (uint32_t x = 0; x < w; x++)
-				line[x] = color;
+static void draw_pixel_rot(const struct fb_ctx *fb, uint32_t lx, uint32_t ly,
+			   uint32_t color, int rot)
+{
+	uint32_t px, py;
+	map_coords(fb, lx, ly, &px, &py, rot);
+	if (px >= fb->xres || py >= fb->yres)
+		return;
+
+	uint8_t *dst = fb->mem + (py * fb->line_length);
+	if (fb->bpp == 16) {
+		*((uint16_t *)(dst + (px * 2))) = (uint16_t)color;
+	} else if (fb->bpp == 32) {
+		*((uint32_t *)(dst + (px * 4))) = color;
+	}
+}
+
+static void fill_rect_rot(const struct fb_ctx *fb, uint32_t lx0, uint32_t ly0,
+			  uint32_t w, uint32_t h, uint32_t color, int rot)
+{
+	for (uint32_t ly = ly0; ly < ly0 + h; ly++) {
+		for (uint32_t lx = lx0; lx < lx0 + w; lx++) {
+			draw_pixel_rot(fb, lx, ly, color, rot);
 		}
 	}
 }
@@ -143,7 +170,7 @@ static void clear_screen(const struct fb_ctx *fb)
 }
 
 static void draw_wordmark(const struct fb_ctx *fb, uint32_t start_x, uint32_t start_y,
-			  uint32_t cell_w, uint32_t cell_h, uint32_t fg_color)
+			  uint32_t cell_w, uint32_t cell_h, uint32_t fg_color, int rot)
 {
 	for (int r = 0; r < LOGO_ROWS; r++) {
 		for (int c = 0; c < LOGO_COLS; c++) {
@@ -157,13 +184,13 @@ static void draw_wordmark(const struct fb_ctx *fb, uint32_t start_x, uint32_t st
 
 			switch (g) {
 			case GLYPH_FULL:
-				fill_rect(fb, px, py, cell_w, cell_h, fg_color);
+				fill_rect_rot(fb, px, py, cell_w, cell_h, fg_color, rot);
 				break;
 			case GLYPH_UPPER:
-				fill_rect(fb, px, py, cell_w, half_h, fg_color);
+				fill_rect_rot(fb, px, py, cell_w, half_h, fg_color, rot);
 				break;
 			case GLYPH_LOWER:
-				fill_rect(fb, px, py + half_h, cell_w, cell_h - half_h, fg_color);
+				fill_rect_rot(fb, px, py + half_h, cell_w, cell_h - half_h, fg_color, rot);
 				break;
 			default:
 				break;
@@ -174,7 +201,7 @@ static void draw_wordmark(const struct fb_ctx *fb, uint32_t start_x, uint32_t st
 
 static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_t track_y,
 			      uint32_t track_w, uint32_t bar_h, int32_t beam_pos,
-			      uint32_t beam_w, uint32_t *scratch_buf)
+			      uint32_t beam_w, uint32_t *scratch_buf, int rot)
 {
 	if (track_w > 4096)
 		track_w = 4096;
@@ -203,16 +230,8 @@ static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_
 	}
 
 	for (uint32_t y = 0; y < bar_h; y++) {
-		if (track_y + y >= fb->yres)
-			break;
-		uint8_t *dst = fb->mem + ((track_y + y) * fb->line_length);
-		if (fb->bpp == 16) {
-			uint16_t *line = (uint16_t *)(dst + (track_x * 2));
-			for (uint32_t x = 0; x < track_w; x++)
-				line[x] = (uint16_t)scratch_buf[x];
-		} else if (fb->bpp == 32) {
-			uint32_t *line = (uint32_t *)(dst + (track_x * 4));
-			memcpy(line, scratch_buf, track_w * sizeof(uint32_t));
+		for (uint32_t x = 0; x < track_w; x++) {
+			draw_pixel_rot(fb, track_x + x, track_y + y, scratch_buf[x], rot);
 		}
 	}
 }
@@ -234,7 +253,7 @@ static int open_tty(void)
 	return -1;
 }
 
-static void read_trait_keys(int *key_up, int *key_down)
+static void read_traits(int *key_up, int *key_down, int *screen_rot)
 {
 	static const char *trait_files[] = {
 		"/mnt/sdcard/.minime/traits",
@@ -245,6 +264,7 @@ static void read_trait_keys(int *key_up, int *key_down)
 
 	*key_up = KEY_VOLUMEUP;
 	*key_down = KEY_VOLUMEDOWN;
+	*screen_rot = 0;
 
 	for (int i = 0; trait_files[i]; i++) {
 		FILE *f = fopen(trait_files[i], "r");
@@ -258,6 +278,8 @@ static void read_trait_keys(int *key_up, int *key_down)
 				*key_up = val;
 			else if (sscanf(line, "key_vol_down=%d", &val) == 1 && val > 0)
 				*key_down = val;
+			else if (sscanf(line, "screen_rotation=%d", &val) == 1 && val >= 0)
+				*screen_rot = val;
 		}
 		fclose(f);
 		break;
@@ -305,9 +327,6 @@ static bool check_file_exists(const char *path)
 
 int main(int argc, char **argv)
 {
-	(void)argc;
-	(void)argv;
-
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sig_handler;
@@ -316,6 +335,20 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &sa, NULL);
 
 	parse_logo_grid();
+
+	int key_vol_up = KEY_VOLUMEUP;
+	int key_vol_down = KEY_VOLUMEDOWN;
+	int screen_rot = 0;
+	read_traits(&key_vol_up, &key_vol_down, &screen_rot);
+
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--rotate") == 0 && i + 1 < argc) {
+			screen_rot = atoi(argv[++i]);
+		} else if (strcmp(argv[i], "90") == 0 || strcmp(argv[i], "180") == 0 ||
+			   strcmp(argv[i], "270") == 0 || strcmp(argv[i], "0") == 0) {
+			screen_rot = atoi(argv[i]);
+		}
+	}
 
 	int tty_fd = open_tty();
 	if (tty_fd >= 0) {
@@ -364,8 +397,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/* Compute layout geometry */
-	uint32_t cell_w = fb.xres / 40;
+	/* Logical display geometry (swapped if rotated 90/270) */
+	uint32_t log_w = (screen_rot == 90 || screen_rot == 270) ? fb.yres : fb.xres;
+	uint32_t log_h = (screen_rot == 90 || screen_rot == 270) ? fb.xres : fb.yres;
+
+	uint32_t cell_w = log_w / 40;
 	if (cell_w < 4)
 		cell_w = 4;
 	if (cell_w > 18)
@@ -375,15 +411,15 @@ int main(int argc, char **argv)
 	uint32_t word_w = LOGO_COLS * cell_w;
 	uint32_t word_h = LOGO_ROWS * cell_h;
 	uint32_t gap_h = (cell_h * 3) / 2;
-	uint32_t bar_h = cell_h / 3;
-	if (bar_h < 3)
-		bar_h = 3;
-	if (bar_h > 8)
-		bar_h = 8;
+	uint32_t bar_h = (cell_h * 2) / 3;
+	if (bar_h < 6)
+		bar_h = 6;
+	if (bar_h > 16)
+		bar_h = 16;
 	uint32_t total_h = word_h + gap_h + bar_h;
 
-	uint32_t start_x = (fb.xres > word_w) ? (fb.xres - word_w) / 2 : 0;
-	uint32_t start_y = (fb.yres > total_h) ? (fb.yres - total_h) / 2 : 0;
+	uint32_t start_x = (log_w > word_w) ? (log_w - word_w) / 2 : 0;
+	uint32_t start_y = (log_h > total_h) ? (log_h - total_h) / 2 : 0;
 
 	uint32_t track_x = start_x;
 	uint32_t track_y = start_y + word_h + gap_h;
@@ -400,11 +436,7 @@ int main(int argc, char **argv)
 		track_w = 4096;
 
 	clear_screen(&fb);
-	draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color);
-
-	int key_vol_up = KEY_VOLUMEUP;
-	int key_vol_down = KEY_VOLUMEDOWN;
-	read_trait_keys(&key_vol_up, &key_vol_down);
+	draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
 
 	int input_fds[MAX_INPUTS];
 	int input_count = scan_input_devices(input_fds, MAX_INPUTS);
@@ -441,7 +473,34 @@ int main(int argc, char **argv)
 		/* Re-scan input devices periodically or if none opened */
 		if (++scan_ticks >= 15 || input_count == 0) {
 			scan_ticks = 0;
-			read_trait_keys(&key_vol_up, &key_vol_down);
+			int prev_rot = screen_rot;
+			read_traits(&key_vol_up, &key_vol_down, &screen_rot);
+			if (screen_rot != prev_rot) {
+				log_w = (screen_rot == 90 || screen_rot == 270) ? fb.yres : fb.xres;
+				log_h = (screen_rot == 90 || screen_rot == 270) ? fb.xres : fb.yres;
+				cell_w = log_w / 40;
+				if (cell_w < 4) cell_w = 4;
+				if (cell_w > 18) cell_w = 18;
+				cell_h = cell_w;
+				word_w = LOGO_COLS * cell_w;
+				word_h = LOGO_ROWS * cell_h;
+				gap_h = (cell_h * 3) / 2;
+				bar_h = (cell_h * 2) / 3;
+				if (bar_h < 6) bar_h = 6;
+				if (bar_h > 16) bar_h = 16;
+				total_h = word_h + gap_h + bar_h;
+				start_x = (log_w > word_w) ? (log_w - word_w) / 2 : 0;
+				start_y = (log_h > total_h) ? (log_h - total_h) / 2 : 0;
+				track_x = start_x;
+				track_y = start_y + word_h + gap_h;
+				track_w = word_w;
+				beam_w = track_w / 3;
+				if (beam_w < 20) beam_w = 20;
+				if (in_graphics_mode) {
+					clear_screen(&fb);
+					draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
+				}
+			}
 			close_input_devices(input_fds, input_count);
 			input_count = scan_input_devices(input_fds, MAX_INPUTS);
 		}
@@ -477,7 +536,7 @@ int main(int argc, char **argv)
 								ioctl(tty_fd, KDSETMODE, KD_GRAPHICS);
 							in_graphics_mode = true;
 							clear_screen(&fb);
-							draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color);
+							draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
 						}
 					}
 				}
@@ -487,7 +546,7 @@ int main(int argc, char **argv)
 		/* Animate progress bar left-to-right only in KD_GRAPHICS mode */
 		if (in_graphics_mode) {
 			draw_gradient_bar(&fb, track_x, track_y, track_w, bar_h,
-					  beam_pos, beam_w, scratch_buf);
+					  beam_pos, beam_w, scratch_buf, screen_rot);
 
 			beam_pos += step;
 			if (beam_pos > (int32_t)track_w) {
