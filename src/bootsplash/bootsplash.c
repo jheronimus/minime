@@ -378,6 +378,9 @@ static int parse_device_ini(const char *path, int *key_up, int *key_down, int *s
 
 static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
 {
+	/* Load platform base traits first */
+	parse_device_ini("/usr/share/minime/traits/platform.ini", key_up, key_down, screen_rot);
+
 	char model[128] = {0};
 	char compat[256] = {0};
 
