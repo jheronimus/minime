@@ -5,7 +5,7 @@
  * gradient progress bar. Listens to evdev volume keys to toggle between
  * bootsplash (KD_GRAPHICS) and console log (KD_TEXT). Watches OpenRC UI
  * lifecycle to perform smooth handoff or reveal errors on failure.
- * Reads screen_rotation trait to automatically rotate on portrait panels.
+ * Reads Device Tree panel rotation and traits to start upright from frame 0.
  */
 
 #define _GNU_SOURCE
@@ -253,6 +253,77 @@ static int open_tty(void)
 	return -1;
 }
 
+static int read_dt_rotation(void)
+{
+	static const char *dt_paths[] = {
+		"/sys/firmware/devicetree/base/dsi@fe060000/panel@0/rotation",
+		"/proc/device-tree/dsi@fe060000/panel@0/rotation",
+		NULL
+	};
+
+	for (int i = 0; dt_paths[i]; i++) {
+		int fd = open(dt_paths[i], O_RDONLY | O_CLOEXEC);
+		if (fd >= 0) {
+			uint8_t buf[4];
+			if (read(fd, buf, 4) == 4) {
+				uint32_t rot = ((uint32_t)buf[0] << 24) |
+				               ((uint32_t)buf[1] << 16) |
+				               ((uint32_t)buf[2] << 8) |
+				               (uint32_t)buf[3];
+				close(fd);
+				if (rot == 90 || rot == 180 || rot == 270)
+					return (int)rot;
+			}
+			close(fd);
+		}
+	}
+
+	DIR *dir = opendir("/sys/firmware/devicetree/base");
+	if (dir) {
+		struct dirent *de;
+		while ((de = readdir(dir)) != NULL) {
+			if (!strstr(de->d_name, "dsi") && !strstr(de->d_name, "panel") &&
+			    !strstr(de->d_name, "display"))
+				continue;
+
+			char subpath[512];
+			snprintf(subpath, sizeof(subpath), "/sys/firmware/devicetree/base/%s", de->d_name);
+			DIR *subdir = opendir(subpath);
+			if (subdir) {
+				struct dirent *subde;
+				while ((subde = readdir(subdir)) != NULL) {
+					if (!strstr(subde->d_name, "panel"))
+						continue;
+
+					char rotpath[512];
+					snprintf(rotpath, sizeof(rotpath),
+						 "/sys/firmware/devicetree/base/%s/%s/rotation",
+						 de->d_name, subde->d_name);
+					int fd = open(rotpath, O_RDONLY | O_CLOEXEC);
+					if (fd >= 0) {
+						uint8_t buf[4];
+						if (read(fd, buf, 4) == 4) {
+							uint32_t rot = ((uint32_t)buf[0] << 24) |
+								       ((uint32_t)buf[1] << 16) |
+								       ((uint32_t)buf[2] << 8) |
+								       (uint32_t)buf[3];
+							close(fd);
+							closedir(subdir);
+							closedir(dir);
+							if (rot == 90 || rot == 180 || rot == 270)
+								return (int)rot;
+						}
+						close(fd);
+					}
+				}
+				closedir(subdir);
+			}
+		}
+		closedir(dir);
+	}
+	return 0;
+}
+
 static void read_traits(int *key_up, int *key_down, int *screen_rot)
 {
 	static const char *trait_files[] = {
@@ -264,7 +335,10 @@ static void read_traits(int *key_up, int *key_down, int *screen_rot)
 
 	*key_up = KEY_VOLUMEUP;
 	*key_down = KEY_VOLUMEDOWN;
-	*screen_rot = 0;
+
+	int dt_rot = read_dt_rotation();
+	if (dt_rot > 0)
+		*screen_rot = dt_rot;
 
 	for (int i = 0; trait_files[i]; i++) {
 		FILE *f = fopen(trait_files[i], "r");

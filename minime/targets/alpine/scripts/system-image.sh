@@ -106,6 +106,11 @@ if [ -x "${TARGET_DIR}/usr/bin/bootsplash" ]; then
 	cp -a "${TARGET_DIR}/usr/bin/bootsplash" "${INITRD_STAGE}/usr/bin/bootsplash"
 fi
 
+if [ -f "${TARGET_DIR}/usr/share/minime/traits/platform.ini" ]; then
+	mkdir -p "${INITRD_STAGE}/etc"
+	cp -f "${TARGET_DIR}/usr/share/minime/traits/platform.ini" "${INITRD_STAGE}/etc/traits"
+fi
+
 if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
 	cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
 	chmod +x "${INITRD_STAGE}/init"
