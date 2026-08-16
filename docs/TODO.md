@@ -18,6 +18,11 @@
 - [ ] Allium: adopt MinUI's append/merge `wifi.cfg` convention so saving from either UI does not clobber other networks
   - [THEORY] Allium's minime `update_wpa_supplicant_conf()` uses `File::create` (overwrite); MinUI's `WIFI_connect` appends only when the SSID is new. Deferred until Allium adopts the same append convention.
 
+## Saturn (YabaSanshiro libretro port)
+
+- [ ] Multi-disc support: implement `retro_disk_control_callback` so minarch's disc-swap menu works for multi-disc games (e.g. Panzer Dragoon Saga). Needs a glue hook to reinit the CD core on `replace_image_index`. Deferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
+- [ ] Buildroot two-core split: the GL-linked core does not build on Buildroot (libmali ships no desktop `libGL`); ship a software-only variant there ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
+
 ## Kernel & Performance
 
 - [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards

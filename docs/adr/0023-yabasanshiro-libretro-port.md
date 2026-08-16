@@ -56,16 +56,27 @@ Download the new source tarball → commit to `upstream` → copy the changed
 renamed/moved files → build + commit. Because core files are byte-identical to
 upstream, the merge is mechanical and reviewable.
 
-### 5. Renderer: OpenGL ES 3.0 primary
+### 5. Renderer: software (Titan) default, GL retained
 
-The libretro core targets **OpenGL ES 3.0** (`RETRO_HW_CONTEXT_OPENGLES3` via
-the `_OGLES3_` define path) — what minime's `libmali` provides, so no new GPU
-userspace and the glue's video path is a repair, not a rewrite. The software
-renderer (`vidsoft.c`) stays as a debug fallback (XRGB8888). **Vulkan is
-retained as sources only** (prebuilt `lib/` pruned — x86/Windows only) and is
-not the default: whether upstream's Vulkan renderer can target Mali Bifrost on
-the RK3566 (driven by `mali-kbase`) is open research; if it pans out, a
-follow-up ADR supersedes this one.
+Both Minime frontends — minarch (RGB565 only) and Allium (RGB565/XRGB8888) —
+accept only software frames and expose no hardware-render context, so the
+**software renderer (`vidsoft.c`, the Titan pipeline) is the Minime default**.
+The glue requests an OpenGL HW context and falls back to software when the
+frontend refuses it (which both Minime UIs always do); the glue converts to
+the frontend's pixel format.
+
+The OpenGL renderer stays **compiled in** (it is upstream's default and the
+only path that uses upstream's shaders): on Alpine it links against Mesa's
+desktop `libGL` (`mesa-gl`, see ADR 0014). On **Buildroot**, libmali ships no
+`libGL`, so the GL-linked core does not build there yet — the core is
+`optional=1` in the shared manifest, so Buildroot images ship without a Saturn
+core until a two-core split (GL vs software-only) lands.
+
+**Vulkan is retained as sources only** (prebuilt `lib/` pruned — x86/Windows
+only) and is not the default. On Alpine, PanVK (`mesa-vulkan-panfrost`)
+provides a driver, so whether upstream's Vulkan renderer can target Mali
+Bifrost on the RK3566 is testable there; Buildroot has no Vulkan path. If
+Vulkan pans out, a follow-up ADR supersedes this one.
 
 ## Consequences
 
@@ -73,10 +84,14 @@ follow-up ADR supersedes this one.
   reviewable; the glue is unambiguously ours; no submodule chain on `main`.
 - Emulator bug fixes cannot be patched into core files (must go upstream or
   into the glue); pruning is re-applied per release.
-- Ships on current images (GLES userspace already present); raw Vulkan
-  performance is left on the table pending the RK3566 investigation.
-- Open work: implement `retro_get_memory_data` / `retro_get_memory_size`
-  (currently stubs).
+- Software rendering needs no on-device GL and works under both Minime
+  frontends; the GL path stays available for GL-capable frontends
+  (RetroArch) and for the deferred frontend-GL work (GLSM/hardware contexts
+  in minarch/Allium).
+- Known gap: Buildroot images ship no Saturn core until the two-core split.
+- Port completion is tracked in the glue (`src/libretro/`); the remaining
+  open work covers save-RAM exposure, savestates, CD format coverage, BIOS
+  handling, and MinUI/Allium system wiring.
 
 ## Alternatives considered
 

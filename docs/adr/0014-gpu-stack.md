@@ -22,8 +22,10 @@ is therefore made **per target**, not globally.
 ### Alpine → Panfrost (open source)
 - Kernel: `minime/boards/common/tiny-panfrost.config`
   (`CONFIG_DRM_PANFROST=y` + dependencies).
-- Userspace: Mesa Panfrost provides GLES via DRM/GBM/KMS. libmali, mali-kbase,
-  and vulkan-loader are deliberately absent (Vulkan is out of V1).
+- Userspace: Mesa Panfrost via DRM/GBM/KMS provides GLES (`mesa-gles`),
+  desktop OpenGL (`mesa-gl` ships `libGL.so.1`), EGL (`mesa-egl`), GBM
+  (`mesa-gbm`), and a Vulkan driver (`mesa-vulkan-panfrost` / PanVK with
+  `vulkan-loader`). libmali and mali-kbase are deliberately absent.
 - `post-build.sh` injects `gpu_driver=panfrost` into
   `/usr/share/minime/traits/platform.ini`.
 
@@ -47,11 +49,13 @@ is therefore made **per target**, not globally.
 
 ## Consequences
 - Alpine ships a fully open GPU stack; Buildroot ships ARM's proprietary stack
-  for closed-source compatibility (DraStic, Pico-8, YabaSanshiro's GLES path).
+  for closed-source compatibility (DraStic, Pico-8; YabaSanshiro's GL path
+  there is deferred until the two-core split, see ADR 0023).
 - Both targets surface GLES behind the single `gpu_driver` trait, so UIs
   (MinUI/Allium) need no per-target GPU knowledge.
-- **Vulkan is not shipped** (no vulkan-loader in V1). Whether YabaSanshiro's
-  Vulkan renderer can target Mali Bifrost on RK3566 via mali-kbase is open
+- **Vulkan ships on Alpine only** (`vulkan-loader` + `mesa-vulkan-panfrost`);
+  Buildroot/libmali ships no Vulkan driver. Whether YabaSanshiro's Vulkan
+  renderer can actually drive Mali Bifrost via PanVK on the RK3566 is open
   research (see ADR 0023).
 
 ## Reference
@@ -61,5 +65,5 @@ is therefore made **per target**, not globally.
   `minime/targets/buildroot/external/package/{libmali,mali-kbase}/`.
 - Alpine package lists: `minime/targets/alpine/configs/world-{common,h700,rk3326,rk3566}`.
 - Injection: `minime/targets/{alpine,buildroot}/.../post-build.sh`.
-- Related: `docs/adr/0023-yabasanshiro-libretro-port.md` (GLES vs Vulkan),
+- Related: `docs/adr/0023-yabasanshiro-libretro-port.md` (renderer strategy),
   `docs/adr/0018-cpu-performance-and-thermal-policy.md` (GPU thermal trips).
