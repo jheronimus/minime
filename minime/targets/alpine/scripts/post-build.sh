@@ -62,6 +62,14 @@ if [ -d "${COMMON_DIR}/overlay" ]; then
 	cp -a "${COMMON_DIR}/overlay/." "${TARGET_DIR}/"
 fi
 
+# Alpine ships this hardening setting, but Minime's kernel does not expose the
+# corresponding sysctl. Keep the supported Alpine settings and omit only the
+# unsupported write so boot does not report a false sysctl error.
+if [ -f "${TARGET_DIR}/usr/lib/sysctl.d/00-alpine.conf" ]; then
+	sed -i '/^[[:space:]]*kernel\.unprivileged_bpf_disabled[[:space:]]*=/d' \
+		"${TARGET_DIR}/usr/lib/sysctl.d/00-alpine.conf"
+fi
+
 # 3. Install board-specific overlay if present.
 if [ -d "${BOARD_DIR}/overlay" ]; then
 	cp -a "${BOARD_DIR}/overlay/." "${TARGET_DIR}/"

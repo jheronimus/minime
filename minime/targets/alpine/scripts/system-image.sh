@@ -86,6 +86,20 @@ for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep 
 done
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
+FSCK_FAT=""
+for candidate in "${TARGET_DIR}/sbin/fsck.fat" "${TARGET_DIR}/usr/sbin/fsck.fat"; do
+	if [ -x "${candidate}" ]; then
+		FSCK_FAT="${candidate}"
+		break
+	fi
+done
+if [ -z "${FSCK_FAT}" ]; then
+	echo "ERROR: fsck.fat not found -- add dosfstools to the target packages" >&2
+	exit 1
+fi
+cp -a "${FSCK_FAT}" "${INITRD_STAGE}/sbin/fsck.fat"
+cp -d "${TARGET_DIR}/lib/ld-"*.so* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+
 if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
 	cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
 	chmod +x "${INITRD_STAGE}/init"

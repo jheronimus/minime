@@ -52,6 +52,19 @@ for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep 
 done
 ln -sf ../bin/busybox "${INITRD_STAGE}/sbin/switch_root"
 
+FSCK_FAT=""
+for candidate in "${TARGET_DIR}/sbin/fsck.fat" "${TARGET_DIR}/usr/sbin/fsck.fat"; do
+	if [ -x "${candidate}" ]; then
+		FSCK_FAT="${candidate}"
+		break
+	fi
+done
+if [ -z "${FSCK_FAT}" ]; then
+	echo "ERROR: fsck.fat not found -- enable BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT" >&2
+	exit 1
+fi
+cp -a "${FSCK_FAT}" "${INITRD_STAGE}/sbin/fsck.fat"
+
 if [ -d "${TARGET_DIR}/lib" ]; then
 	cp -d "${TARGET_DIR}/lib/ld-"*.so* "${INITRD_STAGE}/lib/" 2>/dev/null || true
 	cp -d "${TARGET_DIR}/lib/libc.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true

@@ -30,6 +30,31 @@ for _i in 1 2 3 4 5 6 7 8 9 10; do
 		if mount -t vfat "$dev" /mnt/card 2>/dev/null; then
 			if [ -f /mnt/card/.minime/system ]; then
 				CARD_DEV="$dev"
+				log_card "[INITRAMFS] Found MINIME FAT partition on $CARD_DEV; checking filesystem..."
+				umount /mnt/card 2>/dev/null || {
+					log_card "ERROR: failed to unmount $CARD_DEV before fsck"
+					exec sh
+				}
+				/sbin/fsck.fat -a "$CARD_DEV"
+				fsck_rc=$?
+				if ! mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null; then
+					log_card "ERROR: failed to remount repaired FAT partition $CARD_DEV"
+					exec sh
+				fi
+				case "$fsck_rc" in
+				0 | 1)
+					log_card "[INITRAMFS] FAT fsck completed (exit $fsck_rc)"
+					;;
+				2)
+					log_card "[INITRAMFS] FAT fsck repaired $CARD_DEV; rebooting to complete recovery"
+					sync
+					reboot -f
+					;;
+				*)
+					log_card "ERROR: FAT fsck failed for $CARD_DEV (exit $fsck_rc)"
+					exec sh
+					;;
+				esac
 				log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
 				break
 			fi

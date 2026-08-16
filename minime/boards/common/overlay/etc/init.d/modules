@@ -6,7 +6,6 @@
 description="Load Minime modules from /etc/modules-load.d/"
 
 depend() {
-	need localmount
 	keyword -timeout
 }
 
