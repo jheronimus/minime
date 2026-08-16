@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Scan the Minime monorepo and its forks for accumulated debt after long multi-agent feature sessions — dead code, duplication, unjustified drift from upstream, leftover debugging code, dirty in-place fixes, broken responsibilities, and bespoke reimplementations of available dependencies. Group findings into topics, render them as an HTML review report with cleanup potential and risk factor per change, then deliver the selected topics as reviewed-ready PRs (one per repo touched) with analysis, criteria evaluation, and an on-device verification checklist. The agent never commits or merges; it only delivers PRs and issues. Use after heavy parallel feature work, when the codebase feels messy, or when fork-maintenance burden (rebasing MinUI/Allium/yabause/drastic against upstream) has grown.
+description: Scan the Minime monorepo and its forks for accumulated debt after long multi-agent feature sessions — dead code, duplication, unjustified drift from upstream, leftover debugging code, dirty in-place fixes, broken responsibilities, and bespoke reimplementations of available dependencies. Group findings into topics, render them as a Markdown review report with cleanup potential and risk factor per change, then deliver the selected topics as reviewed-ready PRs (one per repo touched) with analysis, criteria evaluation, and an on-device verification checklist. The agent never commits or merges; it only delivers PRs and issues. Use after heavy parallel feature work, when the codebase feels messy, or when fork-maintenance burden (rebasing MinUI/Allium/yabause/drastic against upstream) has grown.
 ---
 
 # Cleanup
@@ -16,7 +16,7 @@ merging.
 1. **Scan** every region (Scope below) and collect findings for all categories.
 2. **Form topics** — group findings by root cause, with a cross-region impact pass
    per topic.
-3. **Render the HTML report** (below) and present it.
+3. **Render the review report** (below) and present it.
 4. **Select** — the human picks which topics to implement (or the headless invoker
    pre-selects).
 5. **Deliver** — PRs and issues for the selected topics, per the deliverables
@@ -122,23 +122,22 @@ span repos. Rules:
 - Keep topics small enough to review in one sitting. Split anything that mixes an
   architectural move with a mechanical cleanup.
 
-## HTML report
+## Review report
 
-Before delivering anything, render the whole review as a **self-contained HTML
-report** so a human can see every topic and pick what to implement. Write it into a
-per-session folder in the repo: `docs/cleanup/<YYYY-MM-DD>/report.html` (create the
-folder; if the datestamp already exists, append `-2`, `-3`, …). This is the
-session's documented record. The agent writes but never commits — committing the
-session record is the human's call. Open the report for the user — `xdg-open
-<path>` (Linux), `open <path>` (macOS), `start <path>` (Windows) — and state the
-absolute path. Tailwind via CDN for layout.
+Before delivering anything, render the whole review as a **Markdown report** so a
+human can read every topic and pick what to implement. Markdown renders natively in
+VS Code (and GitHub) with no CDN or network. Write it to the session folder:
+`docs/cleanup/<YYYY-MM-DD>/report.md` (create the folder; if the datestamp already
+exists, append `-2`, `-3`, …). This is the session's documented record. The agent
+writes but never commits — committing the session record is the human's call. State
+the absolute path in your reply.
 
 Report structure:
 
-- **Header** — run summary: regions scanned, topics found, totals (estimated SLOC
-  removable, files removable).
-- **One card per topic**:
-  - Title (topic slug), category tags (1–7), **risk badge** (Low/Medium/High).
+- **Header** — run summary as a Markdown table: regions scanned, topics found,
+  totals (estimated SLOC removable, files removable).
+- **One section per topic** (`## <n>. <title>`), with the risk badge, category tags,
+  and recommendation strength as bolded inline labels, then labelled lines:
   - **Problem** — root cause and evidence.
   - **Solution** — what the PRs will do.
   - **Cleanup potential** — estimated SLOC delta (before/after), files removed,
@@ -149,7 +148,7 @@ Report structure:
     not a self-imposed gate — the agent may implement any topic the human selects.
   - **Criteria** — quick verdicts on SLOC, complexity, features, reliability.
   - **Cross-region impact** — consumers traced; coordinated changes needed.
-  - **Recommendation strength** — Strong / Worth exploring / Speculative badge.
+  - Separate sections with `---`.
 - **Top recommendations** — which topics to do first and why.
 
 Risk factor rubric (scored by the surface of the change):
@@ -171,11 +170,11 @@ artifact.
 
 Every session folder (`docs/cleanup/<datestamp>/`) contains:
 
-- `report.html` — the review report above.
+- `report.md` — the review report above.
 - `session.md` — a short summary: date, invoker, regions scanned, topics found
   (slug + category + risk), which were selected and delivered (linked to the
   PRs/issues), and decisions or deferred items. Keep it under the 5 KB doc limit;
-  the detail lives in `report.html`.
+  the detail lives in `report.md`.
 
 Session records are the local **don't re-discover ledger**: before proposing a
 topic, grep `docs/cleanup/*/session.md` for prior coverage alongside the GitHub
