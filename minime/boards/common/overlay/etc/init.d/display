@@ -46,7 +46,9 @@ start() {
 	rotation=$(get_trait screen_rotation)
 	ebegin "Display orientation (UI-driven, screen_rotation=${rotation:-0} deg)"
 	if [ -x /usr/bin/minime-rotate ]; then
-		/usr/bin/minime-rotate --query 2>/dev/null || true
+		# Diagnostic only — keep the boot console clean; run
+		# `minime-rotate --query` over SSH for the connector/plane state.
+		/usr/bin/minime-rotate --query >/dev/null 2>&1 || true
 	fi
 	log_boot "UI-driven rotation: ${rotation:-0} deg"
 	eend 0

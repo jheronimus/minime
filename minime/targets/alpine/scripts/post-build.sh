@@ -80,7 +80,12 @@ mkdir -p "${TARGET_DIR}/usr/share/minime/scripts"
 #    DHCP DNS servers to it via NameResolvingService=resolvconf).
 ln -sf /run/resolvconf/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 
-# 6. Touch a marker file used by initramfs-init.sh to advance system time on cold
+# 6. Persist OpenRC service start/stop output so boot-time init script errors
+#    are diagnosable from the SD card (rc.log next to boot.log).
+printf 'rc_logger="YES"\nRC_LOGGER_FILE="/mnt/sdcard/.minime/logs/rc.log"\n' \
+	>>"${TARGET_DIR}/etc/rc.conf"
+
+# 7. Touch a marker file used by initramfs-init.sh to advance system time on cold
 #    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 
