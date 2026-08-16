@@ -20,6 +20,7 @@
 
 ## Saturn (YabaSanshiro libretro port)
 
+- [ ] Frontend GL support (GLSM/hardware contexts in minarch/Allium) to run the core's GL renderer. The software (Titan) path draws no visible video in this core (verified on-device with a real BIOS: opaque-black frames) — see [ADR 0023](adr/0023-yabasanshiro-libretro-port.md). This is the main blocker for playable Saturn; also unlocks GL/Vulkan for other cores.
 - [ ] Multi-disc support: implement `retro_disk_control_callback` so minarch's disc-swap menu works for multi-disc games (e.g. Panzer Dragoon Saga). Needs a glue hook to reinit the CD core on `replace_image_index`. Deferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 - [ ] Buildroot two-core split: the GL-linked core does not build on Buildroot (libmali ships no desktop `libGL`); ship a software-only variant there ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 - [ ] Add `SAT/saturn_bios.bin` to the private `jheronimus/console-bios` repo so full local image builds ship a Saturn BIOS. The core now falls back to HLE when the BIOS is absent (`Bios/SAT/saturn_bios.bin`), but real BIOS is preferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).

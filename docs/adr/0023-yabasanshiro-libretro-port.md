@@ -56,27 +56,26 @@ Download the new source tarball → commit to `upstream` → copy the changed
 renamed/moved files → build + commit. Because core files are byte-identical to
 upstream, the merge is mechanical and reviewable.
 
-### 5. Renderer: software (Titan) default, GL retained
+### 5. Renderer: GL (VIDOGL) is required; software draws nothing
 
-Both Minime frontends — minarch (RGB565 only) and Allium (RGB565/XRGB8888) —
-accept only software frames and expose no hardware-render context, so the
-**software renderer (`vidsoft.c`, the Titan pipeline) is the Minime default**.
-The glue requests an OpenGL HW context and falls back to software when the
-frontend refuses it (which both Minime UIs always do); the glue converts to
-the frontend's pixel format.
+The core's **software renderer (`vidsoft.c`, Titan) produces no visible
+output** in a contextless libretro setup — verified on-device (RK3566, real
+BIOS): opaque-black frames, zero color pixels. Upstream only ever ran the GL
+renderer in libretro; its VIDSoft mode is only exercised on Android with an
+EGL context. So the core must use the **OpenGL renderer (`vidogl.c`)**, which
+needs hardware-render support in the frontends (GLSM/hardware contexts in
+minarch/Allium) — both UIs are software-only today (RGB565 / RGB565+XRGB8888),
+so that frontend work is the blocker.
 
-The OpenGL renderer stays **compiled in** (it is upstream's default and the
-only path that uses upstream's shaders): on Alpine it links against Mesa's
-desktop `libGL` (`mesa-gl`, see ADR 0014). On **Buildroot**, libmali ships no
-`libGL`, so the GL-linked core does not build there yet — the core is
-`optional=1` in the shared manifest, so Buildroot images ship without a Saturn
-core until a two-core split (GL vs software-only) lands.
+The OpenGL renderer stays **compiled in** (upstream's default): on Alpine it
+links against Mesa's desktop `libGL` (`mesa-gl`, ADR 0014). On **Buildroot**,
+libmali ships no `libGL`, so the GL-linked core does not build there —
+`optional=1` in the manifest, so Buildroot ships no Saturn core until a
+two-core split lands.
 
-**Vulkan is retained as sources only** (prebuilt `lib/` pruned — x86/Windows
-only) and is not the default. On Alpine, PanVK (`mesa-vulkan-panfrost`)
-provides a driver, so whether upstream's Vulkan renderer can target Mali
-Bifrost on the RK3566 is testable there; Buildroot has no Vulkan path. If
-Vulkan pans out, a follow-up ADR supersedes this one.
+**Vulkan** sources are retained (prebuilt `lib/` pruned). On Alpine, PanVK
+(`mesa-vulkan-panfrost`) provides a driver, so the Vulkan renderer is testable
+there; Buildroot has none. If Vulkan pans out, a follow-up ADR supersedes this.
 
 ## Consequences
 
@@ -89,10 +88,10 @@ Vulkan pans out, a follow-up ADR supersedes this one.
   (RetroArch) and for the deferred frontend-GL work (GLSM/hardware contexts
   in minarch/Allium).
 - Known gap: Buildroot images ship no Saturn core until the two-core split.
-- The libretro port is functional: software rendering (RGB565 to the
-  frontend), save RAM, savestates, CHD/bin/cue/iso support, and BIOS/HLE
-  fallback are implemented in the glue. Remaining gaps (multi-disc swap,
-  Buildroot build, BIOS provisioning) are tracked in `docs/TODO.md`.
+- The libretro port is complete except video: load, save RAM, savestates,
+  CHD/bin/cue/iso, BIOS/HLE fallback all work; software draws nothing
+  (core-level). Frontend GL in minarch/Allium is the next step; remaining
+  gaps are tracked in `docs/TODO.md`.
 
 ## Alternatives considered
 
