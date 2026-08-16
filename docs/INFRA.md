@@ -8,11 +8,6 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ## 1. GitHub Actions Workflows (`.github/workflows/`)
 
-### `validate.yml` — Mandatory Validation Gate
-- **Trigger**: Every push to `main` (all paths, not just `minime/**`) and every pull request.
-- **Purpose**: Runs the full `just validate` quality gate in CI (just, shellcheck, actionlint, clang-format via `.mise.toml`; Rust via rustup for `check-allium`). This is the authoritative verdict — a commit that fails validation is a red run, regardless of what local hooks reported.
-- **Enforcement**: (a) the `build-musl.yml` / `build-glibc.yml` pipelines gate their image/OTA uploads on a `validate` job running `just validate-static` — a validation failure means nothing ships; (b) repo owners should mark this workflow's `Validate` check as **required** in branch protection for `main`, which hard-blocks PR merges and re-pushes of failed commits. Local `pre-commit`/`pre-push` hooks (`just install-hooks`) are convenience; `git commit/push --no-verify` can always bypass them, which is why CI enforcement exists. GitHub.com has no pre-receive hooks, so a deliberately bypassed push can land but will fail CI validation and cannot ship.
-
 ### `build-musl.yml` / `build-glibc.yml` — Main Build Pipelines
 - **Trigger**: `build-musl.yml` (alpine): push to `main` filtered to `minime/**` and `src/**` (shared source: remote/benchmark/display/libmali/kernel); daily cron at 04:00 UTC (`0 4 * * *`, = 07:00 GMT+3); `workflow_dispatch` (comma-separated `targets` input of alpine boards, default `all`). `build-glibc.yml` (buildroot): same daily cron and `workflow_dispatch` (buildroot boards); **no push trigger**.
 - **Purpose**: Builds bootloaders, UIs, OS images, and OTA update packages. Push to `main` builds only the fast-path alpine board (`FAST_PATH_TARGET` env at the top of `build-musl.yml`, default `rk3566`); the daily cron and `all` dispatch rebuild every board of that distro. Uploads `.img.zst` / `.tar.zst` to the `testing` GitHub Release on any main-branch run.
@@ -53,11 +48,19 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`minime/build/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 
 ### Validation & Helper Scripts (`scripts/`)
+Validation is **local-only and owned by this folder** — every check lives in a
+`scripts/check-*.sh` invoked via `just`; there is no CI validation job.
 - **`scripts/check-traits.sh`**: Validates device hardware traits configuration against the trait schema for all boards.
 - **`scripts/check-kernel-config.sh`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
 - **`scripts/check-firmware.sh`**: Verifies all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
-- **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex chars) and SHA-512 (128 hex chars) string format integrity in Buildroot `.hash` files and `APKBUILD`s.
+- **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex) / SHA-512 (128 hex) hash string formats in Buildroot `.hash` files and `APKBUILD`s.
+- **`scripts/check-package-lists.sh`**: Cross-checks local package lists so every referenced package is built.
+- **`scripts/check-scripts.sh` / `check-apkbuilds.sh` / `check-openrc.sh`**: shellcheck over `*.sh`, `APKBUILD`, and OpenRC `init.d` scripts.
+- **`scripts/check-git.sh`**: `git diff --check` (whitespace + conflict markers) on staged and working-tree diffs.
+- **`scripts/check-workflows.sh`**: actionlint over `.github/workflows/*.yml`.
+- **`scripts/check-build-flow.sh`**: Enforces the packaging/compilation split of `build.sh` / `mkimage.sh` / `mkupdate.sh` / `genassets.sh`.
+- **`scripts/install-hooks.sh`**: Installs `pre-commit`/`pre-push` hooks that run `just validate-static` (pre-push forwards to `git lfs pre-push`).
 - **`scripts/update-device.sh`**: Generic push-and-apply OTA helper (stop UI → FTP upload → apply → reboot) for locally built update packages, e.g. the boot-profiler's instrumented initramfs packages. Normal OTA updates run **on-device** via `/usr/bin/update.sh`.
 - **`scripts/fetch-asset.sh`**: Downloads a named release asset (`.img.zst` or `.tar.zst`) from the latest `testing` GitHub Release.
 - **`scripts/remote-cmd.sh`**: Executes arbitrary shell commands on target device over telnet using `target_ip` from `deploy.cfg`.
@@ -71,8 +74,9 @@ All local developer commands are managed via `Justfile` and executed with `just`
 
 | Recipe | What it checks | Shell / Tool | Notes |
 |---|---|---|---|
-| `just validate` | **Fast pre-commit gate** | `just` | Runs all fast quality gates listed below. |
-| `just validate-ci` | **CI quality gate** | `just` | Runs `validate` plus `check-defconfigs` and `check-packages`. |
+| `just validate` | **Full local gate** | `just` | Fast static checks + UI formatting (`check-allium`/`check-minui`/`check-yabause`; needs Rust + clang). |
+| `just validate-static` | **Fast static gate** | `just` | No cargo/clang toolchains. Run by the `pre-commit`/`pre-push` hooks. |
+| `just validate-ci` | **Buildroot-dependent gate** | `just` | Runs `validate` plus `check-defconfigs` and `check-packages` (requires upstream Buildroot tree). |
 | `check-scripts` | `*.sh` files (all distros) | auto from shebang | Syntax (`sh -n`), shellcheck, exec bit. Excludes upstream Buildroot. |
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
 | `check-openrc` | `minime/boards/*/overlay/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
@@ -81,12 +85,15 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-firmware` | Required firmware files | `scripts/check-firmware.sh` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.sh` | Ensures all `.patch` files are referenced in build manifests. |
 | `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.sh` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
-| `check-git` | Git staged diff | `git diff --check` | Catches whitespace errors and unresolved merge conflict markers. |
+| `check-package-lists` | Local package lists | `scripts/check-package-lists.sh` | Cross-checks Alpine/Buildroot lists so every referenced package is built. |
+| `check-git` | Staged + working-tree diff | `scripts/check-git.sh` | `git diff --check` (whitespace + conflict markers). |
+| `check-workflows` | `.github/workflows/*.yml` | `scripts/check-workflows.sh` | actionlint via mise. |
+| `check-build-flow` | Packaging/compilation split | `scripts/check-build-flow.sh` | Enforces `build.sh` (compilation-only) vs `mkimage.sh`/`mkupdate.sh`/`genassets.sh` (packaging-only). |
 | `just deploy <os> <board> <ui> [disk]` | Flash latest testing image | `fetch-asset.sh` + `dd` / `diskutil` | Fetches the latest `minime-<os>-<board>-<ui>.img.zst`, writes it to target disk, injects `wifi.cfg`, ejects card. Also accepts an explicit image path. Supports `deploy.cfg` + `minime` label guard. |
 | `just shell <cmd> [ip]` | Run a remote shell command | `scripts/remote-cmd.sh` | Runs a command on the target over SSH by default (dropbear, blank-password root, enabled by default); `--telnet` forces telnet. The command is passed via a temp file so quotes/pipes survive. Uses `target_ip` in `deploy.cfg`. The OTA update path is the **on-device** `/usr/bin/update.sh <minui|allium>` (e.g. `just shell "update.sh minui"`). |
 | `just upload <file> [remote_path] [ip]` | Copy a file to the device | `scripts/scp-upload.sh` / `scripts/remote-upload.sh` | Copies a local file to the target over SSH/scp by default (any path as root; `ssh 'cat >'`, dropbear ships no scp); `--ftp` uses FTP, limited to the `/mnt/sdcard` root. |
 | `just build-allium [target=musl]` | Build Allium locally | `cargo build` | Builds Allium binaries for `musl` (default) or `glibc`. |
 | `just build-minui [target=musl]` | Build MinUI locally | `make system cores package` | Builds the MinUI binaries/cores for the `minime` platform. |
-| `just install-hooks` | Git pre-commit hook | `.git/hooks/pre-commit` | Installs hook to run `just validate` before every commit. |
+| `just install-hooks` | Git pre-commit/pre-push hooks | `scripts/install-hooks.sh` | Installs hooks that run `just validate-static` (pre-push also forwards to `git lfs pre-push`). |
 
 > `just fetch`, `just fetch-update`, `just update`, and `just check-version` are removed. OTA updates run **on-device** via `/usr/bin/update.sh <minui|allium>` (see the `live-test` skill). `just deploy` fetches the latest testing image on demand via `scripts/fetch-asset.sh`.

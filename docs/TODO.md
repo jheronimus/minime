@@ -2,6 +2,7 @@
 
 ## CI
 
+- [ ] **V2 validation gate**: write a `just commit` wrapper that runs `just validate-static` and then `git commit "$@"` *without* exposing `--no-verify`, and direct AI agents to commit only via that recipe. Git hooks can always be bypassed (`git commit --no-verify`, editing `.git/hooks/`, changing `core.hooksPath`); a wrapper the agents are instructed to use removes the bypass path entirely. (`--no-verify` is currently prohibited by rule in AGENTS.md; this makes it structurally impossible for agents.)
 - [ ] Try switching between Alpine and Buildroot using update.sh
 - [ ] Check if we can package the kernel for Alpine, making the build even faster (the kernel is almost the only thing we build in the Alpine build job)
 - [ ] Review the remote tool done by Gemini, probably slop

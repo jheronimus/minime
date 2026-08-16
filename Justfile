@@ -1,13 +1,13 @@
 default: validate
 
-# ── Fast gates (run pre-commit and in CI) ─────────────────────────────────────
+# ── Validation gates (local-only; every check lives in scripts/) ──────────────
 
-# Run all fast quality gates (shell validation, workflows, traits, git hygiene, kernel config, firmware, patches, hashes, UI submodules)
-validate: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-package-lists check-git check-build-flow check-allium check-minui check-yabause
+# Full gate: fast static checks + UI formatting (check-allium/minui/yabause
+# need Rust + clang toolchains).
+validate: validate-static check-allium check-minui check-yabause
 
-# Fast static gate (no cargo/clang toolchains): the subset of `validate` that
-# CI build workflows run to gate image/OTA shipping. `validate` is the full
-# pre-commit gate; `validate-ci` adds check-defconfigs + check-packages.
+# Fast static gate (no cargo/clang toolchains): what the pre-commit/pre-push
+# hooks run. All validation logic is owned by scripts/check-*.sh.
 validate-static: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-package-lists check-git check-build-flow
 
 # Validate Allium Rust code formatting (cargo fmt) and lints (cargo clippy)
@@ -24,7 +24,7 @@ check-yabause:
 
 # Validate GitHub Actions workflow files with actionlint
 check-workflows:
-    mise exec -- actionlint
+    ./scripts/check-workflows.sh
 
 # Validate merged kernel configuration fragments (duplicates, symbol format, vendor toggles)
 check-kernel-config:
@@ -50,67 +50,21 @@ check-package-lists:
 # ── Shell script validation ───────────────────────────────────────────────────
 
 # Validate *.sh scripts: syntax (sh -n), shellcheck (auto-detect shell from
-# shebang), and executable permission.  Excludes upstream Buildroot tree.
+# shebang), and executable permission. Excludes upstream Buildroot tree.
 check-scripts:
-    #!/usr/bin/env sh
-    set -eu
-    failed=0
-    find . -type f -name "*.sh" \
-        -not -path "*/buildroot/buildroot/*" \
-        -not -path "*/build-bootloader-tmp/*" \
-        -not -path "*/ui/*" \
-        -not -path "*/.git/*" \
-        -not -path "*/pkg/*" \
-        -not -path "*/downloads/*" \
-        -not -path "*/src/yabause/libchdr/*" \
-        -not -path "*/src/yabause/yabause/*" \
-        | sort | while read -r f; do
-        echo "  sh: $f"
-        # Syntax-check with the interpreter declared by the shebang: sh cannot
-        # parse bash scripts (arrays, here-strings), bash rejects sh-only -e/-u
-        # is fine, but bash-specific constructs must not be run through sh.
-        interpreter=$(head -n 1 "$f" | sed -n 's|^#!.*[ /]\([a-zA-Z0-9._-]*\) *$|\1|p' | head -n 1)
-        case "$interpreter" in
-        bash) bash -n "$f" ;;
-        *) sh -n "$f" ;;
-        esac
-        shellcheck --severity=warning "$f"
-        if head -n 1 "$f" | grep -q "^#!"; then
-            if [ ! -x "$f" ]; then
-                echo "ERROR: $f has a shebang but no executable bit" >&2
-                exit 1
-            fi
-        fi
-    done
+    ./scripts/check-scripts.sh
 
 # Validate APKBUILD files: syntax (sh -n) and shellcheck targeting ash.
 # SC2154 (abuild-injected vars) is suppressed via inline directive in each file.
 # No shebang or executable check — abuild sources them directly.
 check-apkbuilds:
-    #!/usr/bin/env sh
-    set -eu
-    find minime/targets/alpine/aports -name "APKBUILD" -not -path "*/pkg/*" | sort | while read -r f; do
-        echo "  apkbuild: $f"
-        sh -n "$f"
-        shellcheck --shell=sh --severity=warning "$f"
-    done
+    ./scripts/check-apkbuilds.sh
 
 # Validate OpenRC init.d scripts: shellcheck targeting ash.
 # SC2034 (openrc-run framework globals) is suppressed via inline directive.
 # Executable permission is required — OpenRC runs them directly.
 check-openrc:
-    #!/usr/bin/env sh
-    set -eu
-    find minime/boards -path "*/etc/init.d/*" -type f \
-        -not -path "*/pkg/*" \
-        | sort | while read -r f; do
-        echo "  openrc: $f"
-        shellcheck --shell=sh --severity=warning "$f"
-        if [ ! -x "$f" ]; then
-            echo "ERROR: $f is not executable" >&2
-            exit 1
-        fi
-    done
+    ./scripts/check-openrc.sh
 
 # ── Other fast gates ──────────────────────────────────────────────────────────
 
@@ -118,73 +72,19 @@ check-openrc:
 check-traits:
     ./scripts/check-traits.sh
 
-# Check git diff for whitespace errors and merge conflict markers
+# Check git diffs for whitespace errors and merge conflict markers
+# (staged + working tree)
 check-git:
-    git diff --check
+    ./scripts/check-git.sh
 
-# Validate build flow convention: build.sh + genimage.sh + Makefile pattern
+# Enforce the build-convention rules (no compilation in packaging scripts,
+# no packaging in build.sh) that the pipeline only catches at make time
 check-build-flow:
-    #!/usr/bin/env sh
-    set -eu
-    failed=0
+    ./scripts/check-build-flow.sh
 
-    # 1. build.sh exists for each target
-    for target in alpine buildroot; do
-        script="minime/targets/${target}/scripts/build.sh"
-        if [ ! -f "$script" ]; then
-            echo "ERROR: $script missing" >&2
-            failed=1
-        fi
-    done
+# ── Buildroot-dependent gates (require upstream Buildroot tree) ───────────────
 
-    # 2. build.sh has 'components' subcommand
-    for target in alpine buildroot; do
-        script="minime/targets/${target}/scripts/build.sh"
-        if [ -f "$script" ] && ! grep -q 'components' "$script"; then
-            echo "ERROR: $script missing 'components' subcommand" >&2
-            failed=1
-        fi
-    done
-
-    # 3. mkimage.sh exists and doesn't contain compilation logic
-    mkimage="minime/build/mkimage.sh"
-    if [ ! -f "$mkimage" ]; then
-        echo "ERROR: $mkimage missing" >&2
-        failed=1
-    elif grep -qE '^\s*(make |gcc |g\+\+ |configure |cmake |abuild |apk add)' "$mkimage"; then
-        echo "ERROR: $mkimage contains compilation logic" >&2
-        failed=1
-    fi
-
-    # 4. Makefiles have 'components' target, and common.mk has 'image' target
-    common_mk="minime/targets/common.mk"
-    if [ ! -f "$common_mk" ]; then
-        echo "ERROR: $common_mk missing" >&2
-        failed=1
-    elif ! grep -q '^image:' "$common_mk" && ! grep -q '^image ' "$common_mk"; then
-        echo "ERROR: $common_mk missing 'image' target" >&2
-        failed=1
-    fi
-
-    for target in alpine buildroot; do
-        mk="minime/targets/${target}/Makefile"
-        if [ -f "$mk" ]; then
-            if ! grep -q '^components:' "$mk" && ! grep -q '^components ' "$mk"; then
-                echo "ERROR: $mk missing 'components' target" >&2
-                failed=1
-            fi
-        fi
-    done
-
-    if [ "$failed" -eq 0 ]; then
-        echo "Build flow convention check passed."
-    else
-        exit 1
-    fi
-
-# ── CI-only gates (require upstream Buildroot tree) ───────────────────────────
-
-# Run all CI gates (fast gates + Buildroot-dependent checks)
+# Run all gates (fast + Buildroot-dependent checks)
 validate-ci: validate check-defconfigs check-packages
 
 # Merge and validate our custom config fragments for all boards
@@ -200,7 +100,7 @@ check-packages:
     if [ -d minime/targets/buildroot/buildroot ]; then
         python3 minime/targets/buildroot/buildroot/utils/check-package -b minime/targets/buildroot/external/package/*/*
     else
-        echo "Buildroot source tree not found — skipping (CI only)."
+        echo "Buildroot source tree not found — skipping (requires upstream Buildroot tree)."
     fi
 
 # ── UI Management ─────────────────────────────────────────────────────────────
@@ -229,19 +129,10 @@ build-minui target="musl":
 
 # ── Developer setup ───────────────────────────────────────────────────────────
 
-# Install git pre-commit hook that runs `just validate` before every commit
+# Install git pre-commit/pre-push hooks that run `just validate-static` (the
+# pre-push hook also forwards to git-lfs so LFS-tracked roms still upload).
 install-hooks:
-    #!/usr/bin/env sh
-    set -eu
-    hook=".git/hooks/pre-commit"
-    printf '#!/usr/bin/env sh\n# Auto-installed by `just install-hooks`. Run `just validate` manually.\nset -eu\necho "==> pre-commit: running just validate"\nexec just validate\n' > "$hook"
-    chmod +x "$hook"
-    echo "Installed pre-commit hook at $hook"
-
-    hook=".git/hooks/pre-push"
-    printf '#!/usr/bin/env sh\n# Auto-installed by `just install-hooks`. Run `just validate` before pushing.\nset -eu\necho "==> pre-push: running just validate"\nexec just validate\n' > "$hook"
-    chmod +x "$hook"
-    echo "Installed pre-push hook at $hook"
+    ./scripts/install-hooks.sh
 
 # ── Image Management ──────────────────────────────────────────────────────────
 

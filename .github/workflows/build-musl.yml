@@ -31,24 +31,6 @@ permissions:
   contents: write
 
 jobs:
-  validate:
-    name: Validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-
-      - name: Install mise
-        run: |
-          curl -fsSL https://mise.run | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install tools (mise)
-        run: mise install
-
-      - name: Run static validation
-        run: mise exec -- just validate-static
-
   bootloader:
     name: Bootloader
     uses: ./.github/workflows/build-bootloader.yml
@@ -86,7 +68,6 @@ jobs:
 
   build-cores-musl:
     name: Build Cores (musl)
-    needs: [validate]
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Code

@@ -95,22 +95,24 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
 ## Unified Validation Quality Gates
 
 All checks must pass before committing. Do not suppress/bypass warnings.
-All gates are defined in the root `Justfile` and must be run via `just`.
 
-The gate is **enforced by CI, not by convention**: `.github/workflows/validate.yml`
-runs the full `just validate` on every push to `main` and every PR, and the
-build pipelines (`build-musl.yml` / `build-glibc.yml`) gate image/OTA uploads on
-a `validate-static` job. A commit that fails validation is a red CI run and
-**cannot ship an image or OTA**. Local `pre-commit`/`pre-push` hooks
-(`just install-hooks`) are convenience only — never claim "it passed locally" in
-place of the CI verdict, and never use `git commit/push --no-verify` to bypass
-the gate. (`docs/INFRA.md` documents enforcement; branch protection should mark
-the `Validate` check required on `main`.)
+Validation is **local-only and owned by `scripts/`**: every check lives in a
+`scripts/check-*.sh` file and is invoked through `just`. There is **no CI
+validation job** — the build pipeline is the functional gate (a broken change
+fails at `make components` / `make image`), and `--no-verify` is prohibited
+below. The installed hooks are the primary gate; do not treat them as optional.
 
-- **Fast gates (pre-commit)**: `just validate`
-- **CI-only gates**: `just validate-ci`
-- **Static gate (CI build gate)**: `just validate-static`
-- **Developer setup**: `just install-hooks`
+- **Full gate**: `just validate` (adds UI formatting checks — needs Rust + clang)
+- **Fast static gate**: `just validate-static` (no cargo/clang toolchains) — run
+  by the `pre-commit`/`pre-push` hooks installed via `just install-hooks`
+- **Buildroot-dependent gate**: `just validate-ci` (requires upstream Buildroot tree)
+- **Setup (once per clone)**: `mise install` then `just install-hooks`
+
+**`--no-verify` is prohibited.** Never pass `--no-verify` to `git commit` or
+`git push`. The hooks exist to stop broken code from being committed at all —
+bypassing them defeats the only validation the repo has. There is no CI safety
+net underneath. (A `just commit` wrapper that removes the `--no-verify` path
+entirely is planned — see `docs/TODO.md`.)
 
 
 ## BIOS ROMs
