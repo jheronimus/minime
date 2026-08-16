@@ -20,6 +20,39 @@ log_card() {
 	fi
 }
 
+run_fat_fsck() {
+	/sbin/fsck.fat -a "$CARD_DEV"
+	FSCK_RC=$?
+}
+
+finish_card_mount() {
+	if ! mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null; then
+		log_console "ERROR: failed to mount repaired FAT partition $CARD_DEV"
+		exec sh
+	fi
+	[ -f /mnt/card/.minime/system ] || {
+		umount /mnt/card 2>/dev/null || true
+		return 1
+	}
+
+	case "$FSCK_RC" in
+	0 | 1)
+		log_card "[INITRAMFS] FAT fsck completed (exit $FSCK_RC)"
+		;;
+	2)
+		log_card "[INITRAMFS] FAT fsck repaired $CARD_DEV; rebooting to complete recovery"
+		sync
+		reboot -f
+		;;
+	*)
+		log_card "ERROR: FAT fsck failed for $CARD_DEV (exit $FSCK_RC)"
+		exec sh
+		;;
+	esac
+	log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
+	return 0
+}
+
 mkdir -p /mnt/card
 
 # Wait for Linux to enumerate SD/eMMC devices and mount the partition.
@@ -27,36 +60,32 @@ log_console "Waiting for block devices..."
 for _i in 1 2 3 4 5 6 7 8 9 10; do
 	for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
 		[ -b "$dev" ] || continue
-		[ "$(blkid -s LABEL -o value "$dev" 2>/dev/null)" = "minime" ] || continue
-		CARD_DEV="$dev"
-		log_console "Checking MINIME FAT filesystem on $CARD_DEV..."
-		/sbin/fsck.fat -a "$CARD_DEV"
-		fsck_rc=$?
-		if ! mount -t vfat "$CARD_DEV" /mnt/card 2>/dev/null; then
-			log_console "ERROR: failed to mount repaired FAT partition $CARD_DEV"
-			exec sh
-		fi
-		if [ ! -f /mnt/card/.minime/system ]; then
-			umount /mnt/card 2>/dev/null || true
+		if [ "$(blkid -s LABEL -o value "$dev" 2>/dev/null)" = "minime" ]; then
+			CARD_DEV="$dev"
+			log_console "Checking MINIME FAT filesystem on $CARD_DEV..."
+			run_fat_fsck
+			finish_card_mount && break
 			CARD_DEV=""
 			continue
 		fi
-		case "$fsck_rc" in
-		0 | 1)
-			log_card "[INITRAMFS] FAT fsck completed (exit $fsck_rc)"
-			;;
-		2)
-			log_card "[INITRAMFS] FAT fsck repaired $CARD_DEV; rebooting to complete recovery"
-			sync
-			reboot -f
-			;;
-		*)
-			log_card "ERROR: FAT fsck failed for $CARD_DEV (exit $fsck_rc)"
-			exec sh
-			;;
-		esac
-		log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
-		break
+
+		# BusyBox builds without usable blkid support fall back to the original
+		# marker-based probe, then fsck the identified partition before remounting.
+		if mount -t vfat "$dev" /mnt/card 2>/dev/null; then
+			if [ -f /mnt/card/.minime/system ]; then
+				CARD_DEV="$dev"
+				log_card "[INITRAMFS] Found MINIME FAT partition on $CARD_DEV; checking filesystem..."
+				umount /mnt/card 2>/dev/null || {
+					log_card "ERROR: failed to unmount $CARD_DEV before fsck"
+					exec sh
+				}
+				run_fat_fsck
+				finish_card_mount && break
+				CARD_DEV=""
+				continue
+			fi
+			umount /mnt/card 2>/dev/null || true
+		fi
 	done
 	[ -n "$CARD_DEV" ] && break
 	sleep 1
