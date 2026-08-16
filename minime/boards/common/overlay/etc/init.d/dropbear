@@ -21,8 +21,8 @@ depend() {
 keygen() {
 	if [ ! -f "${DB_HOSTKEY}" ]; then
 		mkdir -p "${DB_HOSTKEY_DIR}"
-		dropbearkey -t ed25519 -f "${DB_HOSTKEY}" 2>/dev/null || \
-			dropbearkey -t rsa -s 2048 -f "${DB_HOSTKEY}" 2>/dev/null || true
+		dropbearkey -t ed25519 -f "${DB_HOSTKEY}" >/dev/null 2>&1 || \
+			dropbearkey -t rsa -s 2048 -f "${DB_HOSTKEY}" >/dev/null 2>&1 || true
 	fi
 	[ -f "${DB_HOSTKEY}" ] || return 1
 	# Only readable by root.
