@@ -6,6 +6,7 @@
  * bootsplash (KD_GRAPHICS) and console log (KD_TEXT). Watches OpenRC UI
  * lifecycle to perform smooth handoff or reveal errors on failure.
  * Reads Device Tree and embedded traits to start upright from frame 0 across all boards.
+ * Clears the framebuffer to solid black on exit so PAK/launcher/poweroff fallbacks are clean.
  */
 
 #define _GNU_SOURCE
@@ -207,22 +208,19 @@ static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_
 		track_w = 4096;
 
 	for (uint32_t x = 0; x < track_w; x++) {
-		int32_t dist = (int32_t)x - beam_pos;
-		if (dist >= 0 && (uint32_t)dist < beam_w) {
-			/* Inside beam: 0.0 (tail) -> 1.0 (head) */
-			float t = 1.0f - ((float)dist / (float)beam_w);
-			uint8_t r, g, b;
-			if (t < 0.5f) {
-				float f = t * 2.0f;
-				r = 0;
-				g = (uint8_t)(30.0f + f * (150.0f - 30.0f));
-				b = (uint8_t)(100.0f + f * (255.0f - 100.0f));
-			} else {
-				float f = (t - 0.5f) * 2.0f;
-				r = (uint8_t)(f * 100.0f);
-				g = (uint8_t)(150.0f + f * (255.0f - 150.0f));
-				b = 255;
-			}
+		/* Toroidal distance for seamless continuous wrap */
+		int32_t d = abs((int32_t)x - beam_pos);
+		int32_t d_wrap = (int32_t)track_w - d;
+		if (d_wrap < d)
+			d = d_wrap;
+
+		if ((uint32_t)d < beam_w) {
+			float t = 1.0f - ((float)d / (float)beam_w);
+			float intensity = t * t * (3.0f - 2.0f * t); /* Smooth Hermite curve */
+
+			uint8_t r = (uint8_t)(intensity * 180.0f);
+			uint8_t g = (uint8_t)(30.0f * (1.0f - intensity) + intensity * 240.0f);
+			uint8_t b = (uint8_t)(80.0f * (1.0f - intensity) + intensity * 255.0f);
 			scratch_buf[x] = pack_pixel(fb, r, g, b);
 		} else {
 			scratch_buf[x] = 0;
@@ -648,8 +646,8 @@ int main(int argc, char **argv)
 	int input_count = scan_input_devices(input_fds, MAX_INPUTS);
 
 	bool in_graphics_mode = true;
-	int32_t beam_pos = -(int32_t)beam_w;
-	int step = (track_w / 30);
+	int32_t beam_pos = 0;
+	int step = (int)(track_w / 35);
 	if (step < 2)
 		step = 2;
 
@@ -659,7 +657,8 @@ int main(int argc, char **argv)
 	while (g_running) {
 		/* OpenRC lifecycle handoff */
 		if (check_file_exists("/run/openrc/started/ui")) {
-			/* UI started -> exit smoothly leaving KD_GRAPHICS */
+			/* UI started -> clear framebuffer to pure black so fallback / PAK start / shutdown is black */
+			clear_screen(&fb);
 			break;
 		}
 		if (check_file_exists("/run/openrc/failed/ui")) {
@@ -719,7 +718,7 @@ int main(int argc, char **argv)
 			pfds[i].revents = 0;
 		}
 
-		int poll_ret = poll(pfds, input_count, 33);
+		int poll_ret = poll(pfds, input_count, 20);
 		if (poll_ret > 0) {
 			for (int i = 0; i < input_count; i++) {
 				if (!(pfds[i].revents & POLLIN))
@@ -755,10 +754,15 @@ int main(int argc, char **argv)
 					  beam_pos, beam_w, scratch_buf, screen_rot);
 
 			beam_pos += step;
-			if (beam_pos > (int32_t)track_w) {
-				beam_pos = -(int32_t)beam_w;
+			if (beam_pos >= (int32_t)track_w) {
+				beam_pos -= (int32_t)track_w;
 			}
 		}
+	}
+
+	/* Clear screen before exiting so background framebuffer is clean black */
+	if (tty_fd < 0 || in_graphics_mode) {
+		clear_screen(&fb);
 	}
 
 	close_input_devices(input_fds, input_count);

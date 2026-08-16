@@ -5,9 +5,9 @@
 description="Minime Bootsplash"
 
 depend() {
-	after fb-unblank traits
-	before ui
-	keyword -shutdown
+	after fb-unblank
+	before *
+	keyword -shutdown -timeout
 }
 
 start() {
