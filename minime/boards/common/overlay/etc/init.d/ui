@@ -9,7 +9,6 @@ description="Minime UI (MinUI/Allium)"
 
 # --- Configuration ---
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
-ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
 UI_ENV_FILE="/mnt/sdcard/.minime/ui.env"
 
 # --- Helper functions ---
@@ -47,15 +46,20 @@ start() {
 
 	audio_card=$(get_trait audio_card)
 	audio_mixer=$(get_trait audio_mixer)
-	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
-		printf 'pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n' \
-			"$audio_card" "$audio_card" >"$ASOUNDRC_FILE"
-	else
-		rm -f "$ASOUNDRC_FILE"
-	fi
+
+	# Firmware owns ALSA routing: generate the boot-time .asoundrc from traits.
+	/usr/share/minime/scripts/audio.sh init
 
 	if [ -n "$audio_mixer" ]; then
 		amixer sset "$audio_mixer" 100% unmute >/dev/null 2>&1 || true
+	fi
+
+	# Some codecs (sun4i/H616) keep a separate "DAC" pswitch that must be
+	# unmuted for sound to pass; the boot-time unmute covers it.
+	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
+		amixer -q -c "$audio_card" sset 'DAC' unmute >/dev/null 2>&1 || true
+	else
+		amixer -q sset 'DAC' unmute >/dev/null 2>&1 || true
 	fi
 
 	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ] && amixer -c "$audio_card" controls >/dev/null 2>&1; then
