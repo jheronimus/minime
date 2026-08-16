@@ -4,7 +4,7 @@
 - **Region**: `minui` (`minime/ui/minui`)
 - **Baseline**: `upstream-main` (shauninman/MinUI snapshot); live upstream fetch deferred (no network)
 - **Delta**: 97 commits, 1,151 files, +6,646 / −36,937 lines (mostly per-device pruning, ADR 0005/0022/0025)
-- **Status**: topics 1–9 + 11–13 implemented (topic 10 evaluated → no change); commits pushed to `jheronimus/MinUI` `main`; container build + on-device verify pending
+- **Status**: topics 1–9 + 11–13 implemented (topic 10 evaluated → no change); commits pushed to `jheronimus/MinUI` `main`; RK3566 OTA and smoke verification complete
 
 ## Topics (13)
 
@@ -41,7 +41,8 @@ Estimated total cleanup: ≈ −230 SLOC, 1 file removed (`platform/makefile.cop
 - **T11**: gambatte DMG grid via env command, patch rewritten.
 - **T12**: 7 makefiles use `../../$(PLATFORM)/libmsettings` instead of `/root/workspace`.
 - **T13**: SND fix comment cites commit 1b210f59 as deliberate divergence.
-- Syntax pass: all changed C files + shell scripts OK. Full container build + on-device verify pending.
+- Syntax pass: all changed C files + shell scripts OK. `just validate` passed; CI build `31962302231` passed.
+- On-device: Alpine/RK3566 manifest verified at `785b0e6` / `a053d45`; launcher and About screen rendered; Game Boy/Gambatte loaded `Dangan GB`, initialized ALSA, rendered the game, opened the in-game menu, and returned to the ROM list without errors.
 
 ## Decisions & notes
 
