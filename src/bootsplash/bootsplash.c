@@ -5,7 +5,7 @@
  * gradient progress bar. Listens to evdev volume keys to toggle between
  * bootsplash (KD_GRAPHICS) and console log (KD_TEXT). Watches OpenRC UI
  * lifecycle to perform smooth handoff or reveal errors on failure.
- * Reads Device Tree panel rotation and traits to start upright from frame 0.
+ * Reads Device Tree and embedded traits to start upright from frame 0 across all boards.
  */
 
 #define _GNU_SOURCE
@@ -253,6 +253,27 @@ static int open_tty(void)
 	return -1;
 }
 
+static void trim_str(char *s)
+{
+	size_t len = strlen(s);
+	while (len > 0 && (s[len - 1] == '\r' || s[len - 1] == '\n' || s[len - 1] == ' ' || s[len - 1] == '\t')) {
+		s[--len] = '\0';
+	}
+}
+
+static int read_dt_str(const char *path, char *buf, size_t max_len)
+{
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	if (fd < 0)
+		return -1;
+	ssize_t n = read(fd, buf, max_len - 1);
+	close(fd);
+	if (n <= 0)
+		return -1;
+	buf[n] = '\0';
+	return 0;
+}
+
 static int read_dt_rotation(void)
 {
 	static const char *dt_paths[] = {
@@ -324,6 +345,109 @@ static int read_dt_rotation(void)
 	return 0;
 }
 
+static int parse_device_ini(const char *path, int *key_up, int *key_down, int *screen_rot)
+{
+	FILE *f = fopen(path, "r");
+	if (!f)
+		return 0;
+
+	char line[256];
+	char parent[64] = {0};
+
+	while (fgets(line, sizeof(line), f)) {
+		int val = 0;
+		if (sscanf(line, "key_vol_up=%d", &val) == 1 && val > 0)
+			*key_up = val;
+		else if (sscanf(line, "key_vol_down=%d", &val) == 1 && val > 0)
+			*key_down = val;
+		else if (sscanf(line, "screen_rotation=%d", &val) == 1 && val >= 0)
+			*screen_rot = val;
+		else if (sscanf(line, "parent=%63s", parent) == 1) {
+			trim_str(parent);
+		}
+	}
+	fclose(f);
+
+	if (parent[0]) {
+		char ppath[512];
+		snprintf(ppath, sizeof(ppath), "/usr/share/minime/traits/devices/%s.ini", parent);
+		parse_device_ini(ppath, key_up, key_down, screen_rot);
+	}
+	return 1;
+}
+
+static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
+{
+	char model[128] = {0};
+	char compat[256] = {0};
+
+	if (read_dt_str("/proc/device-tree/model", model, sizeof(model)) < 0) {
+		read_dt_str("/sys/firmware/devicetree/base/model", model, sizeof(model));
+	}
+	if (read_dt_str("/proc/device-tree/compatible", compat, sizeof(compat)) < 0) {
+		read_dt_str("/sys/firmware/devicetree/base/compatible", compat, sizeof(compat));
+	}
+
+	trim_str(model);
+	trim_str(compat);
+
+	DIR *dir = opendir("/usr/share/minime/traits/devices");
+	if (!dir)
+		return 0;
+
+	struct dirent *de;
+	while ((de = readdir(dir)) != NULL) {
+		if (strstr(de->d_name, ".ini") == NULL)
+			continue;
+
+		char path[512];
+		snprintf(path, sizeof(path), "/usr/share/minime/traits/devices/%s", de->d_name);
+
+		FILE *f = fopen(path, "r");
+		if (!f)
+			continue;
+
+		char line[256];
+		bool in_match = false;
+		char m_model[128] = {0};
+		char m_compat[128] = {0};
+
+		while (fgets(line, sizeof(line), f)) {
+			trim_str(line);
+			if (line[0] == '[') {
+				in_match = (strcmp(line, "[match]") == 0);
+				continue;
+			}
+			if (in_match) {
+				if (strncmp(line, "model=", 6) == 0) {
+					strncpy(m_model, line + 6, sizeof(m_model) - 1);
+					trim_str(m_model);
+				} else if (strncmp(line, "compatible=", 11) == 0) {
+					strncpy(m_compat, line + 11, sizeof(m_compat) - 1);
+					trim_str(m_compat);
+				}
+			}
+		}
+		fclose(f);
+
+		bool matched = false;
+		if (m_model[0] && model[0] && strcmp(m_model, model) == 0) {
+			if (!m_compat[0] || (compat[0] && strstr(compat, m_compat) != NULL))
+				matched = true;
+		} else if (m_compat[0] && compat[0] && strstr(compat, m_compat) != NULL) {
+			matched = true;
+		}
+
+		if (matched) {
+			parse_device_ini(path, key_up, key_down, screen_rot);
+			closedir(dir);
+			return 1;
+		}
+	}
+	closedir(dir);
+	return 0;
+}
+
 static void read_traits(int *key_up, int *key_down, int *screen_rot)
 {
 	static const char *trait_files[] = {
@@ -336,10 +460,15 @@ static void read_traits(int *key_up, int *key_down, int *screen_rot)
 	*key_up = KEY_VOLUMEUP;
 	*key_down = KEY_VOLUMEDOWN;
 
+	/* 1. Check direct Device Tree rotation property */
 	int dt_rot = read_dt_rotation();
 	if (dt_rot > 0)
 		*screen_rot = dt_rot;
 
+	/* 2. Match device from embedded initramfs traits */
+	match_initramfs_traits(key_up, key_down, screen_rot);
+
+	/* 3. Read active traits file from SD card / rootfs if available */
 	for (int i = 0; trait_files[i]; i++) {
 		FILE *f = fopen(trait_files[i], "r");
 		if (!f)
