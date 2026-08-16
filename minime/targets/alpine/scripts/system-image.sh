@@ -99,6 +99,12 @@ if [ -z "${FSCK_FAT}" ]; then
 fi
 cp -a "${FSCK_FAT}" "${INITRD_STAGE}/sbin/fsck.fat"
 cp -d "${TARGET_DIR}/lib/ld-"*.so* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+cp -d "${TARGET_DIR}/lib/libc."* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+
+if [ -x "${TARGET_DIR}/usr/bin/bootsplash" ]; then
+	mkdir -p "${INITRD_STAGE}/usr/bin"
+	cp -a "${TARGET_DIR}/usr/bin/bootsplash" "${INITRD_STAGE}/usr/bin/bootsplash"
+fi
 
 if [ -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" ]; then
 	cp -f "${MINIME_ROOT}/minime/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"

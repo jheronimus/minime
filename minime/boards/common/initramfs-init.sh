@@ -5,6 +5,22 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 
+# Single-owner backlight: set to max from sysfs before bootsplash
+for max_bl in /sys/class/backlight/*/max_brightness; do
+	if [ -r "$max_bl" ]; then
+		bl_dir="$(dirname "$max_bl")"
+		if [ -w "$bl_dir/brightness" ]; then
+			cat "$max_bl" > "$bl_dir/brightness" 2>/dev/null || true
+		fi
+	fi
+done
+
+BOOTSPLASH_PID=""
+if [ -x /usr/bin/bootsplash ]; then
+	/usr/bin/bootsplash &
+	BOOTSPLASH_PID=$!
+fi
+
 CARD_DEV=""
 BOOT_LOG_DIR="/mnt/card"
 
@@ -296,21 +312,16 @@ printf '%s\n' "${BOOT_ID}" >"${LOGS_DIR}/current"
 sync
 log_card "[INITRAMFS] Boot log: ${BOOT_ID}"
 
-# Also ensure backlight is at a visible level.  minui later reads
-# msettings.bin, but having backlight off at boot makes the display
-# invisible until userspace takes over.
-for bl in /sys/class/backlight/*/brightness; do
-	if [ -w "$bl" ]; then
-		echo 5 >"$bl" 2>/dev/null || true
-		log_card "[INITRAMFS] Backlight device $bl set to 5"
-	fi
-done
-
 # Hard check that target init exists and is executable before switch_root
 if [ ! -x /mnt/system/sbin/init ]; then
 	log_card "ERROR: /mnt/system/sbin/init is missing or not executable"
 	ls -la /mnt/system/sbin/init 2>&1 || true
 	exec sh
+fi
+
+if [ -n "$BOOTSPLASH_PID" ]; then
+	kill "$BOOTSPLASH_PID" 2>/dev/null || true
+	wait "$BOOTSPLASH_PID" 2>/dev/null || true
 fi
 
 log_card "[INITRAMFS] Moving mounts and switching root to /mnt/system..."

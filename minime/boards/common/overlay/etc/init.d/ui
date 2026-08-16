@@ -87,10 +87,6 @@ start() {
 	# live in .ui/bin; make them resolvable on PATH.
 	export PATH="/mnt/sdcard/.ui/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"
 
-	for bl in /sys/class/backlight/*/brightness; do
-		[ -w "$bl" ] && echo 5 >"$bl" 2>/dev/null || true
-	done
-
 	if [ -z "$UI_BIN" ] || ! [ -x "$UI_BIN" ]; then
 		echo "No UI binary found" >/tmp/ui.log
 		if [ -d /mnt/sdcard ]; then
@@ -98,8 +94,8 @@ start() {
 			cp -f /tmp/ui.log /mnt/sdcard/ui.log 2>/dev/null || true
 			sync 2>/dev/null || true
 		fi
-		eend 0
-		return 0
+		eend 1 "No UI binary found"
+		return 1
 	fi
 
 	if [ -d /mnt/sdcard ]; then
@@ -114,15 +110,6 @@ start() {
 
 	( "$UI_BIN" </dev/console >/tmp/ui.log 2>&1 ) &
 	echo $! >/tmp/ui.pid
-
-	# Detach the framebuffer console once the UI owns fb0 so kernel
-	# messages and VT key echoes can no longer bleed through the UI.
-	for vtcon in /sys/class/vtconsole/vtcon*/; do
-		[ -r "${vtcon}/name" ] || continue
-		if grep -q "frame buffer device" "${vtcon}/name" 2>/dev/null; then
-			echo 0 >"${vtcon}/bind" 2>/dev/null || true
-		fi
-	done
 
 	eend 0
 }

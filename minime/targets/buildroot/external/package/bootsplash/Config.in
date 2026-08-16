@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BOOTSPLASH
+	bool "bootsplash"
+	help
+	  Minime lightweight framebuffer bootsplash daemon.
