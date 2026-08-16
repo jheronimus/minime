@@ -4,7 +4,7 @@
 - **Region**: `minui` (`minime/ui/minui`)
 - **Baseline**: `upstream-main` (shauninman/MinUI snapshot); live upstream fetch deferred (no network)
 - **Delta**: 97 commits, 1,151 files, +6,646 / −36,937 lines (mostly per-device pruning, ADR 0005/0022/0025)
-- **Status**: topics 1–9 + 11–13 implemented (topic 10 evaluated → no change); commits prepared for `jheronimus/MinUI` `main`; container build + on-device verify pending
+- **Status**: topics 1–9 + 11–13 implemented (topic 10 evaluated → no change); commits pushed to `jheronimus/MinUI` `main`; container build + on-device verify pending
 
 ## Topics (13)
 
