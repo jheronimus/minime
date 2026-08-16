@@ -2,11 +2,8 @@
 
 ## CI
 
-- [ ] **V2 validation gate**: write a `just commit` wrapper that runs `just validate-static` and then `git commit "$@"` *without* exposing `--no-verify`, and direct AI agents to commit only via that recipe. Git hooks can always be bypassed (`git commit --no-verify`, editing `.git/hooks/`, changing `core.hooksPath`); a wrapper the agents are instructed to use removes the bypass path entirely. (`--no-verify` is currently prohibited by rule in AGENTS.md; this makes it structurally impossible for agents.)
+
 - [ ] Try switching between Alpine and Buildroot using update.sh
-- [ ] Check if we can package the kernel for Alpine, making the build even faster (the kernel is almost the only thing we build in the Alpine build job)
-- [ ] Review the remote tool done by Gemini, probably slop
-- [ ] Review the current delta between forks and upstream for MinUI and Allium, trim slop
 
 ## UI
 
@@ -24,18 +21,14 @@
 - [ ] Frontend GL support (GLSM/hardware contexts in minarch/Allium) to run the core's GL renderer. The software (Titan) path draws no visible video in this core (verified on-device with a real BIOS: opaque-black frames) — see [ADR 0023](adr/0023-yabasanshiro-libretro-port.md). This is the main blocker for playable Saturn; also unlocks GL/Vulkan for other cores.
 - [ ] Multi-disc support: implement `retro_disk_control_callback` so minarch's disc-swap menu works for multi-disc games (e.g. Panzer Dragoon Saga). Needs a glue hook to reinit the CD core on `replace_image_index`. Deferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 - [ ] Buildroot two-core split: the GL-linked core does not build on Buildroot (libmali ships no desktop `libGL`); ship a software-only variant there ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
-- [ ] Add `SAT/saturn_bios.bin` to the private `jheronimus/console-bios` repo so full local image builds ship a Saturn BIOS. The core now falls back to HLE when the BIOS is absent (`Bios/SAT/saturn_bios.bin`), but real BIOS is preferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 
 ## Kernel & Performance
 
 - [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards
-  - [x] `CONFIG_ENERGY_MODEL=y` enabled in the shared kernel fragment (ADR 0018)
 - [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
 - [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
   - [THEORY] Atomic profile application for governor, frequency bounds, and core limits via key combinations or minimal UI.
-- [ ] Investigate how performance can be improved in Alpine with musl
-  - [THEORY] jemmalloc/mimalloc3?
 
 ## Power Management & Suspend
 
@@ -45,7 +38,6 @@
 - [ ] Implement Fake Suspend & Quick Resume across platforms (RK3566, RK3326, H700)
   - [THEORY] Offline non-boot CPU cores (or throttle CPU0 to 120MHz powersave), mute audio, disable LEDs, turn off Wi-Fi/audio rails, save emulator state, and start auto-shutdown timer.
 - [ ] Allium idle auto-sleep should mimic MinUI: suspend first, then auto-shutdown
-  - [DONE] Default `auto_sleep_when_charging` to `false` (Allium power.rs) so the 5-min idle timer no longer powers off while charging.
   - [THEORY] Allium's idle timeout (`alliumd.rs` → `handle_quit()`) currently **powers off directly** — it never suspends first. MinUI (`api.c` `PWR_fauxSleep` → `PWR_waitForWake`) instead blanks the screen / suspends, and only auto-powers-off after ~2 min in sleep when **not** charging. Mirror that on Minime: on idle timeout call `handle_suspend()`, then if still idle & not charging, `handle_quit()`.
 - [ ] Qualify real kernel suspend and DTS regulator sleep states (RK3566, RK3326)
 - [ ] Calibrate voltage-based battery gauge with PMIC percentage fallback
@@ -74,10 +66,15 @@
   - [THEORY] Traits hand-copy values that already live in the DTS (freqs, keycodes, thermal trips, GPU OPPs) — every repetition is a drift risk. Explore generating trait values from the compiled DTB at build time (DTS as single source of truth) so hand-authored copies cannot silently diverge; hand-author only true device facts (identity, geometry) that the DTS does not expose.
 - [ ] Add MTP support
 - [ ] Add dual SD card support
-- [ ] Bundle static `fsck.fat` in initramfs to check and repair the FAT partition before mounting (clearing the dirty bit and verifying filesystem integrity)
 
 ## Completed
 
+- [x] Bundle static `fsck.fat` in initramfs to check and repair the FAT partition before mounting
+- [x] Review the remote tool done by Gemini for quality
+- [x] Review the fork vs upstream delta for MinUI and Allium; trim excess code
+- [x] Enable `CONFIG_ENERGY_MODEL=y` in the shared kernel fragment (ADR 0018)
+- [x] Investigate how performance can be improved in Alpine with musl
+- [x] Default Allium `auto_sleep_when_charging` to `false` so the idle timer does not power off while charging
 - [x] Investigate why musl UI build is 2x slower: slow `ubuntu-24.04-arm` runner on cache-miss; mitigated by caching Allium cargo `target/` dirs keyed on `Cargo.lock`
 - [x] Shared RetroArch cores between MinUI and Allium via `build-cores` CI job and `cores-<libc>` artifact
 - [x] Unify Roms folder naming to a single MinUI-canonical scheme (`roms/mappings`) resolved by both UIs
