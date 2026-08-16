@@ -22,6 +22,7 @@
 
 - [ ] Multi-disc support: implement `retro_disk_control_callback` so minarch's disc-swap menu works for multi-disc games (e.g. Panzer Dragoon Saga). Needs a glue hook to reinit the CD core on `replace_image_index`. Deferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 - [ ] Buildroot two-core split: the GL-linked core does not build on Buildroot (libmali ships no desktop `libGL`); ship a software-only variant there ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
+- [ ] Add `SAT/saturn_bios.bin` to the private `jheronimus/console-bios` repo so full local image builds ship a Saturn BIOS. The core now falls back to HLE when the BIOS is absent (`Bios/SAT/saturn_bios.bin`), but real BIOS is preferred ([ADR 0023](adr/0023-yabasanshiro-libretro-port.md)).
 
 ## Kernel & Performance
 
@@ -71,6 +72,7 @@
   - [THEORY] Traits hand-copy values that already live in the DTS (freqs, keycodes, thermal trips, GPU OPPs) — every repetition is a drift risk. Explore generating trait values from the compiled DTB at build time (DTS as single source of truth) so hand-authored copies cannot silently diverge; hand-author only true device facts (identity, geometry) that the DTS does not expose.
 - [ ] Add MTP support
 - [ ] Add dual SD card support
+- [ ] Bundle static `fsck.fat` in initramfs to check and repair the FAT partition before mounting (clearing the dirty bit and verifying filesystem integrity)
 
 ## Completed
 

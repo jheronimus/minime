@@ -89,9 +89,10 @@ Vulkan pans out, a follow-up ADR supersedes this one.
   (RetroArch) and for the deferred frontend-GL work (GLSM/hardware contexts
   in minarch/Allium).
 - Known gap: Buildroot images ship no Saturn core until the two-core split.
-- Port completion is tracked in the glue (`src/libretro/`); the remaining
-  open work covers save-RAM exposure, savestates, CD format coverage, BIOS
-  handling, and MinUI/Allium system wiring.
+- The libretro port is functional: software rendering (RGB565 to the
+  frontend), save RAM, savestates, CHD/bin/cue/iso support, and BIOS/HLE
+  fallback are implemented in the glue. Remaining gaps (multi-disc swap,
+  Buildroot build, BIOS provisioning) are tracked in `docs/TODO.md`.
 
 ## Alternatives considered
 
