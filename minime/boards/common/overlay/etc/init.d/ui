@@ -78,6 +78,7 @@ start() {
 	fi
 
 	export HOME=/mnt/sdcard
+	export XDG_RUNTIME_DIR=/run
 	# Allium shells out to its bundled helpers (say/show/screenshot) which
 	# live in .ui/bin; make them resolvable on PATH.
 	export PATH="/mnt/sdcard/.ui/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"

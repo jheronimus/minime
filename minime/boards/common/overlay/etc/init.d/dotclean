@@ -41,26 +41,26 @@ start() {
 		return 0
 	fi
 
-	# Detached worker (own pidfile, like the logger service workers) so boot
-	# proceeds to the UI immediately.
-	worker_cmd='
-for mnt in /mnt/*/; do
-	[ -d "${mnt}" ] || continue
-	find "${mnt}" \( -name .DS_Store -o -name "._*" \) -type f -delete 2>/dev/null
-	rm -rf "${mnt}.Spotlight-V100" "${mnt}.Trashes" "${mnt}.fseventsd" 2>/dev/null
-	logger -t dotclean "cleaned ${mnt}" 2>/dev/null || true
-	sync
-done
-'
-	start-stop-daemon --start --background --make-pidfile \
-		--pidfile "${PID_FILE}" \
-		-x /bin/sh -- -c "${worker_cmd}" 2>/dev/null || true
-	eend $?
+	# Detached worker so boot proceeds to the UI immediately.
+	(
+		for mnt in /mnt/*/; do
+			[ -d "${mnt}" ] || continue
+			find "${mnt}" \( -name .DS_Store -o -name "._*" \) -type f -delete 2>/dev/null
+			rm -rf "${mnt}.Spotlight-V100" "${mnt}.Trashes" "${mnt}.fseventsd" 2>/dev/null
+			logger -t dotclean "cleaned ${mnt}" 2>/dev/null || true
+			sync
+		done
+		rm -f "${PID_FILE}" 2>/dev/null || true
+	) >/dev/null 2>&1 &
+	echo $! > "${PID_FILE}"
+	eend 0
 }
 
 stop() {
 	ebegin "Stopping dotclean"
-	start-stop-daemon --stop --pidfile "${PID_FILE}" 2>/dev/null || true
-	rm -f "${PID_FILE}" 2>/dev/null || true
+	if [ -f "${PID_FILE}" ]; then
+		kill "$(cat "${PID_FILE}" 2>/dev/null)" 2>/dev/null || true
+		rm -f "${PID_FILE}" 2>/dev/null || true
+	fi
 	eend 0
 }

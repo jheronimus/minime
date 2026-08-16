@@ -94,6 +94,7 @@ start() {
 		start-stop-daemon -S -q -b -m \
 			-p "${SYSLOG_PIDFILE}" \
 			-x /sbin/syslogd -- \
+			-n \
 			-O "${LOG_DIR}/syslog.log" \
 			-s "${SYSLOG_MAX_KB}" \
 			-b "${SYSLOG_KEEP}" 2>/dev/null || true
