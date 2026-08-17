@@ -307,5 +307,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.img.zst --clobber || true
-          gh release upload testing minime/targets/alpine/out/${{ matrix.board }}/*.tar.zst --clobber || true
+          for f in minime/targets/alpine/out/${{ matrix.board }}/*.img.zst minime/targets/alpine/out/${{ matrix.board }}/*.tar.zst; do
+            [ -f "$f" ] || continue
+            for attempt in 1 2 3 4 5; do
+              if gh release upload testing "$f" --clobber; then
+                break
+              fi
+              echo "Upload attempt $attempt failed, retrying..."
+              sleep 5
+            done
+          done
