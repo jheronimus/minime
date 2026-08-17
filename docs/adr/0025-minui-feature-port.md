@@ -48,8 +48,8 @@ to existing code, preserving IMPORT/NextUI behavior.
   `Tools/minime/{Wi-Fi,Bluetooth,Power}.pak` in **BASE**. Each launches like
   the existing Clock/Input tool paks.
 - Backends follow NextUI's shim pattern: a small `WIFI_*`/`BT_*` API
-  (`common/wireless.h`) with generic implementations (`common/generic_wifi.c`
-  speaking `iwctl`, `common/generic_bt.c` speaking `bluetoothctl`). No
+  (`common/wireless.h`) with generic implementations (`common/wifi.c`
+  speaking `iwctl`, `common/bt.c` speaking `bluetoothctl`). No
   libdbus, no toolchain changes.
 - Persistence: Wi-Fi toggles create/remove `config/wifi/enabled` and start/
   stop the firmware `wifi` service; the service now skips startup unless the
@@ -86,6 +86,6 @@ to existing code, preserving IMPORT/NextUI behavior.
 
 ## References
 - [ADR 0015](0015-iwd-wifi.md) — iwd/wifi service (gate change)
-- `minime/ui/minui/workspace/all/settings/`, `common/menu.c|keyboard.c|generic_wifi.c|generic_bt.c|wireless.h`
+- `minime/ui/minui/workspace/all/settings/`, `common/menu.c|keyboard.c|wifi.c|bt.c|wireless.h`
 - `minarch/minarch.c` (rewind + `run_frame`), `common/api.c` (power policy)
 - `minime/boards/common/overlay/etc/init.d/wifi` (enable gate)
