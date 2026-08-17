@@ -72,8 +72,11 @@ struct render_surface {
 	uint8_t *mem;
 	uint32_t width;
 	uint32_t height;
+	uint32_t log_width;
+	uint32_t log_height;
 	uint32_t pitch;
 	uint32_t bpp;
+	int rotation;
 };
 
 struct drm_state {
@@ -152,14 +155,31 @@ static inline uint32_t pack_rgb16(uint8_t r, uint8_t g, uint8_t b)
 
 static inline void put_pixel(const struct render_surface *surf, uint32_t x, uint32_t y, uint32_t color)
 {
-	if (x >= surf->width || y >= surf->height)
+	if (x >= surf->log_width || y >= surf->log_height)
+		return;
+
+	uint32_t px = x;
+	uint32_t py = y;
+
+	if (surf->rotation == 90) {
+		px = y;
+		py = (surf->log_width - 1) - x;
+	} else if (surf->rotation == 180) {
+		px = (surf->log_width - 1) - x;
+		py = (surf->log_height - 1) - y;
+	} else if (surf->rotation == 270) {
+		px = (surf->log_height - 1) - y;
+		py = x;
+	}
+
+	if (px >= surf->width || py >= surf->height)
 		return;
 
 	if (surf->bpp == 16) {
-		uint16_t *p = (uint16_t *)(surf->mem + (y * surf->pitch) + (x * 2));
+		uint16_t *p = (uint16_t *)(surf->mem + (py * surf->pitch) + (px * 2));
 		*p = (uint16_t)color;
 	} else {
-		uint32_t *p = (uint32_t *)(surf->mem + (y * surf->pitch) + (x * 4));
+		uint32_t *p = (uint32_t *)(surf->mem + (py * surf->pitch) + (px * 4));
 		*p = color;
 	}
 }
@@ -419,45 +439,8 @@ static int drm_init(struct drm_state *drm, int angle, uint32_t trait_w, uint32_t
 		return -1;
 	}
 
-	/* Find primary plane */
-	struct drm_mode_get_plane_res pres = {0};
-	if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0 && pres.count_planes > 0) {
-		uint32_t *pids = calloc(pres.count_planes, sizeof(uint32_t));
-		pres.plane_id_ptr = (uint64_t)(uintptr_t)pids;
-		if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0) {
-			for (uint32_t i = 0; i < pres.count_planes; i++) {
-				struct drm_mode_get_plane pl = {0};
-				pl.plane_id = pids[i];
-				if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANE, &pl) == 0 && pl.crtc_id == drm->crtc_id) {
-					uint32_t type_prop = 0;
-					if (drm_find_prop(drm->fd, pids[i], DRM_MODE_OBJECT_PLANE, "type", &type_prop) == 0) {
-						drm->plane_id = pids[i];
-						break;
-					}
-				}
-			}
-		}
-		free(pids);
-	}
-
-	/* Apply hardware primary plane rotation at frame 0 */
-	int plane_rotated = 0;
-	if (drm->plane_id != 0 && angle != 0) {
-		if (drm_set_plane_rotation(drm->fd, drm->plane_id, angle) == 0)
-			plane_rotated = 1;
-	}
-
-	/* Logical resolution */
-	if (trait_w > 0 && trait_h > 0) {
-		drm->width = trait_w;
-		drm->height = trait_h;
-	} else if (plane_rotated || angle == 90 || angle == 270) {
-		drm->width = drm->mode.vdisplay;
-		drm->height = drm->mode.hdisplay;
-	} else {
-		drm->width = drm->mode.hdisplay;
-		drm->height = drm->mode.vdisplay;
-	}
+	drm->width = drm->mode.hdisplay;
+	drm->height = drm->mode.vdisplay;
 
 	/* Allocate double-buffered DRM dumb buffers */
 	for (int b = 0; b < 2; b++) {
@@ -906,9 +889,18 @@ int main(int argc, char **argv)
 		surf.mem = fb.mem;
 	}
 
-	/* Geometry calculations for 0° landscape display */
-	uint32_t log_w = surf.width;
-	uint32_t log_h = surf.height;
+	surf.rotation = screen_rot;
+	if (surf.rotation == 90 || surf.rotation == 270) {
+		surf.log_width = surf.height;
+		surf.log_height = surf.width;
+	} else {
+		surf.log_width = surf.width;
+		surf.log_height = surf.height;
+	}
+
+	/* Geometry calculations for landscape layout */
+	uint32_t log_w = surf.log_width;
+	uint32_t log_h = surf.log_height;
 
 	uint32_t cell_w = log_w / 40;
 	if (cell_w < 4) cell_w = 4;

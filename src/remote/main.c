@@ -60,6 +60,7 @@ typedef enum {
 static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
     const char *out_path = NULL;
     int use_base64 = 0;
+    int raw_mode = 0;
     capture_backend_t backend = BACKEND_AUTO;
     const char *device_path = NULL;
 
@@ -68,6 +69,8 @@ static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
             out_path = argv[++i];
         } else if (strcmp(argv[i], "--base64") == 0) {
             use_base64 = 1;
+        } else if (strcmp(argv[i], "--raw") == 0) {
+            raw_mode = 1;
         } else if (strcmp(argv[i], "--backend") == 0 && i + 1 < argc) {
             const char *b = argv[++i];
             if (strcasecmp(b, "drm") == 0) {
@@ -125,6 +128,19 @@ static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
     uint8_t *final_rgb = raw_rgb;
     int final_w = raw_w;
     int final_h = raw_h;
+
+    int rot_angle = traits->screen_rotation;
+    if (!raw_mode && rot_angle != 0) {
+        int inv_angle = (360 - rot_angle) % 360;
+        uint8_t *rotated = NULL;
+        int rw = 0, rh = 0;
+        if (image_rotate_rgb(raw_rgb, raw_w, raw_h, inv_angle, &rotated, &rw, &rh) == 0) {
+            free(raw_rgb);
+            final_rgb = rotated;
+            final_w = rw;
+            final_h = rh;
+        }
+    }
 
 
     int ret = 0;
