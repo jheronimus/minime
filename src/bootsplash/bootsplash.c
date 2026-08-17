@@ -162,14 +162,14 @@ static inline void put_pixel(const struct render_surface *surf, uint32_t x, uint
 	uint32_t py = y;
 
 	if (surf->rotation == 90) {
-		px = y;
-		py = (surf->log_width - 1) - x;
+		px = (surf->log_height - 1) - y;
+		py = x;
 	} else if (surf->rotation == 180) {
 		px = (surf->log_width - 1) - x;
 		py = (surf->log_height - 1) - y;
 	} else if (surf->rotation == 270) {
-		px = (surf->log_height - 1) - y;
-		py = x;
+		px = y;
+		py = (surf->log_width - 1) - x;
 	}
 
 	if (px >= surf->width || py >= surf->height)
