@@ -17,7 +17,7 @@ done
 
 BOOTSPLASH_PID=""
 if [ -x /usr/bin/bootsplash ]; then
-	/usr/bin/bootsplash &
+	/usr/bin/bootsplash --persist &
 	BOOTSPLASH_PID=$!
 fi
 

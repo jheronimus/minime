@@ -519,19 +519,23 @@ static void drm_flip(struct drm_state *drm)
 	drm->cur_buf = 1 - drm->cur_buf;
 }
 
-static void drm_cleanup(struct drm_state *drm)
+static void drm_cleanup(struct drm_state *drm, bool persist)
 {
 	for (int b = 0; b < 2; b++) {
 		if (drm->bufs[b].map && drm->bufs[b].map != MAP_FAILED) {
-			memset(drm->bufs[b].map, 0, drm->bufs[b].size);
+			if (!persist) {
+				memset(drm->bufs[b].map, 0, drm->bufs[b].size);
+			}
 			munmap(drm->bufs[b].map, drm->bufs[b].size);
 		}
-		if (drm->bufs[b].fb_id) {
-			ioctl(drm->fd, DRM_IOCTL_MODE_RMFB, drm->bufs[b].fb_id);
-		}
-		if (drm->bufs[b].handle) {
-			struct drm_mode_destroy_dumb dd = { .handle = drm->bufs[b].handle };
-			ioctl(drm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dd);
+		if (!persist) {
+			if (drm->bufs[b].fb_id) {
+				ioctl(drm->fd, DRM_IOCTL_MODE_RMFB, drm->bufs[b].fb_id);
+			}
+			if (drm->bufs[b].handle) {
+				struct drm_mode_destroy_dumb dd = { .handle = drm->bufs[b].handle };
+				ioctl(drm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dd);
+			}
 		}
 	}
 	if (drm->fd >= 0)
@@ -814,8 +818,11 @@ int main(int argc, char **argv)
 	uint32_t trait_w = 0, trait_h = 0;
 	read_traits(&key_vol_up, &key_vol_down, &screen_rot, &trait_w, &trait_h);
 
+	bool persist = false;
 	for (int i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "--rotate") == 0 && i + 1 < argc) {
+		if (strcmp(argv[i], "--persist") == 0 || strcmp(argv[i], "--no-clear") == 0) {
+			persist = true;
+		} else if (strcmp(argv[i], "--rotate") == 0 && i + 1 < argc) {
 			screen_rot = atoi(argv[++i]);
 		} else if (strcmp(argv[i], "90") == 0 || strcmp(argv[i], "180") == 0 ||
 			   strcmp(argv[i], "270") == 0 || strcmp(argv[i], "0") == 0) {
@@ -1036,8 +1043,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Clear screen on exit */
-	if (tty_fd < 0 || in_graphics_mode) {
+	/* Clear screen on exit unless persist requested */
+	if (!persist && (tty_fd < 0 || in_graphics_mode)) {
 		if (use_drm) {
 			surf.mem = drm.bufs[drm.cur_buf].map;
 			clear_surface(&surf);
@@ -1050,8 +1057,11 @@ int main(int argc, char **argv)
 	close_input_devices(input_fds, input_count);
 
 	if (use_drm) {
-		drm_cleanup(&drm);
+		drm_cleanup(&drm, persist);
 	} else {
+		if (!persist) {
+			clear_surface(&surf);
+		}
 		munmap(fb.mem, fb.mem_size);
 		close(fb.fd);
 	}
