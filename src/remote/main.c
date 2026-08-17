@@ -126,21 +126,6 @@ static int cmd_screenshot(int argc, char **argv, const RemoteTraits *traits) {
     int final_w = raw_w;
     int final_h = raw_h;
 
-    // Undo the panel rotation so the PNG matches what the player sees.
-    // The fb/DRM buffer is stored rotated by screen_rotation degrees CW.
-    // image_rotate_rgb(90) applies 90 CCW, which undoes 90 CW.
-    int rot = (360 - (traits->screen_rotation % 360)) % 360;
-    if (rot != 0) {
-        uint8_t *rot_rgb = NULL;
-        int rot_w = 0, rot_h = 0;
-        if (image_rotate_rgb(raw_rgb, raw_w, raw_h, rot, &rot_rgb, &rot_w, &rot_h) == 0) {
-            free(raw_rgb);
-            final_rgb = rot_rgb;
-            final_w = rot_w;
-            final_h = rot_h;
-        }
-    }
-
 
     int ret = 0;
     if (use_base64) {

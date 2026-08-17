@@ -24,11 +24,9 @@
 
 ## Kernel & Performance
 
-- [ ] Integrate mainline Rockchip power/charger drivers (`rockchip-pm-domains`, `rk3568-pmu-io-voltage-domain`, `rk817-charger`) to unblock `CONFIG_THERMAL_OF` on all boards
 - [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
   - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
-- [ ] Expose selectable performance profiles (Max Performance, Balanced, Power Save)
-  - [THEORY] Atomic profile application for governor, frequency bounds, and core limits via key combinations or minimal UI.
+
 
 ## Power Management & Suspend
 
@@ -40,18 +38,14 @@
 - [ ] Allium idle auto-sleep should mimic MinUI: suspend first, then auto-shutdown
   - [THEORY] Allium's idle timeout (`alliumd.rs` → `handle_quit()`) currently **powers off directly** — it never suspends first. MinUI (`api.c` `PWR_fauxSleep` → `PWR_waitForWake`) instead blanks the screen / suspends, and only auto-powers-off after ~2 min in sleep when **not** charging. Mirror that on Minime: on idle timeout call `handle_suspend()`, then if still idle & not charging, `handle_quit()`.
 - [ ] Qualify real kernel suspend and DTS regulator sleep states (RK3566, RK3326)
-- [ ] Calibrate voltage-based battery gauge with PMIC percentage fallback
-- [ ] Enhance LED support (green status LED, charging/battery level indicators, low-battery threshold disable)
+
 - [ ] Analyze and optimize idle power consumption (power domains, runtime-PM, unused rails)
 
 ## Display, Audio & Input
 
 - [ ] On-device verify display orientation per device with `just shell "remote screenshot --raw"` ([ADR 0027](adr/0027-display-rotation.md)): confirm RG28XX (270) / RG40XX-V (90) / RG351V (90) directions and correct any that are 180° off. Confirm the newly-shipped H700 panel firmware blobs bring the rg28xx/rg34xx/rg40xx/rgcubexx panels up upright.
-- [ ] Source panel init sequences (`.panel` blobs) for the H700 v2/sp panel variants (rg34xx-sp, rg35xx-sp-v2, rg40xx-v2) — no firmware presets exist yet, so those devices have no display.
-- [ ] Enable `screen_rotation_kernel` (VOP2 hardware rotation via init.d/display) on RK3566: requires dropping UI rotation (`screen_rotation=0`) and verifying the fbdev (Allium) path, whose framebuffer is allocated at native mode dimensions (kernel fbdev 90/270 rotation TODO).
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
-- [ ] Implement the bootsplash ([ADR 0019](adr/0019-bootsplash.md)): `MINIME` framebuffer art + looping gradient bar across initramfs/rootfs, volume-key TTY reveal, `ui`-service failure handoff, single-owner boot brightness
 
 ## Board Infrastructure & System
 
@@ -93,3 +87,6 @@
 - [x] Device hostname announcement via mdnsd (`minime.local`, ADR 0017)
 - [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0003)
 - [x] RK3326 bringup in CI matrix and both `minime/targets/*/Makefile` boards
+- [x] Integrate mainline Rockchip power/charger drivers (PM domains, IO domain, RK817 charger) and thermal framework
+- [x] Ship panel firmware blobs for all H700 panel variants (rg34xx-sp, rg35xx-sp-v2, rg40xx-v2)
+- [x] Unified DRM bootsplash (plane rotation, dumb buffers) and Allium DRM display module with fallback

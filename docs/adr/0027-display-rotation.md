@@ -37,7 +37,9 @@ apply an inverse rotation because it reads buffers that the UI already rotated.
    the UI starts. On H700/RK3326 it no-ops (no rotation silicon) and only
    reports the enforcement layer.
 
-3. **H700 panel firmware blobs are shipped** for every panel the panel-firmware-generator presets cover: rg28xx, rg34xx, rg35xx-plus-rev6, rg40xx, rgcubexx (validated byte-for-byte against the existing rg35xx-plus blob). Without a blob the generic driver fails probe. The **v2/sp panel variants** (rg34xx-sp, rg35xx-sp-v2, rg40xx-v2) have **no published presets** and remain uninitialized until their init sequences are sourced (tracked in TODO).
+3. **H700 panel firmware blobs are shipped** for all panels across H700 variants:
+   rg28xx, rg34xx, rg34xx-sp, rg35xx-plus-rev6, rg35xx-sp-v2, rg40xx, rg40xx-v2,
+   and rgcubexx. Without a blob the generic driver fails probe.
 
 4. **Portrait-mounted devices get correct traits**: RG28XX `screen_rotation=270`
    (authoritative from the panel preset). RG40XX-V and RG351V are set to 90,

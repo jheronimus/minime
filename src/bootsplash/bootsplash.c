@@ -1,12 +1,20 @@
 /*
- * bootsplash: lightweight framebuffer bootsplash for Minime
+ * bootsplash: lightweight DRM/KMS and framebuffer bootsplash for Minime
  *
  * Renders the lowercase 'minimē' ASCII wordmark and a looping left-to-right
- * gradient progress bar. Listens to evdev volume keys to toggle between
- * bootsplash (KD_GRAPHICS) and console log (KD_TEXT). Watches OpenRC UI
- * lifecycle to perform smooth handoff or reveal errors on failure.
- * Reads Device Tree and embedded traits to start upright from frame 0 across all boards.
- * Clears the framebuffer to solid black on exit so PAK/launcher/poweroff fallbacks are clean.
+ * gradient progress bar.
+ *
+ * Direct DRM/KMS mode:
+ * - Applies primary plane rotation at frame 0 via DRM atomic commit.
+ * - Allocates DRM dumb buffers and double-buffers via page flips with hardware vsync.
+ * - Draws directly at 0° in native landscape geometry (640x480).
+ *
+ * Fallback mode:
+ * - Falls back to /dev/fb0 if DRM is unavailable.
+ *
+ * Listens to evdev volume keys to toggle between bootsplash (KD_GRAPHICS)
+ * and console log (KD_TEXT). Watches OpenRC UI lifecycle to perform clean handoff.
+ * Clears the screen to black on exit.
  */
 
 #define _GNU_SOURCE
@@ -29,6 +37,15 @@
 #include <linux/input.h>
 #include <linux/kd.h>
 #include <linux/vt.h>
+#include <drm/drm.h>
+#include <drm/drm_mode.h>
+
+#ifndef DRM_MODE_CONNECTED
+#define DRM_MODE_CONNECTED 1
+#endif
+#ifndef DRM_PLANE_TYPE_PRIMARY
+#define DRM_PLANE_TYPE_PRIMARY 1
+#endif
 
 #define LOGO_ROWS 4
 #define LOGO_COLS 30
@@ -51,6 +68,32 @@ enum glyph_type {
 
 static enum glyph_type logo_grid[LOGO_ROWS][LOGO_COLS];
 
+struct render_surface {
+	uint8_t *mem;
+	uint32_t width;
+	uint32_t height;
+	uint32_t pitch;
+	uint32_t bpp;
+};
+
+struct drm_state {
+	int fd;
+	uint32_t conn_id;
+	uint32_t crtc_id;
+	uint32_t plane_id;
+	struct drm_mode_modeinfo mode;
+	struct {
+		uint32_t handle;
+		uint32_t fb_id;
+		uint8_t *map;
+		size_t size;
+		uint32_t pitch;
+	} bufs[2];
+	int cur_buf;
+	uint32_t width;
+	uint32_t height;
+};
+
 struct fb_ctx {
 	int fd;
 	uint8_t *mem;
@@ -59,9 +102,6 @@ struct fb_ctx {
 	uint32_t yres;
 	uint32_t bpp;
 	uint32_t line_length;
-	struct fb_bitfield red;
-	struct fb_bitfield green;
-	struct fb_bitfield blue;
 };
 
 static volatile sig_atomic_t g_running = 1;
@@ -100,115 +140,89 @@ static void parse_logo_grid(void)
 	}
 }
 
-static uint32_t pack_pixel(const struct fb_ctx *fb, uint8_t r, uint8_t g, uint8_t b)
+static inline uint32_t pack_rgb32(uint8_t r, uint8_t g, uint8_t b)
 {
-	if (fb->bpp == 16) {
-		uint16_t r5 = (r >> 3) & 0x1f;
-		uint16_t g6 = (g >> 2) & 0x3f;
-		uint16_t b5 = (b >> 3) & 0x1f;
-		return (r5 << fb->red.offset) | (g6 << fb->green.offset) | (b5 << fb->blue.offset);
-	}
-	return ((uint32_t)r << fb->red.offset) |
-	       ((uint32_t)g << fb->green.offset) |
-	       ((uint32_t)b << fb->blue.offset);
+	return (0xFFU << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
 }
 
-static inline void map_coords(const struct fb_ctx *fb, uint32_t lx, uint32_t ly,
-			      uint32_t *px, uint32_t *py, int rot)
+static inline uint32_t pack_rgb16(uint8_t r, uint8_t g, uint8_t b)
 {
-	switch (rot) {
-	case 90:
-		*px = (fb->xres - 1) - ly;
-		*py = lx;
-		break;
-	case 180:
-		*px = (fb->xres - 1) - lx;
-		*py = (fb->yres - 1) - ly;
-		break;
-	case 270:
-		*px = ly;
-		*py = (fb->yres - 1) - lx;
-		break;
-	case 0:
-	default:
-		*px = lx;
-		*py = ly;
-		break;
-	}
+	return (uint32_t)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
 }
 
-static void draw_pixel_rot(const struct fb_ctx *fb, uint32_t lx, uint32_t ly,
-			   uint32_t color, int rot)
+static inline void put_pixel(const struct render_surface *surf, uint32_t x, uint32_t y, uint32_t color)
 {
-	uint32_t px, py;
-	map_coords(fb, lx, ly, &px, &py, rot);
-	if (px >= fb->xres || py >= fb->yres)
+	if (x >= surf->width || y >= surf->height)
 		return;
 
-	uint8_t *dst = fb->mem + (py * fb->line_length);
-	if (fb->bpp == 16) {
-		*((uint16_t *)(dst + (px * 2))) = (uint16_t)color;
-	} else if (fb->bpp == 32) {
-		*((uint32_t *)(dst + (px * 4))) = color;
+	if (surf->bpp == 16) {
+		uint16_t *p = (uint16_t *)(surf->mem + (y * surf->pitch) + (x * 2));
+		*p = (uint16_t)color;
+	} else {
+		uint32_t *p = (uint32_t *)(surf->mem + (y * surf->pitch) + (x * 4));
+		*p = color;
 	}
 }
 
-static void fill_rect_rot(const struct fb_ctx *fb, uint32_t lx0, uint32_t ly0,
-			  uint32_t w, uint32_t h, uint32_t color, int rot)
+static void clear_surface(const struct render_surface *surf)
 {
-	for (uint32_t ly = ly0; ly < ly0 + h; ly++) {
-		for (uint32_t lx = lx0; lx < lx0 + w; lx++) {
-			draw_pixel_rot(fb, lx, ly, color, rot);
+	if (!surf->mem)
+		return;
+	memset(surf->mem, 0, (size_t)surf->pitch * surf->height);
+}
+
+static void draw_rect(const struct render_surface *surf, uint32_t x, uint32_t y,
+		      uint32_t w, uint32_t h, uint32_t color)
+{
+	for (uint32_t row = 0; row < h; row++) {
+		for (uint32_t col = 0; col < w; col++) {
+			put_pixel(surf, x + col, y + row, color);
 		}
 	}
 }
 
-static void clear_screen(const struct fb_ctx *fb)
+static void draw_glyph(const struct render_surface *surf, uint32_t x, uint32_t y,
+		       uint32_t w, uint32_t h, enum glyph_type type, uint32_t color)
 {
-	if (!fb->mem)
-		return;
-	memset(fb->mem, 0, fb->mem_size);
+	switch (type) {
+	case GLYPH_FULL:
+		draw_rect(surf, x, y, w, h, color);
+		break;
+	case GLYPH_UPPER:
+		draw_rect(surf, x, y, w, (h + 1) / 2, color);
+		break;
+	case GLYPH_LOWER:
+		draw_rect(surf, x, y + h / 2, w, h - h / 2, color);
+		break;
+	case GLYPH_SPACE:
+	default:
+		break;
+	}
 }
 
-static void draw_wordmark(const struct fb_ctx *fb, uint32_t start_x, uint32_t start_y,
-			  uint32_t cell_w, uint32_t cell_h, uint32_t fg_color, int rot)
+static void draw_wordmark(const struct render_surface *surf, uint32_t start_x, uint32_t start_y,
+			  uint32_t cell_w, uint32_t cell_h, uint32_t color)
 {
 	for (int r = 0; r < LOGO_ROWS; r++) {
 		for (int c = 0; c < LOGO_COLS; c++) {
 			enum glyph_type g = logo_grid[r][c];
-			if (g == GLYPH_SPACE)
-				continue;
-
-			uint32_t px = start_x + (c * cell_w);
-			uint32_t py = start_y + (r * cell_h);
-			uint32_t half_h = cell_h / 2;
-
-			switch (g) {
-			case GLYPH_FULL:
-				fill_rect_rot(fb, px, py, cell_w, cell_h, fg_color, rot);
-				break;
-			case GLYPH_UPPER:
-				fill_rect_rot(fb, px, py, cell_w, half_h, fg_color, rot);
-				break;
-			case GLYPH_LOWER:
-				fill_rect_rot(fb, px, py + half_h, cell_w, cell_h - half_h, fg_color, rot);
-				break;
-			default:
-				break;
+			if (g != GLYPH_SPACE) {
+				uint32_t gx = start_x + (uint32_t)c * cell_w;
+				uint32_t gy = start_y + (uint32_t)r * cell_h;
+				draw_glyph(surf, gx, gy, cell_w, cell_h, g, color);
 			}
 		}
 	}
 }
 
-static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_t track_y,
+static void draw_gradient_bar(const struct render_surface *surf, uint32_t track_x, uint32_t track_y,
 			      uint32_t track_w, uint32_t bar_h, int32_t beam_pos,
-			      uint32_t beam_w, uint32_t *scratch_buf, int rot)
+			      uint32_t beam_w, uint32_t *scratch_buf)
 {
 	if (track_w > 4096)
 		track_w = 4096;
 
 	for (uint32_t x = 0; x < track_w; x++) {
-		/* Toroidal distance for seamless continuous wrap */
 		int32_t d = abs((int32_t)x - beam_pos);
 		int32_t d_wrap = (int32_t)track_w - d;
 		if (d_wrap < d)
@@ -216,12 +230,12 @@ static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_
 
 		if ((uint32_t)d < beam_w) {
 			float t = 1.0f - ((float)d / (float)beam_w);
-			float intensity = t * t * (3.0f - 2.0f * t); /* Smooth Hermite curve */
+			float intensity = t * t * (3.0f - 2.0f * t);
 
 			uint8_t r = (uint8_t)(intensity * 180.0f);
 			uint8_t g = (uint8_t)(30.0f * (1.0f - intensity) + intensity * 240.0f);
 			uint8_t b = (uint8_t)(80.0f * (1.0f - intensity) + intensity * 255.0f);
-			scratch_buf[x] = pack_pixel(fb, r, g, b);
+			scratch_buf[x] = (surf->bpp == 16) ? pack_rgb16(r, g, b) : pack_rgb32(r, g, b);
 		} else {
 			scratch_buf[x] = 0;
 		}
@@ -229,10 +243,319 @@ static void draw_gradient_bar(const struct fb_ctx *fb, uint32_t track_x, uint32_
 
 	for (uint32_t y = 0; y < bar_h; y++) {
 		for (uint32_t x = 0; x < track_w; x++) {
-			draw_pixel_rot(fb, track_x + x, track_y + y, scratch_buf[x], rot);
+			put_pixel(surf, track_x + x, track_y + y, scratch_buf[x]);
 		}
 	}
 }
+
+/* ──────────────── DRM Helpers ──────────────── */
+
+static uint32_t rot_for_angle(int angle)
+{
+	switch (angle) {
+	case 90:  return DRM_MODE_ROTATE_90;
+	case 180: return DRM_MODE_ROTATE_180;
+	case 270: return DRM_MODE_ROTATE_270;
+	default:  return DRM_MODE_ROTATE_0;
+	}
+}
+
+static int is_internal_conn(uint32_t type)
+{
+	switch (type) {
+	case DRM_MODE_CONNECTOR_DSI:
+	case DRM_MODE_CONNECTOR_eDP:
+	case DRM_MODE_CONNECTOR_LVDS:
+	case DRM_MODE_CONNECTOR_DPI:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int drm_find_prop(int fd, uint32_t obj_id, uint32_t obj_type,
+			 const char *wanted, uint32_t *prop_id_out)
+{
+	struct drm_mode_obj_get_properties req = {0};
+	req.obj_id = obj_id;
+	req.obj_type = obj_type;
+	if (ioctl(fd, DRM_IOCTL_MODE_OBJ_GETPROPERTIES, &req) < 0 || req.count_props == 0)
+		return -1;
+
+	uint32_t *ids = calloc(req.count_props, sizeof(uint32_t));
+	uint64_t *vals = calloc(req.count_props, sizeof(uint64_t));
+	if (!ids || !vals) {
+		free(ids); free(vals);
+		return -1;
+	}
+
+	req.props_ptr = (uint64_t)(uintptr_t)ids;
+	req.prop_values_ptr = (uint64_t)(uintptr_t)vals;
+	if (ioctl(fd, DRM_IOCTL_MODE_OBJ_GETPROPERTIES, &req) < 0) {
+		free(ids); free(vals);
+		return -1;
+	}
+
+	int found = -1;
+	for (uint32_t i = 0; i < req.count_props; i++) {
+		struct drm_mode_get_property prop = {0};
+		prop.prop_id = ids[i];
+		if (ioctl(fd, DRM_IOCTL_MODE_GETPROPERTY, &prop) == 0) {
+			if (strcmp(prop.name, wanted) == 0) {
+				*prop_id_out = ids[i];
+				found = 0;
+				break;
+			}
+		}
+	}
+	free(ids);
+	free(vals);
+	return found;
+}
+
+static int drm_set_plane_rotation(int fd, uint32_t plane_id, int angle)
+{
+	uint32_t rot_prop = 0;
+	if (drm_find_prop(fd, plane_id, DRM_MODE_OBJECT_PLANE, "rotation", &rot_prop) < 0)
+		return -1;
+
+	uint64_t want = rot_for_angle(angle);
+	struct drm_mode_atomic atom = {0};
+	uint32_t objs[1] = { plane_id };
+	uint32_t props[1] = { rot_prop };
+	uint64_t vals[1] = { want };
+
+	atom.count_objs = 1;
+	atom.objs_ptr = (uint64_t)(uintptr_t)objs;
+	atom.props_ptr = (uint64_t)(uintptr_t)props;
+	atom.prop_values_ptr = (uint64_t)(uintptr_t)vals;
+
+	if (ioctl(fd, DRM_IOCTL_MODE_ATOMIC, &atom) < 0 && errno == EINVAL) {
+		atom.flags = DRM_MODE_ATOMIC_ALLOW_MODESET;
+		if (ioctl(fd, DRM_IOCTL_MODE_ATOMIC, &atom) < 0)
+			return -1;
+	}
+	return 0;
+}
+
+static int drm_init(struct drm_state *drm, int angle, uint32_t trait_w, uint32_t trait_h)
+{
+	memset(drm, 0, sizeof(*drm));
+	drm->fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
+	if (drm->fd < 0)
+		return -1;
+
+	struct drm_set_client_cap cap_univ = { .capability = DRM_CLIENT_CAP_UNIVERSAL_PLANES, .value = 1 };
+	ioctl(drm->fd, DRM_IOCTL_SET_CLIENT_CAP, &cap_univ);
+	struct drm_set_client_cap cap_atomic = { .capability = DRM_CLIENT_CAP_ATOMIC, .value = 1 };
+	ioctl(drm->fd, DRM_IOCTL_SET_CLIENT_CAP, &cap_atomic);
+
+	struct drm_mode_card_res res = {0};
+	if (ioctl(drm->fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0 || res.count_connectors == 0) {
+		close(drm->fd);
+		return -1;
+	}
+
+	uint32_t *crtcs = calloc(res.count_crtcs, sizeof(uint32_t));
+	uint32_t *conns = calloc(res.count_connectors, sizeof(uint32_t));
+	uint32_t *encs = calloc(res.count_encoders, sizeof(uint32_t));
+	uint32_t *fbs = calloc(res.count_fbs, sizeof(uint32_t));
+	if (!crtcs || !conns || !encs || !fbs) {
+		free(crtcs); free(conns); free(encs); free(fbs);
+		close(drm->fd);
+		return -1;
+	}
+
+	res.crtc_id_ptr = (uint64_t)(uintptr_t)crtcs;
+	res.connector_id_ptr = (uint64_t)(uintptr_t)conns;
+	res.encoder_id_ptr = (uint64_t)(uintptr_t)encs;
+	res.fb_id_ptr = (uint64_t)(uintptr_t)fbs;
+	if (ioctl(drm->fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
+		free(crtcs); free(conns); free(encs); free(fbs);
+		close(drm->fd);
+		return -1;
+	}
+
+	int found = 0;
+	for (uint32_t i = 0; i < res.count_connectors; i++) {
+		struct drm_mode_get_connector conn = {0};
+		conn.connector_id = conns[i];
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0)
+			continue;
+		if (conn.connection != DRM_MODE_CONNECTED || conn.count_modes == 0)
+			continue;
+
+		struct drm_mode_modeinfo *modes = calloc(conn.count_modes, sizeof(struct drm_mode_modeinfo));
+		uint32_t *enc_ids = calloc(conn.count_encoders, sizeof(uint32_t));
+		conn.modes_ptr = (uint64_t)(uintptr_t)modes;
+		conn.encoders_ptr = (uint64_t)(uintptr_t)enc_ids;
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) == 0) {
+			drm->conn_id = conns[i];
+			drm->mode = modes[0];
+
+			if (conn.encoder_id != 0) {
+				struct drm_mode_get_encoder enc = {0};
+				enc.encoder_id = conn.encoder_id;
+				if (ioctl(drm->fd, DRM_IOCTL_MODE_GETENCODER, &enc) == 0)
+					drm->crtc_id = enc.crtc_id;
+			}
+			if (drm->crtc_id == 0 && res.count_crtcs > 0)
+				drm->crtc_id = crtcs[0];
+
+			found = 1;
+			free(modes);
+			free(enc_ids);
+			if (is_internal_conn(conn.connector_type))
+				break;
+		} else {
+			free(modes);
+			free(enc_ids);
+		}
+	}
+	free(crtcs); free(conns); free(encs); free(fbs);
+
+	if (!found || drm->crtc_id == 0) {
+		close(drm->fd);
+		return -1;
+	}
+
+	/* Find primary plane */
+	struct drm_mode_get_plane_res pres = {0};
+	if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0 && pres.count_planes > 0) {
+		uint32_t *pids = calloc(pres.count_planes, sizeof(uint32_t));
+		pres.plane_id_ptr = (uint64_t)(uintptr_t)pids;
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANERESOURCES, &pres) == 0) {
+			for (uint32_t i = 0; i < pres.count_planes; i++) {
+				struct drm_mode_get_plane pl = {0};
+				pl.plane_id = pids[i];
+				if (ioctl(drm->fd, DRM_IOCTL_MODE_GETPLANE, &pl) == 0 && pl.crtc_id == drm->crtc_id) {
+					uint32_t type_prop = 0;
+					if (drm_find_prop(drm->fd, pids[i], DRM_MODE_OBJECT_PLANE, "type", &type_prop) == 0) {
+						drm->plane_id = pids[i];
+						break;
+					}
+				}
+			}
+		}
+		free(pids);
+	}
+
+	/* Apply hardware primary plane rotation at frame 0 */
+	int plane_rotated = 0;
+	if (drm->plane_id != 0 && angle != 0) {
+		if (drm_set_plane_rotation(drm->fd, drm->plane_id, angle) == 0)
+			plane_rotated = 1;
+	}
+
+	/* Logical resolution */
+	if (trait_w > 0 && trait_h > 0) {
+		drm->width = trait_w;
+		drm->height = trait_h;
+	} else if (plane_rotated || angle == 90 || angle == 270) {
+		drm->width = drm->mode.vdisplay;
+		drm->height = drm->mode.hdisplay;
+	} else {
+		drm->width = drm->mode.hdisplay;
+		drm->height = drm->mode.vdisplay;
+	}
+
+	/* Allocate double-buffered DRM dumb buffers */
+	for (int b = 0; b < 2; b++) {
+		struct drm_mode_create_dumb cd = {0};
+		cd.width = drm->width;
+		cd.height = drm->height;
+		cd.bpp = 32;
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_CREATE_DUMB, &cd) < 0) {
+			close(drm->fd);
+			return -1;
+		}
+		drm->bufs[b].handle = cd.handle;
+		drm->bufs[b].pitch = cd.pitch;
+		drm->bufs[b].size = cd.size;
+
+		struct drm_mode_fb_cmd fb_cmd = {0};
+		fb_cmd.width = drm->width;
+		fb_cmd.height = drm->height;
+		fb_cmd.pitch = cd.pitch;
+		fb_cmd.bpp = 32;
+		fb_cmd.depth = 24;
+		fb_cmd.handle = cd.handle;
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_ADDFB, &fb_cmd) < 0) {
+			close(drm->fd);
+			return -1;
+		}
+		drm->bufs[b].fb_id = fb_cmd.fb_id;
+
+		struct drm_mode_map_dumb md = {0};
+		md.handle = cd.handle;
+		if (ioctl(drm->fd, DRM_IOCTL_MODE_MAP_DUMB, &md) < 0) {
+			close(drm->fd);
+			return -1;
+		}
+
+		drm->bufs[b].map = mmap(NULL, cd.size, PROT_READ | PROT_WRITE, MAP_SHARED, drm->fd, md.offset);
+		if (drm->bufs[b].map == MAP_FAILED) {
+			close(drm->fd);
+			return -1;
+		}
+		memset(drm->bufs[b].map, 0, cd.size);
+	}
+
+	/* Attach first buffer to CRTC */
+	uint32_t conn_ids[1] = { drm->conn_id };
+	struct drm_mode_crtc crtc = {0};
+	crtc.crtc_id = drm->crtc_id;
+	crtc.fb_id = drm->bufs[0].fb_id;
+	crtc.set_connectors_ptr = (uint64_t)(uintptr_t)conn_ids;
+	crtc.count_connectors = 1;
+	crtc.mode = drm->mode;
+	crtc.mode_valid = 1;
+	ioctl(drm->fd, DRM_IOCTL_MODE_SETCRTC, &crtc);
+
+	return 0;
+}
+
+static void drm_flip(struct drm_state *drm)
+{
+	struct drm_mode_crtc_page_flip pf = {0};
+	pf.crtc_id = drm->crtc_id;
+	pf.fb_id = drm->bufs[drm->cur_buf].fb_id;
+	pf.flags = 0;
+	if (ioctl(drm->fd, DRM_IOCTL_MODE_PAGE_FLIP, &pf) < 0) {
+		/* Fallback to setcrtc if page flip fails */
+		uint32_t conn_ids[1] = { drm->conn_id };
+		struct drm_mode_crtc crtc = {0};
+		crtc.crtc_id = drm->crtc_id;
+		crtc.fb_id = drm->bufs[drm->cur_buf].fb_id;
+		crtc.set_connectors_ptr = (uint64_t)(uintptr_t)conn_ids;
+		crtc.count_connectors = 1;
+		crtc.mode = drm->mode;
+		crtc.mode_valid = 1;
+		ioctl(drm->fd, DRM_IOCTL_MODE_SETCRTC, &crtc);
+	}
+	drm->cur_buf = 1 - drm->cur_buf;
+}
+
+static void drm_cleanup(struct drm_state *drm)
+{
+	for (int b = 0; b < 2; b++) {
+		if (drm->bufs[b].map && drm->bufs[b].map != MAP_FAILED) {
+			memset(drm->bufs[b].map, 0, drm->bufs[b].size);
+			munmap(drm->bufs[b].map, drm->bufs[b].size);
+		}
+		if (drm->bufs[b].fb_id) {
+			ioctl(drm->fd, DRM_IOCTL_MODE_RMFB, drm->bufs[b].fb_id);
+		}
+		if (drm->bufs[b].handle) {
+			struct drm_mode_destroy_dumb dd = { .handle = drm->bufs[b].handle };
+			ioctl(drm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dd);
+		}
+	}
+	if (drm->fd >= 0)
+		close(drm->fd);
+}
+
+/* ──────────────── Traits & LifeCycle Helpers ──────────────── */
 
 static int open_tty(void)
 {
@@ -296,54 +619,11 @@ static int read_dt_rotation(void)
 			close(fd);
 		}
 	}
-
-	DIR *dir = opendir("/sys/firmware/devicetree/base");
-	if (dir) {
-		struct dirent *de;
-		while ((de = readdir(dir)) != NULL) {
-			if (!strstr(de->d_name, "dsi") && !strstr(de->d_name, "panel") &&
-			    !strstr(de->d_name, "display"))
-				continue;
-
-			char subpath[512];
-			snprintf(subpath, sizeof(subpath), "/sys/firmware/devicetree/base/%s", de->d_name);
-			DIR *subdir = opendir(subpath);
-			if (subdir) {
-				struct dirent *subde;
-				while ((subde = readdir(subdir)) != NULL) {
-					if (!strstr(subde->d_name, "panel"))
-						continue;
-
-					char rotpath[512];
-					snprintf(rotpath, sizeof(rotpath),
-						 "/sys/firmware/devicetree/base/%s/%s/rotation",
-						 de->d_name, subde->d_name);
-					int fd = open(rotpath, O_RDONLY | O_CLOEXEC);
-					if (fd >= 0) {
-						uint8_t buf[4];
-						if (read(fd, buf, 4) == 4) {
-							uint32_t rot = ((uint32_t)buf[0] << 24) |
-								       ((uint32_t)buf[1] << 16) |
-								       ((uint32_t)buf[2] << 8) |
-								       (uint32_t)buf[3];
-							close(fd);
-							closedir(subdir);
-							closedir(dir);
-							if (rot == 90 || rot == 180 || rot == 270)
-								return (int)rot;
-						}
-						close(fd);
-					}
-				}
-				closedir(subdir);
-			}
-		}
-		closedir(dir);
-	}
 	return 0;
 }
 
-static int parse_device_ini(const char *path, int *key_up, int *key_down, int *screen_rot)
+static int parse_device_ini(const char *path, int *key_up, int *key_down, int *screen_rot,
+			    uint32_t *width, uint32_t *height)
 {
 	FILE *f = fopen(path, "r");
 	if (!f)
@@ -360,6 +640,10 @@ static int parse_device_ini(const char *path, int *key_up, int *key_down, int *s
 			*key_down = val;
 		else if (sscanf(line, "screen_rotation=%d", &val) == 1 && val >= 0)
 			*screen_rot = val;
+		else if (sscanf(line, "screen_width=%d", &val) == 1 && val > 0 && width)
+			*width = (uint32_t)val;
+		else if (sscanf(line, "screen_height=%d", &val) == 1 && val > 0 && height)
+			*height = (uint32_t)val;
 		else if (sscanf(line, "parent=%63s", parent) == 1) {
 			trim_str(parent);
 		}
@@ -369,15 +653,15 @@ static int parse_device_ini(const char *path, int *key_up, int *key_down, int *s
 	if (parent[0]) {
 		char ppath[512];
 		snprintf(ppath, sizeof(ppath), "/usr/share/minime/traits/devices/%s.ini", parent);
-		parse_device_ini(ppath, key_up, key_down, screen_rot);
+		parse_device_ini(ppath, key_up, key_down, screen_rot, width, height);
 	}
 	return 1;
 }
 
-static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
+static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot,
+				 uint32_t *width, uint32_t *height)
 {
-	/* Load platform base traits first */
-	parse_device_ini("/usr/share/minime/traits/platform.ini", key_up, key_down, screen_rot);
+	parse_device_ini("/usr/share/minime/traits/platform.ini", key_up, key_down, screen_rot, width, height);
 
 	char model[128] = {0};
 	char compat[256] = {0};
@@ -410,8 +694,8 @@ static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
 
 		char line[256];
 		bool in_match = false;
-		char m_model[128] = {0};
-		char m_compat[128] = {0};
+		char m_model[256] = {0};
+		char m_compat[256] = {0};
 
 		while (fgets(line, sizeof(line), f)) {
 			trim_str(line);
@@ -421,10 +705,10 @@ static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
 			}
 			if (in_match) {
 				if (strncmp(line, "model=", 6) == 0) {
-					strncpy(m_model, line + 6, sizeof(m_model) - 1);
+					snprintf(m_model, sizeof(m_model), "%s", line + 6);
 					trim_str(m_model);
 				} else if (strncmp(line, "compatible=", 11) == 0) {
-					strncpy(m_compat, line + 11, sizeof(m_compat) - 1);
+					snprintf(m_compat, sizeof(m_compat), "%s", line + 11);
 					trim_str(m_compat);
 				}
 			}
@@ -440,7 +724,7 @@ static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
 		}
 
 		if (matched) {
-			parse_device_ini(path, key_up, key_down, screen_rot);
+			parse_device_ini(path, key_up, key_down, screen_rot, width, height);
 			closedir(dir);
 			return 1;
 		}
@@ -449,7 +733,7 @@ static int match_initramfs_traits(int *key_up, int *key_down, int *screen_rot)
 	return 0;
 }
 
-static void read_traits(int *key_up, int *key_down, int *screen_rot)
+static void read_traits(int *key_up, int *key_down, int *screen_rot, uint32_t *width, uint32_t *height)
 {
 	static const char *trait_files[] = {
 		"/mnt/sdcard/.minime/traits",
@@ -461,15 +745,12 @@ static void read_traits(int *key_up, int *key_down, int *screen_rot)
 	*key_up = KEY_VOLUMEUP;
 	*key_down = KEY_VOLUMEDOWN;
 
-	/* 1. Check direct Device Tree rotation property */
 	int dt_rot = read_dt_rotation();
 	if (dt_rot > 0)
 		*screen_rot = dt_rot;
 
-	/* 2. Match device from embedded initramfs traits */
-	match_initramfs_traits(key_up, key_down, screen_rot);
+	match_initramfs_traits(key_up, key_down, screen_rot, width, height);
 
-	/* 3. Read active traits file from SD card / rootfs if available */
 	for (int i = 0; trait_files[i]; i++) {
 		FILE *f = fopen(trait_files[i], "r");
 		if (!f)
@@ -484,6 +765,10 @@ static void read_traits(int *key_up, int *key_down, int *screen_rot)
 				*key_down = val;
 			else if (sscanf(line, "screen_rotation=%d", &val) == 1 && val >= 0)
 				*screen_rot = val;
+			else if (sscanf(line, "screen_width=%d", &val) == 1 && val > 0 && width)
+				*width = (uint32_t)val;
+			else if (sscanf(line, "screen_height=%d", &val) == 1 && val > 0 && height)
+				*height = (uint32_t)val;
 		}
 		fclose(f);
 		break;
@@ -543,7 +828,8 @@ int main(int argc, char **argv)
 	int key_vol_up = KEY_VOLUMEUP;
 	int key_vol_down = KEY_VOLUMEDOWN;
 	int screen_rot = 0;
-	read_traits(&key_vol_up, &key_vol_down, &screen_rot);
+	uint32_t trait_w = 0, trait_h = 0;
+	read_traits(&key_vol_up, &key_vol_down, &screen_rot, &trait_w, &trait_h);
 
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--rotate") == 0 && i + 1 < argc) {
@@ -559,67 +845,82 @@ int main(int argc, char **argv)
 		ioctl(tty_fd, KDSETMODE, KD_GRAPHICS);
 	}
 
+	struct drm_state drm;
+	bool use_drm = (drm_init(&drm, screen_rot, trait_w, trait_h) == 0);
+
 	struct fb_ctx fb;
 	memset(&fb, 0, sizeof(fb));
-	fb.fd = open("/dev/fb0", O_RDWR | O_CLOEXEC);
-	if (fb.fd < 0) {
-		if (tty_fd >= 0) {
-			ioctl(tty_fd, KDSETMODE, KD_TEXT);
-			close(tty_fd);
+
+	struct render_surface surf;
+	memset(&surf, 0, sizeof(surf));
+
+	if (use_drm) {
+		surf.width = drm.width;
+		surf.height = drm.height;
+		surf.pitch = drm.bufs[0].pitch;
+		surf.bpp = 32;
+		surf.mem = drm.bufs[0].map;
+	} else {
+		/* Fallback to fbdev */
+		fb.fd = open("/dev/fb0", O_RDWR | O_CLOEXEC);
+		if (fb.fd < 0) {
+			if (tty_fd >= 0) {
+				ioctl(tty_fd, KDSETMODE, KD_TEXT);
+				close(tty_fd);
+			}
+			return 1;
 		}
-		return 1;
+
+		struct fb_var_screeninfo vinfo;
+		struct fb_fix_screeninfo finfo;
+		if (ioctl(fb.fd, FBIOGET_VSCREENINFO, &vinfo) < 0 ||
+		    ioctl(fb.fd, FBIOGET_FSCREENINFO, &finfo) < 0) {
+			close(fb.fd);
+			if (tty_fd >= 0) {
+				ioctl(tty_fd, KDSETMODE, KD_TEXT);
+				close(tty_fd);
+			}
+			return 1;
+		}
+
+		fb.xres = vinfo.xres;
+		fb.yres = vinfo.yres;
+		fb.bpp = vinfo.bits_per_pixel;
+		fb.line_length = finfo.line_length ? finfo.line_length : (fb.xres * (fb.bpp / 8));
+		fb.mem_size = finfo.smem_len ? finfo.smem_len : (fb.line_length * fb.yres);
+
+		fb.mem = mmap(NULL, fb.mem_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb.fd, 0);
+		if (fb.mem == MAP_FAILED) {
+			close(fb.fd);
+			if (tty_fd >= 0) {
+				ioctl(tty_fd, KDSETMODE, KD_TEXT);
+				close(tty_fd);
+			}
+			return 1;
+		}
+
+		surf.width = fb.xres;
+		surf.height = fb.yres;
+		surf.pitch = fb.line_length;
+		surf.bpp = fb.bpp;
+		surf.mem = fb.mem;
 	}
 
-	struct fb_var_screeninfo vinfo;
-	struct fb_fix_screeninfo finfo;
-	if (ioctl(fb.fd, FBIOGET_VSCREENINFO, &vinfo) < 0 ||
-	    ioctl(fb.fd, FBIOGET_FSCREENINFO, &finfo) < 0) {
-		close(fb.fd);
-		if (tty_fd >= 0) {
-			ioctl(tty_fd, KDSETMODE, KD_TEXT);
-			close(tty_fd);
-		}
-		return 1;
-	}
-
-	fb.xres = vinfo.xres;
-	fb.yres = vinfo.yres;
-	fb.bpp = vinfo.bits_per_pixel;
-	fb.line_length = finfo.line_length ? finfo.line_length : (fb.xres * (fb.bpp / 8));
-	fb.red = vinfo.red;
-	fb.green = vinfo.green;
-	fb.blue = vinfo.blue;
-	fb.mem_size = finfo.smem_len ? finfo.smem_len : (fb.line_length * fb.yres);
-
-	fb.mem = mmap(NULL, fb.mem_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb.fd, 0);
-	if (fb.mem == MAP_FAILED) {
-		close(fb.fd);
-		if (tty_fd >= 0) {
-			ioctl(tty_fd, KDSETMODE, KD_TEXT);
-			close(tty_fd);
-		}
-		return 1;
-	}
-
-	/* Logical display geometry (swapped if rotated 90/270) */
-	uint32_t log_w = (screen_rot == 90 || screen_rot == 270) ? fb.yres : fb.xres;
-	uint32_t log_h = (screen_rot == 90 || screen_rot == 270) ? fb.xres : fb.yres;
+	/* Geometry calculations for 0° landscape display */
+	uint32_t log_w = surf.width;
+	uint32_t log_h = surf.height;
 
 	uint32_t cell_w = log_w / 40;
-	if (cell_w < 4)
-		cell_w = 4;
-	if (cell_w > 18)
-		cell_w = 18;
+	if (cell_w < 4) cell_w = 4;
+	if (cell_w > 18) cell_w = 18;
 	uint32_t cell_h = cell_w;
 
 	uint32_t word_w = LOGO_COLS * cell_w;
 	uint32_t word_h = LOGO_ROWS * cell_h;
 	uint32_t gap_h = (cell_h * 3) / 2;
 	uint32_t bar_h = (cell_h * 2) / 3;
-	if (bar_h < 6)
-		bar_h = 6;
-	if (bar_h > 16)
-		bar_h = 16;
+	if (bar_h < 6) bar_h = 6;
+	if (bar_h > 16) bar_h = 16;
 	uint32_t total_h = word_h + gap_h + bar_h;
 
 	uint32_t start_x = (log_w > word_w) ? (log_w - word_w) / 2 : 0;
@@ -630,17 +931,23 @@ int main(int argc, char **argv)
 	uint32_t track_w = word_w;
 
 	uint32_t beam_w = track_w / 3;
-	if (beam_w < 20)
-		beam_w = 20;
+	if (beam_w < 20) beam_w = 20;
 
-	uint32_t fg_color = pack_pixel(&fb, 240, 240, 240);
+	uint32_t fg_color = (surf.bpp == 16) ? pack_rgb16(240, 240, 240) : pack_rgb32(240, 240, 240);
 
 	uint32_t scratch_buf[4096];
 	if (track_w > 4096)
 		track_w = 4096;
 
-	clear_screen(&fb);
-	draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
+	clear_surface(&surf);
+	draw_wordmark(&surf, start_x, start_y, cell_w, cell_h, fg_color);
+	if (use_drm) {
+		/* Initialize second buffer identically for seamless double-buffering */
+		surf.mem = drm.bufs[1].map;
+		clear_surface(&surf);
+		draw_wordmark(&surf, start_x, start_y, cell_w, cell_h, fg_color);
+		surf.mem = drm.bufs[0].map;
+	}
 
 	int input_fds[MAX_INPUTS];
 	int input_count = scan_input_devices(input_fds, MAX_INPUTS);
@@ -648,66 +955,30 @@ int main(int argc, char **argv)
 	bool in_graphics_mode = true;
 	int32_t beam_pos = 0;
 	int step = (int)(track_w / 35);
-	if (step < 2)
-		step = 2;
+	if (step < 2) step = 2;
 
 	time_t start_time = time(NULL);
-	int scan_ticks = 0;
 
 	while (g_running) {
-		/* OpenRC lifecycle handoff */
 		if (check_file_exists("/run/openrc/started/ui")) {
-			/* UI started -> clear framebuffer to pure black so fallback / PAK start / shutdown is black */
-			clear_screen(&fb);
+			if (use_drm) {
+				surf.mem = drm.bufs[drm.cur_buf].map;
+				clear_surface(&surf);
+				drm_flip(&drm);
+			} else {
+				clear_surface(&surf);
+			}
 			break;
 		}
 		if (check_file_exists("/run/openrc/failed/ui")) {
-			/* UI failed -> reveal console and exit */
 			if (tty_fd >= 0)
 				ioctl(tty_fd, KDSETMODE, KD_TEXT);
 			break;
 		}
-
-		/* 60-second safety timeout */
 		if (time(NULL) - start_time > TIMEOUT_SECS) {
 			if (tty_fd >= 0)
 				ioctl(tty_fd, KDSETMODE, KD_TEXT);
 			break;
-		}
-
-		/* Re-scan input devices periodically or if none opened */
-		if (++scan_ticks >= 15 || input_count == 0) {
-			scan_ticks = 0;
-			int prev_rot = screen_rot;
-			read_traits(&key_vol_up, &key_vol_down, &screen_rot);
-			if (screen_rot != prev_rot) {
-				log_w = (screen_rot == 90 || screen_rot == 270) ? fb.yres : fb.xres;
-				log_h = (screen_rot == 90 || screen_rot == 270) ? fb.xres : fb.yres;
-				cell_w = log_w / 40;
-				if (cell_w < 4) cell_w = 4;
-				if (cell_w > 18) cell_w = 18;
-				cell_h = cell_w;
-				word_w = LOGO_COLS * cell_w;
-				word_h = LOGO_ROWS * cell_h;
-				gap_h = (cell_h * 3) / 2;
-				bar_h = (cell_h * 2) / 3;
-				if (bar_h < 6) bar_h = 6;
-				if (bar_h > 16) bar_h = 16;
-				total_h = word_h + gap_h + bar_h;
-				start_x = (log_w > word_w) ? (log_w - word_w) / 2 : 0;
-				start_y = (log_h > total_h) ? (log_h - total_h) / 2 : 0;
-				track_x = start_x;
-				track_y = start_y + word_h + gap_h;
-				track_w = word_w;
-				beam_w = track_w / 3;
-				if (beam_w < 20) beam_w = 20;
-				if (in_graphics_mode) {
-					clear_screen(&fb);
-					draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
-				}
-			}
-			close_input_devices(input_fds, input_count);
-			input_count = scan_input_devices(input_fds, MAX_INPUTS);
 		}
 
 		/* Poll input devices */
@@ -740,18 +1011,31 @@ int main(int argc, char **argv)
 							if (tty_fd >= 0)
 								ioctl(tty_fd, KDSETMODE, KD_GRAPHICS);
 							in_graphics_mode = true;
-							clear_screen(&fb);
-							draw_wordmark(&fb, start_x, start_y, cell_w, cell_h, fg_color, screen_rot);
+							if (use_drm) {
+								surf.mem = drm.bufs[drm.cur_buf].map;
+								clear_surface(&surf);
+								draw_wordmark(&surf, start_x, start_y, cell_w, cell_h, fg_color);
+							} else {
+								clear_surface(&surf);
+								draw_wordmark(&surf, start_x, start_y, cell_w, cell_h, fg_color);
+							}
 						}
 					}
 				}
 			}
 		}
 
-		/* Animate progress bar left-to-right only in KD_GRAPHICS mode */
+		/* Animate progress bar in KD_GRAPHICS mode */
 		if (in_graphics_mode) {
-			draw_gradient_bar(&fb, track_x, track_y, track_w, bar_h,
-					  beam_pos, beam_w, scratch_buf, screen_rot);
+			if (use_drm) {
+				surf.mem = drm.bufs[drm.cur_buf].map;
+			}
+			draw_gradient_bar(&surf, track_x, track_y, track_w, bar_h,
+					  beam_pos, beam_w, scratch_buf);
+
+			if (use_drm) {
+				drm_flip(&drm);
+			}
 
 			beam_pos += step;
 			if (beam_pos >= (int32_t)track_w) {
@@ -760,14 +1044,26 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Clear screen before exiting so background framebuffer is clean black */
+	/* Clear screen on exit */
 	if (tty_fd < 0 || in_graphics_mode) {
-		clear_screen(&fb);
+		if (use_drm) {
+			surf.mem = drm.bufs[drm.cur_buf].map;
+			clear_surface(&surf);
+			drm_flip(&drm);
+		} else {
+			clear_surface(&surf);
+		}
 	}
 
 	close_input_devices(input_fds, input_count);
-	munmap(fb.mem, fb.mem_size);
-	close(fb.fd);
+
+	if (use_drm) {
+		drm_cleanup(&drm);
+	} else {
+		munmap(fb.mem, fb.mem_size);
+		close(fb.fd);
+	}
+
 	if (tty_fd >= 0)
 		close(tty_fd);
 
