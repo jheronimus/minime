@@ -285,6 +285,31 @@ shell cmd="" ip="":
     ./scripts/remote-cmd.sh "{{ip}}"
     rm -f "$tmp"
 
+# OTA-update the device to a UI (minui | allium | muos). For muos, if the
+# installed on-device updater predates muos support, bootstraps through a
+# supported UI first to pull the current OS, then switches to muos.
+# Usage:
+#   just ota <ui> [ip]
+ota ui="" ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ui="{{ui}}"
+    case "$ui" in
+      minui|allium|muos) ;;
+      *) echo "ERROR: unknown UI '$ui' (expected minui, allium, or muos)" >&2; exit 1 ;;
+    esac
+    ip="{{ip}}"
+    if [ "$ui" = "muos" ] && ! just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null; then
+        echo "Installed updater predates muos support; bootstrapping via minui first..."
+        just shell "update.sh minui" "$ip"
+        for i in $(seq 1 30); do
+            sleep 10
+            just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null && break
+        done
+        just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null || { echo "ERROR: bootstrap did not install a muos-capable updater" >&2; exit 1; }
+    fi
+    just shell "update.sh $ui" "$ip"
+
 # Copy a file to the target device (scp/SSH by default, writes any path as root;
 # pass --ftp first to use FTP, which is limited to the /mnt/sdcard root)
 # Usage:
