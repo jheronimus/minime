@@ -104,4 +104,15 @@ rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sys
 #    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 
+# 9. Ensure dbus user and group exist for dbus-daemon
+if [ -f "${TARGET_DIR}/etc/passwd" ] && ! grep -q '^dbus:' "${TARGET_DIR}/etc/passwd"; then
+	echo 'dbus:x:81:81:dbus:/run/dbus:/bin/false' >>"${TARGET_DIR}/etc/passwd"
+fi
+if [ -f "${TARGET_DIR}/etc/group" ] && ! grep -q '^dbus:' "${TARGET_DIR}/etc/group"; then
+	echo 'dbus:x:81:dbus' >>"${TARGET_DIR}/etc/group"
+fi
+if [ -f "${TARGET_DIR}/etc/shadow" ] && ! grep -q '^dbus:' "${TARGET_DIR}/etc/shadow"; then
+	echo 'dbus:*:19000:0:99999:7:::' >>"${TARGET_DIR}/etc/shadow"
+fi
+
 echo "Buildroot post-build stage complete."

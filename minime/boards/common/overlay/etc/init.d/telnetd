@@ -4,7 +4,7 @@
 
 description="Minime telnet daemon"
 
-command="/usr/sbin/telnetd"
+command="$(command -v telnetd 2>/dev/null || echo /usr/sbin/telnetd)"
 command_args="-F -l /usr/bin/autologin -p 23"
 pidfile="/run/telnetd.pid"
 
