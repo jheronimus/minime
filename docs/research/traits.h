@@ -73,6 +73,9 @@ typedef struct MinimeTraitsRef {
 
     // [input]
     char input_gamepad_device_name[MINIME_TRAIT_NAME_MAX];
+    // evdev device name of the analog stick axes (e.g. "adc-joystick"),
+    // or "na" when there are no sticks or the axes share the gamepad device.
+    char input_stick_device_name[MINIME_TRAIT_NAME_MAX];
     char input_power_device_name[MINIME_TRAIT_NAME_MAX];
     char input_volume_device_name[MINIME_TRAIT_NAME_MAX];
     char input_lid_device_name[MINIME_TRAIT_NAME_MAX];

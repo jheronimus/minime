@@ -71,6 +71,7 @@ input_axis_ry
 input_axis_min
 input_axis_center
 input_axis_max
+input_stick_device_name
 "
 
 seen="$(mktemp)"
@@ -124,8 +125,7 @@ for board in h700 rk3326 rk3566; do
 		"key_a=305" "key_b=304" "key_x=307" "key_y=308" \
 		"key_start=315" "key_select=314" "key_menu=316" \
 		"key_l1=310" "key_r1=311" "key_l2=312" "key_r2=313" \
-		"key_power=116" "key_vol_up=115" "key_vol_down=114"
-	do
+		"key_power=116" "key_vol_up=115" "key_vol_down=114"; do
 		k="${kv%%=*}"
 		v="${kv#*=}"
 		act="$(sed -n "s/^${k}=//p" "$platform" | head -n 1)"
@@ -133,30 +133,30 @@ for board in h700 rk3326 rk3566; do
 	done
 
 	case "$board" in
-		h700)
-			for kv in "input_gamepad_device_name=gpio-keys-gamepad" \
-				"input_power_device_name=axp20x-pek" \
-				"input_volume_device_name=gpio-keys-volume"; do
-				k="${kv%%=*}"
-				v="${kv#*=}"
-				act="$(sed -n "s/^${k}=//p" "$platform" | head -n 1)"
-				[ "$act" = "$v" ] || fail "$platform: invalid $k (expected $v, got '$act')"
-			done
-			;;
-		rk3566)
-			for kv in "input_gamepad_device_name=gpio-keys-control" \
-				"input_power_device_name=rk805 pwrkey" \
-				"input_volume_device_name=gpio-keys-vol"; do
-				k="${kv%%=*}"
-				v="${kv#*=}"
-				act="$(sed -n "s/^${k}=//p" "$platform" | head -n 1)"
-				[ "$act" = "$v" ] || fail "$platform: invalid $k (expected $v, got '$act')"
-			done
-			;;
-		rk3326)
-			act="$(sed -n "s/^input_power_device_name=//p" "$platform" | head -n 1)"
-			[ "$act" = "rk805 pwrkey" ] || fail "$platform: invalid input_power_device_name (expected rk805 pwrkey, got '$act')"
-			;;
+	h700)
+		for kv in "input_gamepad_device_name=gpio-keys-gamepad" \
+			"input_power_device_name=axp20x-pek" \
+			"input_volume_device_name=gpio-keys-volume"; do
+			k="${kv%%=*}"
+			v="${kv#*=}"
+			act="$(sed -n "s/^${k}=//p" "$platform" | head -n 1)"
+			[ "$act" = "$v" ] || fail "$platform: invalid $k (expected $v, got '$act')"
+		done
+		;;
+	rk3566)
+		for kv in "input_gamepad_device_name=gpio-keys-control" \
+			"input_power_device_name=rk805 pwrkey" \
+			"input_volume_device_name=gpio-keys-vol"; do
+			k="${kv%%=*}"
+			v="${kv#*=}"
+			act="$(sed -n "s/^${k}=//p" "$platform" | head -n 1)"
+			[ "$act" = "$v" ] || fail "$platform: invalid $k (expected $v, got '$act')"
+		done
+		;;
+	rk3326)
+		act="$(sed -n "s/^input_power_device_name=//p" "$platform" | head -n 1)"
+		[ "$act" = "rk805 pwrkey" ] || fail "$platform: invalid input_power_device_name (expected rk805 pwrkey, got '$act')"
+		;;
 	esac
 
 	for file in "${TRAITS_ROOT}/${board}"/traits/devices/*.ini; do
@@ -185,28 +185,33 @@ for board in h700 rk3326 rk3566; do
 			amin="$(sed -n 's/^input_axis_min=//p' "$file" | head -n 1)"
 			actr="$(sed -n 's/^input_axis_center=//p' "$file" | head -n 1)"
 			amax="$(sed -n 's/^input_axis_max=//p' "$file" | head -n 1)"
+			stick="$(sed -n 's/^input_stick_device_name=//p' "$file" | head -n 1)"
 
 			if [ "$lx" != "na" ]; then
 				[ "$lx" = "0" ] || fail "$file: invalid input_axis_lx '$lx' (expected 0)"
 				[ "$ly" = "1" ] || fail "$file: invalid input_axis_ly '$ly' (expected 1)"
+				[ "$stick" = "adc-joystick" ] ||
+					fail "$file: stick device must set input_stick_device_name=adc-joystick (got '$stick')"
 				if [ "$rx" != "na" ]; then
 					[ "$rx" = "3" ] || fail "$file: invalid input_axis_rx '$rx' (expected 3)"
 					[ "$ry" = "4" ] || fail "$file: invalid input_axis_ry '$ry' (expected 4)"
 				fi
 				case "$board" in
-					h700|rk3326)
-						[ "$amin" = "0" ] && [ "$actr" = "2048" ] && [ "$amax" = "4096" ] ||
-							fail "$file: invalid axis range (expected min=0 center=2048 max=4096, got min=$amin center=$actr max=$amax)"
-						;;
-					rk3566)
-						[ "$amin" = "15" ] && [ "$actr" = "519" ] && [ "$amax" = "1023" ] ||
-							fail "$file: invalid axis range (expected min=15 center=519 max=1023, got min=$amin center=$actr max=$amax)"
-						;;
+				h700 | rk3326)
+					[ "$amin" = "0" ] && [ "$actr" = "2048" ] && [ "$amax" = "4096" ] ||
+						fail "$file: invalid axis range (expected min=0 center=2048 max=4096, got min=$amin center=$actr max=$amax)"
+					;;
+				rk3566)
+					[ "$amin" = "15" ] && [ "$actr" = "519" ] && [ "$amax" = "1023" ] ||
+						fail "$file: invalid axis range (expected min=15 center=519 max=1023, got min=$amin center=$actr max=$amax)"
+					;;
 				esac
 			else
 				[ "$ly" = "na" ] && [ "$rx" = "na" ] && [ "$ry" = "na" ] &&
-				[ "$amin" = "na" ] && [ "$actr" = "na" ] && [ "$amax" = "na" ] ||
+					[ "$amin" = "na" ] && [ "$actr" = "na" ] && [ "$amax" = "na" ] ||
 					fail "$file: non-stick device must set all axis traits to 'na'"
+				[ "$stick" = "na" ] ||
+					fail "$file: non-stick device must set input_stick_device_name=na (got '$stick')"
 			fi
 		fi
 

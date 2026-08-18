@@ -80,6 +80,7 @@ static const TraitField TRAIT_FIELDS[] = {
     STR_FIELD(audio_jack_device_name),
     INT_FIELD(audio_mic),
     STR_FIELD(input_gamepad_device_name),
+    STR_FIELD(input_stick_device_name),
     STR_FIELD(input_power_device_name),
     STR_FIELD(input_volume_device_name),
     STR_FIELD(input_lid_device_name),

@@ -76,7 +76,8 @@ headers are documentation and ignored by parsers.
 
 [audio]     audio_card, audio_mixer, audio_jack_device_name, audio_mic
 
-[input]     input_gamepad_device_name, input_power_device_name,
+[input]     input_gamepad_device_name, input_stick_device_name,
+            input_power_device_name,
             input_volume_device_name, input_lid_device_name,
             input_rumble_device_name, input_touch, input_touch_device_name,
             key_up, key_down, key_left, key_right,
@@ -111,6 +112,10 @@ headers are documentation and ignored by parsers.
   directly; no symbol table in either the file or the consumers.
 - `na` means "not present / not available" for nullable fields. Absent keys
   are treated as `na`.
+- `input_stick_device_name` names the evdev device exposing the analog axes
+  (`adc-joystick`), or `na` when there are no sticks or the axes live on the
+  gamepad device itself. Consumers open it to read `EV_ABS` and fall back to
+  polling the gamepad fd when `na`.
 - The `gpu_*` section covers display output + GPU: `gpu_device=/dev/fb0`
   today, `gpu_device2` for dual-display (RG DS), `gpu_hdmi_connector` as a
   stable DRM connector identifier (e.g. `HDMI-A-1`), and `gpu_clock_min/max`
@@ -131,6 +136,11 @@ Every trait value was cross-referenced against the mainline DTS/DTSi and
 Rocknix sources (cloned, not web-searched) plus on-device checks:
 
 - **Keycodes** match the DTS `linux,code` values (numeric, matching evdev).
+- **Input device names** are the DT node names, guaranteed by the
+  `*-input-name-devices-from-dt-node.patch` kernel series (gpio-keys,
+  adc-joystick, adc-keys fall back to `of_node->name` when `pdev->name` is
+  empty). `EVIOCGNAME` therefore matches the traits verbatim (e.g.
+  `gpio-keys-control`, `adc-joystick`, `adc-keys`).
 - **Touch device names** come from the input driver source:
   `"Goodix Capacitive TouchScreen"` (goodix driver; RG DS, ARC-D),
   `"Hynitron cst3xx Touchscreen"` (hynitron_cstxxx driver; RG353P/M/V).

@@ -1,0 +1,50 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] input: name evdev devices from the DT node name
+
+DT-instantiated platform devices carry an empty pdev->name, so the
+gpio-keys, adc-joystick and adc-keys drivers register input devices with
+an empty EVIOCGNAME string. Minime UIs open input devices by the
+trait-provided names (which are the DT node names, e.g. "gpio-keys-control",
+"adc-joystick"), so name each input device from its of_node when present.
+
+Signed-off-by: Minime <maintainers@minime-os.local>
+---
+ drivers/input/joystick/adc-joystick.c | 2 +-
+ drivers/input/keyboard/adc-keys.c     | 2 +-
+ drivers/input/keyboard/gpio_keys.c    | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-joystick.c
+--- a/drivers/input/joystick/adc-joystick.c
++++ b/drivers/input/joystick/adc-joystick.c
+@@ -271,7 +271,7 @@ static int adc_joystick_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	joy->input = input;
+-	input->name = pdev->name;
++	input->name = dev->of_node ? dev->of_node->name : pdev->name;
+ 	input->id.bustype = BUS_HOST;
+ 
+ 	error = adc_joystick_set_axes(dev, joy);
+diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys.c
+--- a/drivers/input/keyboard/adc-keys.c
++++ b/drivers/input/keyboard/adc-keys.c
+@@ -149,6 +149,6 @@ static int adc_keys_probe(struct platform_device *pdev)
+ 	input_set_drvdata(input, st);
+ 
+-	input->name = pdev->name;
++	input->name = dev->of_node ? dev->of_node->name : pdev->name;
+ 	input->phys = "adc-keys/input0";
+ 
+ 	input->id.bustype = BUS_HOST;
+diff --git a/drivers/input/keyboard/gpio_keys.c b/drivers/input/keyboard/gpio_keys.c
+--- a/drivers/input/keyboard/gpio_keys.c
++++ b/drivers/input/keyboard/gpio_keys.c
+@@ -884,6 +884,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
+ 	input_set_drvdata(input, ddata);
+ 
+-	input->name = pdata->name ? : pdev->name;
++	input->name = pdata->name ? : (dev->of_node ? dev->of_node->name : pdev->name);
+ 	input->phys = "gpio-keys/input0";
+ 	input->dev.parent = dev;
+ 	input->open = gpio_keys_open;
