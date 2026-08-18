@@ -33,10 +33,10 @@ jobs:
                   out.append(line)
                   continue
               fields = line.split("|")
-              if len(fields) != 11:
+              if len(fields) != 12:
                   out.append(line)
                   continue
-              core, repo, hash_, buildpath, makefile, flags, patch, platform, core_so, optional, autobump = fields
+              core, repo, hash_, buildpath, makefile, flags, patch, platform, core_so, optional, autobump, builder = fields
               if autobump != "1" or not repo or not hash_:
                   out.append(line)
                   continue

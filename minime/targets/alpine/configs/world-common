@@ -50,6 +50,7 @@ zstd
 xz
 lz4
 lz4-libs
+bzip2
 # ── Networking (link/addr) ───────────────────────────────────────────────
 iproute2
 iputils

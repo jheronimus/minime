@@ -12,6 +12,9 @@ set -eu
 #                   from it, e.g. "ccache aarch64-linux-gnu-" or "" for native)
 #   CC / CXX / AR  (used by cores whose Makefile does not branch on CROSS_COMPILE)
 #   JOBS           (default: nproc)
+#
+# Recipes are either `make`-based (patched minime cores + simple unix builds)
+# or `cmake`-based (flycast, ppsspp), selected by the manifest `builder` field.
 
 CORES_DIR="$(cd "$(dirname "$0")" && pwd)"
 MANIFEST="$CORES_DIR/manifest"
@@ -53,7 +56,7 @@ clone_retry() {
 }
 
 # shellcheck disable=SC2034  # autobump is consumed by the update-cores bot
-while IFS='|' read -r core repo hash buildpath makefile flags patch platform core_so optional autobump; do
+while IFS='|' read -r core repo hash buildpath makefile flags patch platform core_so optional autobump builder; do
 	[ -n "$core" ] || continue
 	case "$core" in \#*) continue ;; esac
 
@@ -93,23 +96,44 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 
 	# Build.
 	bdir="$src${buildpath:+/$buildpath}"
-	set -- make
-	[ -n "$makefile" ] && set -- "$@" -f "$makefile"
-	[ -n "$CROSS_COMPILE" ] && set -- "$@" CROSS_COMPILE="$CROSS_COMPILE"
-	set -- "$@" CC="$CC" CXX="$CXX" AR="$AR" platform="${platform:-minime}"
-	# shellcheck disable=SC2086
-	if ! (cd "$bdir" && "$@" $flags -j"$JOBS"); then
-		if [ "$optional" = "1" ]; then
-			echo "WARNING: $core build failed (optional) — skipping" >&2
-			continue
+	if [ "$builder" = "cmake" ]; then
+		# CMake cores (flycast, ppsspp): configure into build/ then compile.
+		# CC/CXX/AR are passed so the glibc amd64->aarch64 cross build works.
+		# shellcheck disable=SC2086
+		if ! (cd "$bdir" && cmake -B build -DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_AR="$AR" $flags &&
+			make -C build -j"$JOBS"); then
+			if [ "$optional" = "1" ]; then
+				echo "WARNING: $core build failed (optional) — skipping" >&2
+				continue
+			fi
+			echo "ERROR: $core build failed" >&2
+			exit 1
 		fi
-		echo "ERROR: $core build failed" >&2
-		exit 1
+	else
+		set -- make
+		[ -n "$makefile" ] && set -- "$@" -f "$makefile"
+		[ -n "$CROSS_COMPILE" ] && set -- "$@" CROSS_COMPILE="$CROSS_COMPILE"
+		set -- "$@" CC="$CC" CXX="$CXX" AR="$AR" platform="${platform:-minime}"
+		# shellcheck disable=SC2086
+		if ! (cd "$bdir" && "$@" $flags -j"$JOBS"); then
+			if [ "$optional" = "1" ]; then
+				echo "WARNING: $core build failed (optional) — skipping" >&2
+				continue
+			fi
+			echo "ERROR: $core build failed" >&2
+			exit 1
+		fi
 	fi
 
 	# Collect the .so (+ drastic shims, which must sit next to the core).
+	# CMake cores emit into build/ (sometimes build/lib/), not the source dir.
 	so_name="${core_so:-${core}_libretro.so}"
-	if [ ! -f "$bdir/$so_name" ]; then
+	so_path="$bdir/$so_name"
+	if [ ! -f "$so_path" ] && [ "$builder" = "cmake" ]; then
+		so_path="$(find "$bdir/build" -name "$so_name" -print -quit)"
+	fi
+	if [ -z "$so_path" ] || [ ! -f "$so_path" ]; then
 		if [ "$optional" = "1" ]; then
 			echo "WARNING: $core produced no $so_name (optional) — skipping" >&2
 			continue
@@ -117,15 +141,15 @@ while IFS='|' read -r core repo hash buildpath makefile flags patch platform cor
 		echo "ERROR: expected $so_name in $bdir" >&2
 		exit 1
 	fi
-	cp "$bdir/$so_name" "$OUT_DIR/$so_name"
+	cp "$so_path" "$OUT_DIR/$so_name"
 	for shim in liblog.so libOpenSLES.so; do
 		if [ -f "$bdir/$shim" ]; then
 			cp "$bdir/$shim" "$OUT_DIR/$shim"
 		fi
 	done
-	echo "$core|$so_name|$repo|${hash:-}" >> "$OUT_DIR/cores.txt"
+	echo "$core|$so_name|$repo|${hash:-}" >>"$OUT_DIR/cores.txt"
 	built=$((built + 1))
-done < "$MANIFEST"
+done <"$MANIFEST"
 
 rm -rf "$SRC_DIR"
 echo "Built $built core(s) into $OUT_DIR"
