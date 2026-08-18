@@ -170,13 +170,13 @@ elif [ "$UI" = "muos" ]; then
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-musl:latest" \
-			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release CC=\"ccache gcc\" NM=\"nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release DEBUG=1 CC=\"ccache gcc\" NM=\"nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
 	else
 		docker run --rm -u root \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-glibc:latest" \
-			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release DEBUG=1 CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
 	fi
 
 	STAGE_DIR=$(mktemp -d)
