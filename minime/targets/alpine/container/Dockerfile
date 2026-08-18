@@ -74,7 +74,10 @@ RUN apk add --no-cache --no-progress \
 		cargo \
 		sdl2-dev \
 		sdl2_image-dev \
+		sdl2_mixer-dev \
 		sdl2_ttf-dev \
+		bzip2-dev \
+		xz-dev \
 		nodejs \
 		npm \
 		squashfs-tools \

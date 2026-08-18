@@ -22,7 +22,10 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		pkg-config \
 		libsdl2-dev:arm64 \
 		libsdl2-image-dev:arm64 \
+		libsdl2-mixer-dev:arm64 \
 		libsdl2-ttf-dev:arm64 \
+		libbz2-dev:arm64 \
+		liblzma-dev:arm64 \
 		libasound2-dev:arm64 \
 		libdrm-dev:arm64 \
 		libegl1-mesa-dev:arm64 \
