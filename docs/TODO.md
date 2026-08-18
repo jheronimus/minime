@@ -4,6 +4,10 @@
 
 ## UI
 
+- [ ] CI-verify the new GLES3 shared cores (flycast, mupen64plus_next, ppsspp) on both libcs and iterate the recipes; then on-device verify (live-test skill). See [cores-review](research/cores-review.md)
+- [ ] MinUI: swap pak defaults to the ecosystem cores — SFC.pak→snes9x, MD.pak→genesis_plus_gx, NGP/NGPC.pak→mednafen_ngp, GBA.pak→mgba (+ rename MGBA.pak to a gpsp fallback pak)
+- [ ] MinUI: add DC/N64/PSP paks once minarch grows GL support (blocked on the frontend GL work below)
+- [ ] muOS: add a ppsspp Pickles coredef (`retro/coredef/`) and the fbneo/arcade assign; consider `mednafen_supergrafx` + `mednafen_lynx` coredefs
 - [ ] Debug Wi-Fi, BT and Power PAKs in MinUI, make sure everything works well
 - [ ] Add boxart support and maybe a scraper PAK (Allium is implementing its own scraper these days)?
 - [ ] Write a MinUI-native frontend to PortMaster (depends on the boxart support to display screenshots)

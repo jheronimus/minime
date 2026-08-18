@@ -7,14 +7,14 @@ Accepted
 Minime is designed to be strictly UI-agnostic. Unlike monolithic firmware distributions (e.g. Rocknix, MuOS, Knulli), Minime makes zero assumptions about which frontend UI runs on top of it. Low-level hardware platform glue (kernel, Mali GPU drivers, audio routing, input events, hardware traits detection) is isolated completely from frontend user interfaces (MinUI, Allium, or any future UI port).
 
 Previously:
-- OS init scripts contained hardcoded paths, UI display names, and explicit process lists (`killall minui minarch keymon... alliumd...`) for teardown.
-- Distro build recipes (`APKBUILD` / `.mk`) manufactured custom entrypoint wrappers (`launch.sh`) or generated `ui.env` manifests on the fly.
-- Distro image staging logic created redundant or placeholder user directories (`Roms`, `Bios`, `Saves`, `.userdata`).
+- OS init scripts contained hardcoded paths, UI display names, and explicit process lists for teardown.
+- Distro build recipes manufactured custom entrypoint wrappers (`launch.sh`) or generated `ui.env` manifests on the fly.
+- Distro image staging created redundant or placeholder user directories (`Roms`, `Bios`, `Saves`, `.userdata`).
 
 ## Decision
 
 ### Core Contract Boundary
-Minime OS has zero internal knowledge of how any UI works. Minime reads `.minime/ui.env` provided by the UI payload, and UIs read hardware traits from `.minime/traits` provided by Minime — that is the complete contract boundary. Minime build scripts and init services must never mutate UI binaries, reorganize UI internal directories, or interpret UI-specific internal logic.
+Minime OS has zero internal knowledge of how any UI works. Minime reads `.minime/ui.env` provided by the UI payload, and UIs read hardware traits from `.minime/traits` provided by Minime — that is the complete contract boundary. Minime build scripts and init services must never mutate UI binaries, reorganize UI internal directories, or interpret UI internal logic.
 
 ### 1. Hardware Traits Architecture
 Hardware platform capabilities are abstracted via immutable `.ini` manifests bundled into the rootfs at build time under `/usr/share/minime/traits/`:
@@ -22,6 +22,8 @@ Hardware platform capabilities are abstracted via immutable `.ini` manifests bun
 - `devices/*.ini`: Defines device-specific traits matched against `/proc/device-tree/model` and `compatible`.
 
 On boot, `init.d/traits` merges `platform.ini` and the matching device manifest into `/mnt/sdcard/.minime/traits`. Core scripts (`ui`, `wifi`) query traits via key lookup functions (`get_trait <key>`). UIs target `minime` directly by reading `/mnt/sdcard/.minime/traits`.
+
+minarch (the emulator host) is not device-tagged: screen dims/rotation reach it via `GFX_init()` from traits, and device clocks/governor resolve in the platform layer. The upstream `DEVICE` envar / `default-<tag>.cfg` per-device config mechanism is unused and was removed from `minarch.c`; paks carry only per-system preferences.
 
 ### 2. UI Payload & Archive Extraction Contract
 - UIs build and package their release archives (`.zip`) in their own repositories.
@@ -51,13 +53,12 @@ UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings
 The OS `ui` init script is a clean, UI-agnostic contract executor:
 - **Environment & Library Paths**: `ui.sh` does **not** manage `LD_LIBRARY_PATH` or set UI environment variables. Relaunch loops, environment setups, and library loading are 100% internal to the UI payload (managed by RPATH or the UI's own entrypoint script pointed to by `UI_BIN`).
 - **Start**: Reads `/mnt/sdcard/.minime/ui.env`. If missing or if `UI_BIN` is non-executable, logs `No UI binary found` to `/mnt/sdcard/boot.log` and exits cleanly. Otherwise, launches `UI_BIN` via `start-stop-daemon`.
-- **Stop**: Reads `UI_STOP_CMD` from `ui.env` and executes it to trigger native UI graceful teardown. Sends `SIGTERM` to `/tmp/ui.pid` process group, followed by `UI_PROCESSES` cleanup. OS init scripts never hardcode launcher binary names.
-- **IPC / Shutdown**: UI applications handle power off / reboot directly (calling `poweroff` or `reboot`). `ui.sh` does not interpret UI-specific IPC files (e.g. `/tmp/next`, `/tmp/poweroff`).
+- **Stop**: Reads `UI_STOP_CMD` from `ui.env` and executes it for graceful UI teardown. Sends `SIGTERM` to `/tmp/ui.pid` group, then `UI_PROCESSES` cleanup. OS init never hardcodes launcher names.
+- **IPC / Shutdown**: UI handles power off / reboot directly. `ui.sh` does not interpret UI IPC files (e.g. `/tmp/next`, `/tmp/poweroff`).
 
 ### 5. SD Card Directory Ownership
-- Minime OS only creates `/mnt/sdcard/.minime/` (containing system images, kernel, device tree blobs, traits, and hardware configs).
-- Minime OS does **not** create media directories (`Roms/`, `Bios/`, `Saves/`) or vestigial storage folders (`.userdata/`). All user directories are owned by the UI payload or created on first boot by the UI.
+- Minime OS only creates `/mnt/sdcard/.minime/` (system images, kernel, device tree blobs, traits, hardware configs).
+- Minime OS does **not** create media directories (`Roms/`, `Bios/`, `Saves/`) or vestigial storage folders (`.userdata/`). User directories are owned by the UI payload or created on first boot by the UI.
 
 ## Rationale
-- **Zero Coupling**: OS firmware scripts (`ui`, `init.d/traits`) and build recipes remain 100% free of UI-specific package names, paths, and entrypoint wrappers.
-- **Portability & Hot-Swapping**: Third-party UIs can be ported or hot-swapped simply by dropping their files on the SD card and updating `/mnt/sdcard/.minime/ui.env`.
+- **Portability & Hot-Swapping**: UIs can be ported or hot-swapped by dropping their files on the SD card and updating `/mnt/sdcard/.minime/ui.env`.

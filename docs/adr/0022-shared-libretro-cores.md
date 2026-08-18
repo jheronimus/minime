@@ -23,10 +23,15 @@ Build every core **once** in CI and let both UIs consume the flat output.
 
 1. **`minime/build/cores/` is the single source of truth** (moved out of the
    MinUI submodule):
-   - `manifest`: 17 recipes in `core|repo|hash|buildpath|makefile|flags|patch|
-     platform|core_so|optional|autobump` form. The 13 original MinUI cores plus
-     handy (Lynx), mednafen_wswan (WonderSwan), yabasanshiro (Saturn, WIP) and
-     drastic (NDS, WIP, glibc-only) from jheronimus forks.
+   - `manifest`: 25 recipes in `core|repo|hash|buildpath|makefile|flags|patch|
+     platform|core_so|optional|autobump|builder` form. The 13 original MinUI
+     cores plus handy (Lynx), mednafen_wswan (WonderSwan), yabasanshiro
+     (Saturn, WIP) and drastic (NDS, WIP, glibc-only) from jheronimus forks,
+     and the 2026-08 review set (snes9x, genesis_plus_gx, mednafen_ngp, fbneo,
+     flycast, mupen64plus_next, ppsspp) — see
+     `docs/research/cores-review.md`. `builder` selects the build system:
+     `make` (default) or `cmake` (flycast, ppsspp, the GLES3 big-three are
+     `optional=1` and need a GL host, see ADR 0023).
    - `patches/`: the 13 vendored `platform=minime` patches, the 2 extra
      per-core patches gambatte/pokemini carried over from the old build, and
      new handy + mednafen_wswan patches. Applied in order with `git apply -p1`
