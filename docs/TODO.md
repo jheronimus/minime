@@ -59,6 +59,7 @@
 ## Completed
 
 - [x] Support and verify switching between Alpine and Buildroot target OSes using `update.sh` ([ADR 0003](adr/0003-on-device-ota-update.md))
+- [x] Fix Buildroot Bluetooth service startup: dynamically resolve `bluetoothd` across `/usr/libexec/bluetooth` and `/usr/lib/bluetooth` in `init.d/bluetooth`
 
 - [x] Eliminate bootsplash flicker during switch_root: `--persist` flag preserves DRM scanout framebuffer across initramfs handoff
 - [x] Review and trim init scripts: start wireless services (`iwd`, `bluetoothd`) on demand with user gates
