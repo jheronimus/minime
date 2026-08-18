@@ -167,11 +167,11 @@ while [ $# -gt 0 ]; do
 		alpine | buildroot)
 			TARGET="${arg}"
 			;;
-		minui | allium)
+		minui | allium | muos)
 			UI="${arg}"
 			;;
 		*)
-			die "unsupported argument '$1' (expected alpine, buildroot, minui, or allium)"
+			die "unsupported argument '$1' (expected alpine, buildroot, minui, allium, or muos)"
 			;;
 		esac
 		shift
@@ -195,8 +195,8 @@ alpine | buildroot) ;;
 esac
 
 case "${UI}" in
-minui | allium) ;;
-*) die "unsupported UI '${UI}' (expected minui or allium)" ;;
+minui | allium | muos) ;;
+*) die "unsupported UI '${UI}' (expected minui, allium, or muos)" ;;
 esac
 
 log "board=${BOARD} target=${TARGET} (installed: ${FROM_TARGET}) ui=${UI} (installed: ${FROM_UI:-unknown})"
@@ -251,18 +251,21 @@ log "installing ${SIZE} bytes (${rem_target:-?}/${rem_ui:-?} ${rem_min:-?}/${rem
 
 # Stop the UI so it is not running from files we are about to replace.
 /etc/init.d/ui stop >/dev/null 2>&1 || true
-killall -9 minui.elf minarch.elf keymon.elf 2>/dev/null || true
+killall -9 minui.elf minarch.elf keymon.elf alliumd muxfrontend 2>/dev/null || true
 sleep 1
 
 # Apply: UI payload clean-replaced, .minime overlaid (state kept).
 # MinUI lives under .system/; Allium under .ui/ + .allium/ + RetroArch/ +
-# apps/ + Roms/ + Saves/ + BIOS/.  Remove the old UI's top-level dirs so a
-# UI switch does not leave stale binaries, then extract the whole archive.
+# apps/ + Roms/ + Saves/ + BIOS/; muOS lives under .muos/. Remove the old
+# UI's top-level dirs so a UI switch does not leave stale binaries.
 case "${FROM_UI:-${UI}}" in
 minui) rm -rf "${SDCARD}/.system" ;;
 allium)
 	rm -rf "${SDCARD}/.ui" "${SDCARD}/.allium" \
 		"${SDCARD}/RetroArch" "${SDCARD}/apps"
+	;;
+muos)
+	rm -rf "${SDCARD}/.muos"
 	;;
 esac
 unzstd -c "${ARCHIVE}" | tar -xf - -C "${SDCARD}"
@@ -276,6 +279,10 @@ minui)
 allium)
 	[ -x "${SDCARD}/.ui/bin/alliumd" ] ||
 		die "install incomplete: .ui/bin/alliumd missing; leaving archive at ${ARCHIVE}"
+	;;
+muos)
+	[ -x "${SDCARD}/.muos/bin/muxfrontend" ] ||
+		die "install incomplete: .muos/bin/muxfrontend missing; leaving archive at ${ARCHIVE}"
 	;;
 esac
 
