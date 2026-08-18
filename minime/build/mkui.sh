@@ -201,7 +201,10 @@ elif [ "$UI" = "muos" ]; then
 	# verifies by hash at boot). MuOS's own init/bin/device are NOT staged —
 	# Minime replaces the init flow with launch.sh and derives device/config
 	# from the device traits.
-	[ -d "$ROOT_DIR/minime/ui/muos/internal/share" ] && cp -r "$ROOT_DIR/minime/ui/muos/internal/share/." "$STAGE_DIR/.muos/share/" || true
+	# -L dereferences the symlinked fonts (muterm.ttf, mucredits.ttf) into real
+	# files: the .muos payload lives on FAT32, which supports neither symlinks
+	# nor hardlinks.
+	[ -d "$ROOT_DIR/minime/ui/muos/internal/share" ] && cp -rL "$ROOT_DIR/minime/ui/muos/internal/share/." "$STAGE_DIR/.muos/share/" || true
 	[ -d "$ROOT_DIR/minime/ui/muos/internal/script" ] && cp -r "$ROOT_DIR/minime/ui/muos/internal/script/." "$STAGE_DIR/.muos/script/" || true
 
 	# Minime port overlay: launcher, ui.env contract, and iwd wifi scripts live
@@ -218,7 +221,9 @@ elif [ "$UI" = "muos" ]; then
 	fi
 
 	OUT_TAR="$ROOT_DIR/minime/ui/out/muos-${LIBC}-aarch64.tar"
-	tar -cf "$OUT_TAR" -C "$STAGE_DIR" .
+	# --dereference: internal/share ships symlinked fonts (muterm.ttf, mucredits.ttf)
+	# that FAT32 cannot store; embed the target files instead.
+	tar --dereference -cf "$OUT_TAR" -C "$STAGE_DIR" .
 	zstd -q -9 -f "$OUT_TAR"
 	rm -f "$OUT_TAR"
 	echo "Created ${OUT_TAR}.zst"
