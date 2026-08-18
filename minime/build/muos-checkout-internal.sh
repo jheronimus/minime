@@ -14,7 +14,10 @@ REF="${1:?usage: muos-checkout-internal.sh <ref>}"
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 PATH_INTERNAL="$ROOT_DIR/minime/ui/muos/internal"
 
-if [ -d "$PATH_INTERNAL" ]; then
+# Already present = a real checkout (full or sparse) exists. Git may leave an
+# EMPTY directory at the path for a skipped (update=none) submodule, so a plain
+# -d test is not enough.
+if [ -e "$PATH_INTERNAL/.git" ] || [ -d "$PATH_INTERNAL/share" ]; then
 	echo "muos internal already present at $PATH_INTERNAL" >&2
 	exit 0
 fi
