@@ -50,10 +50,10 @@ mednafen_wswan|https://github.com/libretro/beetle-wswan-libretro|||||mednafen_ws
 yabasanshiro|https://github.com/jheronimus/yabause|cd7fa90c3d84a69609a976228cebfea8f6ffa716|yabause/src/libretro|Makefile|||arm64||1|0|
 drastic|https://github.com/jheronimus/drastic|aca7a6c8ad6b9ae50c6824ec8df7d6a14cdeaa7a|wrapper|Makefile|||minime||1|0|
 stella|https://github.com/libretro/stella2023||src/os/libretro|Makefile||stella.patch|minime|stella_libretro.so|0|1|
-snes9x|https://github.com/libretro/snes9x||||||unix||0|1|
-genesis_plus_gx|https://github.com/libretro/Genesis-Plus-GX||||||unix||0|1|
+snes9x|https://github.com/libretro/snes9x||libretro||||unix||0|1|
+genesis_plus_gx|https://github.com/libretro/Genesis-Plus-GX|||Makefile.libretro|||unix||0|1|
 mednafen_ngp|https://github.com/libretro/beetle-ngp-libretro||||||unix||0|1|
 fbneo|https://github.com/libretro/FBNeo||src/burner/libretro||||unix||0|1|
 mupen64plus_next|https://github.com/libretro/mupen64plus-libretro-nx||||FORCE_GLES3=1 WITH_DYNAREC=aarch64||unix||1|1|
 flycast|https://github.com/flyinghead/flycast||||-DLIBRETRO=ON -DUSE_GLES=ON -DUSE_OPENGL=ON -DUSE_DX11=OFF -DUSE_DX9=OFF -DUSE_PULSEAUDIO=OFF -DUSE_VULKAN=OFF||unix||1|1|cmake
-ppsspp|https://github.com/hrydgard/ppsspp|a477ae023fe634e99de05c8baa101630b70e3518||||-DLIBRETRO=ON -DBUILD_SHARED_LIBS=OFF -DUSE_FFMPEG=OFF -DUSING_FBDEV=ON -DUSE_DISCORD=OFF -DANDROID=OFF -DWIN32=OFF -DAPPLE=OFF -DUNITTEST=OFF -DSIMULATOR=OFF -DUSING_QT_UI=OFF -DHEADLESS=OFF -DMOBILE_DEVICE=OFF -DENABLE_CTEST=OFF -DUSING_X11_VULKAN=OFF -DARM=ON -DARM64=ON -DUSING_GLES2=ON -DUSING_EGL=OFF -DCMAKE_SYSTEM_PROCESSOR=aarch64||unix||1|0|cmake
+ppsspp|https://github.com/hrydgard/ppsspp|a477ae023fe634e99de05c8baa101630b70e3518|||-DLIBRETRO=ON -DBUILD_SHARED_LIBS=OFF -DUSE_FFMPEG=OFF -DUSING_FBDEV=ON -DUSE_DISCORD=OFF -DANDROID=OFF -DWIN32=OFF -DAPPLE=OFF -DUNITTEST=OFF -DSIMULATOR=OFF -DUSING_QT_UI=OFF -DHEADLESS=OFF -DMOBILE_DEVICE=OFF -DENABLE_CTEST=OFF -DUSING_X11_VULKAN=OFF -DARM=ON -DARM64=ON -DUSING_GLES2=ON -DUSING_EGL=OFF -DCMAKE_SYSTEM_PROCESSOR=aarch64||unix||1|0|cmake
