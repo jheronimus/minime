@@ -38,13 +38,16 @@ RUN apk add --no-cache --no-progress \
 		cmake \
 		cpio \
 		curl \
+		curl-dev \
 		dtc \
 		file \
 		flex \
+		freetype-dev \
 		genimage \
 		git \
 		gmp-dev \
 		libarchive-tools \
+		libpng-dev \
 		linux-headers \
 		llvm \
 		llvm-dev \
@@ -78,6 +81,7 @@ RUN apk add --no-cache --no-progress \
 		sdl2_ttf-dev \
 		bzip2-dev \
 		xz-dev \
+		zstd-dev \
 		nodejs \
 		npm \
 		squashfs-tools \

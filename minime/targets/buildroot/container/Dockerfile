@@ -20,6 +20,9 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		automake \
 		libtool \
 		pkg-config \
+		libcurl4-openssl-dev:arm64 \
+		libfreetype-dev:arm64 \
+		libpng-dev:arm64 \
 		libsdl2-dev:arm64 \
 		libsdl2-image-dev:arm64 \
 		libsdl2-mixer-dev:arm64 \
