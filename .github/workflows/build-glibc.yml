@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', '.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -174,12 +174,6 @@ jobs:
         run: |
           minime/build/mkui.sh allium glibc
 
-      - name: Compile muOS
-        id: compile-muos
-        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/muos-{0}-aarch64.tar.zst', 'glibc')) == ''
-        run: |
-          minime/build/mkui.sh muos glibc
-
       - name: Save Allium Cargo Target
         if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
         uses: actions/cache/save@v6
@@ -191,14 +185,14 @@ jobs:
           key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save UI Cache
-        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success' || steps.compile-muos.outcome == 'success')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', '.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save UI CCache
-        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success' || steps.compile-muos.outcome == 'success')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-glibc
@@ -208,6 +202,68 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ui-glibc
+          path: minime/ui/out
+          retention-days: 7
+
+  build-ui-muos-glibc:
+    name: Build muOS (glibc)
+    needs: [build-cores-glibc]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore muOS Cache
+        id: cache-muos-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: minime/ui/out
+          key: ui-muos-glibc-${{ hashFiles('.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Restore muOS CCache
+        id: ccache-muos-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-muos-glibc-${{ github.sha }}
+          restore-keys: |
+            ccache-ui-muos-glibc-
+
+      - name: Download Cores
+        uses: actions/download-artifact@v8
+        with:
+          name: cores-glibc
+          path: minime/build/cores/out
+
+      - name: Compile muOS
+        id: compile-muos
+        if: steps.cache-muos-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/muos-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh muos glibc
+
+      - name: Save muOS Cache
+        if: always() && steps.compile-muos.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: minime/ui/out
+          key: ui-muos-glibc-${{ hashFiles('.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+
+      - name: Save muOS CCache
+        if: always() && steps.compile-muos.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ui-ccache-glibc
+          key: ccache-ui-muos-glibc-${{ github.sha }}
+
+      - name: Upload muOS Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-muos-glibc
           path: minime/ui/out
           retention-days: 7
 
@@ -273,6 +329,84 @@ jobs:
           export MINIME_COMMIT UI_COMMIT
           make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
 
+      - name: Save CCache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Save DL Cache
+        if: always() && steps.build-components.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in minime/targets/buildroot/out/${{ matrix.board }}/*.img.zst minime/targets/buildroot/out/${{ matrix.board }}/*.tar.zst; do
+            [ -f "$f" ] || continue
+            for attempt in 1 2 3 4 5; do
+              if gh release upload testing "$f" --clobber; then
+                break
+              fi
+              echo "Upload attempt $attempt failed, retrying..."
+              sleep 5
+            done
+          done
+
+  build-os-muos:
+    name: Build muOS OS (buildroot / ${{ matrix.board }})
+    needs: [bootloader, setup, build-ui-muos-glibc]
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.setup.outputs.boards) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Download Bootloader
+        uses: actions/download-artifact@v8
+        with:
+          name: bootloader-out
+          path: minime/uboot/out
+
+      - name: Download muOS UI
+        uses: actions/download-artifact@v8
+        with:
+          name: ui-muos-glibc
+          path: minime/ui/out
+
+      - name: Restore CCache
+        id: ccache-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            ccache-buildroot-${{ matrix.board }}-
+
+      - name: Restore DL Cache
+        id: dl-os-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.buildroot-dl
+          key: dl-buildroot-${{ matrix.board }}-${{ github.sha }}
+          restore-keys: |
+            dl-buildroot-${{ matrix.board }}-
+
+      - name: Build Components
+        id: build-components
+        run: make -C minime/targets/buildroot components BOARD=${{ matrix.board }}
+
       - name: Build Image for muOS
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
@@ -299,7 +433,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in minime/targets/buildroot/out/${{ matrix.board }}/*.img.zst minime/targets/buildroot/out/${{ matrix.board }}/*.tar.zst; do
+          for f in minime/targets/buildroot/out/${{ matrix.board }}/*muos*.img.zst minime/targets/buildroot/out/${{ matrix.board }}/*muos*.tar.zst; do
             [ -f "$f" ] || continue
             for attempt in 1 2 3 4 5; do
               if gh release upload testing "$f" --clobber; then
