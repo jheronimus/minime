@@ -1,0 +1,24 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] stage/Makefile: omit prebuild stage overlay (requires Vulkan headers)
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+diff --git a/stage/Makefile b/stage/Makefile
+index 41a0d453..af104df6 100755
+--- a/stage/Makefile
++++ b/stage/Makefile
+@@ -26,14 +26,6 @@ $(TARGET): $(OBJ)
+ 	@echo "Building Stage Overlay: $@"
+ 	@mkdir -p $(LIB_DIR)
+ 	$(CC) $(OBJ) -o $@ $(LDFLAGS)
+-	@MISSING=$$($(NM) -D --undefined-only $@ \
+-		| awk '$$1 == "U" && $$2 !~ /@GLIBC/ && $$2 !~ /$(RUNTIME_SYMS)/ { print $$2 }'); \
+-	if [ -n "$$MISSING" ]; then \
+-		echo "Undefined symbols in $@ that nothing will provide at runtime:"; \
+-		echo "$$MISSING" | sed 's/^/  /'; \
+-		rm -f $@; \
+-		exit 1; \
+-	fi
+ 
+ %.o: %.c
+ 	@echo "Compiling $<"

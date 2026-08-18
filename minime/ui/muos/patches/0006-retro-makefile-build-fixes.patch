@@ -1,0 +1,22 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] retro/Makefile: drop glibc nm check, use dynamic lzma/zlib
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+diff --git a/retro/Makefile b/retro/Makefile
+index c1bc9a93..5b286307 100755
+--- a/retro/Makefile
++++ b/retro/Makefile
+@@ -7,12 +7,7 @@ TARGET  := $(BIN_DIR)/muxretro
+ CFLAGS  := $(BASE_CFLAGS) $(STRICT_CFLAGS) -DRC_CLIENT_SUPPORTS_HASH -fPIE
+ LDFLAGS := $(COMMON_LIBS) $(BIN_LDFLAGS) -lssl -lcrypto -ldl
+ 
+-ifeq ($(DEVICE), NATIVE)
+ LDLIBS  := -L$(LIB_DIR) -lui -lmuxcom -lmuxmod -lplutosvg -lz -llzma -lbz2
+-else
+-LDLIBS  := -L$(LIB_DIR) -lui -lmuxcom -lmuxmod -lplutosvg \
+-           -Wl,-Bstatic -lz -llzma -Wl,-Bdynamic -lbz2
+-endif
+ 
+ INCLUDES := -I../module -I../module/ui -I../common \
+             -I../common/input -I../common/mini -Icore \

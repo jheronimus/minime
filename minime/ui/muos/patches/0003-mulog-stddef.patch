@@ -1,0 +1,17 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] mulog: include stddef.h for offsetof on musl
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+diff --git a/module/mulog.c b/module/mulog.c
+index e4105501..040ad0bc 100755
+--- a/module/mulog.c
++++ b/module/mulog.c
+@@ -5,6 +5,7 @@
+ #include <poll.h>
+ #include <signal.h>
+ #include <stdint.h>
++#include <stddef.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>

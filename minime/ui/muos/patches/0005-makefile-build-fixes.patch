@@ -1,0 +1,18 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] Makefile: drop glibc-only nm symbol check
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+diff --git a/Makefile b/Makefile
+index 7745b5cd..2e89bad7 100755
+--- a/Makefile
++++ b/Makefile
+@@ -34,8 +34,6 @@ info:
+ prebuild:
+ 	$(VERBOSE)rm -rf $(BIN_DIR)
+ 	$(VERBOSE)find . -name "*.o" -not -path "./.git/*" -exec rm -f {} +
+-	@echo "Building Stage Overlay: libmustage.so"
+-	$(VERBOSE)$(MAKE) -C stage DEVICE="$(DEVICE)" DEBUG="$(DEBUG)" $(QUIET) || exit 1
+ 	$(VERBOSE)for DEP in $(DEPENDENCIES); do \
+ 		echo "Building Dependency: $$DEP"; \
+ 		$(MAKE) -C $$DEP DEVICE="$(DEVICE)" DEBUG="$(DEBUG)" $(QUIET) || exit 1; \

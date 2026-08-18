@@ -1,0 +1,54 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] muxshare: read connected SSID via iw/iwctl (Minime uses iwd, no wpa_supplicant)
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+diff --git a/module/muxshare.c b/module/muxshare.c
+index 6fa0d23d..f3f743ac 100755
+--- a/module/muxshare.c
++++ b/module/muxshare.c
+@@ -1412,6 +1412,44 @@ int read_wpa_status_value(const char *key, char *value) {
+ int read_connected_ssid(char *ssid) {
+     ssid[0] = '\0';
+ 
++    // 1. Try iw dev wlan0 link (kernel wireless link state)
++    const char *const iw_argv[] = {"iw", "dev", "wlan0", "link", NULL};
++    char *iw_out = get_execute_result_argv(iw_argv, -1);
++    if (iw_out) {
++        char *p = strstr(iw_out, "SSID: ");
++        if (p) {
++            p += 6;
++            char *eol = strpbrk(p, "\r\n");
++            if (eol) *eol = '\0';
++            snprintf(ssid, MAX_BUFFER_SIZE, "%s", p);
++            net_trim(ssid);
++            free(iw_out);
++            if (*ssid) return 1;
++        } else {
++            free(iw_out);
++        }
++    }
++
++    // 2. Try iwctl station wlan0 show (iwd)
++    const char *const iwctl_argv[] = {"iwctl", "station", "wlan0", "show", NULL};
++    char *iwctl_out = get_execute_result_argv(iwctl_argv, -1);
++    if (iwctl_out) {
++        char *p = strstr(iwctl_out, "Connected network");
++        if (p) {
++            p += strlen("Connected network");
++            while (*p && isspace((unsigned char) *p)) p++;
++            char *eol = strpbrk(p, "\r\n");
++            if (eol) *eol = '\0';
++            snprintf(ssid, MAX_BUFFER_SIZE, "%s", p);
++            net_trim(ssid);
++            free(iwctl_out);
++            if (*ssid) return 1;
++        } else {
++            free(iwctl_out);
++        }
++    }
++
++    // 3. Fallback to wpa_cli (wpa_supplicant)
+     char state[MAX_BUFFER_SIZE];
+     if (!read_wpa_status_value("wpa_state", state)) return 0;
+     if (strcmp(state, "COMPLETED") != 0) return 0;
