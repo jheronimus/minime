@@ -23,6 +23,7 @@ When a topic is addressed across several ADRs, they are merged into a single ADR
 11. **Libretro cores: shared builder & naming** — `0022`.
 12. **YabaSanshiro libretro port** — `0023`.
 13. **DraStic libretro port** — `0024`.
-14. **UI ports** — `0025` MinUI feature port.
+14. **UI ports** — `0025` MinUI feature port, `0028` MuOS frontend port.
 15. **Performance benchmarking** — `0026` benchmark suite.
 16. **Display rotation ownership** — `0027` display overlay, panel firmware, traits.
+17. **Input mapping & default hotkeys** — `0029` default hotkeys & input mapping architecture.

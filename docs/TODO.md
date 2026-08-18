@@ -44,6 +44,20 @@
 
 ## Display, Audio & Input
 
+- [ ] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([ADR 0011](adr/0011-traits-schema.md))
+  - [THEORY] On H700 and RK3566, gamepad buttons (`gpio-keys-gamepad` / `gpio-keys-control`) and analog sticks (`adc-joystick`) are separate evdev devices. ADR 0011 schema currently omits `input_stick_device_name`, and both UI input loops only open `input_gamepad_device_name`. Add `input_stick_device_name` to ADR 0011, update traits manifests (`adc-joystick` on stick devices, `na` on stickless), and teach `PLAT_initInput` (MinUI) / `InputContext` (Allium) to open and poll both descriptors.
+- [ ] Comprehensive input mapping & hotkeys across all Minime devices in MinUI and Allium (emulators & shortcuts)
+  - [THEORY] Configure MinUI (`platform.c` / `minarch`) and Allium (`input.rs` / `alliumd`) to handle input mappings across all form factors:
+    - **6-button layout (RG ARC-D / ARC-S)**: Pass `key_c=306` and `key_z=309` alongside A/B/X/Y to `RETRO_DEVICE_ID_JOYPAD_C` and `RETRO_DEVICE_ID_JOYPAD_Z` for Genesis/MD and 6-button arcade cores.
+    - **Single/dual-stick & vertical layouts**: Support single-stick vertical devices (RG40XX-V, RG351V with dedicated `F` key), dual-stick devices (RG35XX-H, RG40XX-H, CubeXX, RG353, RG503, RG351P/M/MP), and stickless devices (RG28XX, RG34XX, RG35XX Plus/SP).
+    - **AmberELEC-inspired hotkey convention**: Unify emulator and launcher shortcuts based on [AmberELEC controls](https://amberelec.org/guides/getting-to-know-amberelec.html):
+      - Hotkey modifier: Dedicated **`F` / `MENU`** button is the primary default on all devices that have it (`key_menu != na`); fallback to **`SELECT`** only on the few devices lacking a dedicated function key (e.g. RG351P/M/MP).
+      - Quick Menu: `F`/`MENU` tap (or `Hotkey + X` / `L3 + R3`).
+      - Save State: `Hotkey + R1` | Load State: `Hotkey + L1`.
+      - Fast Forward: `Hotkey + R2` | Rewind: `Hotkey + L2`.
+      - State Slot Select: `Hotkey + D-Pad Right` (Next) / `Hotkey + D-Pad Left` (Prev).
+      - Quit Game: `Hotkey + START` (or double press) | Reset: `Hotkey + B` | Pause: `Hotkey + A`.
+      - Brightness: `MENU + VolUp` / `MENU + VolDown` (hardware volume keys control volume directly).
 - [ ] On-device verify display orientation per device with `just shell "remote screenshot --raw"` ([ADR 0027](adr/0027-display-rotation.md)): confirm RG28XX (270) / RG40XX-V (90) / RG351V (90) directions and correct any that are 180° off. Confirm the newly-shipped H700 panel firmware blobs bring the rg28xx/rg34xx/rg40xx/rgcubexx panels up upright.
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
