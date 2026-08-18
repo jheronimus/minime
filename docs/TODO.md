@@ -44,8 +44,10 @@
 
 ## Display, Audio & Input
 
-- [ ] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([ADR 0011](adr/0011-traits-schema.md))
+- [x] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([ADR 0011](adr/0011-traits-schema.md))
   - [THEORY] On H700 and RK3566, gamepad buttons (`gpio-keys-gamepad` / `gpio-keys-control`) and analog sticks (`adc-joystick`) are separate evdev devices. ADR 0011 schema currently omits `input_stick_device_name`, and both UI input loops only open `input_gamepad_device_name`. Add `input_stick_device_name` to ADR 0011, update traits manifests (`adc-joystick` on stick devices, `na` on stickless), and teach `PLAT_initInput` (MinUI) / `InputContext` (Allium) to open and poll both descriptors.
+  - **Done**: `input_stick_device_name` added to ADR 0011, all device manifests (`adc-joystick` / `na`), `check-traits.sh` validation, MinUI `kStickIndex` (already wired), Allium `input_device_names()`, and reference `docs/research/traits.c`. The kernel input drivers (gpio-keys / adc-joystick / adc-keys) are patched to report the DT node name via `EVIOCGNAME` (`*-input-name-devices-from-dt-node.patch`), so trait device names match the kernel. (muOS `traits.{h,c}` were tried then removed — Option A: `launch.sh` derives `device/config` from traits instead; see [ADR 0028](adr/0028-muos-frontend-port.md).)
+  - **Remaining**: on-device verification of `EVIOCGNAME` on every board, and RG351 family input (no DT input nodes exist in Minime today — see rk3326 board notes).
 - [ ] Comprehensive input mapping & hotkeys across all Minime devices in MinUI and Allium (emulators & shortcuts)
   - [THEORY] Configure MinUI (`platform.c` / `minarch`) and Allium (`input.rs` / `alliumd`) to handle input mappings across all form factors:
     - **6-button layout (RG ARC-D / ARC-S)**: Pass `key_c=306` and `key_z=309` alongside A/B/X/Y to `RETRO_DEVICE_ID_JOYPAD_C` and `RETRO_DEVICE_ID_JOYPAD_Z` for Genesis/MD and 6-button arcade cores.

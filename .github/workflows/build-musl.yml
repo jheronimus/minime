@@ -235,12 +235,17 @@ jobs:
       - name: Set safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      - name: Checkout muOS internal (sparse payload)
+        run: |
+          internal_sha="$(git ls-tree HEAD minime/ui/muos/internal | awk '{print $3}')"
+          minime/build/muos-checkout-internal.sh "$internal_sha"
+
       - name: Restore muOS Cache
         id: cache-muos-restore
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-muos-musl-${{ hashFiles('.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-muos-musl-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore muOS CCache
         id: ccache-muos-restore
@@ -268,7 +273,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-muos-musl-${{ hashFiles('.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-muos-musl-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save muOS CCache
         if: always() && steps.compile-muos.outcome == 'success'

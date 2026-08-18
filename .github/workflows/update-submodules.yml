@@ -24,9 +24,12 @@ jobs:
       - name: Update submodules to latest main
         run: |
           git submodule update --remote --merge
+          # muos/internal is update=none (sparse payload, skipped by recursive
+          # checkout) so bump it explicitly to the latest main tip.
+          minime/build/muos-checkout-internal.sh main
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add minime/ui/allium minime/ui/minui minime/ui/muos
+          git add minime/ui/allium minime/ui/minui minime/ui/muos/frontend minime/ui/muos/internal
           if git diff --staged --quiet; then
             echo "Submodules are up-to-date."
           else

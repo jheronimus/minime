@@ -163,20 +163,25 @@ elif [ "$UI" = "allium" ]; then
 
 elif [ "$UI" = "muos" ]; then
 	echo "Building muOS binaries for ${LIBC}..."
-	cd "$ROOT_DIR/minime/ui/muos"
+	cd "$ROOT_DIR/minime/ui/muos/frontend"
+
+	# Apply the Minime port patch series on top of the pristine upstream checkout.
+	# Patches live in minime/ui/muos/patches (the fork is retired) and are
+	# 3way-applied so they tolerate upstream drift.
+	git apply --3way "$ROOT_DIR"/minime/ui/muos/patches/*.patch
 
 	if [ "$LIBC" = "musl" ]; then
 		docker run --rm -u root \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-musl:latest" \
-			/bin/bash -c "apk add --no-cache curl-dev sdl2_mixer-dev bzip2-dev xz-dev zstd-dev freetype-dev libpng-dev ffmpeg-dev && cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release DEBUG=1 CC=\"ccache gcc\" NM=\"nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+			/bin/bash -c "apk add --no-cache curl-dev sdl2_mixer-dev bzip2-dev xz-dev zstd-dev freetype-dev libpng-dev ffmpeg-dev && cd /workspace/minime/ui/muos/frontend && make DEVICE=ARM64 BUILD=release DEBUG=1 CC=\"ccache gcc\" NM=\"nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/frontend/bin"
 	else
 		docker run --rm -u root \
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-glibc:latest" \
-			/bin/bash -c "apt-get update && apt-get install -y --no-install-recommends libcurl4-openssl-dev:arm64 libsdl2-mixer-dev:arm64 libbz2-dev:arm64 liblzma-dev:arm64 libzstd-dev:arm64 libfreetype-dev:arm64 libpng-dev:arm64 libavformat-dev:arm64 libavcodec-dev:arm64 libswscale-dev:arm64 libavutil-dev:arm64 && cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release DEBUG=1 CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+			/bin/bash -c "apt-get update && apt-get install -y --no-install-recommends libcurl4-openssl-dev:arm64 libsdl2-mixer-dev:arm64 libbz2-dev:arm64 liblzma-dev:arm64 libzstd-dev:arm64 libfreetype-dev:arm64 libpng-dev:arm64 libavformat-dev:arm64 libavcodec-dev:arm64 libswscale-dev:arm64 libavutil-dev:arm64 && cd /workspace/minime/ui/muos/frontend && make DEVICE=ARM64 BUILD=release DEBUG=1 CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/frontend/bin"
 	fi
 
 	STAGE_DIR=$(mktemp -d)
@@ -185,21 +190,26 @@ elif [ "$UI" = "muos" ]; then
 	mkdir -p "$STAGE_DIR/.muos/share"
 	mkdir -p "$STAGE_DIR/.minime"
 
-	# Stage compiled binaries
-	cp -r "$ROOT_DIR/minime/ui/muos/bin/." "$STAGE_DIR/.muos/bin/" 2>/dev/null || true
+	# Stage compiled binaries first, then restore the submodule to its pinned
+	# pristine state (drop patches + build output, incl. gitignored bin/).
+	cp -r "$ROOT_DIR/minime/ui/muos/frontend/bin/." "$STAGE_DIR/.muos/bin/" 2>/dev/null || true
+	git reset -q --hard
+	git clean -qfdx
 
-	# Stage scripts and share assets
-	[ -d "$ROOT_DIR/minime/ui/muos/script" ] && cp -r "$ROOT_DIR/minime/ui/muos/script/." "$STAGE_DIR/.muos/script/" || true
-	[ -d "$ROOT_DIR/minime/ui/muos/share" ] && cp -r "$ROOT_DIR/minime/ui/muos/share/." "$STAGE_DIR/.muos/share/" || true
+	# Stage the MuOS runtime payload from the upstream internal submodule:
+	# share/ (themes, fonts, info) and script/ (the runtime scripts the frontend
+	# verifies by hash at boot). MuOS's own init/bin/device are NOT staged —
+	# Minime replaces the init flow with launch.sh and derives device/config
+	# from the device traits.
+	[ -d "$ROOT_DIR/minime/ui/muos/internal/share" ] && cp -r "$ROOT_DIR/minime/ui/muos/internal/share/." "$STAGE_DIR/.muos/share/" || true
+	[ -d "$ROOT_DIR/minime/ui/muos/internal/script" ] && cp -r "$ROOT_DIR/minime/ui/muos/internal/script/." "$STAGE_DIR/.muos/script/" || true
 
-	# Stage launcher and contract
-	if [ -f "$ROOT_DIR/minime/ui/muos/launch.sh" ]; then
-		cp "$ROOT_DIR/minime/ui/muos/launch.sh" "$STAGE_DIR/.muos/launch.sh"
-		chmod +x "$STAGE_DIR/.muos/launch.sh"
-	fi
-	if [ -f "$ROOT_DIR/minime/ui/muos/.minime/ui.env" ]; then
-		cp "$ROOT_DIR/minime/ui/muos/.minime/ui.env" "$STAGE_DIR/.minime/ui.env"
-	fi
+	# Minime port overlay: launcher, ui.env contract, and iwd wifi scripts live
+	# in minime/ui/muos/overlay (they are Minime-specific, not upstream).
+	[ -f "$ROOT_DIR/minime/ui/muos/overlay/launch.sh" ] && cp "$ROOT_DIR/minime/ui/muos/overlay/launch.sh" "$STAGE_DIR/.muos/launch.sh"
+	chmod +x "$STAGE_DIR/.muos/launch.sh" 2>/dev/null || true
+	[ -f "$ROOT_DIR/minime/ui/muos/overlay/.minime/ui.env" ] && cp "$ROOT_DIR/minime/ui/muos/overlay/.minime/ui.env" "$STAGE_DIR/.minime/ui.env"
+	cp -r "$ROOT_DIR/minime/ui/muos/overlay/script/." "$STAGE_DIR/.muos/script/" 2>/dev/null || true
 
 	# Inject shared Minime cores into RetroArch
 	if [ -d "$ROOT_DIR/minime/build/cores/out" ]; then
