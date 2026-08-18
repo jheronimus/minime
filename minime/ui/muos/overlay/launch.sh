@@ -33,6 +33,10 @@ mkdir -p /run/muos /tmp/muos
 mkdir -p "${MUOS_DATA}"
 ln -sfn "${MUOS_DATA}" "${RUN_MUOS}/storage"
 
+# Upstream muOS init creates /opt/muos -> payload root; the internal scripts and
+# device helpers hardcode /opt/muos paths, so mirror it here.
+ln -sfn "${MUOS_ROOT}" /opt/muos
+
 # ---- device/config generation -------------------------------------------------
 # mkfile DIR KEY VALUE: create only when absent, never clobber runtime writes.
 mkfile() {
@@ -116,13 +120,44 @@ btn_idx() {
 	echo 0
 }
 
+# Read the evdev device's kernel hardware IDs (bus/vendor/product/version) from
+# sysfs, matched by device name. Prints "bus vendor product version" in hex,
+# or the fallbacks when the device can't be found.
+# SDL_CreateJoystickGUID for a Linux evdev device uses exactly these four
+# values from the kernel's input_id, so the GUID must match what SDL computes.
+device_ids() {
+	name="$1"
+	for ev in /sys/class/input/event*/device; do
+		[ -r "$ev/name" ] || continue
+		[ "$(cat "$ev/name" 2>/dev/null)" = "$name" ] || continue
+		prod=$(sed -n 's/^PRODUCT=//p' "$ev/uevent" 2>/dev/null | head -n1)
+		[ -n "$prod" ] || continue
+		IFS=/ read -r bus vendor product version <<EOF
+$prod
+EOF
+		printf '0x%s 0x%s 0x%s 0x%s\n' "$bus" "$vendor" "$product" "$version"
+		return 0
+	done
+	printf '0x19 0x0001 0x0001 0x0100\n'
+}
+
 # build_map NAME IS_GAMEPAD -> full SDL gamecontroller mapping string.
-# GUID: 16-bit bus (BUS_HOST=0x18) + crc16(name) + vendor/product 0x0001 +
-# version 0x0100, exactly SDL_CreateJoystickGUID's layout for these devices.
+# GUID layout (SDL_CreateJoystickGUID, LE uint16 slots):
+#   [0]=bus [1]=crc16(name) [2]=vendor [3]=0 [4]=product [5]=0 [6]=version [7]=0
+# the 32-hex GUID string is the straight dump of those bytes (see
+# SDL_JoystickGetGUIDString). Must match SDL's own GUID for the device.
 build_map() {
 	name="$1"
 	is_gpad="$2"
-	guid="1800$(crc16_le "$name")010000000100000000010000"
+	read -r bus vendor product version <<EOF
+$(device_ids "$name")
+EOF
+	guid="$(printf '%02x%02x%s%02x%02x0000%02x%02x0000%02x%02x0000' \
+		$(((bus & 0xff))) $(((bus >> 8) & 0xff)) \
+		"$(crc16_le "$name")" \
+		$(((vendor & 0xff))) $(((vendor >> 8) & 0xff)) \
+		$(((product & 0xff))) $(((product >> 8) & 0xff)) \
+		$(((version & 0xff))) $(((version >> 8) & 0xff)))"
 
 	if [ "$is_gpad" = "1" ]; then
 		fields="b:$(btn_idx key_b),a:$(btn_idx key_a),y:$(btn_idx key_y),x:$(btn_idx key_x)"

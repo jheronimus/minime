@@ -32,7 +32,7 @@ read_ui_env() {
 # --- OpenRC service ---
 
 depend() {
-	after modules fb-unblank traits gpudriver localmount
+	after modules fb-unblank traits gpudriver localmount udev udev-settle
 }
 
 start() {
