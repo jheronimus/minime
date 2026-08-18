@@ -160,6 +160,58 @@ elif [ "$UI" = "allium" ]; then
 	zstd -q -9 -f "$OUT_TAR"
 	rm -f "$OUT_TAR"
 	echo "Created ${OUT_TAR}.zst"
+
+elif [ "$UI" = "muos" ]; then
+	echo "Building muOS binaries for ${LIBC}..."
+	cd "$ROOT_DIR/minime/ui/muos"
+
+	if [ "$LIBC" = "musl" ]; then
+		docker run --rm -u root \
+			-v "$GITHUB_WORKSPACE:/workspace" \
+			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
+			"ghcr.io/${OWNER}/minime-musl:latest" \
+			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release CC=\"ccache gcc\" NM=\"nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+	else
+		docker run --rm -u root \
+			-v "$GITHUB_WORKSPACE:/workspace" \
+			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
+			"ghcr.io/${OWNER}/minime-glibc:latest" \
+			/bin/bash -c "cd /workspace/minime/ui/muos && make DEVICE=ARM64 BUILD=release CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/bin"
+	fi
+
+	STAGE_DIR=$(mktemp -d)
+	mkdir -p "$STAGE_DIR/.muos/bin"
+	mkdir -p "$STAGE_DIR/.muos/script"
+	mkdir -p "$STAGE_DIR/.muos/share"
+	mkdir -p "$STAGE_DIR/.minime"
+
+	# Stage compiled binaries
+	cp -r "$ROOT_DIR/minime/ui/muos/bin/." "$STAGE_DIR/.muos/bin/" 2>/dev/null || true
+
+	# Stage scripts and share assets
+	[ -d "$ROOT_DIR/minime/ui/muos/script" ] && cp -r "$ROOT_DIR/minime/ui/muos/script/." "$STAGE_DIR/.muos/script/" || true
+	[ -d "$ROOT_DIR/minime/ui/muos/share" ] && cp -r "$ROOT_DIR/minime/ui/muos/share/." "$STAGE_DIR/.muos/share/" || true
+
+	# Stage launcher and contract
+	if [ -f "$ROOT_DIR/minime/ui/muos/launch.sh" ]; then
+		cp "$ROOT_DIR/minime/ui/muos/launch.sh" "$STAGE_DIR/.muos/launch.sh"
+		chmod +x "$STAGE_DIR/.muos/launch.sh"
+	fi
+	if [ -f "$ROOT_DIR/minime/ui/muos/.minime/ui.env" ]; then
+		cp "$ROOT_DIR/minime/ui/muos/.minime/ui.env" "$STAGE_DIR/.minime/ui.env"
+	fi
+
+	# Inject shared Minime cores into RetroArch
+	if [ -d "$ROOT_DIR/minime/build/cores/out" ]; then
+		mkdir -p "$STAGE_DIR/.muos/emulator/retroarch/cores"
+		cp "$ROOT_DIR/minime/build/cores/out/"*.so "$STAGE_DIR/.muos/emulator/retroarch/cores/" || true
+	fi
+
+	OUT_TAR="$ROOT_DIR/minime/ui/out/muos-${LIBC}-aarch64.tar"
+	tar -cf "$OUT_TAR" -C "$STAGE_DIR" .
+	zstd -q -9 -f "$OUT_TAR"
+	rm -f "$OUT_TAR"
+	echo "Created ${OUT_TAR}.zst"
 else
 	echo "Unknown UI: $UI" >&2
 	exit 1

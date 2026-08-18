@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', '.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -174,6 +174,12 @@ jobs:
         run: |
           minime/build/mkui.sh allium glibc
 
+      - name: Compile muOS
+        id: compile-muos
+        if: steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/muos-{0}-aarch64.tar.zst', 'glibc')) == ''
+        run: |
+          minime/build/mkui.sh muos glibc
+
       - name: Save Allium Cargo Target
         if: always() && (steps.cache-ui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', 'glibc')) == '')
         uses: actions/cache/save@v6
@@ -185,14 +191,14 @@ jobs:
           key: allium-target-glibc-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save UI Cache
-        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success' || steps.compile-muos.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-glibc-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', '.git/modules/minime/ui/minui/HEAD', '.git/modules/minime/ui/muos/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save UI CCache
-        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success')
+        if: always() && (steps.compile-minui.outcome == 'success' || steps.compile-allium.outcome == 'success' || steps.compile-muos.outcome == 'success')
         uses: actions/cache/save@v6
         with:
           path: ~/.ui-ccache-glibc
@@ -266,6 +272,13 @@ jobs:
           UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/allium)"
           export MINIME_COMMIT UI_COMMIT
           make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=allium
+
+      - name: Build Image for muOS
+        run: |
+          MINIME_COMMIT="$(git rev-parse --short HEAD)"
+          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/muos)"
+          export MINIME_COMMIT UI_COMMIT
+          make -C minime/targets/buildroot image update BOARD=${{ matrix.board }} UI=muos
 
       - name: Save CCache
         if: always() && steps.build-components.outcome == 'success'

@@ -6,6 +6,10 @@
 	path = minime/ui/minui
 	url = https://github.com/jheronimus/MinUI
 	branch = main
+[submodule "minime/ui/muos"]
+	path = minime/ui/muos
+	url = https://github.com/jheronimus/muos
+	branch = main
 [submodule "src/yabause"]
 	path = src/yabause
 	url = https://github.com/jheronimus/yabause

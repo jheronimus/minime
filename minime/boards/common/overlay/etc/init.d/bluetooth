@@ -26,20 +26,35 @@ start() {
 	ebegin "Starting Bluetooth stack"
 
 	# 1. bluetoothd
+	bluetoothd_bin="$(command -v bluetoothd 2>/dev/null || true)"
+	if [ -z "${bluetoothd_bin}" ]; then
+		for path in /usr/libexec/bluetooth/bluetoothd /usr/lib/bluetooth/bluetoothd; do
+			if [ -x "${path}" ]; then
+				bluetoothd_bin="${path}"
+				break
+			fi
+		done
+	fi
+	if [ -z "${bluetoothd_bin}" ]; then
+		eend 1 "bluetoothd binary not found"
+		return 1
+	fi
+
 	mkdir -p /var/lib/bluetooth
 	chmod 700 /var/lib/bluetooth 2>/dev/null || true
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluetoothd.pid \
-		-x /usr/lib/bluetooth/bluetoothd -- -n
+		-x "${bluetoothd_bin}" -- -n
 	if [ $? -ne 0 ]; then
 		eend 1 "bluetoothd failed to start"
 		return 1
 	fi
 
 	# 2. BlueALSA
+	bluealsa_bin="$(command -v bluealsa 2>/dev/null || echo /usr/bin/bluealsa)"
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluealsa.pid \
-		-x /usr/bin/bluealsa -- -p a2dp-sink -p a2dp-source
+		-x "${bluealsa_bin}" -- -p a2dp-sink -p a2dp-source
 	# BlueALSA failure is non-fatal (audio routing only)
 	eend 0
 }

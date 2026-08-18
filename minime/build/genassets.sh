@@ -7,7 +7,7 @@
 set -eu
 
 usage() {
-	echo "Usage: ${0##*/} <minui|allium|none> <dest_dir> [alpine|buildroot|musl|glibc]" >&2
+	echo "Usage: ${0##*/} <minui|allium|muos|none> <dest_dir> [alpine|buildroot|musl|glibc]" >&2
 	exit 1
 }
 
@@ -78,6 +78,22 @@ elif [ "$UI" = "allium" ]; then
 	else
 		echo "ERROR: Local Allium artifact not found in ${UI_ART_DIR}/." >&2
 		echo "Run the build-ui job or 'just build-allium' to generate it." >&2
+		exit 1
+	fi
+
+elif [ "$UI" = "muos" ]; then
+	local_zip="${UI_ART_DIR}/muos-${LIBC}-aarch64.zip"
+	local_tar="${UI_ART_DIR}/muos-${LIBC}-aarch64.tar.zst"
+
+	if [ -f "${local_zip}" ]; then
+		echo "Using local UI artifact: ${local_zip}" >&2
+		unzip -q -o "${local_zip}" -d "${DEST_DIR}"
+	elif [ -f "${local_tar}" ]; then
+		echo "Using local UI artifact: ${local_tar}" >&2
+		unzstd -q -c "${local_tar}" | tar -xf - -C "${DEST_DIR}"
+	else
+		echo "ERROR: Local muOS artifact not found in ${UI_ART_DIR}/." >&2
+		echo "Run the build-ui job or 'just build-muos' to generate it." >&2
 		exit 1
 	fi
 fi

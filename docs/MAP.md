@@ -27,6 +27,7 @@ minime/
 │   ├── mkupdate.sh     # Cross-distro update archive generator (.tar.gz)
 │   ├── genassets.sh    # UI payload downloader
 │   └── container/      # Multi-arch shared packager container (genimage + mtools)
+├── ui/                 # UI Frontend Submodules & Build (allium, minui, muos)
 
 src/                    # Shared Source Code Vaults
 ├── libmali/            # ARM Mali Bifrost/Utgard userspace libraries & shims

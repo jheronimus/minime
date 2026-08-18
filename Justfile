@@ -127,6 +127,13 @@ build-minui target="musl":
     make cores PLATFORM=minime
     make package
 
+# Build muOS binaries locally for target C library (musl or glibc)
+build-muos target="musl":
+    #!/usr/bin/env sh
+    set -eu
+    echo "Building muOS for target {{target}}..."
+    ./minime/build/mkui.sh muos {{target}}
+
 # ── Developer setup ───────────────────────────────────────────────────────────
 
 # Install git pre-commit/pre-push hooks that run `just validate-static` (the
