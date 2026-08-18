@@ -2,7 +2,9 @@
 # shellcheck shell=sh
 # update: self-update Minime from the GitHub "testing" release.
 #
-# Usage: update <minui|allium>
+# Usage: update [target] [ui]
+#        update <minui|allium|alpine|buildroot>
+#        update --target <alpine|buildroot> --ui <minui|allium>
 #
 # Detects board (h700/rk3326/rk3566) and target (alpine/buildroot) on-device,
 # downloads the matching OTA archive directly with curl, compares it against
@@ -32,7 +34,7 @@ TRAITS_FILE="${SDCARD}/.minime/traits"
 # --- Helpers --------------------------------------------------------------
 
 usage() {
-	echo "Usage: ${0##*/} <minui|allium>" >&2
+	echo "Usage: ${0##*/} [alpine|buildroot] [minui|allium]" >&2
 	exit 1
 }
 
@@ -134,25 +136,70 @@ migrate_one() {
 
 # --- Main -----------------------------------------------------------------
 
-UI="${1:-}"
-[ -n "${UI}" ] || usage
-UI="$(echo "${UI}" | tr 'A-Z' 'a-z')"
-case "${UI}" in
-minui | allium) ;;
-*) die "unsupported UI '${UI}' (expected minui or allium)" ;;
-esac
+for arg in "$@"; do
+	case "$arg" in
+	-h | --help) usage ;;
+	esac
+done
 
 if [ "${UPDATE_DETACHED:-0}" != "1" ]; then
-	detach "$UI"
+	detach "$@"
 fi
+
+TARGET=""
+UI=""
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--target)
+		[ $# -ge 2 ] || usage
+		TARGET="$2"
+		shift 2
+		;;
+	--ui)
+		[ $# -ge 2 ] || usage
+		UI="$2"
+		shift 2
+		;;
+	*)
+		arg="$(echo "$1" | tr 'A-Z' 'a-z')"
+		case "${arg}" in
+		alpine | buildroot)
+			TARGET="${arg}"
+			;;
+		minui | allium)
+			UI="${arg}"
+			;;
+		*)
+			die "unsupported argument '$1' (expected alpine, buildroot, minui, or allium)"
+			;;
+		esac
+		shift
+		;;
+	esac
+done
 
 echo $$ >"${PID_FILE}"
 trap 'rm -f "${PID_FILE}"' EXIT
 
 BOARD="$(detect_board)"
-TARGET="$(detect_target)"
+FROM_TARGET="$(detect_target)"
 FROM_UI="$(installed_ui)"
-log "board=${BOARD} target=${TARGET} ui=${UI} installed_ui=${FROM_UI:-unknown}"
+
+[ -n "${TARGET}" ] || TARGET="${FROM_TARGET}"
+[ -n "${UI}" ] || UI="${FROM_UI:-minui}"
+
+case "${TARGET}" in
+alpine | buildroot) ;;
+*) die "unsupported target '${TARGET}' (expected alpine or buildroot)" ;;
+esac
+
+case "${UI}" in
+minui | allium) ;;
+*) die "unsupported UI '${UI}' (expected minui or allium)" ;;
+esac
+
+log "board=${BOARD} target=${TARGET} (installed: ${FROM_TARGET}) ui=${UI} (installed: ${FROM_UI:-unknown})"
 
 [ -x /usr/bin/curl ] || die "curl is not available on this image"
 [ -d "${SDCARD}" ] || die "no SD card at ${SDCARD}"
@@ -175,21 +222,32 @@ log "downloaded ${SIZE} bytes"
 # Compare the archive's manifest against the installed one.
 REMOTE_MANIFEST="$(unzstd -c "${ARCHIVE}" 2>/dev/null | tar -xOf - ./.minime/manifest.json 2>/dev/null || true)"
 if [ -n "${REMOTE_MANIFEST}" ] && [ -f "${INSTALLED_MANIFEST}" ]; then
+	rem_target="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"target": *"\([^"]*\)".*/\1/p' | head -n1)"
+	rem_board="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"board": *"\([^"]*\)".*/\1/p' | head -n1)"
+	rem_ui="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"ui": *"\([^"]*\)".*/\1/p' | head -n1)"
 	rem_min="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"minime_commit": *"\([^"]*\)".*/\1/p' | head -n1)"
-	rem_ui="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"ui_commit": *"\([^"]*\)".*/\1/p' | head -n1)"
-	loc_min="$(sed -n 's/.*"minime_commit": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
-	loc_ui="$(sed -n 's/.*"ui_commit": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+	rem_ui_commit="$(echo "${REMOTE_MANIFEST}" | sed -n 's/.*"ui_commit": *"\([^"]*\)".*/\1/p' | head -n1)"
 
-	if [ "${rem_min}" = "${loc_min}" ] && [ "${rem_ui}" = "${loc_ui}" ] &&
+	loc_target="$(sed -n 's/.*"target": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+	loc_board="$(sed -n 's/.*"board": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+	loc_ui="$(sed -n 's/.*"ui": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+	loc_min="$(sed -n 's/.*"minime_commit": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+	loc_ui_commit="$(sed -n 's/.*"ui_commit": *"\([^"]*\)".*/\1/p' "${INSTALLED_MANIFEST}" | head -n1)"
+
+	if [ "${rem_target}" = "${loc_target}" ] &&
+		[ "${rem_board}" = "${loc_board}" ] &&
+		[ "${rem_ui}" = "${loc_ui}" ] &&
+		[ "${rem_min}" = "${loc_min}" ] &&
+		[ "${rem_ui_commit}" = "${loc_ui_commit}" ] &&
 		[ -n "${rem_min}" ] && [ "${rem_min}" != "unknown" ]; then
-		log "already up to date (${rem_min}/${rem_ui})"
+		log "already up to date (${rem_target}/${rem_ui} ${rem_min}/${rem_ui_commit})"
 		rm -f "${ARCHIVE}"
 		rmdir "${UPDATE_DIR}" 2>/dev/null || true
 		exit 0
 	fi
 fi
 
-log "installing ${SIZE} bytes (${rem_min:-?}/${rem_ui:-?})..."
+log "installing ${SIZE} bytes (${rem_target:-?}/${rem_ui:-?} ${rem_min:-?}/${rem_ui_commit:-?})..."
 
 # Stop the UI so it is not running from files we are about to replace.
 /etc/init.d/ui stop >/dev/null 2>&1 || true
@@ -200,7 +258,7 @@ sleep 1
 # MinUI lives under .system/; Allium under .ui/ + .allium/ + RetroArch/ +
 # apps/ + Roms/ + Saves/ + BIOS/.  Remove the old UI's top-level dirs so a
 # UI switch does not leave stale binaries, then extract the whole archive.
-case "${FROM_UI:-}" in
+case "${FROM_UI:-${UI}}" in
 minui) rm -rf "${SDCARD}/.system" ;;
 allium)
 	rm -rf "${SDCARD}/.ui" "${SDCARD}/.allium" \

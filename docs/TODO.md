@@ -1,9 +1,6 @@
 # Minime TODO
 
-## CI
 
-
-- [ ] Try switching between Alpine and Buildroot using update.sh
 
 ## UI
 
@@ -60,6 +57,8 @@
 - [ ] Add dual SD card support
 
 ## Completed
+
+- [x] Support and verify switching between Alpine and Buildroot target OSes using `update.sh` ([ADR 0003](adr/0003-on-device-ota-update.md))
 
 - [x] Eliminate bootsplash flicker during switch_root: `--persist` flag preserves DRM scanout framebuffer across initramfs handoff
 - [x] Review and trim init scripts: start wireless services (`iwd`, `bluetoothd`) on demand with user gates

@@ -68,9 +68,13 @@ rm -rf "${EROF_STAGE}"
 # Assemble custom boot-stage initramfs
 echo "Assembling initramfs..."
 INITRD_STAGE=$(mktemp -d)
-mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
+mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" "${INITRD_STAGE}/usr" \
 	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
 	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+
+ln -sf lib "${INITRD_STAGE}/lib64"
+ln -sf ../lib "${INITRD_STAGE}/usr/lib"
+ln -sf ../lib "${INITRD_STAGE}/usr/lib64"
 
 # Alpine's standard busybox is dynamically linked against musl; the
 # initramfs runs before any dynamic linker is available on /mnt/system.

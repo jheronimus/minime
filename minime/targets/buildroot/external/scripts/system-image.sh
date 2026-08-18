@@ -42,9 +42,14 @@ mkfs.erofs -z lz4hc "${BINARIES_DIR}/system.erofs" "${TARGET_DIR}"
 # Always reassemble the initramfs so stale cached copies never survive.
 echo "Assembling initramfs.img..."
 INITRD_STAGE=$(mktemp -d)
-mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" \
+mkdir -p "${INITRD_STAGE}/bin" "${INITRD_STAGE}/sbin" "${INITRD_STAGE}/lib" "${INITRD_STAGE}/usr" \
 	"${INITRD_STAGE}/proc" "${INITRD_STAGE}/sys" "${INITRD_STAGE}/dev" \
 	"${INITRD_STAGE}/tmp" "${INITRD_STAGE}/mnt/card" "${INITRD_STAGE}/mnt/system"
+
+# Ensure glibc dynamic linker search paths (/lib64, /usr/lib64, /usr/lib) resolve to /lib
+ln -sf lib "${INITRD_STAGE}/lib64"
+ln -sf ../lib "${INITRD_STAGE}/usr/lib"
+ln -sf ../lib "${INITRD_STAGE}/usr/lib64"
 
 cp -f "${TARGET_DIR}/bin/busybox" "${INITRD_STAGE}/bin/busybox"
 for app in sh mount mountpoint umount sleep reboot cp mkdir rm cat echo dd grep sync chroot date blkid; do
@@ -70,6 +75,10 @@ if [ -d "${TARGET_DIR}/lib" ]; then
 	cp -d "${TARGET_DIR}/lib/libc.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
 	cp -d "${TARGET_DIR}/lib/libm.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
 	cp -d "${TARGET_DIR}/lib/libresolv.so"* "${INITRD_STAGE}/lib/" 2>/dev/null || true
+fi
+if [ -d "${TARGET_DIR}/etc" ]; then
+	mkdir -p "${INITRD_STAGE}/etc"
+	cp -a "${TARGET_DIR}/etc/ld.so"* "${INITRD_STAGE}/etc/" 2>/dev/null || true
 fi
 
 if [ -x "${TARGET_DIR}/usr/bin/bootsplash" ]; then
