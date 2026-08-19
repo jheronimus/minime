@@ -235,7 +235,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: minime/ui/out
-          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/ui/muos/overlay/**', 'minime/ui/muos/patches/**', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -304,7 +304,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: minime/ui/out
-          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/ui/muos/overlay/**', 'minime/ui/muos/patches/**', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
 
       - name: Save UI CCache
         if: always() && steps.compile-ui.outcome == 'success'
