@@ -140,7 +140,12 @@ minui_keys() {
 		sed -E 's/^(FIELD\(|")//; s/"$//'
 }
 
-emitted_keys | while IFS= read -r key; do
+# Write emitted keys to a temp file so the while loop is not in a pipe subshell.
+# (In POSIX sh, 'cmd | while read' runs while in a subshell; 'read' returning 1
+# at EOF then propagates as the loop's exit code, falsely triggering '|| exit 1'.)
+_keys_tmp="$(mktemp)"
+emitted_keys > "$_keys_tmp"
+while IFS= read -r key; do
 	[ -f "$ALLIUM_TRAITS" ] && { allium_keys | grep -Fxq "$key" || {
 		echo "registry key '$key' is missing from Allium traits.rs KNOWN_KEYS" >&2
 		exit 1
@@ -149,6 +154,7 @@ emitted_keys | while IFS= read -r key; do
 		echo "registry key '$key' is missing from MinUI traits.c TRAIT_FIELDS" >&2
 		exit 1
 	}; }
-done || exit 1
+done < "$_keys_tmp"
+rm -f "$_keys_tmp"
 
 echo "consumer parity check passed"
