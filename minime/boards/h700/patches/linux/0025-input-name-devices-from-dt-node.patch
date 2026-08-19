@@ -9,23 +9,17 @@ trait-provided names (which are the DT node names, e.g. "gpio-keys-control",
 
 Signed-off-by: Minime <maintainers@minime-os.local>
 ---
- drivers/input/joystick/adc-joystick.c | 3 ++-
- drivers/input/keyboard/adc-keys.c     | 2 +-
- drivers/input/keyboard/gpio_keys.c    | 2 +-
- 3 files changed, 4 insertions(+), 3 deletions(-)
-
-diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-joystick.c
 --- a/drivers/input/joystick/adc-joystick.c
 +++ b/drivers/input/joystick/adc-joystick.c
-@@ -10,6 +10,7 @@
- #include <linux/input.h>
+@@ -8,6 +8,7 @@
+ #include <linux/iio/iio.h>
  #include <linux/iio/consumer.h>
  #include <linux/module.h>
 +#include <linux/of.h>
  #include <linux/platform_device.h>
  #include <linux/property.h>
- #include <linux/slab.h>
-@@ -271,7 +272,7 @@ static int adc_joystick_probe(struct platform_device *pdev)
+ 
+@@ -271,7 +272,7 @@
  	}
  
  	joy->input = input;
@@ -34,10 +28,10 @@ diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-
  	input->id.bustype = BUS_HOST;
  
  	error = adc_joystick_set_axes(dev, joy);
-diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys.c
 --- a/drivers/input/keyboard/adc-keys.c
 +++ b/drivers/input/keyboard/adc-keys.c
-@@ -149,6 +149,6 @@ static int adc_keys_probe(struct platform_device *pdev)
+@@ -148,7 +148,7 @@
+ 
  	input_set_drvdata(input, st);
  
 -	input->name = pdev->name;
@@ -45,10 +39,10 @@ diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys
  	input->phys = "adc-keys/input0";
  
  	input->id.bustype = BUS_HOST;
-diff --git a/drivers/input/keyboard/gpio_keys.c b/drivers/input/keyboard/gpio_keys.c
 --- a/drivers/input/keyboard/gpio_keys.c
 +++ b/drivers/input/keyboard/gpio_keys.c
-@@ -884,6 +884,6 @@ static int gpio_keys_probe(struct platform_device *pdev)
+@@ -883,7 +883,7 @@
+ 	platform_set_drvdata(pdev, ddata);
  	input_set_drvdata(input, ddata);
  
 -	input->name = pdata->name ? : pdev->name;
