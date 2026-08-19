@@ -17,7 +17,15 @@ Signed-off-by: Minime <maintainers@minime-os.local>
 diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-joystick.c
 --- a/drivers/input/joystick/adc-joystick.c
 +++ b/drivers/input/joystick/adc-joystick.c
-@@ -271,7 +271,7 @@ static int adc_joystick_probe(struct platform_device *pdev)
+@@ -10,6 +10,7 @@
+ #include <linux/input.h>
+ #include <linux/iio/consumer.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/property.h>
+ #include <linux/slab.h>
+@@ -271,7 +272,7 @@ static int adc_joystick_probe(struct platform_device *pdev)
  	}
  
  	joy->input = input;
@@ -29,7 +37,14 @@ diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-
 diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys.c
 --- a/drivers/input/keyboard/adc-keys.c
 +++ b/drivers/input/keyboard/adc-keys.c
-@@ -149,6 +149,6 @@ static int adc_keys_probe(struct platform_device *pdev)
+@@ -11,6 +11,7 @@
+ #include <linux/input.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/property.h>
+ #include <linux/slab.h>
+@@ -149,6 +150,6 @@ static int adc_keys_probe(struct platform_device *pdev)
  	input_set_drvdata(input, st);
  
 -	input->name = pdev->name;
