@@ -70,11 +70,11 @@ else
 	if [ ! -d "${WORK_DIR}/atf" ]; then
 		git clone --depth 1 --branch "$ATF_VERSION" https://github.com/ARM-software/arm-trusted-firmware.git "${WORK_DIR}/atf"
 	fi
-	if [ "$BOARD" = "h700" ]; then
-		echo "Applying ATF regulator patch..."
-		curl -sSfL "https://github.com/ROCKNIX/distribution/raw/next/projects/Allwinner/patches/atf/0003-sunxi-Don-t-enable-referenced-regulators.patch" |
-			git -C "${WORK_DIR}/atf" apply - || echo "WARNING: Failed to apply ATF patch"
-	fi
+	for p in "${BOOTLOADER_DIR}/${BOARD}/patches/atf/"*.patch; do
+		[ -f "$p" ] || continue
+		echo "Applying ATF patch: $(basename "$p")"
+		git -C "${WORK_DIR}/atf" apply "$p"
+	done
 	make -j"$(nproc)" -C "${WORK_DIR}/atf" PLAT="${ATF_PLAT}" DEBUG=0 bl31
 	if [ "$BOARD" = "h700" ]; then
 		BL31_PATH="${WORK_DIR}/atf/build/${ATF_PLAT}/release/bl31.bin"
@@ -95,13 +95,7 @@ fi
 	cd "${WORK_DIR}/uboot"
 	export CROSS_COMPILE="${CCACHE}${CROSS_COMPILE}"
 
-	if [ "$BOARD" = "h700" ]; then
-		echo "Applying U-Boot MMC delay patch..."
-		curl -sSfL "https://github.com/ROCKNIX/distribution/raw/next/projects/Allwinner/patches/u-boot/0015-sunxi-mmc-increase-stabilization-delay-from-1ms-to-20ms.patch" |
-			git apply - || echo "WARNING: Failed to apply U-Boot MMC delay patch"
-	fi
-
-	for p in "${BOOTLOADER_DIR}/${BOARD}/patches/"*.patch; do
+	for p in "${BOOTLOADER_DIR}/${BOARD}/patches/"*.patch "${BOOTLOADER_DIR}/${BOARD}/patches/uboot/"*.patch; do
 		[ -f "$p" ] || continue
 		echo "Applying U-Boot board patch: $(basename "$p")"
 		git apply "$p" || {

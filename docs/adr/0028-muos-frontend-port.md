@@ -34,7 +34,7 @@ Minime supports MinUI and Allium as selectable frontends per [ADR 0010](0010-ui-
 
 ### 5. Dual-Libc CI Parity
 - muOS builds for both Alpine (`musl`) and Buildroot (`glibc`) in GitHub Actions using `crash_stub.c` for toolchains without `execinfo.h`.
-- Artifacts (`muos-musl-aarch64.tar.zst`, `muos-glibc-aarch64.tar.zst`) are integrated directly into image generation via `packages/image/genassets.sh`.
+- Artifacts (`muos-musl-aarch64.tar.zst`, `muos-glibc-aarch64.tar.zst`) are integrated directly into image generation via `packages/image/build.sh`.
 - The `.muos` payload is assembled by `mkui.sh`: `bin/` from the frontend build; `share/` (themes/fonts/info) and `script/` staged from the `muos/internal` submodule (`init/`, `bin/`, `device/` are not staged — Minime replaces the init flow with `launch.sh` and derives device config from traits); `launch.sh` + iwd wifi scripts from `packages/ui/muos/overlay`; shared cores injected into `emulator/retroarch/cores/`. The submodule checkouts are restored to pristine after staging (nothing is committed to them). UI cache keys hash both submodule HEADs.
 
 ## Consequences

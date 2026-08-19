@@ -9,7 +9,7 @@
 ## Context & Problem Statement
 
 OTA delivery was originally host-pushed via `just update <os> <board> <ui>`
-([scripts/update-device.sh](../../scripts/update-device.sh)). This required the host
+([](../../)). This required the host
 to track board, target, UI, and dynamic DHCP IP (`deploy.cfg`).
 
 The on-device updater [update.sh](../../packages/components/boards/common/overlay/usr/bin/update.sh)
@@ -53,7 +53,7 @@ There is no Roms rename on UI switch — user data is preserved by construction.
 ### 5. Host-side OTA tooling removed
 
 - `just update` and `just check-version` removed.
-- [scripts/update-device.sh](../../scripts/update-device.sh) is retained only for local custom package pushes.
+- [](../../) is retained only for local custom package pushes.
 - Verify status with `just shell "cat /mnt/sdcard/.minime/manifest.json"`.
 
 ## Consequences

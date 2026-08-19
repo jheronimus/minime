@@ -145,7 +145,7 @@ Building Alpine Linux firmware for Minime:
 
 - **`Makefile`**: Entrypoint for Alpine builds. Two-step build convention:
   - `make components BOARD=<board> UI=<ui>` — compilation in container (minirootfs, APKs, rootfs, erofs, initramfs).
-  - `make image BOARD=<board> UI=<ui>` — runs `genassets.sh` + `mkimage.sh` + `mkupdate.sh` in packager container.
+  - `make image BOARD=<board> UI=<ui>` — runs `packages/image/build.sh` in packager container.
 - **`scripts/build.sh`**: Core build script with subcommands:
   - `components` (default): resolve_minirootfs → build_local_apks → assemble_rootfs → build_system_image
   - `system-image`: erofs + initramfs only (second container invocation of `make components`)
@@ -161,7 +161,7 @@ Building Buildroot firmware for Minime:
 
 - **`Makefile`**: Entrypoint for Buildroot builds. Two-step build convention:
   - `make components BOARD=<board> UI=<ui>` — compilation in container (defconfig, full Buildroot build).
-  - `make image BOARD=<board> UI=<ui>` — runs `genassets.sh` + `mkimage.sh` + `mkupdate.sh` in packager container.
+  - `make image BOARD=<board> UI=<ui>` — runs `packages/image/build.sh` in packager container.
 - **`scripts/build.sh`**: Build wrapper with subcommands:
   - `components` (default): defconfig → make → copy_images
   - `defconfig`: merge config fragments only
@@ -191,13 +191,13 @@ Both Alpine and Buildroot follow a two-step build convention:
 
 ```
 make components  →  build.sh  (compilation in builder container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
+make image       →  packages/image/build.sh  (shared scripts, target's own container)
 ```
 
 | Step | Alpine | Buildroot | Runs |
 |------|--------|-----------|------|
 | `make components` | `build.sh components` | `build.sh components` | In builder container |
-| `make image` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | `genassets.sh` + `mkimage.sh` + `mkupdate.sh` | In target's own container |
+| `make image` | `packages/image/build.sh` | `packages/image/build.sh` | In target's own container |
 
 **Rules:**
 - `build.sh` does compilation only. No image packaging.

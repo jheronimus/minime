@@ -48,17 +48,16 @@ Alpine and Buildroot targets are built from their respective directories in `pac
 
 ### Build Convention
 
-Both targets follow the same two-step pattern via the shared `packages/components/common.mk` (included by both target Makefiles). The packaging scripts (`genassets.sh`, `mkimage.sh`, `mkupdate.sh`) are shared in `packages/image/`, but each target runs them in its own container image — `minime-musl` (Alpine, arm64) or `minime-glibc` (Buildroot, amd64):
+Both targets follow the same two-step pattern via the shared `packages/components/common.mk` (included by both target Makefiles). The packaging scripts (`packages/image/build.sh`) are shared in `packages/image/`, but each target runs them in its own container image — `minime-musl` (Alpine, arm64) or `minime-glibc` (Buildroot, amd64):
 ```
 make components  →  build.sh  (compilation in the target's own container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
+make image       →  packages/image/build.sh  (shared scripts, target's own container)
 ```
 
 **Rules:**
 - `build.sh` does compilation only. No image packaging (no genimage, no mcopy, no mkdosfs).
 - `mkimage.sh` does image packaging only. No compilation (no make, no gcc, no kernel build).
 - `mkupdate.sh` does update archive generation only.
-- `genassets.sh` does UI asset retrieval and extraction only.
 - The Makefile orchestrates the two steps. CI calls `make components` then `make image` separately.
 - Never add compilation logic to `mkimage.sh` or `mkupdate.sh`.
 - Never add packaging logic to `build.sh`.

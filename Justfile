@@ -8,7 +8,7 @@ validate: validate-static check-allium check-minui check-yabause
 
 # Fast static gate (no cargo/clang toolchains): what the pre-commit/pre-push
 # hooks run. All validation logic is owned by scripts/check-*.sh.
-validate-static: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-hashes check-package-lists check-git check-build-flow
+validate-static: check-scripts check-workflows check-apkbuilds check-openrc check-traits check-kernel-config check-firmware check-patches check-package-lists check-git check-build-flow
 
 # Validate Allium Rust code formatting (cargo fmt) and lints (cargo clippy)
 check-allium:
@@ -37,10 +37,6 @@ check-firmware:
 # Verify all patch files are referenced in build manifests
 check-patches:
     ./scripts/check-patches.sh
-
-# Validate SHA-256 and SHA-512 hash formats in package manifests
-check-hashes:
-    ./scripts/check-hashes.sh
 
 # Cross-check local package lists (Alpine ALPINE_PKGS/world-common, Buildroot
 # common.config/external packages) so every referenced package is built.

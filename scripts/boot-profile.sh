@@ -16,9 +16,7 @@
 #   restore [os board ui] [ip]     push back the stock initramfs, reboot
 #
 # Defaults: alpine h700 minui; target IP read from deploy.cfg.
-# Optionally pass `--ota` to inject/restore to deliver via a rebuilt OTA
-# package instead of a direct FTP upload of the initramfs.
-
+#
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -50,7 +48,6 @@ parse_args() {
 	npos=0
 	for a in "$@"; do
 		case "$a" in
-		--ota) OTA=1 ;;
 		--debug) DEBUG=1 ;;
 		[0-9]*.[0-9]*.[0-9]*.[0-9]*) IP="$a" ;;
 		*)
@@ -511,20 +508,8 @@ cmd_restore() {
 		log "extracting stock initramfs..."
 		extract_stock_initramfs "$ws" "$stock"
 		initramfs="$(repack_initramfs "$ws")"
-		if [ "$OTA" -eq 1 ]; then
-			cp "$initramfs" "$ws/stage/.minime/initramfs"
-			triple_str="$(triple)"
-			pkg="$ws/minime-${triple_str}-stock.tar.zst"
-			(
-				cd "$ws/stage" &&
-					tar -cf - . | zstd -q -9 >"$pkg"
-			)
-			log "delivering stock OTA via update-device.sh..."
-			"$SCRIPTS/update-device.sh" "$pkg" "$IP"
-		else
-			log "uploading stock initramfs over FTP..."
-			curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"
-		fi
+		log "uploading stock initramfs over FTP..."
+		curl -s -S -u root: -T "$initramfs" "ftp://$IP/.minime/initramfs"
 		remote "rm -f /mnt/sdcard/boot-profile.log /mnt/sdcard/boot-profiler.sh /mnt/sdcard/.boot-profiler-debug /mnt/sdcard/boot-profiler.trace; sync; reboot" >/dev/null 2>&1 || true
 		log "rebooting with stock initramfs (profiler removed). Verify with: just shell \"cat /mnt/sdcard/.minime/manifest.json\""
 	)

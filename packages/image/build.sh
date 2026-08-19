@@ -54,11 +54,41 @@ else
 	[ -n "${first_dtb}" ] && cp -f "${first_dtb}" "${STAGE_DIR}/.minime/dtb"
 fi
 
-# 2. Stage UI payload & manifest
-[ -d "${INPUT_DIR}/ui-${UI}" ] && cp -rp "${INPUT_DIR}/ui-${UI}/." "${STAGE_DIR}/"
+# 2. Stage UI payload & preloaded ROMs
+case "${TARGET}" in
+alpine|musl) LIBC="musl" ;;
+buildroot|glibc) LIBC="glibc" ;;
+*) LIBC="musl" ;;
+esac
+
+UI_ART_DIR="${MINIME_ROOT}/packages/ui/out"
+if [ "$UI" != "none" ]; then
+	local_tar="${UI_ART_DIR}/${UI}-${LIBC}-aarch64.tar.zst"
+	local_zip="${UI_ART_DIR}/${UI}-${LIBC}-aarch64.zip"
+	if [ -f "${local_tar}" ]; then
+		unzstd -q -c "${local_tar}" | tar -xf - -C "${STAGE_DIR}"
+	elif [ -f "${local_zip}" ]; then
+		unzip -q -o "${local_zip}" -d "${STAGE_DIR}"
+	elif [ -d "${INPUT_DIR}/ui-${UI}" ]; then
+		cp -rp "${INPUT_DIR}/ui-${UI}/." "${STAGE_DIR}/"
+	else
+		echo "ERROR: UI artifact for ${UI} (${LIBC}) not found in ${UI_ART_DIR}" >&2
+		exit 1
+	fi
+	if [ "$UI" = "minui" ]; then
+		for z in "${STAGE_DIR}/MinUI.zip" "${STAGE_DIR}/MinUI-extras.zip"; do
+			[ -f "$z" ] && unzip -q -o "$z" -d "${STAGE_DIR}" && rm -f "$z" || true
+		done
+	fi
+fi
+
+if [ -f "${MINIME_ROOT}/roms/install.sh" ]; then
+	sh "${MINIME_ROOT}/roms/install.sh" "${STAGE_DIR}"
+fi
+
 MINIME_COMMIT="${MINIME_COMMIT:-$(git -C "${MINIME_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 UI_COMMIT="${UI_COMMIT:-$(git -C "${MINIME_ROOT}/packages/ui/${UI}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
-cat <<EOF >"${STAGE_DIR}/.minime/manifest.json"
+cat <<JSON >"${STAGE_DIR}/.minime/manifest.json"
 {
   "target": "${TARGET}",
   "board": "${BOARD}",
@@ -67,7 +97,7 @@ cat <<EOF >"${STAGE_DIR}/.minime/manifest.json"
   "ui_commit": "${UI_COMMIT}",
   "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 }
-EOF
+JSON
 
 # 3. Build Update Package (.tar.zst)
 PKG_NAME="minime-${TARGET}-${BOARD}-${UI}"

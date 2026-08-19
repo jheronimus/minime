@@ -65,7 +65,7 @@ OTA updates are applied **on the device** by `/usr/bin/update.sh <minui|allium>`
    - Switching UIs (e.g. MinUI → Allium) renames `Roms/` subfolders to the new UI's naming convention via the shared `roms/mappings` table (also consumed by the preloaded-ROM installer).
 5. Reboots the device.
 
-There is no host-side OTA push (`just update`). Arbitrary local file uploads use `just upload`; the generic push-and-apply helper [scripts/update-device.sh](../../scripts/update-device.sh) remains for locally built packages (boot-profiler instrumented initramfs).
+There is no host-side OTA push (`just update`). Arbitrary local file uploads use `just upload`; the generic push-and-apply helper [](../../) remains for locally built packages (boot-profiler instrumented initramfs).
 
 #### Full image flash (`just deploy`)
 

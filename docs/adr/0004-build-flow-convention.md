@@ -22,7 +22,7 @@ Both targets follow a two-step build convention:
 
 ```
 make components  →  build.sh  (compilation in builder container)
-make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
+make image       →  packages/image/build.sh  (shared scripts, target's own container)
 ```
 
 ### Responsibilities

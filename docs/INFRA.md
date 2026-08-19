@@ -50,7 +50,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`packages/bootloader/build.sh`**: Builds U-Boot for `h700`, `rk3326`, or `rk3566` (invoked by the `build-bootloader` reusable workflow in `build-bootloader.yml`). `rk3566` and `rk3326` use the vendor Rockchip boot chain (committed rkbin DDR/BL31 blobs; `rk3326` additionally packs `uboot.img` via `loaderimage` and `trust.img` via `trust_merger`); `h700` builds ATF and U-Boot from source.
 - **`packages/cores/buildcores.sh`**: Builds all shared RetroArch cores from `packages/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
 - **`packages/ui/build.sh`**: Compiles MinUI, Allium, and muOS for a given libc variant (`musl` or `glibc`). Invoked by the `ui` job in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`; muOS applies `packages/ui/muos/patches` to the pristine `frontend` submodule, builds, and stages `bin/` + `muos/internal` `share/`+`script/` + the `packages/ui/muos/overlay` launcher. Outputs archives to `packages/ui/out/` (ephemeral runner path, not committed to git).
-- **`packages/image/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
+- **`packages/image/build.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
 - **`packages/image/build.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
 - **`packages/image/build.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.
 - **`packages/image/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
@@ -64,14 +64,14 @@ Validation is **local-only and owned by this folder** — every check lives in a
 - **`scripts/check-kernel-config.sh`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
 - **`scripts/check-firmware.sh`**: Verifies all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
-- **`scripts/check-hashes.sh`**: Lints SHA-256 (64 hex) / SHA-512 (128 hex) hash string formats in Buildroot `.hash` files and `APKBUILD`s.
+- ****: Lints SHA-256 (64 hex) / SHA-512 (128 hex) hash string formats in Buildroot `.hash` files and `APKBUILD`s.
 - **`scripts/check-package-lists.sh`**: Cross-checks local package lists so every referenced package is built.
 - **`scripts/check-scripts.sh` / `check-apkbuilds.sh` / `check-openrc.sh`**: shellcheck over `*.sh`, `APKBUILD`, and OpenRC `init.d` scripts.
 - **`scripts/check-git.sh`**: `git diff --check` (whitespace + conflict markers) on staged and working-tree diffs.
 - **`scripts/check-workflows.sh`**: actionlint over `.github/workflows/*.yml`.
 - **`scripts/check-build-flow.sh`**: Enforces the packaging/compilation split of `build.sh` / `mkimage.sh` / `mkupdate.sh` / `genassets.sh`.
 - **`scripts/install-hooks.sh`**: Installs `pre-commit`/`pre-push` hooks that run `just validate-static` (pre-push forwards to `git lfs pre-push`).
-- **`scripts/update-device.sh`**: Generic push-and-apply OTA helper (stop UI → FTP upload → apply → reboot) for locally built update packages, e.g. the boot-profiler's instrumented initramfs packages. Normal OTA updates run **on-device** via `/usr/bin/update.sh`.
+- ****: Generic push-and-apply OTA helper (stop UI → FTP upload → apply → reboot) for locally built update packages, e.g. the boot-profiler's instrumented initramfs packages. Normal OTA updates run **on-device** via `/usr/bin/update.sh`.
 - **`scripts/fetch-asset.sh`**: Downloads a named release asset (`.img.zst` or `.tar.zst`) from the latest `testing` GitHub Release.
 - **`scripts/remote-cmd.sh`**: Executes arbitrary shell commands on target device over telnet using `target_ip` from `deploy.cfg`.
 - **`scripts/remote-upload.sh`**: Uploads a local file to the target device over FTP.
@@ -94,7 +94,7 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.sh` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
 | `check-firmware` | Required firmware files | `scripts/check-firmware.sh` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.sh` | Ensures all `.patch` files are referenced in build manifests. |
-| `check-hashes` | Package manifests `.hash` / `APKBUILD` | `scripts/check-hashes.sh` | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
+| `check-hashes` | Package manifests `.hash` / `APKBUILD` |  | Validates SHA-256 (64 hex) & SHA-512 (128 hex) string formats. |
 | `check-package-lists` | Local package lists | `scripts/check-package-lists.sh` | Cross-checks Alpine/Buildroot lists so every referenced package is built. |
 | `check-git` | Staged + working-tree diff | `scripts/check-git.sh` | `git diff --check` (whitespace + conflict markers). |
 | `check-workflows` | `.github/workflows/*.yml` | `scripts/check-workflows.sh` | actionlint via mise. |

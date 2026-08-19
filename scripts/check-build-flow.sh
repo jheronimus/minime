@@ -31,8 +31,7 @@ check_no_package() {
 }
 
 check_no_compile "$ROOT_DIR/packages/image/build.sh"
-check_no_compile "$ROOT_DIR/packages/image/build.sh"
-check_no_compile "$ROOT_DIR/packages/image/genassets.sh"
+check_no_compile "$ROOT_DIR/packages/image/gentraits.sh"
 
 for target in alpine buildroot; do
 	check_no_package "$ROOT_DIR/packages/components/${target}/scripts/build.sh"
