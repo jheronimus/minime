@@ -223,47 +223,77 @@ build_tinykernel() {
 	TK_APKB="${ALPINE_DIR}/aports/tinykernel/APKBUILD"
 	[ -f "${TK_APKB}" ] || die "missing aports/tinykernel/APKBUILD"
 
-	local tk_ver tk_rel apk_file
+	local tk_ver tk_rel apk_file board_apk_file board_apk_name remote_url need_build target_out
 	tk_ver=$(sed -n 's/^pkgver=//p' "${TK_APKB}")
 	tk_rel=$(sed -n 's/^pkgrel=//p' "${TK_APKB}")
+	board_apk_name="tinykernel-${BOARD}-${tk_ver}-r${tk_rel}.apk"
 
-	# tinykernel uses the host kernel toolchain (the aarch64 target needs
-	# the cross gcc but aports' linux-stable recipe drives it via
-	# kernel.org sources; we run the same source + patch stack).
-	# Wipe the build dir first: an interrupted `rootpkg` run leaves
-	# fakeroot-owned files in src/ and pkg/ that the agent user cannot
-	# delete; abuild's up-to-date cache will then skip the unpack step
-	# and the package stage fails with "can't cd to src/<name>".
-	rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null ||
-		die "could not clear ${ALPINE_BUILD_DIR}/tinykernel; rm as root first"
-	mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
-	cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
-	cd "${ALPINE_BUILD_DIR}/tinykernel"
-	sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g; s/CROSS_COMPILE=aarch64-alpine-linux-musl-/CROSS_COMPILE=/g' APKBUILD
-
+	mkdir -p "${ALPINE_PACKAGES_DIR}/build/aarch64"
 	apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/tinykernel-${tk_ver}-r${tk_rel}.apk"
+	board_apk_file="${ALPINE_PACKAGES_DIR}/build/aarch64/${board_apk_name}"
 
-	if [ -f "${apk_file}" ]; then
+	need_build=0
+	if [ "${FORCE_KERNEL_REBUILD:-0}" = "1" ] || [ "${FORCE_KERNEL_REBUILD:-0}" = "true" ]; then
+		log "FORCE_KERNEL_REBUILD requested; compiling tinykernel"
+		need_build=1
+	elif [ -f "${board_apk_file}" ]; then
+		log "Found pre-built tinykernel APK in cache: ${board_apk_file}"
+		cp -f "${board_apk_file}" "${apk_file}"
+	elif [ -f "${apk_file}" ]; then
 		log "Found pre-built tinykernel APK in cache: ${apk_file}"
+		cp -f "${apk_file}" "${board_apk_file}"
 	else
-		log "abuild: tinykernel"
+		remote_url="https://github.com/${GITHUB_REPOSITORY:-jheronimus/minime}/releases/download/kernel-packages/${board_apk_name}"
+		log "Checking for pre-built kernel package: ${remote_url}"
+		if curl -fsSL --retry 2 "${remote_url}" -o "${board_apk_file}"; then
+			log "Downloaded pre-built tinykernel APK: ${board_apk_name}"
+			cp -f "${board_apk_file}" "${apk_file}"
+		else
+			log "No pre-built kernel package found on release; compiling tinykernel"
+			need_build=1
+		fi
+	fi
+
+	if [ "${need_build}" = "1" ]; then
+		# Wipe the build dir first: an interrupted `rootpkg` run leaves
+		# fakeroot-owned files in src/ and pkg/ that the agent user cannot
+		# delete; abuild's up-to-date cache will then skip the unpack step
+		# and the package stage fails with "can't cd to src/<name>".
+		rm -rf "${ALPINE_BUILD_DIR}/tinykernel" 2>/dev/null ||
+			die "could not clear ${ALPINE_BUILD_DIR}/tinykernel; rm as root first"
+		mkdir -p "${ALPINE_BUILD_DIR}/tinykernel"
+		cp -a "${ALPINE_DIR}/aports/tinykernel/." "${ALPINE_BUILD_DIR}/tinykernel/"
+		cd "${ALPINE_BUILD_DIR}/tinykernel"
+		sed -i 's/gcc-aarch64//g; s/binutils-aarch64//g; s/CROSS_COMPILE=aarch64-alpine-linux-musl-/CROSS_COMPILE=/g' APKBUILD
+
+		log "abuild: tinykernel (${BOARD})"
 		ensure_kernel_tarball
 		JOBS="${ALPINE_JOBS:-2}" MAKEFLAGS="-j${ALPINE_JOBS:-2}" \
 			abuild -r -P "${ALPINE_PACKAGES_DIR}" -D "${ALPINE_DL_DIR}"
+		if [ -f "${apk_file}" ]; then
+			cp -f "${apk_file}" "${board_apk_file}"
+		fi
 	fi
 
 	# Stage the kernel artifacts for the packager to consume.
 	if [ -f "${apk_file}" ]; then
-		log "Staging tinykernel from newly built APK: ${apk_file}"
+		log "Staging tinykernel from APK: ${apk_file}"
 		mkdir -p "${ALPINE_OUTPUT_DIR}/boot"
-		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot" var/lib/minime
+		rm -rf "${ALPINE_OUTPUT_DIR}/boot/lib" "${ALPINE_OUTPUT_DIR}/boot/var" "${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		tar -xzf "${apk_file}" -C "${ALPINE_OUTPUT_DIR}/boot"
 		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/tinykernel.Image" "${ALPINE_OUTPUT_DIR}/boot/Image"
-		rm -rf "${ALPINE_OUTPUT_DIR}/boot/dtbs"
 		mv -f "${ALPINE_OUTPUT_DIR}/boot/var/lib/minime/dtbs" "${ALPINE_OUTPUT_DIR}/boot/dtbs"
 		rm -rf "${ALPINE_OUTPUT_DIR}/boot/var"
 		log "tinykernel staged: ${ALPINE_OUTPUT_DIR}/boot/Image and DTBs"
 	else
 		die "tinykernel did not produce APK at ${apk_file}"
+	fi
+
+	# Copy board APK to target out directory for release packaging/upload.
+	target_out="${ALPINE_ROOT}/out/${BOARD}"
+	mkdir -p "${target_out}"
+	if [ -f "${board_apk_file}" ]; then
+		cp -f "${board_apk_file}" "${target_out}/"
 	fi
 }
 
@@ -335,7 +365,13 @@ assemble_rootfs() {
 		"passwd -d root 2>/dev/null || sed -i 's/^root:.*/root::0:0:root:\/root:\/bin\/sh/' /etc/shadow" 2>/dev/null || true
 
 	# Install the tinykernel modules into the immutable EROFS rootfs.
-	if [ -d "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules" ]; then
+	if [ -d "${ALPINE_OUTPUT_DIR}/boot/lib/modules" ]; then
+		cp -a "${ALPINE_OUTPUT_DIR}/boot/lib/modules/." \
+			"${ALPINE_ROOTFS_DIR}/lib/modules/"
+		TK_KVER=$(ls "${ALPINE_ROOTFS_DIR}/lib/modules" | head -1)
+		[ -n "${TK_KVER}" ] && chroot "${ALPINE_ROOTFS_DIR}" \
+			/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
+	elif [ -d "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules" ]; then
 		cp -a "${ALPINE_OUTPUT_DIR}/boot/modules/lib/modules/." \
 			"${ALPINE_ROOTFS_DIR}/lib/modules/"
 		TK_KVER=$(ls "${ALPINE_ROOTFS_DIR}/lib/modules" | head -1)

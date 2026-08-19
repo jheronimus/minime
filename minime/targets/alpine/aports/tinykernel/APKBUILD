@@ -153,10 +153,7 @@ package() {
 	local src="$srcdir/linux-$pkgver"
 	cd "$src" || return 1
 
-	# We do not install tinykernel into the rootfs; the Alpine build
-	# script copies Image + dtbs + modules to /alpine-output/boot/ for
-	# packager to consume.  abuild still needs a "package" function
-	# to succeed, so emit a tiny stamp APK with the .config + patches.
+	# Package Image, DTBs, config, and modules into the APK package.
 	install -Dm644 .config "$pkgdir/var/lib/minime/tinykernel.config"
 	install -Dm644 arch/arm64/boot/Image "$pkgdir/var/lib/minime/tinykernel.Image"
 	for dtb in $_dtbs; do
@@ -164,11 +161,10 @@ package() {
 		install -Dm644 "arch/arm64/boot/dts/${dtb}.dtb" "$out"
 	done
 
-	# Modules go to /alpine-output/boot/modules, not into the rootfs.
-	mkdir -p /alpine-output/boot/modules
+	mkdir -p "$pkgdir/lib/modules"
 	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- \
-		INSTALL_MOD_PATH=/alpine-output/boot/modules modules_install
-	rm -f /alpine-output/boot/modules/lib/modules/*/build /alpine-output/boot/modules/lib/modules/*/source
+		INSTALL_MOD_PATH="$pkgdir" modules_install
+	rm -f "$pkgdir"/lib/modules/*/build "$pkgdir"/lib/modules/*/source
 }
 
 # Staging hook: build_tinykernel() in scripts/build.sh runs after abuild

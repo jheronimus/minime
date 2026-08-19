@@ -403,3 +403,22 @@ jobs:
               sleep 5
             done
           done
+
+      - name: Upload Kernel Packages
+        if: github.ref == 'refs/heads/main' && needs.setup.outputs.libc == 'alpine'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in minime/targets/alpine/out/${{ needs.setup.outputs.soc }}/tinykernel-*.apk; do
+            [ -f "$f" ] || continue
+            if ! gh release view kernel-packages >/dev/null 2>&1; then
+              gh release create kernel-packages --title "Prebuilt Linux Kernel Packages" --notes "Prebuilt Linux kernel packages for the Alpine version of Minime."
+            fi
+            for attempt in 1 2 3 4 5; do
+              if gh release upload kernel-packages "$f" --clobber; then
+                break
+              fi
+              echo "Upload attempt $attempt failed, retrying..."
+              sleep 5
+            done
+          done
