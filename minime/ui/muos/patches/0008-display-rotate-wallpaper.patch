@@ -76,3 +76,23 @@ index 4dd6d99e..9090d0f8 100755
  
      if (video_overlay_fn_ptr) video_overlay_fn_ptr(monitor.renderer);
  
+diff --git a/common/video.c b/common/video.c
+index 6f61be6f..f846aef3 100755
+--- a/common/video.c
++++ b/common/video.c
+@@ -303,7 +303,7 @@ static void sdl_overlay_cb(SDL_Renderer *r) {
+ 
+ static void wallpaper_cb(SDL_Renderer *r) {
+     if (!has_frame || !video_tex) return;
+-    SDL_RenderCopy(r, video_tex, NULL, &video_dst);
++    display_render_logical_texture(r, video_tex);
+ }
+ 
+ static void fade_cb(lv_timer_t *t) {
+@@ -1156,5 +1156,5 @@ void video_wallpaper_render_frame(SDL_Renderer *r) {
+ 
+     if (moved_frame) video_upload(present_frame);
+ 
+-    if (has_frame && video_tex) SDL_RenderCopy(r, video_tex, NULL, &video_dst);
++    if (has_frame && video_tex) display_render_logical_texture(r, video_tex);
+ }
