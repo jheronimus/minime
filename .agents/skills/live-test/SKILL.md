@@ -37,9 +37,9 @@ The device updates itself from the GitHub `testing` release:
 just shell "update.sh minui"     # or: update.sh allium, or update.sh buildroot — switch UI or OS without reflashing
 ```
 
-What it does (see `minime/boards/common/overlay/usr/bin/update.sh`):
+What it does (see `packages/components/boards/common/overlay/usr/bin/update.sh`):
 
-1. **Self-detects** board (`/proc/device-tree/compatible`) and any omitted target (`/etc/os-release`) or UI (`.minime/ui.env`).
+1. **Self-detects** board (`/proc/device-tree/compatible`) and any omitted target (`/etc/os-release`) or UI (`.packages/ui.env`).
 2. **Detaches** (`setsid`) so it survives the telnet session dropping; logs to `/mnt/sdcard/.minime/update/update.log`.
 3. **Downloads** `minime-<target>-<board>-<ui>.tar.zst` from the `testing` release with curl.
 4. **Compares** the archive's `.minime/manifest.json` against the installed one; exits early if already current.

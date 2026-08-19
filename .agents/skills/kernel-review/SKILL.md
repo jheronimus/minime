@@ -19,7 +19,7 @@ Read those first.
 - **Rocknix is read-only reference, never a source to copy from.** Do not
   import its patches, DTS, or quirk scripts. Only scalar quirk *values* may be
   harvested as data (with provenance noted in the trait file).
-- **Every patch is tracked.** `minime/build/kernel-patch-manifest` records
+- **Every patch is tracked.** `packages/components/scripts/kernel-patch-manifest` records
   each patch's upstream status; `sync-kernel.yml` auto-drops patches marked
   `upstream=master`. A kernel review updates this manifest.
 - **Registry is the single source of truth.** After any device change, run
@@ -44,7 +44,7 @@ rgcubexx) return automatically once their DTS lands — add them back here.
 
 ### 2. Check what patches can be dropped for already-supported devices
 
-For each patch in `minime/build/kernel-patch-manifest`, check whether its
+For each patch in `packages/components/scripts/kernel-patch-manifest`, check whether its
 content is now present in the target kernel:
 
 - Driver patches (e.g. `panel-mipi-dpi-spi`, btrtl chip entries): grep the
@@ -65,9 +65,9 @@ Only add a patch if the new device's DTS or a required driver is genuinely
 missing from mainline. Prefer upstream; do NOT port Rocknix patches. A needed
 patch should:
 
-- Live in `minime/boards/<board>/patches/linux/`, named `NNNN-<slug>.patch`
+- Live in `packages/components/boards/<board>/patches/linux/`, named `NNNN-<slug>.patch`
   following the existing series.
-- Get a section in `minime/build/kernel-patch-manifest` with `upstream=-`
+- Get a section in `packages/components/scripts/kernel-patch-manifest` with `upstream=-`
   (record the upstream submission/commit it tracks, if any, in the patch
   header or manifest note).
 - Be verified to apply cleanly under Buildroot's strict `--fuzz=0`
@@ -75,7 +75,7 @@ patch should:
 
 ### 4. Implement in traits
 
-Add the device to `minime/boards/<board>/traits/devices/<device>.ini`:
+Add the device to `packages/components/boards/<board>/traits/devices/<device>.ini`:
 
 - **Mainline DTS used as-is** (identity-only device): set `[match]` +
   `[device]` + full core schema, and `[dts] dtb=<path>` if the DTB name is
@@ -89,7 +89,7 @@ Add the device to `minime/boards/<board>/traits/devices/<device>.ini`:
 
 Then, in lockstep:
 
-- Add any new panel firmware blob to `minime/boards/h700/firmware/panels/`
+- Add any new panel firmware blob to `packages/components/boards/h700/firmware/panels/`
   and its `CONFIG_EXTRA_FIRMWARE` entry in `tiny-h700.config`; for Buildroot,
   add the DTB to `external/configs/h700.config`.
 - Harvest any known quirks for the new device from the Rocknix quirk scripts
@@ -103,7 +103,7 @@ Then, in lockstep:
 - [ ] `just validate-static` passes (traits-gen check + consumer parity).
 - [ ] `traits-gen dtbs <board>` / `overlays <board> <tmpdir>` output matches
       expectations.
-- [ ] Kernel builds (`make -C minime/targets/alpine components BOARD=<board>`).
+- [ ] Kernel builds (`make -C packages/components/alpine components BOARD=<board>`).
 - [ ] Manifest entries added/updated for every patch touched.
 - [ ] No Rocknix content copied into the tree.
 - [ ] On-device verification per the `live-test` skill once CI artifacts land.

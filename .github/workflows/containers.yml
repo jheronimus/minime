@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'minime/targets/alpine/container/**'
-      - 'minime/targets/buildroot/container/**'
+      - 'packages/components/alpine/container/**'
+      - 'packages/components/buildroot/container/**'
       - '.github/workflows/containers.yml'
   workflow_dispatch:
 
@@ -37,8 +37,8 @@ jobs:
       - name: Build and push musl container
         uses: docker/build-push-action@v7
         with:
-          context: minime/targets/alpine/container
-          file: minime/targets/alpine/container/Dockerfile
+          context: packages/components/alpine/container
+          file: packages/components/alpine/container/Dockerfile
           platforms: linux/arm64
           push: true
           tags: |
@@ -65,8 +65,8 @@ jobs:
       - name: Build and push glibc container
         uses: docker/build-push-action@v7
         with:
-          context: minime/targets/buildroot
-          file: minime/targets/buildroot/container/Dockerfile
+          context: packages/components/buildroot
+          file: packages/components/buildroot/container/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |

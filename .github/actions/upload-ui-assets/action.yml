@@ -15,27 +15,27 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact_prefix }}-musl-aarch64
-        path: minime/ui/out
+        path: packages/ui/out
       continue-on-error: true
 
     - name: Download glibc artifact
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact_prefix }}-glibc-aarch64
-        path: minime/ui/out
+        path: packages/ui/out
       continue-on-error: true
 
     - name: Download consolidated artifact (if used)
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact_prefix }}-assets
-        path: minime/ui/out
+        path: packages/ui/out
       continue-on-error: true
 
     - name: Upload to UI rolling release
       shell: bash
       run: |
         gh release create latest-ui --title "Latest UI Assets" --notes "Rolling release for UI prebuilts" || true
-        gh release upload latest-ui minime/ui/out/${{ inputs.artifact_prefix }}-*.tar.xz --clobber
+        gh release upload latest-ui packages/ui/out/${{ inputs.artifact_prefix }}-*.tar.xz --clobber
       env:
         GH_TOKEN: ${{ inputs.github_token }}

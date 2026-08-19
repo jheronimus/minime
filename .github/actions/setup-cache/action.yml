@@ -24,7 +24,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.buildroot-ccache
-        key: minime-buildroot-ccache-${{ inputs.board }}-${{ hashFiles('minime/boards/*/tiny-*.config', 'minime/targets/buildroot/external/configs/*.config', 'minime/targets/buildroot/external/package/**/*.mk', 'minime/boards/*/patches/**') }}
+        key: minime-buildroot-ccache-${{ inputs.board }}-${{ hashFiles('packages/components/boards/*/tiny-*.config', 'packages/components/buildroot/external/configs/*.config', 'packages/components/buildroot/external/package/**/*.mk', 'packages/components/boards/*/patches/**') }}
         restore-keys: |
           minime-buildroot-ccache-${{ inputs.board }}-
         save-always: true
@@ -34,7 +34,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/alpine-output/${{ inputs.board }}/packages
-        key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('minime/boards/common/tiny-base.config', 'minime/boards/common/tiny-panfrost.config', 'minime/boards/common/tiny-libmali.config', 'minime/boards/common/firmware/**', 'minime/boards/common/overlay/**', 'minime/boards/${{ inputs.board }}/tiny-*.config', 'minime/boards/${{ inputs.board }}/patches/**', 'minime/boards/${{ inputs.board }}/dts/**', 'minime/boards/${{ inputs.board }}/firmware/**', 'minime/targets/alpine/aports/**') }}
+        key: minime-alpine-pkgs-${{ inputs.board }}-${{ hashFiles('packages/components/boards/common/tiny-base.config', 'packages/components/boards/common/tiny-panfrost.config', 'packages/components/boards/common/tiny-libmali.config', 'packages/components/boards/common/firmware/**', 'packages/components/boards/common/overlay/**', 'packages/components/boards/${{ inputs.board }}/tiny-*.config', 'packages/components/boards/${{ inputs.board }}/patches/**', 'packages/components/boards/${{ inputs.board }}/dts/**', 'packages/components/boards/${{ inputs.board }}/firmware/**', 'packages/components/alpine/aports/**') }}
         restore-keys: |
           minime-alpine-pkgs-${{ inputs.board }}-
         save-always: true

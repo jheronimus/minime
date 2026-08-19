@@ -33,8 +33,8 @@ Regions and their upstream baselines:
 | Region | Port boundary | Upstream baseline |
 |---|---|---|
 | `minime/` (this repo) | n/a — the project itself | none (firmware owns all hardware support) |
-| `minime/ui/minui` | `workspace/minime/`, `workspace/all/` | https://github.com/shauninman/MinUI (`main`) |
-| `minime/ui/allium` | `crates/common/src/platform/minime`, `crates/play/src/platform/minime` (feature `minime`) | https://github.com/goweiwen/Allium (`main`) |
+| `packages/ui/minui` | `workspace/minime/`, `workspace/all/` | https://github.com/shauninman/MinUI (`main`) |
+| `packages/ui/allium` | `crates/common/src/platform/minime`, `crates/play/src/platform/minime` (feature `minime`) | https://github.com/goweiwen/Allium (`main`) |
 | `src/yabause` | `yabause/src/libretro/` (ours), `libchdr/` (vendored) | `upstream` branch of the fork (vanilla tarballs) |
 | `src/drastic` | per ADR 0024 | record a vanilla baseline if none exists |
 
