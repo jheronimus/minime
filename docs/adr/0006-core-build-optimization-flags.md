@@ -51,7 +51,7 @@ i.e. **neon GPU + ari64 dynarec with the toolchain's default optimization**, del
 
 ## Reference
 
-- Fix commit: `minime/ui/minui` fork `8705ef9` (minime submodule `f903d5cf`).
+- Fix commit: `packages/ui/minui` fork `8705ef9` (minime submodule `f903d5cf`).
 - Upstream rgb30 pcsx branch: `workspace/rgb30/cores/patches/pcsx_rearmed.patch`.
 - Issue class (not the cause): libretro/pcsx_rearmed#478 "Pause Menu doesn't show texts".
 - Related single-binary ISA decision: `docs/adr/0005-single-binary-cpu-isa.md` (covers `-march`/`-mtune`, a different flag set).

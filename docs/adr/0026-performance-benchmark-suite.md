@@ -32,8 +32,8 @@ Implement a self-contained, firmware- and UI-agnostic C99 benchmarking tool (`/u
    - Comparison mode loads a saved baseline JSON and outputs delta percentages (+X.X%) and overall index speedup.
 
 5. **Dual-Distro Packaging**:
-   - Alpine: `minime/targets/alpine/aports/minime-benchmark/APKBUILD` (binary installed to `/usr/bin/benchmark`).
-   - Buildroot: `minime/targets/buildroot/external/package/benchmark/` (binary installed to `/usr/bin/benchmark`).
+   - Alpine: `packages/components/alpine/aports/minime-benchmark/APKBUILD` (binary installed to `/usr/bin/benchmark`).
+   - Buildroot: `packages/components/buildroot/external/package/benchmark/` (binary installed to `/usr/bin/benchmark`).
    - Host Justfile recipe: `just benchmark [ip]`.
 
 ## Consequences

@@ -1,15 +1,15 @@
-[submodule "minime/ui/allium"]
-	path = minime/ui/allium
+[submodule "packages/ui/allium"]
+	path = packages/ui/allium
 	url = https://github.com/jheronimus/Allium
 	branch = main
-[submodule "minime/ui/minui"]
-	path = minime/ui/minui
+[submodule "packages/ui/minui"]
+	path = packages/ui/minui
 	url = https://github.com/jheronimus/MinUI
 	branch = main
 # muOS frontend (upstream). Pinned to main; the Minime port delta (patches +
-# overlay) lives in minime/ui/muos/.
-[submodule "minime/ui/muos/frontend"]
-	path = minime/ui/muos/frontend
+# overlay) lives in packages/ui/muos/.
+[submodule "packages/ui/muos/frontend"]
+	path = packages/ui/muos/frontend
 	url = https://github.com/MustardOS/frontend.git
 	branch = main
 [submodule "src/yabause"]
@@ -22,10 +22,10 @@
 	branch = main
 # muOS runtime payload (upstream internal). update=none: recursive checkouts
 # skip it; the muos build jobs sparse-clone only share/ + script/ via
-# minime/build/muos-checkout-internal.sh. Browse it with the helper or
-# `git submodule update --init minime/ui/muos/internal`.
-[submodule "minime/ui/muos/internal"]
-	path = minime/ui/muos/internal
+# packages/ui/muos-checkout-internal.sh. Browse it with the helper or
+# `git submodule update --init packages/ui/muos/internal`.
+[submodule "packages/ui/muos/internal"]
+	path = packages/ui/muos/internal
 	url = https://github.com/MustardOS/internal.git
 	branch = main
 	shallow = true

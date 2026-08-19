@@ -51,5 +51,5 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
 
 - Alpine's `build.sh` lost the `all` and `image` subcommands; `components` now includes erofs+initramfs.
 - Buildroot's `system-image.sh` no longer calls genimage; that responsibility moved to the target's own container.
-- Each target's builder container (`minime/targets/alpine/container/` / `minime/targets/buildroot/container/`) ships genimage/mtools, so packaging runs in the target's own image.
+- Each target's builder container (`packages/components/alpine/container/` / `packages/components/buildroot/container/`) ships genimage/mtools, so packaging runs in the target's own image.
 - CI workflows no longer need host tools (mtools, genimage, u-boot-tools) for the `make image` step.

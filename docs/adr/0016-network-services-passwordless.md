@@ -75,8 +75,8 @@ project is in the heavy development/debugging stage. Specifically:
 
 ## Reference
 
-- Init services: `minime/boards/common/overlay/etc/init.d/{telnetd,ftpd,dropbear,wifi}`.
-- Empty-password build steps: `minime/targets/alpine/scripts/build.sh`,
-  `minime/targets/buildroot/external/configs/common.config`.
+- Init services: `packages/components/boards/common/overlay/etc/init.d/{telnetd,ftpd,dropbear,wifi}`.
+- Empty-password build steps: `packages/components/alpine/scripts/build.sh`,
+  `packages/components/buildroot/external/configs/common.config`.
 - Related: `docs/adr/0007-logging-and-diagnostics.md` (log capture over these
   services), `docs/adr/0015-iwd-wifi.md` (Wi-Fi stack).

@@ -23,8 +23,8 @@ jobs:
         id: cache-bootloader-restore
         uses: actions/cache/restore@v6
         with:
-          path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
+          path: packages/bootloader
+          key: bootloader-${{ hashFiles('packages/bootloader/**/config/**', 'packages/bootloader/**/patches/**', 'packages/bootloader/build.sh') }}
 
       - name: Restore Bootloader CCache
         id: ccache-bootloader-restore
@@ -37,22 +37,22 @@ jobs:
 
       - name: Compile Bootloader
         id: compile-bootloader
-        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('minime/uboot/out/h700/u-boot-sunxi-with-spl.bin', 'minime/uboot/out/rk3326/idbloader.img', 'minime/uboot/out/rk3566/idbloader.img') == ''
+        if: steps.cache-bootloader-restore.outputs.cache-hit != 'true' || hashFiles('packages/bootloader/h700/out/u-boot-sunxi-with-spl.bin', 'packages/bootloader/rk3326/out/idbloader.img', 'packages/bootloader/rk3566/out/idbloader.img') == ''
         run: |
           docker run --rm -u root \
             -v "$HOME/.bootloader-ccache:/root/.ccache" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace \
             "ghcr.io/${{ github.repository_owner }}/minime-glibc:latest" \
-            /bin/bash -c "minime/build/mkbootloader.sh rk3326 2026.07 && minime/build/mkbootloader.sh rk3566 2026.07 && minime/build/mkbootloader.sh h700 2026.07 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/uboot/out"
-          sudo chown -R "$USER:$USER" minime/uboot/out
+            /bin/bash -c "packages/bootloader/build.sh rk3326 2026.07 && packages/bootloader/build.sh rk3566 2026.07 && packages/bootloader/build.sh h700 2026.07 && chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/bootloader"
+          sudo chown -R "$USER:$USER" packages/bootloader
 
       - name: Save Bootloader Cache
         if: always() && steps.compile-bootloader.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: minime/uboot/out
-          key: bootloader-${{ hashFiles('minime/uboot/config/**', 'minime/uboot/patches/**', 'minime/boards/*/patches/uboot/**', 'minime/build/mkbootloader.sh') }}
+          path: packages/bootloader
+          key: bootloader-${{ hashFiles('packages/bootloader/**/config/**', 'packages/bootloader/**/patches/**', 'packages/bootloader/build.sh') }}
 
       - name: Save Bootloader CCache
         if: always() && steps.compile-bootloader.outcome == 'success'
@@ -65,5 +65,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bootloader-out
-          path: minime/uboot/out
+          path: |
+            packages/bootloader/h700/out
+            packages/bootloader/rk3326/out
+            packages/bootloader/rk3566/out
           retention-days: 7

@@ -49,5 +49,5 @@ Shortcuts follow an AmberELEC-inspired standard:
 - [ADR 0010](0010-ui-contract-and-traits.md) — UI Contract and Traits
 - [ADR 0011](0011-traits-schema.md) — Hardware Traits Schema
 - [AmberELEC Controls Guide](https://amberelec.org/guides/getting-to-know-amberelec.html)
-- MinUI: `minime/ui/minui/workspace/minime/platform/` & `minarch/`
-- Allium: `minime/ui/allium/crates/common/src/platform/minime/`
+- MinUI: `packages/ui/minui/workspace/minime/platform/` & `minarch/`
+- Allium: `packages/ui/allium/crates/common/src/platform/minime/`

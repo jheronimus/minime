@@ -87,5 +87,5 @@ Redundant `echo 5` writes in `initramfs-init.sh` and `init.d/ui` are removed.
 
 ## Reference
 
-- Code: `src/bootsplash/`, `minime/boards/common/overlay/etc/init.d/bootsplash`.
-- Scripts: `minime/boards/common/initramfs-init.sh`, `overlay/etc/init.d/ui`.
+- Code: `src/bootsplash/`, `packages/components/boards/common/overlay/etc/init.d/bootsplash`.
+- Scripts: `packages/components/boards/common/initramfs-init.sh`, `overlay/etc/init.d/ui`.

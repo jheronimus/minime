@@ -10,10 +10,10 @@ errors=0
 find_fw() {
     fw="$1"
     for d in \
-        "${ROOT_DIR}/minime/boards/common/firmware" \
-        "${ROOT_DIR}/minime/boards/h700/firmware" \
-        "${ROOT_DIR}/minime/boards/rk3326/firmware" \
-        "${ROOT_DIR}/minime/boards/rk3566/firmware"
+        "${ROOT_DIR}/packages/components/boards/common/firmware" \
+        "${ROOT_DIR}/packages/components/boards/h700/firmware" \
+        "${ROOT_DIR}/packages/components/boards/rk3326/firmware" \
+        "${ROOT_DIR}/packages/components/boards/rk3566/firmware"
     do
         if [ -f "$d/$fw" ]; then return 0; fi
     done
@@ -22,8 +22,8 @@ find_fw() {
 
 check_config() {
     board="$1"
-    config="${ROOT_DIR}/minime/boards/${board}/tiny-${board}.config"
-    base="${ROOT_DIR}/minime/boards/common/tiny-base.config"
+    config="${ROOT_DIR}/packages/components/boards/${board}/tiny-${board}.config"
+    base="${ROOT_DIR}/packages/components/boards/common/tiny-base.config"
 
     extra_fw=""
     if [ -f "$base" ]; then
@@ -53,7 +53,7 @@ check_config "rk3566"
 # 2. Check Device Tree firmware-name declarations
 tmp_dts=$(mktemp)
 trap 'rm -f "$tmp_dts"' EXIT
-find "${ROOT_DIR}/minime/boards" -type f \( -name "*.dts" -o -name "*.dtsi" \) > "$tmp_dts"
+find "${ROOT_DIR}/packages/components/boards" -type f \( -name "*.dts" -o -name "*.dtsi" \) > "$tmp_dts"
 while IFS= read -r dts || [ -n "$dts" ]; do
     [ -z "$dts" ] && continue
     fws=$(grep -oE 'firmware-name[[:space:]]*=[[:space:]]*"[^"]+"' "$dts" | cut -d'"' -f2 || true)

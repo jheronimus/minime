@@ -28,34 +28,34 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ### `build-bootloader.yml` — U-Boot Builder (Reusable)
 - **Trigger**: Called by `build.yml`.
-- **Purpose**: Builds and caches U-Boot binaries for `rk3326`, `rk3566`, and `h700`. Source-cached by hash of `minime/uboot/**`.
+- **Purpose**: Builds and caches U-Boot binaries for `rk3326`, `rk3566`, and `h700`. Source-cached by hash of `packages/bootloader/**`.
 
 ### `containers.yml` — Build & Push Builder Images
-- **Trigger**: Push to `main` on `minime/targets/alpine/container/**` or `minime/targets/buildroot/container/**`; `workflow_dispatch`.
+- **Trigger**: Push to `main` on `packages/components/alpine/container/**` or `packages/components/buildroot/container/**`; `workflow_dispatch`.
 - **Purpose**: Builds and pushes `ghcr.io/.../minime-musl:latest` (arm64) and `ghcr.io/.../minime-glibc:latest` (amd64) to GHCR. These images are prerequisites for the build pipelines.
 
 ### `sync-kernel.yml` — Automated Kernel Version Sync
 - **Trigger**: Daily cron at 00:00 UTC. Commits directly to `main`.
-- **Purpose**: Runs `minime/build/synckernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config, then drops any patches marked `upstream=master` in `minime/build/kernel-patch-manifest` (their content has landed in mainline).
+- **Purpose**: Runs `packages/image/synckernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config, then drops any patches marked `upstream=master` in `packages/image/kernel-patch-manifest` (their content has landed in mainline).
 
 ### `update-submodules.yml` — UI Submodule Bump
 - **Trigger**: Daily cron at 02:00 UTC; `repository_dispatch` event `update-submodules`.
-- **Purpose**: Runs `git submodule update --remote` on `minime/ui/allium` and `minime/ui/minui`, then commits the bumped SHAs to `main`.
+- **Purpose**: Runs `git submodule update --remote` on `packages/ui/allium` and `packages/ui/minui`, then commits the bumped SHAs to `main`.
 
 ---
 
 ## 2. Repository Scripts & Entrypoints
 
-### Build Scripts (`minime/build/`)
-- **`minime/build/mkbootloader.sh`**: Builds U-Boot for `h700`, `rk3326`, or `rk3566` (invoked by the `build-bootloader` reusable workflow in `build-bootloader.yml`). `rk3566` and `rk3326` use the vendor Rockchip boot chain (committed rkbin DDR/BL31 blobs; `rk3326` additionally packs `uboot.img` via `loaderimage` and `trust.img` via `trust_merger`); `h700` builds ATF and U-Boot from source.
-- **`minime/build/cores/buildcores.sh`**: Builds all shared RetroArch cores from `minime/build/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
-- **`minime/build/mkui.sh`**: Compiles MinUI, Allium, and muOS for a given libc variant (`musl` or `glibc`). Invoked by the `ui` job in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`; muOS applies `minime/ui/muos/patches` to the pristine `frontend` submodule, builds, and stages `bin/` + `muos/internal` `share/`+`script/` + the `minime/ui/muos/overlay` launcher. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
-- **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
-- **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
-- **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.
-- **`minime/build/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
-- **`minime/build/traits-gen.sh`**: Device registry generator + validator. Emits overlay DTS for derived devices into the kernel tree at build time, prints the shipped-DTB list, and cross-references the registry against the Buildroot DTS config (`check`). The registry is the single source of truth for devices.
-- **`minime/build/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
+### Build Scripts (`packages/image/`)
+- **`packages/bootloader/build.sh`**: Builds U-Boot for `h700`, `rk3326`, or `rk3566` (invoked by the `build-bootloader` reusable workflow in `build-bootloader.yml`). `rk3566` and `rk3326` use the vendor Rockchip boot chain (committed rkbin DDR/BL31 blobs; `rk3326` additionally packs `uboot.img` via `loaderimage` and `trust.img` via `trust_merger`); `h700` builds ATF and U-Boot from source.
+- **`packages/cores/buildcores.sh`**: Builds all shared RetroArch cores from `packages/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
+- **`packages/ui/build.sh`**: Compiles MinUI, Allium, and muOS for a given libc variant (`musl` or `glibc`). Invoked by the `ui` job in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`; muOS applies `packages/ui/muos/patches` to the pristine `frontend` submodule, builds, and stages `bin/` + `muos/internal` `share/`+`script/` + the `packages/ui/muos/overlay` launcher. Outputs archives to `packages/ui/out/` (ephemeral runner path, not committed to git).
+- **`packages/image/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
+- **`packages/image/build.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
+- **`packages/image/build.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.
+- **`packages/image/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
+- **`packages/image/gentraits.sh`**: Device registry generator + validator. Emits overlay DTS for derived devices into the kernel tree at build time, prints the shipped-DTB list, and cross-references the registry against the Buildroot DTS config (`check`). The registry is the single source of truth for devices.
+- **`packages/image/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 
 ### Validation & Helper Scripts (`scripts/`)
 Validation is **local-only and owned by this folder** — every check lives in a
@@ -89,7 +89,7 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `just validate-ci` | **Buildroot-dependent gate** | `just` | Runs `validate` plus `check-defconfigs` and `check-packages` (requires upstream Buildroot tree). |
 | `check-scripts` | `*.sh` files (all distros) | auto from shebang | Syntax (`sh -n`), shellcheck, exec bit. Excludes upstream Buildroot. |
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
-| `check-openrc` | `minime/boards/*/overlay/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
+| `check-openrc` | `packages/components/boards/*/overlay/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
 | `check-traits` | Device traits configuration | `scripts/check-traits.sh` | Delegates registry validation to `traits-gen check`; adds input/axis checks. |
 | `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.sh` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
 | `check-firmware` | Required firmware files | `scripts/check-firmware.sh` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |

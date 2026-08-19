@@ -13,30 +13,30 @@ errors=0
 
 # ── Alpine ────────────────────────────────────────────────────────────────────
 build_pkgs="$(sed -n 's/^[[:space:]]*ALPINE_PKGS="\(.*\)"$/\1/p' \
-	"${ROOT}/minime/targets/alpine/scripts/build.sh")"
+	"${ROOT}/packages/components/alpine/scripts/build.sh")"
 [ -n "$build_pkgs" ] || {
 	echo "ERROR: cannot parse ALPINE_PKGS from build.sh" >&2
 	exit 1
 }
 
 for p in $build_pkgs; do
-	[ -d "${ROOT}/minime/targets/alpine/aports/${p}" ] ||
+	[ -d "${ROOT}/packages/components/alpine/aports/${p}" ] ||
 		{
 			echo "ERROR: build.sh builds ${p} but aports/${p} missing" >&2
 			errors=$((errors + 1))
 		}
-	grep -qw "${p}" "${ROOT}/minime/targets/alpine/configs/world-common" ||
+	grep -qw "${p}" "${ROOT}/packages/components/alpine/configs/world-common" ||
 		{
 			echo "ERROR: ${p} is built but missing from world-common" >&2
 			errors=$((errors + 1))
 		}
 done
 
-for d in "${ROOT}"/minime/targets/alpine/aports/*; do
+for d in "${ROOT}"/packages/components/alpine/aports/*; do
 	[ -d "$d" ] || continue
 	name="${d##*/}"
 	[ "$name" = "tinykernel" ] && continue
-	grep -qw "$name" "${ROOT}/minime/targets/alpine/configs/world-common" || continue
+	grep -qw "$name" "${ROOT}/packages/components/alpine/configs/world-common" || continue
 	echo "$build_pkgs" | grep -qw "$name" ||
 		{
 			echo "ERROR: world-common ${name} is missing from build.sh ALPINE_PKGS" >&2
@@ -46,11 +46,11 @@ done
 
 # ── Buildroot (Minime external packages only) ─────────────────────────────────
 for sym in $(grep -oE '^BR2_PACKAGE_[A-Z0-9_]+=y' \
-	"${ROOT}/minime/targets/buildroot/external/configs/common.config" | sed 's/=y$//'); do
+	"${ROOT}/packages/components/buildroot/external/configs/common.config" | sed 's/=y$//'); do
 	name="${sym#BR2_PACKAGE_}"
 	dir="$(echo "$name" | tr '[:upper:]_' '[:lower:]-')"
-	[ -d "${ROOT}/minime/targets/buildroot/external/package/${dir}" ] || continue
-	grep -qs "package/${dir}/Config.in" "${ROOT}/minime/targets/buildroot/external/Config.in" ||
+	[ -d "${ROOT}/packages/components/buildroot/external/package/${dir}" ] || continue
+	grep -qs "package/${dir}/Config.in" "${ROOT}/packages/components/buildroot/external/Config.in" ||
 		{
 			echo "ERROR: ${sym} enabled but package/${dir}/Config.in not sourced in external/Config.in" >&2
 			errors=$((errors + 1))

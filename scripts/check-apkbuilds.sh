@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."
 tmp=$(mktemp)
 trap 'rm -f "$tmp"' EXIT
 
-find minime/targets/alpine/aports -name "APKBUILD" -not -path "*/pkg/*" | sort >"$tmp"
+find packages/components/alpine/aports -name "APKBUILD" -not -path "*/pkg/*" | sort >"$tmp"
 
 while read -r f || [ -n "$f" ]; do
 	[ -n "$f" ] || continue

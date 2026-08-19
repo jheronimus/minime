@@ -37,22 +37,22 @@ start before Wi-Fi connects), and implements RFC 6762 conflict probing with
 mDNSResponder.
 
 - **Buildroot**: `BR2_PACKAGE_MDNSD=y` was already in
-  [common.config](../../minime/targets/buildroot/external/configs/common.config)
+  [common.config](../../packages/components/buildroot/external/configs/common.config)
   but shipped no init service — its SysV `S50mdnsd` is removed by
   `post-build.sh` (ADR 0009). This ADR wires it up with the shared service below.
 - **Alpine**: built as a local aport
-  [aports/mdnsd/APKBUILD](../../minime/targets/alpine/aports/mdnsd/APKBUILD)
+  [aports/mdnsd/APKBUILD](../../packages/components/alpine/aports/mdnsd/APKBUILD)
   from the upstream release tarball and added to `world-common` + the
   `build.sh` package loop.
 
 Both targets run **mdnsd v1.2**. Alpine builds it from the upstream source
 directly; Buildroot `2026.05.1` ships an older in-tree version (0.12), so the
 buildroot tree is patched to 1.2 via
-[support/buildroot-patches](../../minime/targets/buildroot/support/buildroot-patches/0001-mdnsd-bump-to-1.2.patch).
+[support/buildroot-patches](../../packages/components/buildroot/support/buildroot-patches/0001-mdnsd-bump-to-1.2.patch).
 
 ### 2. Shared init service
 
-[init.d/mdns](../../minime/boards/common/overlay/etc/init.d/mdns) (boot
+[init.d/mdns](../../packages/components/boards/common/overlay/etc/init.d/mdns) (boot
 runlevel) runs `mdnsd -n -s -H minime`:
 
 - `-n` keeps mdnsd in the foreground so `start-stop-daemon` tracks the pid
@@ -68,7 +68,7 @@ runlevel) runs `mdnsd -n -s -H minime`:
 
 ### 3. Service records
 
-[`/etc/mdns.d/`](../../minime/boards/common/overlay/etc/mdns.d/) ships four
+[`/etc/mdns.d/`](../../packages/components/boards/common/overlay/etc/mdns.d/) ships four
 DNS-SD records — `_minime._tcp` (custom discovery type) plus `_telnet._tcp`,
 `_ftp._tcp`, `_ssh._tcp` for the remote-access daemons (ADR 0016). These
 records are what make mdnsd register the `minime.local` A/AAAA records in the
@@ -96,12 +96,12 @@ an mDNS-aware resolver (avahi + nss-mdns).
 
 ## Reference
 
-- Init service: `minime/boards/common/overlay/etc/init.d/mdns`,
-  `minime/boards/common/overlay/etc/runlevels/boot/mdns`,
-  `minime/boards/common/overlay/etc/mdns.d/*.service`.
-- Build integration: `minime/targets/alpine/aports/mdnsd/APKBUILD`,
-  `minime/targets/alpine/configs/world-common`, `minime/targets/alpine/scripts/build.sh`,
-  `minime/targets/buildroot/external/configs/common.config`.
+- Init service: `packages/components/boards/common/overlay/etc/init.d/mdns`,
+  `packages/components/boards/common/overlay/etc/runlevels/boot/mdns`,
+  `packages/components/boards/common/overlay/etc/mdns.d/*.service`.
+- Build integration: `packages/components/alpine/aports/mdnsd/APKBUILD`,
+  `packages/components/alpine/configs/world-common`, `packages/components/alpine/scripts/build.sh`,
+  `packages/components/buildroot/external/configs/common.config`.
 - Client docs: `deploy_sample.cfg`, `.agents/skills/live-test/SKILL.md`.
 - Related: `docs/adr/0003-on-device-ota-update.md` (the update path the
   name serves), `docs/adr/0016-network-services-passwordless.md`.

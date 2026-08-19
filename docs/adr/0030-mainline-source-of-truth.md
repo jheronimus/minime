@@ -19,7 +19,7 @@ work and a constant rebase burden.
 Mainline Linux is the gate and the source of truth for device support:
 
 1. **Mainline-gated device registry.** The trait registry
-   (`minime/boards/<board>/traits/`) only contains devices whose DTS is (or
+   (`packages/components/boards/<board>/traits/`) only contains devices whose DTS is (or
    derives from one that is) in mainline. Non-mainline devices are dropped
    until upstream lands their DTS — e.g. RG40XX-H/V and RG Cube XX were
    removed because their DTS never landed upstream; they return automatically
@@ -29,14 +29,14 @@ Mainline Linux is the gate and the source of truth for device support:
    panel) inherit core traits instead of duplicating them and carry a `[dts]`
    section (`base=`, `panel=`, `panel_supply=`/`panel_rotation=` for RK3326)
    describing the overlay to generate.
-3. **`traits-gen.sh` owns generation and validation.** `minime/build/
+3. **`traits-gen.sh` owns generation and validation.** `packages/image/
    traits-gen.sh` emits the overlay DTS into the kernel tree at build time
    (Alpine APKBUILD + Buildroot `external.mk` call it), prints the shipped-DTB
    list, and `check` cross-references the registry against the Buildroot DTS
    config. `scripts/check-traits.sh` delegates structural validation to it.
    There are no `dts/` directories anymore.
 4. **Self-shrinking patch series.** Every kernel patch is tracked in
-   `minime/build/kernel-patch-manifest` with its upstream status. Patches whose
+   `packages/image/kernel-patch-manifest` with its upstream status. Patches whose
    content is confirmed in mainline (`upstream=master`) are auto-dropped by the
    daily `sync-kernel.yml` on the next kernel bump. The patch series therefore
    shrinks as mainline catches up instead of accumulating.

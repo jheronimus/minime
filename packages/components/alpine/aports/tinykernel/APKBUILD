@@ -1,0 +1,130 @@
+# shellcheck shell=sh disable=SC2034,SC2154,SC3043
+# abuild framework sets srcdir/builddir/pkgdir in the build env.
+# Maintainer: Minime <maintainers@minime-os.local>
+pkgname=tinykernel
+pkgver=7.1.5
+pkgrel=3
+pkgdesc="Minime minimal Linux kernel + DTBs for Alpine"
+url="https://github.com/gregkh/linux"
+arch="aarch64"
+license="GPL-2.0-only"
+options="!strip !check"
+makedepends="
+	bash
+	bc
+	bison
+	flex
+	gcc-aarch64
+	binutils-aarch64
+	linux-headers
+	ncurses-dev
+	openssl-dev
+	perl
+	python3
+"
+
+# Direct upstream tarball URL so the build is reproducible without aports sync.
+# If you need the in-progress stable branch, switch to git://.
+source="
+	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-${pkgver}.tar.xz
+"
+sha512sums="17f95307b6e86a0794df146d97256ba4783b7a494f5eb43aafc14d64367541874cec7f6e8c2ea724eca149db18e4bd5880bf28a8c5e47ae8a769776bbd955af8  linux-7.1.5.tar.xz"
+
+: "${DTB_BOARD:=rk3566}"
+case "$DTB_BOARD" in
+	rk3566|rk3326|h700) ;;
+	*) echo "unsupported DTB_BOARD=$DTB_BOARD"; exit 1 ;;
+esac
+
+# Shipped DTB list is generated from the device registry
+# (packages/components/boards/<board>/traits/ — the single source of truth for devices).
+_dtbs="$(bash "${MINIME_ROOT:-/workspace}/packages/image/gentraits.sh" dtbs "$DTB_BOARD")"
+
+build() {
+	local src="$srcdir/linux-$pkgver"
+	cd "$src" || return 1
+
+	# 1. Apply Minime's kernel patch series.
+	local patch_dir="${MINIME_ROOT:-/workspace}/packages/components/boards/${DTB_BOARD}/patches/linux"
+	if [ -d "$patch_dir" ]; then
+		for p in "$patch_dir"/*.patch; do
+			[ -f "$p" ] || continue
+			msg "Applying $p"
+			patch -p1 -N < "$p" || return 1
+		done
+	fi
+
+	# 2. Generate overlay DTS for derived devices from the device registry.
+	local traits_gen="${MINIME_ROOT:-/workspace}/packages/image/gentraits.sh"
+	local dts_dir="${DTB_BOARD}"
+	case "$DTB_BOARD" in
+		h700)   dts_dir=allwinner ;;
+		rk3326|rk3566) dts_dir=rockchip ;;
+	esac
+	bash "$traits_gen" overlays "$DTB_BOARD" "arch/arm64/boot/dts/$dts_dir" >/dev/null || return 1
+	[ "$DTB_BOARD" = "rk3326" ] &&
+		bash "$traits_gen" makefile "$DTB_BOARD" >> arch/arm64/boot/dts/rockchip/Makefile
+
+	# 3. Merge kernel config:
+	#    tiny-base.config -> tiny-<board>.config -> tiny-panfrost.config -> olddefconfig
+	local cfg_src="${MINIME_ROOT:-/workspace}/packages/components/boards"
+	cat > .config <<-EOF
+		# merged by APKBUILD build()
+		# tiny-base.config first
+	EOF
+	cat "${cfg_src}/common/tiny-base.config" >> .config
+	cat "${cfg_src}/${DTB_BOARD}/tiny-${DTB_BOARD}.config" >> .config
+	if [ -f "${cfg_src}/${DTB_BOARD}/tiny-dongles.config" ]; then
+		cat "${cfg_src}/${DTB_BOARD}/tiny-dongles.config" >> .config
+	fi
+	cat "${cfg_src}/common/tiny-panfrost.config" >> .config
+
+	# 4. Resolve new options and surface any unresolved ones.
+	local fw_stage="$srcdir/firmware"
+	mkdir -p "$fw_stage"
+	cp -rL "${MINIME_ROOT:-/workspace}/packages/components/boards/common/firmware/"* "$fw_stage/"
+	if [ -d "${MINIME_ROOT:-/workspace}/packages/components/boards/${DTB_BOARD}/firmware" ]; then
+		cp -rL "${MINIME_ROOT:-/workspace}/packages/components/boards/${DTB_BOARD}/firmware/"* "$fw_stage/"
+	fi
+	sed -i "s|__MINIME_BOARD_FIRMWARE_DIR__|$fw_stage|g" .config
+	sed -i "s|__MINIME_COMMON_FIRMWARE_DIR__|${MINIME_ROOT:-/workspace}/packages/components/boards/common/firmware|g" .config
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- olddefconfig
+
+	# 5. Hard guard: CONFIG_DRM_PANFROST must be present, CONFIG_MALI_KBASE
+	#    must not.  A future patch series that re-enables the proprietary
+	#    Mali driver pair needs explicit opt-in, not a silent regression.
+	grep -q "^CONFIG_DRM_PANFROST=y" .config \
+		|| { echo "FATAL: CONFIG_DRM_PANFROST=y missing after olddefconfig"; return 1; }
+	if grep -q "^CONFIG_MALI_KBASE=y\|^CONFIG_MALI_MIDGARD=y\|^CONFIG_MALI_BIFROST=y" .config; then
+		echo "FATAL: proprietary Mali driver re-enabled by olddefconfig"; return 1
+	fi
+
+	# 6. Build kernel + DTBs + modules.
+	local dtb_targets=""
+	for dtb in $_dtbs; do
+		dtb_targets="$dtb_targets ${dtb}.dtb"
+	done
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- -j"$JOBS" Image modules $dtb_targets
+}
+
+package() {
+	local src="$srcdir/linux-$pkgver"
+	cd "$src" || return 1
+
+	# Package Image, DTBs, config, and modules into the APK package.
+	install -Dm644 .config "$pkgdir/var/lib/minime/tinykernel.config"
+	install -Dm644 arch/arm64/boot/Image "$pkgdir/var/lib/minime/tinykernel.Image"
+	for dtb in $_dtbs; do
+		local out="$pkgdir/var/lib/minime/dtbs/${dtb##*/}.dtb"
+		install -Dm644 "arch/arm64/boot/dts/${dtb}.dtb" "$out"
+	done
+
+	mkdir -p "$pkgdir/lib/modules"
+	make ARCH=arm64 CROSS_COMPILE=aarch64-alpine-linux-musl- \
+		INSTALL_MOD_PATH="$pkgdir" modules_install
+	rm -f "$pkgdir"/lib/modules/*/build "$pkgdir"/lib/modules/*/source
+}
+
+# Staging hook: build_tinykernel() in scripts/build.sh runs after abuild
+# to pick up /alpine-output/boot/Image + DTBs.  abuild's "rootpkg" target
+# produces the .apk listed above.

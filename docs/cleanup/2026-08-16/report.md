@@ -1,6 +1,6 @@
 # Minime Cleanup Review — minui · 2026-08-16
 
-> trial run of the cleanup skill · region: `minui` (`minime/ui/minui`) · baseline: `upstream-main` (snapshot of shauninman/MinUI)
+> trial run of the cleanup skill · region: `minui` (`packages/ui/minui`) · baseline: `upstream-main` (snapshot of shauninman/MinUI)
 
 ## Summary
 

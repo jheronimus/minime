@@ -78,7 +78,7 @@ Transition Wi-Fi to **iwd (Internet Wireless Daemon)**:
 
 ## Reference
 
-- Previous wifi service: `minime/boards/common/overlay/etc/init.d/wifi`
+- Previous wifi service: `packages/components/boards/common/overlay/etc/init.d/wifi`
   (wpa_supplicant + udhcpc version).
 - iwd storage/config dirs: `iwd.network(5)` — `$STATE_DIRECTORY` defaults to
   `/var/lib/iwd`, overridden per-daemon.

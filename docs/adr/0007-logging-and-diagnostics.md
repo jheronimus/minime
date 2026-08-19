@@ -101,7 +101,7 @@ bundles, on demand:
 - `logs/` (all per-boot dirs),
 - live `dmesg` output,
 - wifi diagnostics (if present),
-- `.minime/traits`, `.minime/ui.env`, `.minime/config/*`,
+- `.minime/traits`, `.packages/ui.env`, `.minime/config/*`,
 - `.system/version.txt` and commit info,
 
 into `minime-diagnostics-YYYYmmdd.tar.gz` at the FAT root. A host-side

@@ -2,7 +2,7 @@
 
 ## Context
 
-Minime's shared cores (built from `minime/build/cores/manifest` by `buildcores.sh`,
+Minime's shared cores (built from `packages/cores/manifest` by `buildcores.sh`,
 consumed by MinUI, Allium and muOS) were inherited verbatim from MinUI, whose
 `platform=minime` cores target the weakest Anbernic chips (RGB30/RK2023-class).
 Adding the muOS frontend port surfaced the need to re-review: muOS/Rocknix/Knulli

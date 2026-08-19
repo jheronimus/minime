@@ -21,7 +21,7 @@ cores unverifiable.
 
 Build every core **once** in CI and let both UIs consume the flat output.
 
-1. **`minime/build/cores/` is the single source of truth** (moved out of the
+1. **`packages/cores/` is the single source of truth** (moved out of the
    MinUI submodule):
    - `manifest`: 25 recipes in `core|repo|hash|buildpath|makefile|flags|patch|
      platform|core_so|optional|autobump|builder` form. The 13 original MinUI
@@ -41,9 +41,9 @@ Build every core **once** in CI and let both UIs consume the flat output.
      `cores.txt`.
 2. **`build-cores` CI job** (matrix musl/glibc, mirrors `build-ui`) runs
    `buildcores.sh` in the `minime-musl` / `minime-glibc` containers, caches
-   `minime/build/cores/out` and a per-libc ccache, and uploads a `cores-<libc>`
+   `packages/cores/out` and a per-libc ccache, and uploads a `cores-<libc>`
    artifact. `build-ui` depends on it and downloads the artifact to
-   `minime/build/cores/out`.
+   `packages/cores/out`.
 3. **Consumption**:
    - MinUI: the submodule `cores:` make target copies the flat artifact into
      `SYSTEM/minime/cores` (all paks load `$CORES_PATH/<EMU_EXE>_libretro.so`
@@ -70,6 +70,6 @@ Build every core **once** in CI and let both UIs consume the flat output.
 
 - ADR 0005/0006: single-binary CPU ISA and core build optimization flags.
 - ADR 0004: target build convention (this ADR covers UI cores, not target
-  rootfs; `buildcores.sh` is a separate `minime/build/` component).
+  rootfs; `buildcores.sh` is a separate `packages/image/` component).
 - ADR 0023 (yabasanshiro port) and ADR 0024 (drastic conversion) describe the
   two WIP cores.

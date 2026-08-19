@@ -11,9 +11,9 @@ warnings=0
 echo "Checking kernel configuration fragments..."
 
 for pair in \
-    "h700 minime/boards/common/tiny-base.config minime/boards/h700/tiny-h700.config" \
-    "rk3326 minime/boards/common/tiny-base.config minime/boards/rk3326/tiny-rk3326.config" \
-    "rk3566 minime/boards/common/tiny-base.config minime/boards/rk3566/tiny-rk3566.config"
+    "h700 packages/components/boards/common/tiny-base.config packages/components/boards/h700/tiny-h700.config" \
+    "rk3326 packages/components/boards/common/tiny-base.config packages/components/boards/rk3326/tiny-rk3326.config" \
+    "rk3566 packages/components/boards/common/tiny-base.config packages/components/boards/rk3566/tiny-rk3566.config"
 do
     label="${pair%% *}"
     files="${pair#* }"
@@ -26,7 +26,7 @@ do
     out=$(awk -v label="$label" '
         { sub(/^[ \t]+/, ""); sub(/[ \t]+$/, "") }
         /^$/ { next }
-        
+
         {
             sym = ""
             val = ""
@@ -40,22 +40,22 @@ do
             } else {
                 next
             }
-            
+
             if (sym !~ /^CONFIG_/) {
                 print "ERROR [" label "] Invalid symbol name without CONFIG_ prefix at " FILENAME ":" FNR ": " sym
                 next
             }
-            
+
             if (sym in seen && sym != "CONFIG_EXTRA_FIRMWARE" && sym != "CONFIG_EXTRA_FIRMWARE_DIR") {
                 print "ERROR [" label "] Duplicate symbol " sym " defined at " FILENAME ":" FNR " and " seen[sym]
             }
             seen[sym] = FILENAME ":" FNR
-            
+
             if (sym ~ /^CONFIG_NET_VENDOR_/ && val == "y") {
                 vendor_locs[sym] = FILENAME ":" FNR
             }
         }
-        
+
         END {
             for (v_sym in vendor_locs) {
                 v_name = substr(v_sym, 19)

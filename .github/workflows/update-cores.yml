@@ -22,24 +22,27 @@ jobs:
       - name: Bump autobump core hashes
         run: |
           python3 - <<'PYEOF'
-          import os, subprocess
+          import glob, os, re, subprocess
 
-          manifest = "minime/build/cores/manifest"
           changed = False
-          lines = open(manifest).read().splitlines()
-          out = []
-          for line in lines:
-              if not line or line.startswith("#"):
-                  out.append(line)
+          for ini_path in sorted(glob.glob("packages/cores/*/core.ini")):
+              core = os.path.basename(os.path.dirname(ini_path))
+              content = open(ini_path).read()
+
+              autobump_match = re.search(r"^autobump\s*=\s*(.*)$", content, re.MULTILINE)
+              repo_match = re.search(r"^repo\s*=\s*(.*)$", content, re.MULTILINE)
+              hash_match = re.search(r"^hash\s*=\s*(.*)$", content, re.MULTILINE)
+
+              if not (autobump_match and repo_match and hash_match):
                   continue
-              fields = line.split("|")
-              if len(fields) != 12:
-                  out.append(line)
-                  continue
-              core, repo, hash_, buildpath, makefile, flags, patch, platform, core_so, optional, autobump, builder = fields
+
+              autobump = autobump_match.group(1).strip()
+              repo = repo_match.group(1).strip()
+              hash_ = hash_match.group(1).strip()
+
               if autobump != "1" or not repo or not hash_:
-                  out.append(line)
                   continue
+
               try:
                   head = subprocess.run(
                       ["git", "ls-remote", repo, "HEAD"],
@@ -47,17 +50,16 @@ jobs:
                   ).stdout.split()[0]
               except Exception as e:
                   print(f"  [skip] {core}: {e}")
-                  out.append(line)
                   continue
+
               if head != hash_:
-                  fields[2] = head
-                  line = "|".join(fields)
+                  new_content = re.sub(r"^hash\s*=.*$", f"hash = {head}", content, flags=re.MULTILINE)
+                  open(ini_path, "w").write(new_content)
                   print(f"  {core}: {hash_[:12]} -> {head[:12]}")
                   changed = True
-              out.append(line)
-          open(manifest, "w").write("\n".join(out) + "\n")
+
           if changed:
-              print("manifest updated")
+              print("cores updated")
           else:
               print("cores are up-to-date")
           PYEOF
@@ -67,7 +69,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add minime/build/cores/manifest
+          git add packages/cores
           if git diff --staged --quiet; then
             echo "No core changes."
           else

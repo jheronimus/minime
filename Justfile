@@ -89,16 +89,16 @@ validate-ci: validate check-defconfigs check-packages
 
 # Merge and validate our custom config fragments for all boards
 check-defconfigs:
-    make -C minime/targets/buildroot defconfig BOARD=h700
-    make -C minime/targets/buildroot defconfig BOARD=rk3326
-    make -C minime/targets/buildroot defconfig BOARD=rk3566
+    make -C packages/components/buildroot defconfig BOARD=h700
+    make -C packages/components/buildroot defconfig BOARD=rk3326
+    make -C packages/components/buildroot defconfig BOARD=rk3566
 
 # Lint our custom Buildroot packages using upstream check-package utility
 check-packages:
     #!/usr/bin/env sh
     set -eu
-    if [ -d minime/targets/buildroot/buildroot ]; then
-        python3 minime/targets/buildroot/buildroot/utils/check-package -b minime/targets/buildroot/external/package/*/*
+    if [ -d packages/components/buildroot/buildroot ]; then
+        python3 packages/components/buildroot/buildroot/utils/check-package -b packages/components/buildroot/external/package/*/*
     else
         echo "Buildroot source tree not found — skipping (requires upstream Buildroot tree)."
     fi
@@ -110,7 +110,7 @@ build-allium target="musl":
     #!/usr/bin/env sh
     set -eu
     echo "Building Allium for target {{target}}..."
-    cd minime/ui/allium
+    cd packages/ui/allium
     if [ "{{target}}" = "musl" ]; then
         cargo build --release --target aarch64-unknown-linux-musl --features minime
     else
@@ -122,7 +122,7 @@ build-minui target="musl":
     #!/usr/bin/env sh
     set -eu
     echo "Building MinUI for target {{target}}..."
-    cd minime/ui/minui
+    cd packages/ui/minui
     make system PLATFORM=minime
     make cores PLATFORM=minime
     make package
@@ -132,7 +132,7 @@ build-muos target="musl":
     #!/usr/bin/env sh
     set -eu
     echo "Building muOS for target {{target}}..."
-    ./minime/build/mkui.sh muos {{target}}
+    ./packages/ui/build.sh muos {{target}}
 
 # ── Developer setup ───────────────────────────────────────────────────────────
 

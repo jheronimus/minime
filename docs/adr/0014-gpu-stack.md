@@ -20,7 +20,7 @@ is therefore made **per target**, not globally.
 ## Decision
 
 ### Alpine → Panfrost (open source)
-- Kernel: `minime/boards/common/tiny-panfrost.config`
+- Kernel: `packages/components/boards/common/tiny-panfrost.config`
   (`CONFIG_DRM_PANFROST=y` + dependencies).
 - Userspace: Mesa Panfrost via DRM/GBM/KMS provides GLES (`mesa-gles`),
   desktop OpenGL (`mesa-gl` ships `libGL.so.1`), EGL (`mesa-egl`), GBM
@@ -30,7 +30,7 @@ is therefore made **per target**, not globally.
   `/usr/share/minime/traits/platform.ini`.
 
 ### Buildroot → libmali + mali-kbase (proprietary)
-- Kernel: `minime/boards/common/tiny-libmali.config` — no in-tree GPU `=y`
+- Kernel: `packages/components/boards/common/tiny-libmali.config` — no in-tree GPU `=y`
   options; Panfrost is explicitly disabled; the out-of-tree mali-kbase module
   is built separately.
 - Userspace: `src/libmali` blobs (Bifrost G31 for H700/RK3326, G52 for RK3566)
@@ -44,7 +44,7 @@ is therefore made **per target**, not globally.
   `init.d/gpudriver` service reads it and loads the matching module (it
   replaced the separate panfrost/gpudriver scripts); `update.sh` uses it as
   the target-detection fallback (`panfrost=alpine`, `mali_kbase=buildroot`).
-- udev rules (`minime/boards/common/overlay/etc/udev/rules.d/50-panfrost.rules`)
+- udev rules (`packages/components/boards/common/overlay/etc/udev/rules.d/50-panfrost.rules`)
   set device permissions.
 
 ## Consequences
@@ -59,11 +59,11 @@ is therefore made **per target**, not globally.
   research (see ADR 0023).
 
 ## Reference
-- Kernel fragments: `minime/boards/common/tiny-panfrost.config`,
-  `minime/boards/common/tiny-libmali.config`.
+- Kernel fragments: `packages/components/boards/common/tiny-panfrost.config`,
+  `packages/components/boards/common/tiny-libmali.config`.
 - Userspace: `src/libmali/`, `src/mali-kbase/`,
-  `minime/targets/buildroot/external/package/{libmali,mali-kbase}/`.
-- Alpine package lists: `minime/targets/alpine/configs/world-{common,h700,rk3326,rk3566}`.
-- Injection: `minime/targets/{alpine,buildroot}/.../post-build.sh`.
+  `packages/components/buildroot/external/package/{libmali,mali-kbase}/`.
+- Alpine package lists: `packages/components/alpine/configs/world-{common,h700,rk3326,rk3566}`.
+- Injection: `packages/components/{alpine,buildroot}/.../post-build.sh`.
 - Related: `docs/adr/0023-yabasanshiro-libretro-port.md` (renderer strategy),
   `docs/adr/0018-cpu-performance-and-thermal-policy.md` (GPU thermal trips).

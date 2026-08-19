@@ -105,7 +105,7 @@
 - [x] `dotclean` OpenRC service clears Mac metadata files (`._*`, `.DS_Store`)
 - [x] Device hostname announcement via mdnsd (`minime.local`, ADR 0017)
 - [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0003)
-- [x] RK3326 bringup in CI matrix and both `minime/targets/*/Makefile` boards
+- [x] RK3326 bringup in CI matrix and both `packages/components/*/Makefile` boards
 - [x] Integrate mainline Rockchip power/charger drivers (PM domains, IO domain, RK817 charger) and thermal framework
 - [x] Ship panel firmware blobs for all H700 panel variants (rg28xx, rg34xx/-sp, rg35xx-plus-rev6, rg35xx-sp-v2)
 - [x] Unified DRM bootsplash (plane rotation, dumb buffers) and Allium DRM display module with fallback

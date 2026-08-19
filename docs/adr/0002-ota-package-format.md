@@ -18,7 +18,7 @@ Questions arose regarding OTA behavior and delivery:
 
 ### 1. Update Package Specification
 
-The update package generator [mkupdate.sh](../../minime/build/mkupdate.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.zst`.
+The update package generator [mkupdate.sh](../../packages/image/build.sh) packages system binaries **and the active UI payload** into a compressed archive `minime-<target>-<board>-<ui>.tar.zst`.
 
 The archive is a **deliberate mirror of the on-SD payload layout**. It contains strictly:
 
@@ -29,9 +29,9 @@ The archive is a **deliberate mirror of the on-SD payload layout**. It contains 
 | `.minime/system` | `system.erofs` | Read-only compressed EROFS root filesystem |
 | `.minime/devices/*.dtb` | `*.dtb` | Device Tree Blobs for board hardware variants |
 | `.minime/dtb` | default DTB | `boot.cmd`'s fallback DTB, used when `.minime/devices/${device}` is missing (`device` comes from `device.cfg`/U-Boot `fdtfile`; the default is chosen like `mkimage.sh` — `DEFAULT_DEVICE` from `boot.env`, else the first `devices/*.dtb`). Without this entry, DTS-affecting kernel changes silently never deploy over OTA |
-| `.minime/ui.env` | UI payload | UI contract manifest (only when a `--ui` is specified) |
+| `.packages/ui.env` | UI payload | UI contract manifest (only when a `--ui` is specified) |
 | `.minime/manifest.json` | Generated | Build identity: `target`, `board`, `ui`, `minime_commit`, `ui_commit`, `timestamp` |
-| `.system/` | UI payload staging | MinUI binaries (`minime/`, `res/`, `version.txt`, `commits.txt`) |
+| `.system/` | UI payload staging | MinUI binaries (`packages/`, `res/`, `version.txt`, `commits.txt`) |
 
 The archive is built with a leading `.` so that **extracting it directly onto `/mnt/sdcard/` places each entry in its final location**:
 
@@ -45,10 +45,10 @@ unzstd -c minime-alpine-h700-minui.tar.zst | tar -xf - -C /mnt/sdcard/
 
 OTA updates do not trigger SD card partition expansion:
 
-- [mkimage.sh](../../minime/build/mkimage.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.zst`).
-- [mkupdate.sh](../../minime/build/mkupdate.sh) omits `/mnt/card/.minime/config/first_boot_expand`.
-- On first boot after raw image flash, [initramfs-init.sh](../../minime/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
-- When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](../../minime/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
+- [mkimage.sh](../../packages/image/build.sh#L135) creates `/mnt/card/.minime/config/first_boot_expand` only when staging full raw disk images (`.img.zst`).
+- [mkupdate.sh](../../packages/image/build.sh) omits `/mnt/card/.minime/config/first_boot_expand`.
+- On first boot after raw image flash, [initramfs-init.sh](../../packages/components/boards/common/initramfs-init.sh#L91-L150) finds `first_boot_expand` -> resizes partition -> deletes `first_boot_expand`.
+- When an OTA update is applied, `first_boot_expand` is not recreated -> [initramfs-init.sh](../../packages/components/boards/common/initramfs-init.sh#L91) finds no trigger file -> skips partition expansion.
 
 ### 3. Delivery Tooling
 

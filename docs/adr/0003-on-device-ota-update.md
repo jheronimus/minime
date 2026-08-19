@@ -12,7 +12,7 @@ OTA delivery was originally host-pushed via `just update <os> <board> <ui>`
 ([scripts/update-device.sh](../../scripts/update-device.sh)). This required the host
 to track board, target, UI, and dynamic DHCP IP (`deploy.cfg`).
 
-The on-device updater [update.sh](../../minime/boards/common/overlay/usr/bin/update.sh)
+The on-device updater [update.sh](../../packages/components/boards/common/overlay/usr/bin/update.sh)
 is the single OTA path. Requirements:
 - **Switch UIs & Targets without reflashing.** Switching between MinUI/Allium or
   Alpine/Buildroot must not require rewriting the SD card.
@@ -22,11 +22,11 @@ is the single OTA path. Requirements:
 
 ### 1. The on-device updater is the single OTA path
 
-[update.sh](../../minime/boards/common/overlay/usr/bin/update.sh) takes optional
+[update.sh](../../packages/components/boards/common/overlay/usr/bin/update.sh) takes optional
 `[alpine|buildroot]` and `[minui|allium]` arguments and self-detects anything omitted:
 - **Board** from `/proc/device-tree/compatible`, with staged `.minime/dtb` fallback.
 - **Target** from `/etc/os-release`, with `gpu_driver` trait fallback.
-- **UI** from `/mnt/sdcard/.minime/ui.env`, with `minui` fallback.
+- **UI** from `/mnt/sdcard/.packages/ui.env`, with `minui` fallback.
 
 It downloads `minime-<target>-<board>-<ui>.tar.zst` from GitHub `testing`, diffs
 `.minime/manifest.json` against the installed build (exits early if current),
@@ -34,7 +34,7 @@ stops the UI, applies (`.system` clean-replaced, `.minime` overlaid), and reboot
 
 ### 2. UI and Target switching without reflashing
 
-The OTA archive carries `.minime/ui.env`, the full OS payload (`kernel`,
+The OTA archive carries `.packages/ui.env`, the full OS payload (`kernel`,
 `initramfs`, `system.erofs`, DTBs), and UI binaries (ADR 0002). `update.sh allium`
 or `update.sh buildroot` installs the requested payload. On next boot, `init.d/ui`
 reads the overlaid `ui.env` and traits regenerate if `gpu_driver` changed.
@@ -64,6 +64,6 @@ There is no Roms rename on UI switch — user data is preserved by construction.
 
 ## Reference
 
-- Updater: `minime/boards/common/overlay/usr/bin/update.sh`.
+- Updater: `packages/components/boards/common/overlay/usr/bin/update.sh`.
 - Mapping: `roms/mappings`, `roms/install.sh`.
 - Related: `docs/adr/0002-ota-package-format.md`, `docs/adr/0016-network-services-passwordless.md`, `docs/adr/0017-mdns-self-announcement.md`.

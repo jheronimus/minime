@@ -49,7 +49,7 @@ The only differing artifact is the kernel. The only kernel-affecting commit betw
 
 ## Decision
 
-Revert the RSB additions in `minime/boards/h700/tiny-h700.config`:
+Revert the RSB additions in `packages/components/boards/h700/tiny-h700.config`:
 
 - Remove `CONFIG_SUNXI_RSB=y`
 - Remove `CONFIG_MFD_AXP20X_RSB=y`

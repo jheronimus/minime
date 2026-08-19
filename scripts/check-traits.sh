@@ -7,9 +7,9 @@
 
 set -eu
 
-TRAITS_ROOT="${1:-$(cd "$(dirname "$0")/../minime/boards" && pwd)}"
+TRAITS_ROOT="${1:-$(cd "$(dirname "$0")/../packages/components/boards" && pwd)}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TRAITS_GEN="${REPO_ROOT}/minime/build/traits-gen.sh"
+TRAITS_GEN="${REPO_ROOT}/packages/image/gentraits.sh"
 
 fail() {
 	echo "$*" >&2
@@ -118,8 +118,8 @@ echo "traits check passed"
 # mis-parses the merged file at runtime. [dts]/[match]/parent keys are
 # generation metadata and are never emitted.
 
-ALLIUM_TRAITS="${REPO_ROOT}/minime/ui/allium/crates/common/src/platform/minime/traits.rs"
-MINUI_TRAITS="${REPO_ROOT}/minime/ui/minui/workspace/minime/platform/traits.c"
+ALLIUM_TRAITS="${REPO_ROOT}/packages/ui/allium/crates/common/src/platform/minime/traits.rs"
+MINUI_TRAITS="${REPO_ROOT}/packages/ui/minui/workspace/minime/platform/traits.c"
 
 # Keys the merged runtime file can contain (registry minus meta keys).
 emitted_keys() {

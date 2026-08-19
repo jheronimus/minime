@@ -85,14 +85,14 @@ tmp_br=$(mktemp)
 tmp_ak=$(mktemp)
 trap 'rm -f "$tmp_br" "$tmp_ak"' EXIT
 
-find "${ROOT_DIR}/minime/targets/buildroot/external/package" -type f -name '*.hash' > "$tmp_br"
+find "${ROOT_DIR}/packages/components/buildroot/external/package" -type f -name '*.hash' > "$tmp_br"
 br_count=$(wc -l < "$tmp_br")
 echo "Checking $br_count Buildroot package .hash file(s)..."
 while IFS= read -r bh || [ -n "$bh" ]; do
     [ -n "$bh" ] && check_buildroot_hash "$bh"
 done < "$tmp_br"
 
-find "${ROOT_DIR}/minime/targets/alpine/aports" -type f -name 'APKBUILD' > "$tmp_ak"
+find "${ROOT_DIR}/packages/components/alpine/aports" -type f -name 'APKBUILD' > "$tmp_ak"
 ak_count=$(wc -l < "$tmp_ak")
 echo "Checking $ak_count Alpine APKBUILD file(s)..."
 while IFS= read -r ak || [ -n "$ak" ]; do

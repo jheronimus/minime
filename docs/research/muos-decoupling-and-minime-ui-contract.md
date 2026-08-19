@@ -1,6 +1,6 @@
 # MuOS Decoupling & Minime UI Contract — Research
 
-> Status: research-phase analysis. The **decided** architecture is [ADR 0028](../adr/0028-muos-frontend-port.md): upstream `MustardOS/frontend` + `MustardOS/internal` submodules, no forks, all Minime code as patches/overlay under `minime/ui/muos/`. This note records the upstream disassembly that informed that decision.
+> Status: research-phase analysis. The **decided** architecture is [ADR 0028](../adr/0028-muos-frontend-port.md): upstream `MustardOS/frontend` + `MustardOS/internal` submodules, no forks, all Minime code as patches/overlay under `packages/ui/muos/`. This note records the upstream disassembly that informed that decision.
 
 ## Upstream Architecture
 
@@ -9,7 +9,7 @@
 ## Minime Replacement
 
 - Minime's OpenRC init, `device.sh`, ALSA/Mali drivers, and `init.d/traits` replace `internal`'s OS glue (`script/init/`, `script/system/`, `device/`, `bin/`).
-- Only `internal/share/` (themes/fonts/info) and `internal/script/` are staged into the payload by `mkui.sh`; the rest is Minime-specific (`launch.sh` + iwd wifi scripts) and lives in `minime/ui/muos/overlay/`.
+- Only `internal/share/` (themes/fonts/info) and `internal/script/` are staged into the payload by `mkui.sh`; the rest is Minime-specific (`launch.sh` + iwd wifi scripts) and lives in `packages/ui/muos/overlay/`.
 - `MustardOS/asset` (marketing collateral) and `theme` (3.5 GB theme-manager catalog; the default theme ships in `internal/share/theme/MustardOS`) are not submoduled.
 - Minime uses **iwd**, not wpa_supplicant; the frontend's wifi bridge (`muxshare.c` iw/iwctl) is an irreducible patch.
 
@@ -18,7 +18,7 @@
 | Component | Provided By | Location |
 | :--- | :--- | :--- |
 | Linux kernel, DTB, GPU, audio, network | Minime OS | RootFS |
-| UI init service | Minime OS | `/etc/init.d/ui` → `.minime/ui.env` |
+| UI init service | Minime OS | `/etc/init.d/ui` → `.packages/ui.env` |
 | Hardware traits | Minime OS | `/mnt/sdcard/.minime/traits` |
 | muOS binaries | frontend build | `.muos/bin/` |
 | muOS share/script | internal submodule | `.muos/share/`, `.muos/script/` |

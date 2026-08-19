@@ -17,10 +17,10 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 
 ## Monorepo Structure
 
-- `minime/`: Central source of truth for hardware definitions, bootloaders, target software builders, and image packaging.
+- `packages/`: Central source of truth for hardware definitions, bootloaders, target software builders, and image packaging.
   - `boards/`: Board definitions, kernel patches, traits, and OpenRC overlays.
     - `common/`: Shared OpenRC services (`overlay/etc/init.d/`), sysctl, wifi config, `device.sh`.
-    - `h700/`, `rk3326/`, `rk3566/`: Per-board patches, traits, firmware, `boot.env`, and `genimage.cfg`. Per-device overlay DTS is generated from the traits registry by `minime/build/traits-gen.sh` (no `dts/` dirs). The full system design — intent (deterministic traits, no hand authoring, follow mainline not other firmwares), logic, and audit references — is in [`docs/traits-system.md`](docs/traits-system.md); kernel-version evaluation uses the `kernel-review` skill.
+    - `h700/`, `rk3326/`, `rk3566/`: Per-board patches, traits, firmware, `boot.env`, and `genimage.cfg`. Per-device overlay DTS is generated from the traits registry by `packages/image/gentraits.sh` (no `dts/` dirs). The full system design — intent (deterministic traits, no hand authoring, follow mainline not other firmwares), logic, and audit references — is in [`docs/traits-system.md`](docs/traits-system.md); kernel-version evaluation uses the `kernel-review` skill.
   - `uboot/`: U-Boot configs (`config/`), patches (`patches/`), and prebuilt binaries (`out/`).
   - `targets/`: Target software builders.
     - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).
@@ -34,21 +34,21 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 
 ## File Locations & Repository Mapping
 
-Minime supports two build targets: Alpine and Buildroot, housed under `minime/targets/`. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the central `minime/boards/` directory. Target build scripts reference or import them directly from there.
+Minime supports two build targets: Alpine and Buildroot, housed under `packages/components/`. All shared configuration files, DTS/DTB files, kernel patches, firmware blobs, and hardware traits live in the central `packages/components/boards/` directory. Target build scripts reference or import them directly from there.
 
 For precise paths, consult [docs/MAP.md](docs/MAP.md).
 
-For init scripts, `minime/boards/common/overlay/etc/init.d/` is the single source of truth for cross-distro OpenRC services. At build time, target builders copy these init scripts into their rootfs before building `system.erofs`.
+For init scripts, `packages/components/boards/common/overlay/etc/init.d/` is the single source of truth for cross-distro OpenRC services. At build time, target builders copy these init scripts into their rootfs before building `system.erofs`.
 
 ## Local Target Builds
 
-Alpine and Buildroot targets are built from their respective directories in `minime/targets/` using the two-step build convention:
-- **Alpine**: `make -C minime/targets/alpine components BOARD=<board>` then `make -C minime/targets/alpine image BOARD=<board>`
-- **Buildroot**: `make -C minime/targets/buildroot components BOARD=<board>` then `make -C minime/targets/buildroot image BOARD=<board>`
+Alpine and Buildroot targets are built from their respective directories in `packages/components/` using the two-step build convention:
+- **Alpine**: `make -C packages/components/alpine components BOARD=<board>` then `make -C packages/components/alpine image BOARD=<board>`
+- **Buildroot**: `make -C packages/components/buildroot components BOARD=<board>` then `make -C packages/components/buildroot image BOARD=<board>`
 
 ### Build Convention
 
-Both targets follow the same two-step pattern via the shared `minime/targets/common.mk` (included by both target Makefiles). The packaging scripts (`genassets.sh`, `mkimage.sh`, `mkupdate.sh`) are shared in `minime/build/`, but each target runs them in its own container image — `minime-musl` (Alpine, arm64) or `minime-glibc` (Buildroot, amd64):
+Both targets follow the same two-step pattern via the shared `packages/components/common.mk` (included by both target Makefiles). The packaging scripts (`genassets.sh`, `mkimage.sh`, `mkupdate.sh`) are shared in `packages/image/`, but each target runs them in its own container image — `minime-musl` (Alpine, arm64) or `minime-glibc` (Buildroot, amd64):
 ```
 make components  →  build.sh  (compilation in the target's own container)
 make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, target's own container)
@@ -78,7 +78,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
   file, and may grow freely.
 - **Path and Restructuring Integrity**: When moving, renaming, or consolidating files or directories (e.g., board assets, source paths, packages), you MUST perform a repository-wide search (`grep`) for all references to the old paths in both `alpine/` and `buildroot/` directories (including Makefiles, package `.mk` files, configs, scripts, workflow files, and `APKBUILD`s) and update them concurrently.
 - **Dual-Distro Co-equality**: Both Alpine and Buildroot are co-equal consumers of the shared assets. When modifying or consolidating a shared config/path, ensure the change is implemented in both build targets, verifying that neither target is left broken or using outdated paths.
-- **UI Submodules & CI Artifacts**: `minime/ui/allium`, `minime/ui/minui`, and `minime/ui/muos` are git submodules tracking upstream/fork branches. UI binaries are compiled by the `ui` job in `build.yml` (musl on ARM64, glibc on AMD64 cross) and passed to `build-os` as ephemeral GitHub Actions run artifacts (`ui-{ui}-{libc}`). They are never committed to git and never uploaded to a GitHub Release. At packaging time `genassets.sh` extracts the matching archive from the downloaded artifact into `minime/ui/out/` (ephemeral runner path). Submodule SHAs in `minime` are bumped automatically by `update-submodules.yml` (daily cron + `repository_dispatch`).
+- **UI Submodules & CI Artifacts**: `packages/ui/allium`, `packages/ui/minui`, and `packages/ui/muos` are git submodules tracking upstream/fork branches. UI binaries are compiled by the `ui` job in `build.yml` (musl on ARM64, glibc on AMD64 cross) and passed to `build-os` as ephemeral GitHub Actions run artifacts (`ui-{ui}-{libc}`). They are never committed to git and never uploaded to a GitHub Release. At packaging time `genassets.sh` extracts the matching archive from the downloaded artifact into `packages/ui/out/` (ephemeral runner path). Submodule SHAs in `minime` are bumped automatically by `update-submodules.yml` (daily cron + `repository_dispatch`).
 - **Minimal UI Codebase Intrusion**: Unless implementing a user-requested feature, restrict UI code modifications strictly to the Minime platform port directory (e.g. `workspace/minime/` in MinUI, `src/platform/minime/` in Allium). Leave shared upstream launcher code untouched. Exceptions are permitted ONLY when:
   - Working around upstream behavior within the platform port directory is excessively complex or hacky (e.g. requiring dozens of lines of workaround vs. a clean one-line fix in shared code).
   - The change objectively fixes crashes, memory/data corruption, thread deadlocks, or performance regressions present in the original codebase.

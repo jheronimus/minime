@@ -188,7 +188,7 @@ Rocknix sources (cloned, not web-searched) plus on-device checks:
 ### 4. Strict parser contract
 
 UIs mirror `docs/research/traits.c` (the reference implementation) or
-`minime/ui/minui/workspace/minime/platform/traits.c`:
+`packages/ui/minui/workspace/minime/platform/traits.c`:
 
 - A schema table maps keys to struct fields (string or int).
 - Parsing fails loudly on **unknown keys**, **missing required keys**, and
@@ -215,6 +215,6 @@ flags or resolution logic.
 ## References
 
 - `docs/research/traits.c` / `traits.h` — reference parser implementation.
-- `minime/boards/*/traits/` — the trait files themselves (source of truth).
+- `packages/components/boards/*/traits/` — the trait files themselves (source of truth).
 - `docs/adr/0018-cpu-performance-and-thermal-policy.md` — CPU clock semantics.
 - `docs/adr/0012-h700-device-detection.md` — DTB detection & selection.

@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'minime/**'
+      - 'packages/**'
       - 'src/**'
       - '.github/workflows/build.yml'
       - '.github/workflows/build-bootloader.yml'
@@ -127,8 +127,8 @@ jobs:
         id: cache-cores-restore
         uses: actions/cache/restore@v6
         with:
-          path: minime/build/cores/out
-          key: cores-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/cores/out
+          key: cores-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Restore Cores CCache
         id: ccache-cores-restore
@@ -141,7 +141,7 @@ jobs:
 
       - name: Build Cores (musl)
         id: build-cores-musl-step
-        if: needs.setup.outputs.musl_or_glibc == 'musl' && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
+        if: needs.setup.outputs.musl_or_glibc == 'musl' && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('packages/cores/out/cores.txt') == '')
         env:
           CROSS_COMPILE: 'ccache '
           CC: 'ccache gcc'
@@ -154,11 +154,11 @@ jobs:
             -w /workspace \
             --env CROSS_COMPILE --env CC --env CXX --env AR \
             "${{ needs.setup.outputs.container }}" \
-            /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+            /bin/bash -c "packages/cores/build.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/cores/out"
 
       - name: Build Cores (glibc)
         id: build-cores-glibc-step
-        if: needs.setup.outputs.musl_or_glibc == 'glibc' && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('minime/build/cores/out/cores.txt') == '')
+        if: needs.setup.outputs.musl_or_glibc == 'glibc' && (steps.cache-cores-restore.outputs.cache-hit != 'true' || hashFiles('packages/cores/out/cores.txt') == '')
         env:
           CROSS_COMPILE: 'ccache aarch64-linux-gnu-'
           CC: 'ccache aarch64-linux-gnu-gcc'
@@ -171,14 +171,14 @@ jobs:
             -w /workspace \
             --env CROSS_COMPILE --env CC --env CXX --env AR \
             "${{ needs.setup.outputs.container }}" \
-            /bin/bash -c "minime/build/cores/buildcores.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/build/cores/out"
+            /bin/bash -c "packages/cores/build.sh && chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/cores/out"
 
       - name: Save Cores Cache
         if: always() && (steps.build-cores-musl-step.outcome == 'success' || steps.build-cores-glibc-step.outcome == 'success')
         uses: actions/cache/save@v6
         with:
-          path: minime/build/cores/out
-          key: cores-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/cores/out
+          key: cores-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Save Cores CCache
         if: always() && (steps.build-cores-musl-step.outcome == 'success' || steps.build-cores-glibc-step.outcome == 'success')
@@ -191,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: cores-${{ needs.setup.outputs.musl_or_glibc }}
-          path: minime/build/cores/out
+          path: packages/cores/out
           retention-days: 7
 
   ui:
@@ -210,32 +210,32 @@ jobs:
       - name: Checkout muOS internal (sparse payload)
         if: needs.setup.outputs.ui == 'muos'
         run: |
-          internal_sha="$(git ls-tree HEAD minime/ui/muos/internal | awk '{print $3}')"
-          minime/build/muos-checkout-internal.sh "$internal_sha"
+          internal_sha="$(git ls-tree HEAD packages/ui/muos/internal | awk '{print $3}')"
+          packages/ui/muos-checkout-internal.sh "$internal_sha"
 
       - name: Restore MinUI Cache
         if: needs.setup.outputs.ui == 'minui'
         id: cache-minui-restore
         uses: actions/cache/restore@v6
         with:
-          path: minime/ui/out
-          key: ui-minui-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-minui-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/minui/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Restore Allium Cache
         if: needs.setup.outputs.ui == 'allium'
         id: cache-allium-restore
         uses: actions/cache/restore@v6
         with:
-          path: minime/ui/out
-          key: ui-allium-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-allium-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/allium/HEAD', '.git/modules/packages/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/packages/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Restore muOS Cache
         if: needs.setup.outputs.ui == 'muos'
         id: cache-muos-restore
         uses: actions/cache/restore@v6
         with:
-          path: minime/ui/out
-          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/ui/muos/overlay/**', 'minime/ui/muos/patches/**', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/muos/frontend/HEAD', '.git/modules/packages/ui/muos/internal/HEAD', 'packages/ui/muos/overlay/**', 'packages/ui/muos/patches/**', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -253,10 +253,10 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            minime/ui/allium/target
-            minime/ui/allium/third-party/dufs/target
-            minime/ui/allium/third-party/collie/target
-          key: allium-target-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+            packages/ui/allium/target
+            packages/ui/allium/third-party/dufs/target
+            packages/ui/allium/third-party/collie/target
+          key: allium-target-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('packages/ui/allium/Cargo.lock', 'packages/ui/allium/third-party/dufs/Cargo.lock', 'packages/ui/allium/third-party/collie/Cargo.lock') }}
           restore-keys: |
             allium-target-${{ needs.setup.outputs.musl_or_glibc }}-
 
@@ -264,47 +264,47 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: cores-${{ needs.setup.outputs.musl_or_glibc }}
-          path: minime/build/cores/out
+          path: packages/cores/out
 
       - name: Compile UI
         id: compile-ui
         if: |
-          (needs.setup.outputs.ui == 'minui' && (steps.cache-minui-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/minui-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
-          (needs.setup.outputs.ui == 'allium' && (steps.cache-allium-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/allium-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
-          (needs.setup.outputs.ui == 'muos' && (steps.cache-muos-restore.outputs.cache-hit != 'true' || hashFiles(format('minime/ui/out/muos-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == ''))
+          (needs.setup.outputs.ui == 'minui' && (steps.cache-minui-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/minui-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
+          (needs.setup.outputs.ui == 'allium' && (steps.cache-allium-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/allium-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
+          (needs.setup.outputs.ui == 'muos' && (steps.cache-muos-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/muos-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == ''))
         run: |
-          minime/build/mkui.sh ${{ needs.setup.outputs.ui }} ${{ needs.setup.outputs.musl_or_glibc }}
+          packages/ui/build.sh ${{ needs.setup.outputs.ui }} ${{ needs.setup.outputs.musl_or_glibc }}
 
       - name: Save Allium Cargo Target
         if: always() && needs.setup.outputs.ui == 'allium' && steps.compile-ui.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: |
-            minime/ui/allium/target
-            minime/ui/allium/third-party/dufs/target
-            minime/ui/allium/third-party/collie/target
-          key: allium-target-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('minime/ui/allium/Cargo.lock', 'minime/ui/allium/third-party/dufs/Cargo.lock', 'minime/ui/allium/third-party/collie/Cargo.lock') }}
+            packages/ui/allium/target
+            packages/ui/allium/third-party/dufs/target
+            packages/ui/allium/third-party/collie/target
+          key: allium-target-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('packages/ui/allium/Cargo.lock', 'packages/ui/allium/third-party/dufs/Cargo.lock', 'packages/ui/allium/third-party/collie/Cargo.lock') }}
 
       - name: Save MinUI Cache
         if: always() && needs.setup.outputs.ui == 'minui' && steps.compile-ui.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: minime/ui/out
-          key: ui-minui-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/minui/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-minui-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/minui/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Save Allium Cache
         if: always() && needs.setup.outputs.ui == 'allium' && steps.compile-ui.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: minime/ui/out
-          key: ui-allium-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/allium/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/minime/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-allium-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/allium/HEAD', '.git/modules/packages/ui/allium/modules/third-party/RetroArch-patch/HEAD', '.git/modules/packages/ui/allium/modules/third-party/RetroArch-patch/modules/submodules/RetroArch/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Save muOS Cache
         if: always() && needs.setup.outputs.ui == 'muos' && steps.compile-ui.outcome == 'success'
         uses: actions/cache/save@v6
         with:
-          path: minime/ui/out
-          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/minime/ui/muos/frontend/HEAD', '.git/modules/minime/ui/muos/internal/HEAD', 'minime/ui/muos/overlay/**', 'minime/ui/muos/patches/**', 'minime/build/mkui.sh', 'minime/build/cores/manifest', 'minime/build/cores/buildcores.sh', 'minime/build/cores/patches/**') }}
+          path: packages/ui/out
+          key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/muos/frontend/HEAD', '.git/modules/packages/ui/muos/internal/HEAD', 'packages/ui/muos/overlay/**', 'packages/ui/muos/patches/**', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Save UI CCache
         if: always() && steps.compile-ui.outcome == 'success'
@@ -317,7 +317,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ui-${{ needs.setup.outputs.ui }}-${{ needs.setup.outputs.musl_or_glibc }}
-          path: minime/ui/out
+          path: packages/ui/out
           retention-days: 7
 
   build-os:
@@ -337,13 +337,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: bootloader-out
-          path: minime/uboot/out
+          path: packages/bootloader
 
       - name: Download UI
         uses: actions/download-artifact@v8
         with:
           name: ui-${{ needs.setup.outputs.ui }}-${{ needs.setup.outputs.musl_or_glibc }}
-          path: minime/ui/out
+          path: packages/ui/out
 
       - name: Restore CCache
         id: ccache-os-restore
@@ -365,14 +365,14 @@ jobs:
 
       - name: Build Components
         id: build-components
-        run: make -C minime/targets/${{ needs.setup.outputs.libc }} components BOARD=${{ needs.setup.outputs.soc }}
+        run: make -C packages/components/${{ needs.setup.outputs.libc }} components BOARD=${{ needs.setup.outputs.soc }}
 
       - name: Build Image & Update Package
         run: |
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
-          UI_COMMIT="$(git rev-parse --short HEAD:minime/ui/${{ needs.setup.outputs.ui }})"
+          UI_COMMIT="$(git rev-parse --short HEAD:packages/ui/${{ needs.setup.outputs.ui }})"
           export MINIME_COMMIT UI_COMMIT
-          make -C minime/targets/${{ needs.setup.outputs.libc }} image update BOARD=${{ needs.setup.outputs.soc }} UI=${{ needs.setup.outputs.ui }}
+          make -C packages/components/${{ needs.setup.outputs.libc }} image update BOARD=${{ needs.setup.outputs.soc }} UI=${{ needs.setup.outputs.ui }}
 
       - name: Save CCache
         if: always() && steps.build-components.outcome == 'success'
@@ -393,7 +393,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in minime/targets/${{ needs.setup.outputs.libc }}/out/${{ needs.setup.outputs.soc }}/*.img.zst minime/targets/${{ needs.setup.outputs.libc }}/out/${{ needs.setup.outputs.soc }}/*.tar.zst; do
+          for f in packages/components/${{ needs.setup.outputs.libc }}/out/${{ needs.setup.outputs.soc }}/*.img.zst packages/components/${{ needs.setup.outputs.libc }}/out/${{ needs.setup.outputs.soc }}/*.tar.zst; do
             [ -f "$f" ] || continue
             for attempt in 1 2 3 4 5; do
               if gh release upload testing "$f" --clobber; then
@@ -409,7 +409,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in minime/targets/alpine/out/${{ needs.setup.outputs.soc }}/tinykernel-*.apk; do
+          for f in packages/components/alpine/out/${{ needs.setup.outputs.soc }}/tinykernel-*.apk; do
             [ -f "$f" ] || continue
             if ! gh release view kernel-packages >/dev/null 2>&1; then
               gh release create kernel-packages --title "Prebuilt Linux Kernel Packages" --notes "Prebuilt Linux kernel packages for the Alpine version of Minime."

@@ -6,23 +6,15 @@ local.mk
 **/._*
 
 # Alpine abuild artifacts
-minime/targets/alpine/aports/*/src
-minime/targets/alpine/aports/*/pkg
-alpine/aports/*/src
-alpine/aports/*/pkg
+packages/components/alpine/aports/*/src
+packages/components/alpine/aports/*/pkg
 
 # Folder-specific outputs and dependencies
-minime/targets/alpine/out/
-minime/targets/alpine/logs/
-minime/targets/buildroot/out/
-minime/targets/buildroot/buildroot/
-minime/targets/buildroot/logs/
-alpine/out/
-alpine/buildroot/
-alpine/logs/
-buildroot/out/
-buildroot/buildroot/
-buildroot/logs/
+packages/components/alpine/out/
+packages/components/alpine/logs/
+packages/components/buildroot/out/
+packages/components/buildroot/buildroot/
+packages/components/buildroot/logs/
 
 # Build and local configurations
 **/local.mk
@@ -37,35 +29,27 @@ buildroot/logs/
 deploy.cfg
 wifi.cfg
 downloads/
-/ui/
-!minime/ui/
-!minime/ui/*
-linux-7.1.5/
-minime/uboot/out/*
-!minime/uboot/out/rk3566/
-minime/uboot/out/rk3566/*
-!minime/uboot/out/rk3566/rkbin/
-!minime/uboot/out/rk3326/
-minime/uboot/out/rk3326/*
-!minime/uboot/out/rk3326/rkbin/
 build-bootloader-tmp/
-minime/ui/out/
+
+packages/bootloader/*/out/*
+!packages/bootloader/rk3566/out/rkbin/
+!packages/bootloader/rk3566/out/rkbin/**
+!packages/bootloader/rk3326/out/rkbin/
+!packages/bootloader/rk3326/out/rkbin/**
+
+packages/ui/out/*
+!packages/ui/out/.gitkeep
 
 # Mounted Minime SD card (symlink to /Volumes/minime)
 card
 
-# Mac dot files
-**/.DS_Store
-**/._*
-
 # Shared cores build outputs
-minime/build/cores/out/
-minime/build/cores/src/
+packages/cores/out/
+packages/cores/src/
 
 # Console BIOS ROMs live in the private forgejo repo (jheronimus/console-bios)
 # They must never be committed here. Mount/copy them in for local builds only.
 bios/
 
 # Cleanup artifacts
-
 docs/cleanup/*

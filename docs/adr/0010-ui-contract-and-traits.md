@@ -14,7 +14,7 @@ Previously:
 ## Decision
 
 ### Core Contract Boundary
-Minime OS has zero internal knowledge of how any UI works. Minime reads `.minime/ui.env` provided by the UI payload, and UIs read hardware traits from `.minime/traits` provided by Minime — that is the complete contract boundary. Minime build scripts and init services must never mutate UI binaries, reorganize UI internal directories, or interpret UI internal logic.
+Minime OS has zero internal knowledge of how any UI works. Minime reads `.packages/ui.env` provided by the UI payload, and UIs read hardware traits from `.minime/traits` provided by Minime — that is the complete contract boundary. Minime build scripts and init services must never mutate UI binaries, reorganize UI internal directories, or interpret UI internal logic.
 
 ### 1. Hardware Traits Architecture
 Hardware platform capabilities are abstracted via immutable `.ini` manifests bundled into the rootfs at build time under `/usr/share/minime/traits/`:
@@ -30,8 +30,8 @@ minarch (the emulator host) is not device-tagged: screen dims/rotation reach it 
 - UI release zips must be structured to extract directly onto the SD card root (`/mnt/sdcard/`) without requiring custom subfolder reorganization.
 - Minime package build scripts (`alpine/aports/<ui>` and `buildroot/external/package/<ui>`) only fetch and extract the UI release zip flat into the SD staging directory (`$(BINARIES_DIR)/ui/`). Minime build recipes must **never** manufacture wrapper scripts (`launch.sh`), move internal directories, or generate `ui.env` manifests.
 
-### 3. Active UI Manifest Contract (`.minime/ui.env`)
-The active UI manifest lives at `/mnt/sdcard/.minime/ui.env`. It is owned and provided 100% by the UI payload archive.
+### 3. Active UI Manifest Contract (`.packages/ui.env`)
+The active UI manifest lives at `/mnt/sdcard/.packages/ui.env`. It is owned and provided 100% by the UI payload archive.
 
 #### Schema
 ```sh
@@ -41,7 +41,7 @@ UI_STOP_CMD="<Command or script path for native graceful UI teardown>"
 UI_PROCESSES="<Space-separated list of process names for stop cleanup>"
 ```
 
-#### Example (`.minime/ui.env`)
+#### Example (`.packages/ui.env`)
 ```sh
 UI_NAME="MinUI"
 UI_BIN="/mnt/sdcard/.system/minime/paks/MinUI.pak/launch.sh"
@@ -52,7 +52,7 @@ UI_PROCESSES="minui.elf minarch.elf keymon.elf clock.elf minput.elf syncsettings
 ### 4. Service Lifecycle (`init.d/ui`)
 The OS `ui` init script is a clean, UI-agnostic contract executor:
 - **Environment & Library Paths**: `ui.sh` does **not** manage `LD_LIBRARY_PATH` or set UI environment variables. Relaunch loops, environment setups, and library loading are 100% internal to the UI payload (managed by RPATH or the UI's own entrypoint script pointed to by `UI_BIN`).
-- **Start**: Reads `/mnt/sdcard/.minime/ui.env`. If missing or if `UI_BIN` is non-executable, logs `No UI binary found` to `/mnt/sdcard/boot.log` and exits cleanly. Otherwise, launches `UI_BIN` via `start-stop-daemon`.
+- **Start**: Reads `/mnt/sdcard/.packages/ui.env`. If missing or if `UI_BIN` is non-executable, logs `No UI binary found` to `/mnt/sdcard/boot.log` and exits cleanly. Otherwise, launches `UI_BIN` via `start-stop-daemon`.
 - **Stop**: Reads `UI_STOP_CMD` from `ui.env` and executes it for graceful UI teardown. Sends `SIGTERM` to `/tmp/ui.pid` group, then `UI_PROCESSES` cleanup. OS init never hardcodes launcher names.
 - **IPC / Shutdown**: UI handles power off / reboot directly. `ui.sh` does not interpret UI IPC files (e.g. `/tmp/next`, `/tmp/poweroff`).
 
@@ -61,4 +61,4 @@ The OS `ui` init script is a clean, UI-agnostic contract executor:
 - Minime OS does **not** create media directories (`Roms/`, `Bios/`, `Saves/`) or vestigial storage folders (`.userdata/`). User directories are owned by the UI payload or created on first boot by the UI.
 
 ## Rationale
-- **Portability & Hot-Swapping**: UIs can be ported or hot-swapped by dropping their files on the SD card and updating `/mnt/sdcard/.minime/ui.env`.
+- **Portability & Hot-Swapping**: UIs can be ported or hot-swapped by dropping their files on the SD card and updating `/mnt/sdcard/.packages/ui.env`.

@@ -29,7 +29,7 @@ immune to thermal policy.
 
 The speed contract lives in per-board `platform.ini` traits
 (`cpu_governor_path`, `cpu_clock_path`, `cpu_clock_{menu,powersave,normal,performance}`;
-values in `minime/boards/{h700,rk3326,rk3566}/traits/platform.ini`):
+values in `packages/components/boards/{h700,rk3326,rk3566}/traits/platform.ini`):
 
 - Levels `0-2`: write `schedutil` to `cpu_governor_path`, cap the `cpu_clock_*`
   kHz at `cpu_clock_path`.
@@ -97,8 +97,8 @@ via `just get-logs`.
 
 ## Reference
 
-- Traits: `minime/boards/{h700,rk3326,rk3566}/traits/platform.ini`.
-- DTS trips patch: `minime/boards/rk3566/patches/linux/`.
+- Traits: `packages/components/boards/{h700,rk3326,rk3566}/traits/platform.ini`.
+- DTS trips patch: `packages/components/boards/rk3566/patches/linux/`.
 - aenertia, *RK3566 Power Profiling* gist (`522cd8df6f0b68a0a2f59f73d5fe3af7`).
 - `docs/research/rk3566-undervolt.md`, `docs/adr/0007-logging-and-diagnostics.md`,
   `docs/adr/0011-traits-schema.md`.

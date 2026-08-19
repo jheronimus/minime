@@ -19,8 +19,8 @@ Maintaining two parallel distributions traditionally introduces overhead, especi
 
 We will enforce a unified `genimage` architecture and a shared boot payload structure for both Alpine and Buildroot targets. 
 
-1. **Shared Partition Layout**: Both distributions share the exact same `genimage.cfg` layouts (`minime/boards/common/genimage.cfg`, with per-board overrides for h700 and rk3326). The SD card layout consists solely of raw, out-of-partition U-Boot bootloader blobs (placed at precise offsets depending on the chipset) and a single, first-boot expandable FAT32 partition.
-2. **Unified Build Pipeline**: Both Alpine and Buildroot share the same image packaging scripts in `minime/build/`, invoked via the shared packager container.
+1. **Shared Partition Layout**: Both distributions share the exact same `genimage.cfg` layouts (`packages/components/boards/common/genimage.cfg`, with per-board overrides for h700 and rk3326). The SD card layout consists solely of raw, out-of-partition U-Boot bootloader blobs (placed at precise offsets depending on the chipset) and a single, first-boot expandable FAT32 partition.
+2. **Unified Build Pipeline**: Both Alpine and Buildroot share the same image packaging scripts in `packages/image/`, invoked via the shared packager container.
 3. **File-Based OS Payload**: The entire OS is encapsulated into portable files located at the root of the FAT32 partition:
    - `system.erofs`: The immutable, compressed root filesystem.
    - `boot/`: A directory containing the kernel (`Image`), device trees (`.dtb`), and the initramfs (`initramfs.cpio.gz`).
@@ -30,7 +30,7 @@ We will enforce a unified `genimage` architecture and a shared boot payload stru
 To ensure dual-distro co-equality and prevent path drift across Alpine and Buildroot target builders:
 
 1. **`MINIME_ROOT`**: Absolute path to the monorepo root directory (`/workspace` inside container, or repository root on host). All shared assets (`boards/`, `uboot/`, `genimage/`, `src/`, `roms/`) resolve relative to `MINIME_ROOT`.
-2. **Target Roots (`ALPINE_ROOT` / `BUILDROOT_ROOT`)**: Absolute path to the target distro directory (`${MINIME_ROOT}/minime/targets/alpine` and `${MINIME_ROOT}/minime/targets/buildroot`). Target-local assets (`aports/`, `external/`, `configs/`, target scripts) resolve relative to their target root.
+2. **Target Roots (`ALPINE_ROOT` / `BUILDROOT_ROOT`)**: Absolute path to the target distro directory (`${MINIME_ROOT}/packages/components/alpine` and `${MINIME_ROOT}/packages/components/buildroot`). Target-local assets (`aports/`, `external/`, `configs/`, target scripts) resolve relative to their target root.
 
 ## Consequences
 

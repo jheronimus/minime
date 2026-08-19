@@ -24,13 +24,13 @@ Because $65,503 < 65,525$, all OS/U-Boot FAT drivers classify the volume as **FA
 
 ## Decision
 1. **Cluster Size**: Fixed to 16 KB (`mkdosfs -F 32 -s 32` -> 32 sectors per cluster @ 512B/sector).
-2. **Minimum Volume Floor (`VFAT_MB`)**: Hardcoded to **1040 MB** in `minime/build/mkimage.sh` for both Alpine and Buildroot image builders.
+2. **Minimum Volume Floor (`VFAT_MB`)**: Hardcoded to **1040 MB** in `packages/image/build.sh` for both Alpine and Buildroot image builders.
 
 At 1040 MB ($1,090,519,040$ bytes), cluster count is $\mathbf{66,527\text{ clusters}} \ge 65,525$, producing a perfectly valid FAT32 volume.
 
 ## Partition Mapping (H700 vs RK3326/RK3566)
 Minime must support heterogeneous SoC families with diverging partition table requirements:
-- **RK3326 / RK3566**: Requires a GPT partition table. Bootloader components reside in raw unpartitioned space before sector 32768, followed by `boot` and `userdata` GPT partitions. RK3566 uses the upstream chain (`idbloader.img`, `u-boot.itb`); RK3326 uses the vendor Rockchip chain (`idbloader.img` at 32K, `uboot.img` at 8M, `trust.img` at 12M — see `minime/boards/rk3326/genimage.cfg`).
+- **RK3326 / RK3566**: Requires a GPT partition table. Bootloader components reside in raw unpartitioned space before sector 32768, followed by `boot` and `userdata` GPT partitions. RK3566 uses the upstream chain (`idbloader.img`, `u-boot.itb`); RK3326 uses the vendor Rockchip chain (`idbloader.img` at 32K, `uboot.img` at 8M, `trust.img` at 12M — see `packages/components/boards/rk3326/genimage.cfg`).
 - **H700 / Allwinner**: Enforces a legacy MBR partition table. Bootloader (`u-boot-sunxi-with-spl.bin`) resides in unpartitioned space starting at sector 16, overlapping with standard GPT headers. `userdata` is an MBR partition.
 
 To unify infrastructure, `genimage.cfg` uses conditional includes. RK3326/RK3566 include `board/common/genimage.cfg` to emit GPT images, while H700 provides its own `board/h700/genimage.cfg` overriding to MBR.

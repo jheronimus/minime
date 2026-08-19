@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-MinUI (the Minime fork at `minime/ui/minui`) needs four features previously
+MinUI (the Minime fork at `packages/ui/minui`) needs four features previously
 implemented in the throwaway `origin/IMPORT` branch: in-game **rewind** and
 standalone **Wi-Fi**, **Bluetooth**, **Power** management. IMPORT implemented
 them inside a full codebase rewrite (shared settings framework, job queue,
@@ -86,6 +86,6 @@ to existing code, preserving IMPORT/NextUI behavior.
 
 ## References
 - [ADR 0015](0015-iwd-wifi.md) — iwd/wifi service (gate change)
-- `minime/ui/minui/workspace/all/settings/`, `common/menu.c|keyboard.c|wifi.c|bt.c|wireless.h`
+- `packages/ui/minui/workspace/all/settings/`, `common/menu.c|keyboard.c|wifi.c|bt.c|wireless.h`
 - `minarch/minarch.c` (rewind + `run_frame`), `common/api.c` (power policy)
-- `minime/boards/common/overlay/etc/init.d/wifi` (enable gate)
+- `packages/components/boards/common/overlay/etc/init.d/wifi` (enable gate)

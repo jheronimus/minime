@@ -1,7 +1,7 @@
 # Cleanup session — 2026-08-16
 
 - **Invoker**: manual trial run (validate the cleanup skill)
-- **Region**: `minui` (`minime/ui/minui`)
+- **Region**: `minui` (`packages/ui/minui`)
 - **Baseline**: `upstream-main` (shauninman/MinUI snapshot); live upstream fetch deferred (no network)
 - **Delta**: 97 commits, 1,151 files, +6,646 / −36,937 lines (mostly per-device pruning, ADR 0005/0022/0025)
 - **Status**: topics 1–9 + 11–13 implemented (topic 10 evaluated → no change); commits pushed to `jheronimus/MinUI` `main`; RK3566 OTA and smoke verification complete
