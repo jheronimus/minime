@@ -1,7 +1,7 @@
 From: Minime <maintainers@minime-os.local>
 Subject: [PATCH] retro/Makefile: drop glibc nm check, use dynamic lzma/zlib
 
-Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+Minime-specific port patch (see docs/adr/0008-ui.md).
 ---
 diff --git a/retro/Makefile b/retro/Makefile
 index c1bc9a93..5b286307 100755

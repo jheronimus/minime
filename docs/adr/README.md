@@ -1,30 +1,19 @@
-# Architecture Decision Records
+# Architecture Decision Records (ADRs)
 
-Each ADR covers exactly one topic; ADRs are grouped into contiguous topic blocks.
-When a topic is addressed across several ADRs, they are merged into a single ADR.
+This directory documents the architectural decisions for the Minime monorepo. Each ADR addresses exactly one topic in a standardized format (`Problem`, `Solution`, `Examples`, `See also`).
 
-1. **Dual OS & OTA design** — `0001` dual-distro architecture, `0002` OTA
-   package format, `0003` on-device update tool.
-2. **Build: CI, optimizations & flags** — `0004` build-flow convention,
-   `0005` single-binary CPU ISA, `0006` core build optimization flags.
-3. **Logger & remote diagnostics tools** — `0007` logging & diagnostics,
-   `0008` remote diagnostics tool.
-4. **Shared configs & scripts (kernel config, init scripts)** — `0009` OpenRC
-   init parity.
-5. **Traits system** — `0010` UI contract & traits, `0011` traits schema,
-   `0012` H700 device detection.
-6. **Storage system** — `0013` FAT32 cluster sizing & image floor.
-7. **GPU stack (panfrost vs libmali)** — `0014`.
-8. **Networking (self announcement, iwd, ftp, telnet, dropbear)** — `0015`
-   iwd, `0016` passwordless services, `0017` mDNS.
-9. **CPU performance & thermals** — `0018`.
-10. **Boot (optimizations, bootsplash, charger behavior)** — `0019`
-    bootsplash, `0020` charger-triggered boot, `0021` H700 PMIC panic.
-11. **Libretro cores: shared builder & naming** — `0022`.
-12. **YabaSanshiro libretro port** — `0023`.
-13. **DraStic libretro port** — `0024`.
-14. **UI ports** — `0025` MinUI feature port, `0028` MuOS frontend port.
-15. **Performance benchmarking** — `0026` benchmark suite.
-16. **Display rotation ownership** — `0027` display overlay, panel firmware, traits.
-17. **Input mapping & default hotkeys** — `0029` default hotkeys & input mapping architecture.
-18. **Mainline kernel as source of truth** — `0030` mainline-gated registry, generated overlays, self-shrinking patches.
+| ADR | Topic | Scope |
+|---|---|---|
+| [`0001-musl+glibc`](0001-musl+glibc.md) | Dual-Distro Architecture | Alpine + Buildroot co-equality |
+| [`0002-build-infra`](0002-build-infra.md) | Build Infrastructure & Pipeline | CI/CD, containers, caching, quality gates |
+| [`0003-compile-flags`](0003-compile-flags.md) | Compiler Tuning & CPU ISA | ARM64 baseline ISA, LTO, optimization |
+| [`0004-updates`](0004-updates.md) | On-Device OTA Updates | Atomic update payload, `/usr/bin/update.sh` |
+| [`0005-retroarch-cores`](0005-retroarch-cores.md) | Shared RetroArch Cores | Modular core builds from `core.ini` |
+| [`0006-diagnostics`](0006-diagnostics.md) | Diagnostics & Logging | Boot logging, `collect-diagnostics`, `remote` |
+| [`0007-boot`](0007-boot.md) | Boot Chain & OpenRC | U-Boot, initramfs, bootsplash, OpenRC |
+| [`0008-ui`](0008-ui.md) | UI Architecture & Launchers | MinUI, Allium, muOS decoupled platform ports |
+| [`0009-storage`](0009-storage.md) | Storage & Partitions | Read-only EROFS system + FAT32 userdata |
+| [`0010-gpu-drivers`](0010-gpu-drivers.md) | GPU Driver Stack | Mali Bifrost kbase + userspace libmali blobs |
+| [`0011-networking`](0011-networking.md) | Networking & Wi-Fi | wpa_supplicant, DHCP, mDNS, Dropbear SSH |
+| [`0012-power-and-thermal`](0012-power-and-thermal.md) | Power & Thermal Management | Governors, thermal tripping, charger boot |
+| [`0013-input`](0013-input.md) | Input Subsystem & Hotkeys | Evdev mapping, traits, keymon, hotkeys |

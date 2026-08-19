@@ -7,7 +7,7 @@ description: Evaluate a new kernel version for Minime — determine which new An
 
 Evaluating a kernel bump against Minime's device-support system. The design
 (intent, logic, references) is documented in
-[`docs/traits-system.md`](../../../docs/traits-system.md) and the governing
+[`docs/traits/TRAITS.md`](../../../docs/traits/TRAITS.md) and the governing
 decision in [`docs/adr/0030-mainline-source-of-truth.md`](../../../docs/adr/0030-mainline-source-of-truth.md).
 Read those first.
 

@@ -1,7 +1,7 @@
 From: Minime <maintainers@minime-os.local>
 Subject: [PATCH] libarchive: undefine HAVE_ARC4RANDOM_BUF for musl portability
 
-Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+Minime-specific port patch (see docs/adr/0008-ui.md).
 ---
 diff --git a/common/libarchive/config.h b/common/libarchive/config.h
 index 12562bc6..9f3c9bfb 100755

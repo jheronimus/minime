@@ -1,7 +1,7 @@
 From: Minime <maintainers@minime-os.local>
 Subject: [PATCH] Makefile: drop glibc-only nm symbol check
 
-Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+Minime-specific port patch (see docs/adr/0008-ui.md).
 ---
 diff --git a/Makefile b/Makefile
 index 7745b5cd..2e89bad7 100755

@@ -127,7 +127,7 @@ span repos. Rules:
 Before delivering anything, render the whole review as a **Markdown report** so a
 human can read every topic and pick what to implement. Markdown renders natively in
 VS Code (and GitHub) with no CDN or network. Write it to the session folder:
-`docs/cleanup/<YYYY-MM-DD>/report.md` (create the folder; if the datestamp already
+`.scratch/cleanup/<YYYY-MM-DD>/report.md` (create the folder; if the datestamp already
 exists, append `-2`, `-3`, …). This is the session's documented record. The agent
 writes but never commits — committing the session record is the human's call. State
 the absolute path in your reply.
@@ -168,7 +168,7 @@ artifact.
 
 ## Session record
 
-Every session folder (`docs/cleanup/<datestamp>/`) contains:
+Every session folder (`.scratch/cleanup/<datestamp>/`) contains:
 
 - `report.md` — the review report above.
 - `session.md` — a short summary: date, invoker, regions scanned, topics found
@@ -177,7 +177,7 @@ Every session folder (`docs/cleanup/<datestamp>/`) contains:
   the detail lives in `report.md`.
 
 Session records are the local **don't re-discover ledger**: before proposing a
-topic, grep `docs/cleanup/*/session.md` for prior coverage alongside the GitHub
+topic, grep `.scratch/cleanup/*/session.md` for prior coverage alongside the GitHub
 issue/PR search.
 
 ## Deliverables
