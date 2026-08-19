@@ -11,7 +11,7 @@ RK3566 and RK3326 already auto-detect the device:
 - RK3566: the rgxx3 U-Boot board reads a board-id resistor on SARADC channel 1 and sets `fdtfile`; `boot.cmd` loads `.minime/devices/${fdtfile}`.
 - RK3326: `first-boot-probe.sh` (initramfs) probes SDIO/USB and writes `device.cfg`, honored by `boot.cmd`.
 
-Allwinner H700 has no board-id ADC. Today every H700 device boots the default `sun50i-h700-anbernic-rg35xx-sp.dtb`; the other 11 H700 DTBs (rg28xx, rg34xx/-sp, rg35xx-2024/-h/-plus/-pro plus `-rev6`/`-v2-panel` variants) are staged in `.minime/devices/` but never selected. Traits resolve every H700 device to `rg35xx-sp-v1`, so non-SP-v1 hardware gets the wrong panel init, keymap, and backlight. This is not real detection.
+Allwinner H700 has no board-id ADC. Today every H700 device boots the default `sun50i-h700-anbernic-rg35xx-sp.dtb`; the other H700 DTBs (rg28xx, rg34xx/-sp, rg35xx-pro plus `-rev6`/`-v2-panel` variants) are staged in `.minime/devices/` but never selected. Traits resolve every H700 device to `rg35xx-sp-v1`, so non-SP-v1 hardware gets the wrong panel init, keymap, and backlight. This is not real detection.
 
 LPDDR3/LPDDR4 is a per-unit RAM variant, not a model signal: Rocknix ships every H700 model in both and picks the U-Boot binary by `vdd-dram` microvolts (1.2 V vs 1.1 V). Minime already swaps the DDR3 U-Boot via the initramfs DCDC3 check, so RAM type is handled independently of model detection.
 

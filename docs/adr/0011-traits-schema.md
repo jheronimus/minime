@@ -47,8 +47,8 @@ Three levels, resolved at boot by `init.d/traits`:
 
 `init.d/traits` merges the chain `platform.ini` → rootmost parent → … →
 device file, emitting every key. **The last value of a duplicated key wins**
-(any trait may be overridden at any lower level). The `parent` key and the
-`[match]` section are meta-data and never emitted.
+(any trait may be overridden at any lower level). The `parent` key, `[match]`,
+and `[dts]` sections are meta-data and never emitted.
 
 ### 2. File sections
 

@@ -221,7 +221,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
    - `minime/targets/buildroot/external/configs/<board>.config` — Buildroot config fragment
 3. Add bootloader binaries to `minime/uboot/out/<board>/`
 4. Update `SUPPORTED_BOARDS` in both `minime/targets/alpine/Makefile` and `minime/targets/buildroot/Makefile`
-5. Update CI matrix in `.github/workflows/alpine.yml` and `.github/workflows/buildroot.yml`
+5. Update CI matrix in `.github/workflows/build.yml` and `.github/workflows/nightly.yml`
 
 ## Adding a new kernel option
 
@@ -241,7 +241,7 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
    - If the device is a mainline DTS with no panel/spin-off, ship the mainline DTB as-is (`[dts] dtb=<path>` or omit `[dts]`).
    - If the device derives from another (e.g. new panel on an existing board), set `parent=<base>` and add a `[dts]` section (`base=`, `panel=`, `panel_supply=`/`panel_rotation=` for RK3326) so `traits-gen` emits the overlay DTS.
    - If it boots another device's DTB, set `[dts] dtb=none`.
-2. Add any new panel firmware blob to `minime/boards/h700/firmware/panels/` and its `CONFIG_EXTRA_FIRMWARE` entry in `tiny-h700.config`; for Buildroot also add the DTB to `external/configs/h700.config`.
+2. Add any new panel firmware blob to `minime/boards/h700/firmware/panels/` and its `CONFIG_EXTRA_FIRMWARE` entry in `tiny-h700.config`; for Buildroot also add the DTB to `external/configs/<board>.config`.
 3. Run `just validate-static` (traits-gen `check` cross-references the registry against the Buildroot config).
 
 ## Adding a new package
