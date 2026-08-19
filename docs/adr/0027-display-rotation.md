@@ -18,7 +18,7 @@ upright." Verification shows that is not true:
 - The H700/RK3326 display controllers (Allwinner DE2, Rockchip VOP-lite) expose
   no plane rotation; only RK3566 VOP2 has hardware 90/270 plane rotation.
 
-Consequences of the false belief: the RG28XX/RG40XX-V/RG351V traits were
+Consequences of the false belief: the RG28XX/RG351V traits were
 `screen_rotation=0` (portrait-mounted panels display sideways), and the H700
 panels other than rg35xx-plus shipped **no firmware blob** — the generic driver
 requires one at probe, so those panels never initialize. The `remote` tool must
@@ -38,11 +38,11 @@ apply an inverse rotation because it reads buffers that the UI already rotated.
    reports the enforcement layer.
 
 3. **H700 panel firmware blobs are shipped** for all panels across H700 variants:
-   rg28xx, rg34xx, rg34xx-sp, rg35xx-plus-rev6, rg35xx-sp-v2, rg40xx, rg40xx-v2,
-   and rgcubexx. Without a blob the generic driver fails probe.
+   rg28xx, rg34xx, rg34xx-sp, rg35xx-plus-rev6, and rg35xx-sp-v2.
+   Without a blob the generic driver fails probe.
 
 4. **Portrait-mounted devices get correct traits**: RG28XX `screen_rotation=270`
-   (authoritative from the panel preset). RG40XX-V and RG351V are set to 90,
+   (authoritative from the panel preset). RG351V is set to 90,
    pending on-device confirmation of the exact direction.
 
 5. **`screen_rotation_kernel` is NOT enabled anywhere yet.** Enabling it for an

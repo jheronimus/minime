@@ -27,3 +27,4 @@ When a topic is addressed across several ADRs, they are merged into a single ADR
 15. **Performance benchmarking** — `0026` benchmark suite.
 16. **Display rotation ownership** — `0027` display overlay, panel firmware, traits.
 17. **Input mapping & default hotkeys** — `0029` default hotkeys & input mapping architecture.
+18. **Mainline kernel as source of truth** — `0030` mainline-gated registry, generated overlays, self-shrinking patches.

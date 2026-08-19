@@ -24,7 +24,8 @@ future ports) can consume traits identically.
 - **UI-Agnostic Contract**: UIs read one flat file and must not re-derive
   device knowledge. Trait values that name a device-tree entity use the DT
   name verbatim; keycodes are numeric evdev codes matching the compiled DTB.
-- **No Drift**: `scripts/check-traits.sh` validates the schema statically,
+- **No Drift**: `traits-gen check` validates the registry schema and DTB
+  cross-reference statically (wired into `scripts/check-traits.sh`),
   and the emitted file is generated on the device from the immutable payload,
   so traits cannot silently diverge from the shipped DTBs.
 - **Expansive but Grounded**: the schema covers real device features (dual
@@ -203,9 +204,9 @@ flags or resolution logic.
 ## Consequences & Benefits
 
 - **Single source of truth**: hardware facts live in the DTBs + trait files;
-  `check-traits.sh` validates the schema and `parent=` chain statically.
+  `traits-gen check` validates the schema and `parent=` chain statically.
 - **Drift is caught**: the strict parser and the DTB comparison in
-  `check-traits.sh` make a wrong or missing trait a loud error.
+  `traits-gen check` make a wrong or missing trait a loud error.
 - **Easy new devices**: a new base device is one `.ini`; a panel revision is
   a 6-line file with `parent=`.
 - **Porting is trivial**: a new UI copies `docs/research/traits.c` and gets a

@@ -2,7 +2,7 @@
 
 Overview of shared hardware assets, target distro builders, bootloaders, image packaging, shared source vaults, and path resolution contracts under `minime/`.
 
-The single source of truth for all board assets, OpenRC services, DTS files, kernel patches, firmware, and traits is the `minime/boards/` directory.
+The single source of truth for all board assets, OpenRC services, kernel patches, firmware, and traits is the `minime/boards/` directory. Per-device overlay DTS is generated from the traits registry by `minime/build/traits-gen.sh` (section 4).
 
 ---
 
@@ -12,9 +12,9 @@ The single source of truth for all board assets, OpenRC services, DTS files, ker
 minime/
 ├── boards/             # Single Source of Truth for Hardware
 │   ├── common/         # Shared OpenRC init scripts, sysctl, wifi config, device.sh, initramfs init
-│   ├── h700/           # H700 DTS, patches, traits, boot.env, genimage.cfg
-│   ├── rk3326/         # RK3326 DTS, patches, traits, boot.env, genimage.cfg
-│   └── rk3566/         # RK3566 DTS, patches, traits, boot.env, genimage.cfg
+│   ├── h700/           # H700 traits, patches, firmware, boot.env, genimage.cfg
+│   ├── rk3326/         # RK3326 traits, patches, firmware, boot.env, genimage.cfg
+│   └── rk3566/         # RK3566 traits, patches, firmware, boot.env, genimage.cfg
 ├── uboot/              # Bootloader definitions & prebuilt binaries
 │   ├── config/         # uboot.config, uboot-rk3326.config, ddr3.defconfig
 │   ├── patches/        # U-Boot & ATF patches
@@ -91,10 +91,11 @@ Cross-distro OpenRC init scripts copied into the rootfs of both targets at build
 - `rk3326/tiny-rk3326.config`: Rockchip RK3326 SoC kernel configuration fragment.
 - `rk3566/tiny-rk3566.config`: Rockchip RK3566 SoC kernel configuration fragment.
 
-## 4. Device Tree Sources (DTS) (`minime/boards/<board>/dts/`)
-- `h700/dts/`: Device Trees for H700 devices (RG35XX SP, Plus, H, 28XX, 40XX).
-- `rk3326/dts/`: Device Trees for RK3326 devices (`rk3326-anbernic-rg351p.dts`, `rk3326-anbernic-rg351mp.dts`).
-- `rk3566/dts/`: Device Trees for RK3566 devices (RG353P, RG353V, RG353M, RG ARC).
+## 4. Device Tree Sources (generated — no `dts/` dirs)
+Mainline DTS lives in the kernel. Minime only ships overlay DTS for derived devices, generated at build time by `minime/build/traits-gen.sh` into the kernel tree (`arch/arm64/boot/dts/allwinner|rockchip`):
+- `h700`: overlays for rg28xx, rg34xx/-sp, rg35xx-pro, and the `-rev6`/`-v2-panel` variants, based on the four mainline H700 DTS.
+- `rk3326`: overlays for `rk3326-anbernic-rg351p`/`rg351mp`, based on the mainline `rk3326-anbernic-rg351m.dtsi`.
+- `rk3566`: no overlays; rg-ds boots the mainline `rk3568-anbernic-rg-ds` DTB, rg353m boots the rg353p DTB.
 
 ## 5. Kernel & U-Boot Patches (`minime/boards/<board>/patches/`)
 - `h700/patches/linux/`: H700 Linux kernel patches (AXP717, DRM panel, power management).
@@ -166,7 +167,7 @@ Building Buildroot firmware for Minime:
   - `defconfig`: merge config fragments only
 - **`external/`**: Buildroot external tree:
   - `external/Config.in`: Package menu declarations.
-  - `external/external.mk`: Makefile rules. Hooks kernel compilation, copies DTS, stages firmware.
+  - `external/external.mk`: Makefile rules. Hooks kernel compilation, generates overlay DTS, stages firmware.
   - `external/external.desc`: External tree metadata (`name: MINIME`).
   - `external/configs/`: Config fragments: `common.config`, `<board>.config`, `<ui>.config`.
   - `external/scripts/post-build.sh`: Copies OpenRC services, traits, firmware into rootfs.
@@ -212,7 +213,6 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
 
 1. Create `minime/boards/<board>/` directory with:
    - `boot.env` — U-Boot boot arguments
-   - `dts/` — Device Tree Source files
    - `patches/linux/` — Kernel patches (if needed)
    - `traits/` — Hardware trait files (`platform.ini`, `devices/<device>.ini`)
 2. Add board config fragments:
@@ -234,6 +234,15 @@ make image       →  genassets.sh + mkimage.sh + mkupdate.sh  (shared scripts, 
 1. Create the script in `minime/boards/common/overlay/etc/init.d/<service>`
 2. Add runlevel symlinks under `minime/boards/common/overlay/etc/runlevels/` (for example `boot` or `default`)
 3. Both Alpine and Buildroot automatically pick up the service from the common overlay (ADR 0009)
+
+## Adding a new device
+
+1. Add `traits/devices/<device>.ini` to `minime/boards/<board>/traits/`:
+   - If the device is a mainline DTS with no panel/spin-off, ship the mainline DTB as-is (`[dts] dtb=<path>` or omit `[dts]`).
+   - If the device derives from another (e.g. new panel on an existing board), set `parent=<base>` and add a `[dts]` section (`base=`, `panel=`, `panel_supply=`/`panel_rotation=` for RK3326) so `traits-gen` emits the overlay DTS.
+   - If it boots another device's DTB, set `[dts] dtb=none`.
+2. Add any new panel firmware blob to `minime/boards/h700/firmware/panels/` and its `CONFIG_EXTRA_FIRMWARE` entry in `tiny-h700.config`; for Buildroot also add the DTB to `external/configs/h700.config`.
+3. Run `just validate-static` (traits-gen `check` cross-references the registry against the Buildroot config).
 
 ## Adding a new package
 

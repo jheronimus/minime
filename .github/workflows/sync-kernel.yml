@@ -20,6 +20,21 @@ jobs:
       - name: Run synckernel.sh
         run: ./minime/build/synckernel.sh
 
+      - name: Drop patches whose content has landed upstream
+        run: |
+          set -euo pipefail
+          manifest=minime/build/kernel-patch-manifest
+          # Iterate over a static copy: the file is rewritten below.
+          cp "$manifest" /tmp/kernel-patch-manifest
+          while IFS= read -r file; do
+            status=$(awk -v f="[$file]" '$0==f{s=1;next} s&&/^upstream=/{sub(/^upstream=/,"");print;exit}' /tmp/kernel-patch-manifest)
+            [ "$status" = "master" ] || continue
+            git rm -q "minime/boards/$file"
+            awk -v f="[$file]" '$0==f{skip=1;next} skip&&/^upstream=/{skip=0;next} !skip' "$manifest" > "$manifest.tmp"
+            mv "$manifest.tmp" "$manifest"
+            echo "Dropped $file (content landed in mainline master)"
+          done < <(sed -n 's|^\[\(.*\)\]$|\1|p' /tmp/kernel-patch-manifest)
+
       - name: Commit and push changes
         run: |
           if ! git diff --quiet; then

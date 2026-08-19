@@ -60,7 +60,7 @@
       - State Slot Select: `Hotkey + D-Pad Right` (Next) / `Hotkey + D-Pad Left` (Prev).
       - Quit Game: `Hotkey + START` (or double press) | Reset: `Hotkey + B` | Pause: `Hotkey + A`.
       - Brightness: `MENU + VolUp` / `MENU + VolDown` (hardware volume keys control volume directly).
-- [ ] On-device verify display orientation per device with `just shell "remote screenshot --raw"` ([ADR 0027](adr/0027-display-rotation.md)): confirm RG28XX (270) / RG40XX-V (90) / RG351V (90) directions and correct any that are 180° off. Confirm the newly-shipped H700 panel firmware blobs bring the rg28xx/rg34xx/rg40xx/rgcubexx panels up upright.
+- [ ] On-device verify display orientation per device with `just shell "remote screenshot --raw"` ([ADR 0027](adr/0027-display-rotation.md)): confirm RG28XX (270) / RG351V (90) directions and correct any that are 180° off. Confirm the newly-shipped H700 panel firmware blobs bring the rg28xx/rg34xx/-sp/rev6/v2 panels up upright.
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 
@@ -109,5 +109,5 @@
 - [x] OTA upload / reboot-wait timeout — detached on-device `update.sh` (ADR 0003)
 - [x] RK3326 bringup in CI matrix and both `minime/targets/*/Makefile` boards
 - [x] Integrate mainline Rockchip power/charger drivers (PM domains, IO domain, RK817 charger) and thermal framework
-- [x] Ship panel firmware blobs for all H700 panel variants (rg34xx-sp, rg35xx-sp-v2, rg40xx-v2)
+- [x] Ship panel firmware blobs for all H700 panel variants (rg28xx, rg34xx/-sp, rg35xx-plus-rev6, rg35xx-sp-v2)
 - [x] Unified DRM bootsplash (plane rotation, dumb buffers) and Allium DRM display module with fallback

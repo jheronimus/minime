@@ -32,52 +32,13 @@ sha512sums="17f95307b6e86a0794df146d97256ba4783b7a494f5eb43aafc14d64367541874cec
 
 : "${DTB_BOARD:=rk3566}"
 case "$DTB_BOARD" in
-	rk3566)
-		_dtbs="
-			rockchip/rk3566-anbernic-rg-arc-d
-			rockchip/rk3566-anbernic-rg-arc-s
-			rockchip/rk3566-anbernic-rg353p
-			rockchip/rk3566-anbernic-rg353ps
-			rockchip/rk3566-anbernic-rg353v
-			rockchip/rk3566-anbernic-rg353vs
-			rockchip/rk3566-anbernic-rg503
-			rockchip/rk3568-anbernic-rg-ds
-		"
-		;;
-	rk3326)
-		_dtbs="
-			rockchip/rk3326-anbernic-rg351p
-			rockchip/rk3326-anbernic-rg351m
-			rockchip/rk3326-anbernic-rg351v
-			rockchip/rk3326-anbernic-rg351mp
-		"
-		;;
-	h700)
-		_dtbs="
-			allwinner/sun50i-h700-anbernic-rg28xx
-			allwinner/sun50i-h700-anbernic-rg34xx
-			allwinner/sun50i-h700-anbernic-rg34xx-sp
-			allwinner/sun50i-h700-anbernic-rg35xx-2024
-			allwinner/sun50i-h700-anbernic-rg35xx-2024-rev6-panel
-			allwinner/sun50i-h700-anbernic-rg35xx-h
-			allwinner/sun50i-h700-anbernic-rg35xx-h-rev6-panel
-			allwinner/sun50i-h700-anbernic-rg35xx-plus
-			allwinner/sun50i-h700-anbernic-rg35xx-plus-rev6-panel
-			allwinner/sun50i-h700-anbernic-rg35xx-pro
-			allwinner/sun50i-h700-anbernic-rg35xx-sp
-			allwinner/sun50i-h700-anbernic-rg35xx-sp-v2-panel
-			allwinner/sun50i-h700-anbernic-rg40xx-h
-			allwinner/sun50i-h700-anbernic-rg40xx-h-v2-panel
-			allwinner/sun50i-h700-anbernic-rg40xx-v
-			allwinner/sun50i-h700-anbernic-rg40xx-v-v2-panel
-			allwinner/sun50i-h700-anbernic-rgcubexx
-		"
-		;;
-	*)
-		echo "unsupported DTB_BOARD=$DTB_BOARD"
-		exit 1
-		;;
+	rk3566|rk3326|h700) ;;
+	*) echo "unsupported DTB_BOARD=$DTB_BOARD"; exit 1 ;;
 esac
+
+# Shipped DTB list is generated from the device registry
+# (minime/boards/<board>/traits/ — the single source of truth for devices).
+_dtbs="$(bash "${MINIME_ROOT:-/workspace}/minime/build/traits-gen.sh" dtbs "$DTB_BOARD")"
 
 build() {
 	local src="$srcdir/linux-$pkgver"
@@ -93,19 +54,16 @@ build() {
 		done
 	fi
 
-	# 2. Copy custom DTS files (only when the board's dts/ dir is non-empty).
-	local dts_src="${MINIME_ROOT:-/workspace}/minime/boards/${DTB_BOARD}/dts"
-	if [ -n "$(ls "${dts_src}"/*.dts 2>/dev/null)" ]; then
-		if [ "${DTB_BOARD}" = "h700" ]; then
-			cp "${dts_src}"/*.dts arch/arm64/boot/dts/allwinner/
-		else
-			cp "${dts_src}"/*.dts arch/arm64/boot/dts/rockchip/
-			if [ "${DTB_BOARD}" = "rk3326" ]; then
-				echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
-				echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
-			fi
-		fi
-	fi
+	# 2. Generate overlay DTS for derived devices from the device registry.
+	local traits_gen="${MINIME_ROOT:-/workspace}/minime/build/traits-gen.sh"
+	local dts_dir="${DTB_BOARD}"
+	case "$DTB_BOARD" in
+		h700)   dts_dir=allwinner ;;
+		rk3326|rk3566) dts_dir=rockchip ;;
+	esac
+	bash "$traits_gen" overlays "$DTB_BOARD" "arch/arm64/boot/dts/$dts_dir" >/dev/null || return 1
+	[ "$DTB_BOARD" = "rk3326" ] &&
+		bash "$traits_gen" makefile "$DTB_BOARD" >> arch/arm64/boot/dts/rockchip/Makefile
 
 	# 3. Merge kernel config:
 	#    tiny-base.config -> tiny-<board>.config -> tiny-panfrost.config -> olddefconfig

@@ -18,9 +18,9 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 ## Monorepo Structure
 
 - `minime/`: Central source of truth for hardware definitions, bootloaders, target software builders, and image packaging.
-  - `boards/`: Board definitions, DTS, kernel patches, traits, and OpenRC overlays.
+  - `boards/`: Board definitions, kernel patches, traits, and OpenRC overlays.
     - `common/`: Shared OpenRC services (`overlay/etc/init.d/`), sysctl, wifi config, `device.sh`.
-    - `h700/`, `rk3326/`, `rk3566/`: Per-board DTS, patches, traits, `boot.env`, and `genimage.cfg`.
+    - `h700/`, `rk3326/`, `rk3566/`: Per-board patches, traits, firmware, `boot.env`, and `genimage.cfg`. Per-device overlay DTS is generated from the traits registry by `minime/build/traits-gen.sh` (no `dts/` dirs).
   - `uboot/`: U-Boot configs (`config/`), patches (`patches/`), and prebuilt binaries (`out/`).
   - `targets/`: Target software builders.
     - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).

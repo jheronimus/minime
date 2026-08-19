@@ -13,9 +13,11 @@ For future audits, the following upstream files define how kernel patches are ma
 ---
 
 ## Manual Corrections
-Two patches from the original Rocknix collection had to be manually corrected to apply cleanly under Buildroot's strict `--fuzz=0` requirement:
+One patch from the original Rocknix collection had to be manually corrected to apply cleanly under Buildroot's strict `--fuzz=0` requirement:
 1. **[0018-rg35xx-2024-enable-usb-otg.patch](0018-rg35xx-2024-enable-usb-otg.patch)** (Originally Rocknix `0152-rg35xx-2024-enable-usb-otg.patch`): Corrected empty context line space discrepancies.
-2. **[0019-enable-rgb-leds.patch](0019-enable-rgb-leds.patch)** (Originally Rocknix `0153-enable-rgb-leds.patch`): Fixed malformed unified diff structure by restoring leading space characters on unchanged context lines.
+
+## Upstream Tracking
+The per-patch upstream status (which patches can be dropped as their content lands in mainline) is tracked in the kernel-patch manifest at [`minime/build/kernel-patch-manifest`](../../../build/kernel-patch-manifest) — the single source of truth for patch triage.
 
 ## Omitted Patches
 The following patches from Rocknix's `H700` device package were omitted:

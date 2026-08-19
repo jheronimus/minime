@@ -36,7 +36,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ### `sync-kernel.yml` — Automated Kernel Version Sync
 - **Trigger**: Daily cron at 00:00 UTC. Commits directly to `main`.
-- **Purpose**: Runs `minime/build/synckernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config.
+- **Purpose**: Runs `minime/build/synckernel.sh` to keep the kernel version pin synced between Alpine's `tinykernel` APKBUILD and Buildroot's kernel config, then drops any patches marked `upstream=master` in `minime/build/kernel-patch-manifest` (their content has landed in mainline).
 
 ### `update-submodules.yml` — UI Submodule Bump
 - **Trigger**: Daily cron at 02:00 UTC; `repository_dispatch` event `update-submodules`.
@@ -54,12 +54,13 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 - **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
 - **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.
 - **`minime/build/synckernel.sh`**: Bumps the kernel version pin and `sha512sums` in Alpine's APKBUILD and Buildroot's config to the latest Alpine-stable release.
+- **`minime/build/traits-gen.sh`**: Device registry generator + validator. Emits overlay DTS for derived devices into the kernel tree at build time, prints the shipped-DTB list, and cross-references the registry against the Buildroot DTS config (`check`). The registry is the single source of truth for devices.
 - **`minime/build/preparelinux.sh`**: Installs host build dependencies (`bison`, `flex`, `genimage`, `cpio`, `mtools`, `fatresize`, `parted`, `erofs-utils`, etc.) on Debian/Ubuntu hosts.
 
 ### Validation & Helper Scripts (`scripts/`)
 Validation is **local-only and owned by this folder** — every check lives in a
 `scripts/check-*.sh` invoked via `just`; there is no CI validation job.
-- **`scripts/check-traits.sh`**: Validates device hardware traits configuration against the trait schema for all boards.
+- **`scripts/check-traits.sh`**: Validates device hardware traits configuration. Structural/schema and DTB cross-reference checks are delegated to `traits-gen check`; keeps the input keycode/axis semantic checks.
 - **`scripts/check-kernel-config.sh`**: Validates kernel config fragments across all boards for duplicates, symbol syntax, and vendor enabler toggles.
 - **`scripts/check-firmware.sh`**: Verifies all required firmware files (`CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` entries) exist in firmware directories.
 - **`scripts/check-patches.sh`**: Ensures all `.patch` files on disk are referenced in build manifests (`APKBUILD`, Makefile, `series`).
@@ -89,7 +90,7 @@ All local developer commands are managed via `Justfile` and executed with `just`
 | `check-scripts` | `*.sh` files (all distros) | auto from shebang | Syntax (`sh -n`), shellcheck, exec bit. Excludes upstream Buildroot. |
 | `check-apkbuilds` | `alpine/aports/**/APKBUILD` | `--shell=sh` | Syntax and shellcheck targeting ash; no shebang/exec check. |
 | `check-openrc` | `minime/boards/*/overlay/etc/init.d/*` | `--shell=sh` | Shellcheck targeting ash; enforces executable bit. |
-| `check-traits` | Device traits configuration | `scripts/check-traits.sh` | Validates board hardware traits config against schema. |
+| `check-traits` | Device traits configuration | `scripts/check-traits.sh` | Delegates registry validation to `traits-gen check`; adds input/axis checks. |
 | `check-kernel-config` | Merged kernel config fragments | `scripts/check-kernel-config.sh` | Detects duplicate symbols, syntax errors, and orphaned vendor toggles. |
 | `check-firmware` | Required firmware files | `scripts/check-firmware.sh` | Verifies `CONFIG_EXTRA_FIRMWARE` and DTS `firmware-name` files exist on disk. |
 | `check-patches` | `.patch` files across repository | `scripts/check-patches.sh` | Ensures all `.patch` files are referenced in build manifests. |

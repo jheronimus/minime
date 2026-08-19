@@ -2,18 +2,15 @@ MINIME_BOARD_NAME = $(notdir $(patsubst %/patches,%,$(call qstrip,$(BR2_GLOBAL_P
 
 include $(sort $(wildcard $(BR2_EXTERNAL_MINIME_PATH)/package/*/*.mk))
 
-# Hooks to copy custom DTS files and patch base DTS file in Linux kernel
+# Hooks to generate overlay DTS from the device registry (single source of
+# truth: minime/boards/<board>/traits/) and patch base DTS file in Linux kernel
 define MINIME_COPY_DTS
-	if [ -d $(MINIME_ROOT)/minime/boards/h700/dts ]; then \
-		cp $(MINIME_ROOT)/minime/boards/h700/dts/*.dts \
-			$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/; \
-	fi
-	if [ -d $(MINIME_ROOT)/minime/boards/rk3326/dts ]; then \
-		cp $(MINIME_ROOT)/minime/boards/rk3326/dts/*.dts \
-			$(LINUX_DIR)/arch/arm64/boot/dts/rockchip/; \
-		echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351p.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \
-		echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += rk3326-anbernic-rg351mp.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \
-	fi
+	bash $(MINIME_ROOT)/minime/build/traits-gen.sh overlays $(MINIME_BOARD_NAME) \
+		$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/ >/dev/null
+	bash $(MINIME_ROOT)/minime/build/traits-gen.sh overlays $(MINIME_BOARD_NAME) \
+		$(LINUX_DIR)/arch/arm64/boot/dts/rockchip/ >/dev/null
+	bash $(MINIME_ROOT)/minime/build/traits-gen.sh makefile $(MINIME_BOARD_NAME) \
+		>> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile
 endef
 LINUX_PRE_PATCH_HOOKS += MINIME_COPY_DTS
 
