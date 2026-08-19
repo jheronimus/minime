@@ -24,7 +24,7 @@ export HOME="/mnt/sdcard"
 export XDG_RUNTIME_DIR="/run"
 
 # ---- trait accessors ---------------------------------------------------------
-trait() { sed -n "s/^$1=//p" "$TRAITS" 2>/dev/null | head -n 1; }
+trait() { sed -n "s/^$1=//p" "$TRAITS" 2>/dev/null | tail -n 1; }
 has() { [ -n "$1" ] && [ "$1" != "na" ]; }
 is1() { [ "$1" = "1" ]; }
 
@@ -79,6 +79,8 @@ crc16_le() {
 # (SDL 2.30 ranks buttons in ascending keycode order: BTN_JOYSTICK..KEY_MAX
 # then 0..BTN_JOYSTICK; all gamepad keys are >= BTN_JOYSTICK, so ascending).
 gpad_codes() {
+	menu_dev=$(trait input_menu_device_name)
+	gpad_dev=$(trait input_gamepad_device_name)
 	{
 		trait key_up
 		trait key_down
@@ -98,26 +100,25 @@ gpad_codes() {
 		trait key_r3
 		trait key_select
 		trait key_start
-		trait key_menu
+		if [ -z "$menu_dev" ] || [ "$menu_dev" = "na" ] || [ "$menu_dev" = "$gpad_dev" ]; then
+			trait key_menu
+		fi
 	} | grep -E '^[0-9]+$' | sort -n
 }
 
 # SDL button index for a trait key: rank among the gamepad's enabled buttons.
+# Returns empty string if key is unmapped or absent on this device.
 btn_idx() {
 	code=$(trait "$1")
-	[ -n "$code" ] && [ "$code" != "na" ] || {
-		echo 0
-		return
-	}
+	[ -n "$code" ] && [ "$code" != "na" ] || return 0
 	n=0
 	for c in $(gpad_codes); do
-		[ "$c" = "$code" ] && {
+		if [ "$c" = "$code" ]; then
 			echo "$n"
-			return
-		}
+			return 0
+		fi
 		n=$((n + 1))
 	done
-	echo 0
 }
 
 # Read the evdev device's kernel hardware IDs (bus/vendor/product/version) from
@@ -160,12 +161,22 @@ EOF
 		$(((version & 0xff))) $(((version >> 8) & 0xff)))"
 
 	if [ "$is_gpad" = "1" ]; then
-		fields="b:$(btn_idx key_b),a:$(btn_idx key_a),y:$(btn_idx key_y),x:$(btn_idx key_x)"
-		fields="${fields},back:$(btn_idx key_select),start:$(btn_idx key_start),guide:$(btn_idx key_menu)"
-		fields="${fields},dpleft:$(btn_idx key_left),dpdown:$(btn_idx key_down),dpright:$(btn_idx key_right),dpup:$(btn_idx key_up)"
-		fields="${fields},leftshoulder:$(btn_idx key_l1),rightshoulder:$(btn_idx key_r1)"
-		fields="${fields},lefttrigger:$(btn_idx key_l2),righttrigger:$(btn_idx key_r2)"
-		fields="${fields},leftstick:$(btn_idx key_l3),rightstick:$(btn_idx key_r3)"
+		fields=""
+		for mapping in \
+			"a:key_a" "b:key_b" "x:key_x" "y:key_y" \
+			"back:key_select" "start:key_start" "guide:key_menu" \
+			"dpleft:key_left" "dpdown:key_down" "dpright:key_right" "dpup:key_up" \
+			"leftshoulder:key_l1" "rightshoulder:key_r1" \
+			"lefttrigger:key_l2" "righttrigger:key_r2" \
+			"leftstick:key_l3" "rightstick:key_r3"; do
+			sdl_btn="${mapping%%:*}"
+			trait_key="${mapping#*:}"
+			idx="$(btn_idx "$trait_key")"
+			if [ -n "$idx" ]; then
+				[ -n "$fields" ] && fields="${fields},"
+				fields="${fields}${sdl_btn}:b${idx}"
+			fi
+		done
 	else
 		fields="leftx:a0,lefty:a1,rightx:a2,righty:a3"
 	fi

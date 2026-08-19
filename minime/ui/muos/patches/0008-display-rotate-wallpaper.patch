@@ -1,0 +1,41 @@
+diff --git a/common/display.c b/common/display.c
+index 4dd6d99e..9090d0f8 100755
+--- a/common/display.c
++++ b/common/display.c
+@@ -980,8 +980,15 @@ static void composite_to(SDL_Texture *target, const int present) {
+     const int video_covers_all = skip_wallpaper && !monitor.needs_clear;
+ 
+     if (monitor.background_image && !skip_wallpaper) {
+-        const SDL_Rect full = {0, 0, device.screen.width, device.screen.height};
+-        SDL_RenderCopy(monitor.renderer, monitor.background_image, NULL, &full);
++        if (monitor.angle == 0.0) {
++            const SDL_Rect full = {0, 0, device.screen.width, device.screen.height};
++            SDL_RenderCopy(monitor.renderer, monitor.background_image, NULL, &full);
++        } else {
++            SDL_RenderCopyEx(
++                monitor.renderer, monitor.background_image, NULL, &monitor.dest_rect, monitor.angle, monitor.pivot_ptr,
++                SDL_FLIP_NONE
++            );
++        }
+     } else if (!video_covers_all) {
+         SDL_SetRenderDrawColor(monitor.renderer, theme.sdl.solid.r, theme.sdl.solid.g, theme.sdl.solid.b, 255);
+         SDL_RenderClear(monitor.renderer);
+@@ -1046,8 +1053,16 @@ static void composite_to(SDL_Texture *target, const int present) {
+ 
+     if (anim_fg) anim_tick(monitor.renderer);
+ 
+-    if (monitor.theme_overlay && !ui_layer_hidden && monitor.theme_overlay_rect.w > 0)
+-        SDL_RenderCopy(monitor.renderer, monitor.theme_overlay, NULL, &monitor.theme_overlay_rect);
++    if (monitor.theme_overlay && !ui_layer_hidden && monitor.theme_overlay_rect.w > 0) {
++        if (monitor.angle == 0.0) {
++            SDL_RenderCopy(monitor.renderer, monitor.theme_overlay, NULL, &monitor.theme_overlay_rect);
++        } else {
++            SDL_RenderCopyEx(
++                monitor.renderer, monitor.theme_overlay, NULL, &monitor.theme_overlay_rect, monitor.angle,
++                monitor.pivot_ptr, SDL_FLIP_NONE
++            );
++        }
++    }
+ 
+     if (video_overlay_fn_ptr) video_overlay_fn_ptr(monitor.renderer);
+ 
