@@ -37,7 +37,7 @@ diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-
 diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys.c
 --- a/drivers/input/keyboard/adc-keys.c
 +++ b/drivers/input/keyboard/adc-keys.c
-@@ -11,6 +11,7 @@
+@@ -11,5 +11,6 @@
  #include <linux/input.h>
  #include <linux/module.h>
 +#include <linux/of.h>

@@ -181,7 +181,7 @@ elif [ "$UI" = "muos" ]; then
 			-v "$GITHUB_WORKSPACE:/workspace" \
 			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
 			"ghcr.io/${OWNER}/minime-glibc:latest" \
-			/bin/bash -c "apt-get update && apt-get install -y --no-install-recommends libcurl4-openssl-dev:arm64 libsdl2-mixer-dev:arm64 libbz2-dev:arm64 liblzma-dev:arm64 libzstd-dev:arm64 libfreetype-dev:arm64 libpng-dev:arm64 libavformat-dev:arm64 libavcodec-dev:arm64 libavdevice-dev:arm64 libswresample-dev:arm64 libswscale-dev:arm64 libavutil-dev:arm64 && cd /workspace/minime/ui/muos/frontend && make DEVICE=ARM64 BUILD=release DEBUG=1 CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/frontend/bin"
+			/bin/bash -c "apt-get update && apt-get install -y --no-install-recommends libssl-dev:arm64 libcurl4-openssl-dev:arm64 libsdl2-mixer-dev:arm64 libbz2-dev:arm64 liblzma-dev:arm64 libzstd-dev:arm64 libfreetype-dev:arm64 libpng-dev:arm64 libavformat-dev:arm64 libavcodec-dev:arm64 libavdevice-dev:arm64 libswresample-dev:arm64 libswscale-dev:arm64 libavutil-dev:arm64 && export CPATH=/usr/include/aarch64-linux-gnu && cd /workspace/minime/ui/muos/frontend && make DEVICE=ARM64 BUILD=release DEBUG=1 CROSS_COMPILE=\"aarch64-linux-gnu-\" CC=\"ccache aarch64-linux-gnu-gcc\" NM=\"aarch64-linux-gnu-nm\" -j\$(nproc) && chown -R \$(stat -c '%u:%g' /workspace) /workspace/minime/ui/muos/frontend/bin"
 	fi
 
 	STAGE_DIR=$(mktemp -d)
