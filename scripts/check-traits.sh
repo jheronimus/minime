@@ -110,3 +110,45 @@ for board in h700 rk3326 rk3566; do
 done
 
 echo "traits check passed"
+
+# --- Consumer parity guard ---------------------------------------------------
+# The registry is the single source of truth for the emitted traits file.
+# Every key the registry can emit must be understood by every UI parser
+# (Allium traits.rs, MinUI traits.c); otherwise the parser rejects or
+# mis-parses the merged file at runtime. [dts]/[match]/parent keys are
+# generation metadata and are never emitted.
+
+ALLIUM_TRAITS="${REPO_ROOT}/minime/ui/allium/crates/common/src/platform/minime/traits.rs"
+MINUI_TRAITS="${REPO_ROOT}/minime/ui/minui/workspace/minime/platform/traits.c"
+
+# Keys the merged runtime file can contain (registry minus meta keys).
+emitted_keys() {
+	cat "${TRAITS_ROOT}"/*/traits/platform.ini "${TRAITS_ROOT}"/*/traits/devices/*.ini |
+		grep -E '^[A-Za-z0-9_]+=' |
+		grep -vE '^(parent|model|compatible|base|dtb|panel|panel_supply|panel_rotation|compat_parent)=' |
+		cut -d= -f1 | sort -u
+}
+
+# Key set a parser understands, one per line.
+allium_keys() {
+	awk '/^const KNOWN_KEYS/,/^];/' "$ALLIUM_TRAITS" | grep -oE '"[a-z0-9_]+"' | tr -d '"'
+}
+
+minui_keys() {
+	awk '/^static const TraitField TRAIT_FIELDS/,/^};/' "$MINUI_TRAITS" |
+		grep -oE '(FIELD\([a-z0-9_]+|"[a-z0-9_]+")' |
+		sed -E 's/^(FIELD\(|")//; s/"$//'
+}
+
+emitted_keys | while IFS= read -r key; do
+	[ -f "$ALLIUM_TRAITS" ] && { allium_keys | grep -Fxq "$key" || {
+		echo "registry key '$key' is missing from Allium traits.rs KNOWN_KEYS" >&2
+		exit 1
+	}; }
+	[ -f "$MINUI_TRAITS" ] && { minui_keys | grep -Fxq "$key" || {
+		echo "registry key '$key' is missing from MinUI traits.c TRAIT_FIELDS" >&2
+		exit 1
+	}; }
+done || exit 1
+
+echo "consumer parity check passed"

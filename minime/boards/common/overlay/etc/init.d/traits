@@ -29,10 +29,12 @@ read_device_key() {
 }
 
 # Emit the non-meta trait lines of a file: all key=value lines outside the
-# [match] section, excluding the cascade `parent` key.
+# [match] and [dts] sections, excluding the cascade `parent` key. [dts] is
+# generation metadata consumed only by traits-gen at build time, never by
+# runtime consumers of the merged traits file.
 emit_file() {
 	awk '
-		/^\[match\]$/ { skip = 1; next }
+		/^\[(match|dts)\]$/ { skip = 1; next }
 		/^\[/ { skip = 0; next }
 		!skip && /^[A-Za-z0-9_]+=/ && $0 !~ /^parent=/ { print }
 	' "$1"
