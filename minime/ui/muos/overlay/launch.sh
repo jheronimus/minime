@@ -35,7 +35,7 @@ ln -sfn "${MUOS_DATA}" "${RUN_MUOS}/storage"
 
 # Upstream muOS init creates /opt/muos -> payload root; the internal scripts and
 # device helpers hardcode /opt/muos paths, so mirror it here.
-ln -sfn "${MUOS_ROOT}" /opt/muos
+[ -L /opt/muos ] || ln -sfn "${MUOS_ROOT}" /opt/muos 2>/dev/null || true
 
 # ---- device/config generation -------------------------------------------------
 # mkfile DIR KEY VALUE: create only when absent, never clobber runtime writes.
@@ -188,67 +188,67 @@ gen_board() {
 		[ "$rx" = "na" ] && stick=1
 	fi
 
-	has "$model" && mkfile board name "$model"
-	mkfile board network "$(has "$wifi" && echo 1 || echo 0)"
-	mkfile board bluetooth "$(has "$bt" && echo 1 || echo 0)"
-	mkfile board portmaster 0
-	mkfile board lid "$(has "$lid" && echo 1 || echo 0)"
-	mkfile board hdmi "$(has "$hdmi" && echo 1 || echo 0)"
-	mkfile board event 0
-	mkfile board debugfs 0
-	mkfile board stick "$stick"
-	mkfile board touch "$(is1 "$touch" && echo 1 || echo 0)"
-	mkfile board rgb 0
-	has "$rumble" && mkfile board rumble "$rumble"
+	has "$model" && mkfile_force board name "$model"
+	mkfile_force board network "$(has "$wifi" && echo 1 || echo 0)"
+	mkfile_force board bluetooth "$(has "$bt" && echo 1 || echo 0)"
+	mkfile_force board portmaster 0
+	mkfile_force board lid "$(has "$lid" && echo 1 || echo 0)"
+	mkfile_force board hdmi "$(has "$hdmi" && echo 1 || echo 0)"
+	mkfile_force board event 0
+	mkfile_force board debugfs 0
+	mkfile_force board stick "$stick"
+	mkfile_force board touch "$(is1 "$touch" && echo 1 || echo 0)"
+	mkfile_force board rgb 0
+	has "$rumble" && mkfile_force board rumble "$rumble"
 	gpad=$(trait input_gamepad_device_name)
 	has "$gpad" && mkfile_force board sdl_map "$(build_map "$gpad" 1)"
 }
 
 gen_audio() {
-	mkfile audio min 0
-	mkfile audio max 100
+	mkfile_force audio min 0
+	mkfile_force audio max 100
 }
 
 gen_mux() {
 	w=$(trait screen_width)
 	h=$(trait screen_height)
-	has "$w" && mkfile mux width "$w"
-	has "$h" && mkfile mux height "$h"
+	has "$w" && mkfile_force mux width "$w"
+	has "$h" && mkfile_force mux height "$h"
 }
 
 gen_storage() {
 	sd=$(trait storage_sd_node)
 	if has "$sd"; then
 		for slot in boot rom; do
-			mkfile storage/${slot} num 1
-			mkfile storage/${slot} dev "${sd}p1"
-			mkfile storage/${slot} mount /mnt/sdcard
-			mkfile storage/${slot} type vfat
-			mkfile storage/${slot} label minime
+			mkfile_force storage/${slot} num 1
+			mkfile_force storage/${slot} dev "${sd}p1"
+			mkfile_force storage/${slot} mount /mnt/sdcard
+			mkfile_force storage/${slot} type vfat
+			mkfile_force storage/${slot} label minime
 		done
 	fi
-	mkfile storage/root mount /
-	mkfile storage/root type erofs
-	mkfile storage/root label system
+	mkfile_force storage/root mount /
+	mkfile_force storage/root type erofs
+	mkfile_force storage/root label system
 }
 
 gen_cpu() {
 	gov=$(trait cpu_governor_path)
 	clk=$(trait cpu_clock_path)
 	if has "$gov"; then
-		mkfile cpu governor "$gov"
-		mkfile cpu default "$(cat "$gov" 2>/dev/null || true)"
+		mkfile_force cpu governor "$gov"
+		mkfile_force cpu default "$(cat "$gov" 2>/dev/null || true)"
 		avail=$(cat "${gov%/*}/scaling_available_governors" 2>/dev/null || true)
-		has "$avail" && mkfile cpu available "$avail"
+		has "$avail" && mkfile_force cpu available "$avail"
 	fi
 	if has "$clk"; then
-		mkfile cpu scaler "${clk%/*}/scaling_cur_freq"
+		mkfile_force cpu scaler "${clk%/*}/scaling_cur_freq"
 	fi
 }
 
 gen_network() {
 	wifi=$(trait wifi_interface)
-	has "$wifi" && mkfile network iface "$wifi"
+	has "$wifi" && mkfile_force network iface "$wifi"
 }
 
 gen_screen() {
@@ -257,30 +257,37 @@ gen_screen() {
 	rot=$(trait screen_rotation)
 	bmax=$(trait screen_backlight_max)
 	hdmi=$(trait gpu_hdmi_connector)
-	has "$bmax" && mkfile screen bright "$bmax"
-	mkfile screen wait 0
-	mkfile screen device /dev/fb0
-	has "$hdmi" && mkfile screen hdmi "$hdmi"
-	has "$w" && mkfile screen width "$w"
-	has "$h" && mkfile screen height "$h"
-	has "$rot" && mkfile screen rotate "$rot"
+	has "$bmax" && mkfile_force screen bright "$bmax"
+	mkfile_force screen wait 0
+	mkfile_force screen device /dev/fb0
+	has "$hdmi" && mkfile_force screen hdmi "$hdmi"
+	if [ "$rot" = "90" ] || [ "$rot" = "270" ]; then
+		sw="$h"
+		sh="$w"
+	else
+		sw="$w"
+		sh="$h"
+	fi
+	has "$sw" && mkfile_force screen width "$sw"
+	has "$sh" && mkfile_force screen height "$sh"
+	has "$rot" && mkfile_force screen rotate "$rot"
 }
 
 gen_sdl() {
 	rot=$(trait screen_rotation)
-	mkfile sdl scaler 1
-	has "$rot" && mkfile sdl rotate "$((rot / 90))"
+	mkfile_force sdl scaler 1
+	has "$rot" && mkfile_force sdl rotate "$((rot / 90))"
 }
 
 gen_battery() {
 	b=$(trait power_battery_sysfs)
 	c=$(trait power_charger_online_path)
 	if has "$b"; then
-		mkfile battery capacity "${b}/capacity"
-		mkfile battery health "${b}/health"
-		mkfile battery voltage "${b}/voltage_now"
+		mkfile_force battery capacity "${b}/capacity"
+		mkfile_force battery health "${b}/health"
+		mkfile_force battery voltage "${b}/voltage_now"
 	fi
-	has "$c" && mkfile battery charger "$c"
+	has "$c" && mkfile_force battery charger "$c"
 }
 
 # The stick axes live on a second evdev device (adc-joystick). SDL maps one
