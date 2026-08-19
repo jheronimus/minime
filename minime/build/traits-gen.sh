@@ -27,7 +27,6 @@ set -eu
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BOARDS_ROOT="$ROOT/minime/boards"
-BUILDROOT_H700_CONFIG="$ROOT/minime/targets/buildroot/external/configs/h700.config"
 
 usage() {
 	echo "usage: $0 check <board> | overlays <board> <outdir> | dtbs <board> | makefile <board>" >&2
@@ -181,6 +180,21 @@ check_board() {
 			}
 		fi
 
+		# Explicit dtb must start with dir/ prefix (unless none)
+		explicit_dtb="$(read_key dtb "$file")"
+		if [ -n "$explicit_dtb" ] && [ "$explicit_dtb" != "none" ]; then
+			# shellcheck disable=SC2046
+			set -- $(board_info "$board")
+			b_dir="$1"
+			case "$explicit_dtb" in
+			"${b_dir}/"*) ;;
+			*)
+				echo "$file: explicit dtb '$explicit_dtb' must start with '${b_dir}/'" >&2
+				fail=1
+				;;
+			esac
+		fi
+
 		# Duplicate [match] detection.
 		match="$(read_key model "$file")|$(read_key compatible "$file")"
 		case " $seen " in
@@ -212,13 +226,17 @@ check_board() {
 		}
 	done
 
-	if [ "$board" = h700 ] && [ -f "$BUILDROOT_H700_CONFIG" ]; then
-		cfg_dtbs="$(sed 's/^BR2_LINUX_KERNEL_INTREE_DTS_NAME="//; s/"$//' "$BUILDROOT_H700_CONFIG" | tr ' ' '\n' | grep '^allwinner/' | tr '\n' ' ')"
+	buildroot_cfg="$ROOT/minime/targets/buildroot/external/configs/${board}.config"
+	if [ -f "$buildroot_cfg" ]; then
+		# shellcheck disable=SC2046
+		set -- $(board_info "$board")
+		b_dir="$1"
+		cfg_dtbs="$(sed 's/^BR2_LINUX_KERNEL_INTREE_DTS_NAME="//; s/"$//' "$buildroot_cfg" | tr ' ' '\n' | grep "^${b_dir}/" | tr '\n' ' ')"
 		for dtb in $registry; do
 			case " $cfg_dtbs " in
 			*" $dtb "*) ;;
 			*)
-				echo "registry device $dtb is not in the Buildroot h700 config" >&2
+				echo "registry device $dtb is not in the Buildroot $board config" >&2
 				fail=1
 				;;
 			esac
@@ -228,7 +246,7 @@ check_board() {
 			case " $registry " in
 			*" $dtb "*) ;;
 			*)
-				echo "Buildroot h700 config ships $dtb but the registry has no device for it" >&2
+				echo "Buildroot $board config ships $dtb but the registry has no device for it" >&2
 				fail=1
 				;;
 			esac

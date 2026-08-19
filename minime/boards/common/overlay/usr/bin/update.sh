@@ -68,14 +68,14 @@ detect_board() {
 	case "${compat}" in
 	*"sun50i-h700"*) echo "h700" ;;
 	*"rk3326"*) echo "rk3326" ;;
-	*"rk3566"*) echo "rk3566" ;;
+	*"rk3566"*|*"rk3568"*) echo "rk3566" ;;
 	*)
 		# Fallback: /mnt/sdcard/.minime/dtb, e.g. sun50i-h700-*.dtb
 		dtb="$(basename "${SDCARD}/.minime/dtb" 2>/dev/null || true)"
 		case "${dtb}" in
 		"sun50i-h700-"*) echo "h700" ;;
 		"rk3326-"*) echo "rk3326" ;;
-		"rk3566-"*) echo "rk3566" ;;
+		"rk3566-"*|"rk3568-"*) echo "rk3566" ;;
 		*) die "cannot detect board (compatible='${compat}' dtb='${dtb}')" ;;
 		esac
 		;;

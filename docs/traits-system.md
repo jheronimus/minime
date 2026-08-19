@@ -40,7 +40,7 @@ layouts live in [MAP.md](MAP.md). This doc is the *how it works* reference.
 2. **`traits-gen.sh`** modes:
    - `check <board>` — schema validation (required keys, `parent=` resolves,
      no self-parent/duplicate matches/obsolete values), every core device
-     resolves to a DTB, registry ↔ Buildroot h700 DTS config cross-reference.
+     resolves to a DTB, registry ↔ Buildroot DTS config cross-reference.
    - `overlays <board> <outdir>` — emit overlay DTS for devices with a `[dts]
      base=` section (include base, set compatible/model, panel override +
      `panel_supply`/`panel_rotation` for RK3326).

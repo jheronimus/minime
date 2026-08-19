@@ -2,13 +2,17 @@ MINIME_BOARD_NAME = $(notdir $(patsubst %/patches,%,$(call qstrip,$(BR2_GLOBAL_P
 
 include $(sort $(wildcard $(BR2_EXTERNAL_MINIME_PATH)/package/*/*.mk))
 
+ifeq ($(MINIME_BOARD_NAME),h700)
+MINIME_DTS_DIR = allwinner
+else
+MINIME_DTS_DIR = rockchip
+endif
+
 # Hooks to generate overlay DTS from the device registry (single source of
 # truth: minime/boards/<board>/traits/) and patch base DTS file in Linux kernel
 define MINIME_COPY_DTS
 	bash $(MINIME_ROOT)/minime/build/traits-gen.sh overlays $(MINIME_BOARD_NAME) \
-		$(LINUX_DIR)/arch/arm64/boot/dts/allwinner/ >/dev/null
-	bash $(MINIME_ROOT)/minime/build/traits-gen.sh overlays $(MINIME_BOARD_NAME) \
-		$(LINUX_DIR)/arch/arm64/boot/dts/rockchip/ >/dev/null
+		$(LINUX_DIR)/arch/arm64/boot/dts/$(MINIME_DTS_DIR)/ >/dev/null
 	bash $(MINIME_ROOT)/minime/build/traits-gen.sh makefile $(MINIME_BOARD_NAME) \
 		>> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile
 endef
