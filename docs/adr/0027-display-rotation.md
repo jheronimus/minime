@@ -26,16 +26,15 @@ apply an inverse rotation because it reads buffers that the UI already rotated.
 
 ## Decision
 
-1. **The trait remains the single source of truth** for panel orientation.
+1. **The trait is the single source of truth** for panel orientation.
    `screen_rotation` is the angle the UI must apply. Consumers (MinUI, Allium,
-   `remote`, `minime-rotate`) all read it.
+   muOS, emulators, `remote`) all read it.
 
-2. **A shared `init.d/display` overlay service** (plus `/usr/bin/minime-rotate`)
-   owns rotation that Minime applies outside the UI. It reads the optional
-   `screen_rotation_kernel` trait; when set and non-zero it programs the VOP2
-   primary-plane `rotation` property on the internal (non-HDMI) connector before
-   the UI starts. On H700/RK3326 it no-ops (no rotation silicon) and only
-   reports the enforcement layer.
+2. **Rotation is handled uniformly in userspace/UI.** Because H700 and RK3326
+   display controllers (Allwinner DE2, Rockchip VOP-lite) have no hardware
+   rotation units, all launchers and emulators rotate their framebuffers directly
+   using `screen_rotation`. The experimental `minime-rotate` KMS plane rotation
+   tool and `init.d/display` service have been removed.
 
 3. **H700 panel firmware blobs are shipped** for all panels across H700 variants:
    rg28xx, rg34xx, rg34xx-sp, rg35xx-plus-rev6, and rg35xx-sp-v2.
@@ -45,23 +44,11 @@ apply an inverse rotation because it reads buffers that the UI already rotated.
    (authoritative from the panel preset). RG351V is set to 90,
    pending on-device confirmation of the exact direction.
 
-5. **`screen_rotation_kernel` is NOT enabled anywhere yet.** Enabling it for an
-   RK3566 device requires the UI rotation to be dropped (`screen_rotation=0`) and
-   the fbdev path verified: the fbdev framebuffer is allocated at native mode
-   dimensions, so 90/270 plane rotation of it distorts (a known mainline fbdev
-   TODO). KMS clients (SDL) control buffer dimensions and work; Allium (fbdev)
-   does not until the fbdev emulation reports logical dimensions. This is the
-   on-device verification task.
-
 ## Consequences
 
-- UIs/emulators/`remote` keep rotating via the trait until a device opts into
-  `screen_rotation_kernel`; `remote` then stops rotating automatically because
-  it reads the trait (`screen_rotation` becomes 0).
-- H700 display bring-up now works for all shipped panels.
-- Portrait devices are no longer silently sideways; exact angles are confirmed
-  with `remote screenshot --raw` (`remote-diagnostics` skill recipe 3).
-- Verification steps are tracked in `docs/TODO.md` ("Display, Audio & Input").
+- UIs, emulators, and `remote` rotate cleanly via the `screen_rotation` trait.
+- H700 display bring-up works for all shipped panels.
+- Zero kernel/KMS plane rotation state to manage or distort fbdev dimensions.
 
 ## Status
 
