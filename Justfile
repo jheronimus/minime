@@ -251,9 +251,42 @@ deploy os="" board="" ui="" disk_device="":
 
         if [ -n "${mount_point}" ] && [ -d "${mount_point}" ]; then
             echo "Mounted at: ${mount_point}"
-            mkdir -p "${mount_point}/.minime/config"
+            mkdir -p "${mount_point}/.minime/config/iwd"
+            mkdir -p "${mount_point}/.minime/config/wifi"
+            echo 1 > "${mount_point}/.minime/config/wifi/enabled"
             cp -f wifi.cfg "${mount_point}/.minime/config/wifi.cfg"
-            echo "Wi-Fi configuration applied successfully."
+
+            # Generate native iwd .psk profiles
+            ssid=""
+            psk=""
+            while IFS='=' read -r key val || [ -n "$key" ]; do
+                [ -n "$key" ] || continue
+                key=$(printf '%s' "$key" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                val=$(printf '%s' "$val" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^"//;s/"$//')
+                case "$key" in
+                    \#*) continue ;;
+                    SSID)
+                        if [ -n "$ssid" ]; then
+                            if [ -n "$psk" ]; then
+                                printf '[Security]\nPassphrase=%s\n[Settings]\nAutoConnect=true\n' "$psk" > "${mount_point}/.minime/config/iwd/${ssid}.psk"
+                            else
+                                printf '[Settings]\nAutoConnect=true\n' > "${mount_point}/.minime/config/iwd/${ssid}.psk"
+                            fi
+                            psk=""
+                        fi
+                        ssid="$val"
+                        ;;
+                    Passphrase) psk="$val" ;;
+                esac
+            done < wifi.cfg
+            if [ -n "$ssid" ]; then
+                if [ -n "$psk" ]; then
+                    printf '[Security]\nPassphrase=%s\n[Settings]\nAutoConnect=true\n' "$psk" > "${mount_point}/.minime/config/iwd/${ssid}.psk"
+                else
+                    printf '[Settings]\nAutoConnect=true\n' > "${mount_point}/.minime/config/iwd/${ssid}.psk"
+                fi
+            fi
+            echo "Wi-Fi configuration and iwd profiles applied successfully."
         else
             echo "WARNING: Could not find mount point. Wi-Fi settings not applied." >&2
         fi
