@@ -1,5 +1,42 @@
+diff --git a/common/anim.c b/common/anim.c
+index 86accebc..4eeffdc5 100755
+--- a/common/anim.c
++++ b/common/anim.c
+@@ -2,6 +2,7 @@
+ #include <SDL2/SDL_image.h>
+ #include <stdio.h>
+ #include <string.h>
++#include "display.h"
+ #include <limits.h>
+ #include <time.h>
+ #include <errno.h>
+@@ -294,22 +295,11 @@ void anim_tick(SDL_Renderer *renderer) {
+         anim.last_tick = now;
+     }
+ 
+-    if (!anim.foreground && anim.gradient_tex) SDL_RenderCopy(renderer, anim.gradient_tex, NULL, NULL);
++    if (!anim.foreground && anim.gradient_tex) display_render_logical_texture(renderer, anim.gradient_tex);
+ 
+     SDL_Texture *tex = anim.frames[anim.current_frame].texture;
+     if (tex) {
+-        int tw, th, rw, rh;
+-        SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
+-        SDL_GetRendererOutputSize(renderer, &rw, &rh);
+-
+-        const int col = anim.position % 3;
+-        const int row = anim.position / 3;
+-
+-        const int x = col == 0 ? 0 : col == 1 ? (rw - tw) / 2 : rw - tw;
+-        const int y = row == 0 ? 0 : row == 1 ? (rh - th) / 2 : rh - th;
+-
+-        const SDL_Rect dst = {x, y, tw, th};
+-        SDL_RenderCopy(renderer, tex, NULL, &dst);
++        display_render_logical_texture(renderer, tex);
+     }
+ }
+ 
 diff --git a/common/display.c b/common/display.c
-index 4dd6d99e..9090d0f8 100755
+index 4dd6d99e..caf5b724 100755
 --- a/common/display.c
 +++ b/common/display.c
 @@ -980,8 +980,15 @@ static void composite_to(SDL_Texture *target, const int present) {
@@ -39,3 +76,17 @@ index 4dd6d99e..9090d0f8 100755
  
      if (video_overlay_fn_ptr) video_overlay_fn_ptr(monitor.renderer);
  
+@@ -1237,3 +1252,13 @@ void canvas_invalidate_gpu_texture(lv_obj_t *canvas) {
+     lv_draw_sdl_ctx_t *sdl_ctx = (lv_draw_sdl_ctx_t *) disp->driver->draw_ctx;
+     lv_draw_sdl_texture_cache_remove_src(sdl_ctx, lv_canvas_get_img(canvas));
+ }
++
++void display_render_logical_texture(SDL_Renderer *renderer, SDL_Texture *texture) {
++    if (monitor.angle == 0.0) {
++        SDL_RenderCopy(renderer, texture, NULL, &monitor.dest_rect);
++    } else {
++        SDL_RenderCopyEx(
++            renderer, texture, NULL, &monitor.dest_rect, monitor.angle, monitor.pivot_ptr, SDL_FLIP_NONE
++        );
++    }
++}
