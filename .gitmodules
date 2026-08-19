@@ -30,6 +30,10 @@
 	branch = main
 	shallow = true
 	update = none
+# ROM + BIOS asset set for MinUI (stored on private HTPC Forgejo).
+# update=none: GitHub Actions runners can't reach htpc.local:2222 over SSH;
+# recursive checkouts and update-submodules skip it. Init manually with:
+# `git submodule update --init roms/tinyset`
 [submodule "roms/tinyset"]
 	path = roms/tinyset
 	url = ssh://git@htpc.local:2222/ilembitov/tinyset.git
