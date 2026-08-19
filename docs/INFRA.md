@@ -8,18 +8,27 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ## 1. GitHub Actions Workflows (`.github/workflows/`)
 
-### `build-musl.yml` / `build-glibc.yml` — Main Build Pipelines
-- **Trigger**: `build-musl.yml` (alpine): push to `main` filtered to `minime/**` and `src/**` (shared source: remote/benchmark/display/libmali/kernel); daily cron at 04:00 UTC (`0 4 * * *`, = 07:00 GMT+3); `workflow_dispatch` (comma-separated `targets` input of alpine boards, default `all`). `build-glibc.yml` (buildroot): same daily cron and `workflow_dispatch` (buildroot boards); **no push trigger**.
-- **Purpose**: Builds bootloaders, UIs, OS images, and OTA update packages. Push to `main` builds only the fast-path alpine board (`FAST_PATH_TARGET` env at the top of `build-musl.yml`, default `rk3566`); the daily cron and `all` dispatch rebuild every board of that distro. Uploads `.img.zst` / `.tar.zst` to the `testing` GitHub Release on any main-branch run.
-- **Concurrency**: Each workflow has its own `concurrency` group (`cancel-in-progress: true`) keyed on `github.ref` — the newest run wins within a workflow, and musl/glibc runs may overlap because they upload disjoint assets to `testing`. A cancelled run is expected behaviour (a newer commit/dispatch superseded it), not an error.
-- **Jobs** (identical in both, differing only in libc values / alpine-vs-buildroot target dir):
-  - `setup` — computes the board matrix: `push` → `[FAST_PATH_TARGET]`, cron → all boards of the distro, `workflow_dispatch` → parsed `targets` input (fails on unknown boards).
-  - `bootloader` — calls the shared reusable workflow `build-bootloader.yml` (U-Boot for all three boards `{rk3326, rk3566, h700}`, cached by hash of `minime/uboot/**`). `rk3326`/`rk3566` use the vendor rkbin boot chain, `h700` builds ATF from source.
-  - `build-cores-{libc}` — builds the shared RetroArch cores from `minime/build/cores/manifest` via `buildcores.sh`. Uploads the flat `cores-{libc}` artifact consumed by the UI job. Cached by a **source-only** key (`manifest` + `buildcores.sh` + `patches/**`) so unchanged cores reuse artifacts (~1 min vs 4–6 min).
-  - `build-ui-{libc}` — compiles MinUI, Allium, and muOS (musl on ARM64 inside `minime-musl:latest`; glibc on AMD64 cross inside `minime-glibc:latest`). Cached by submodule HEADs (allium, its nested RetroArch-patch/RetroArch, minui, muos/frontend, muos/internal) + `minime/build/mkui.sh`; Allium cargo `target/` dirs (workspace + dufs/collie) cached separately keyed on their `Cargo.lock`. muOS is built from the pristine upstream `frontend` submodule with `minime/ui/muos/patches` applied; its runtime payload (`share/` + `script/`) is staged from the `muos/internal` submodule (sparse-cloned via `minime/build/muos-checkout-internal.sh`, since it is `update=none` and skipped by recursive checkout).
-  - `build-os` (matrix over the `setup` board list) — runs `make components` then `make image update` (once per UI). Uses `minime/targets/{alpine,buildroot}`, per-distro ccache, a board-shared DL dir, the matching `ui-{libc}` artifact, and the matching upload path. The Alpine kernel tarball is pre-downloaded into the DL cache with a retrying curl + sha512 verification so a transient CDN truncation self-heals instead of aborting the build.
-- **Caches**: `bootloader-*`, `cores-{libc}-*`, `ccache-cores-{libc}-*`, `ui-{libc}-*`, `ccache-ui-{libc}-*`, `allium-target-{libc}-*`, `ccache-{os}-{board}-*`, `dl-{os}-*` (alpine distfiles are shared across boards; buildroot keys per board). Binary caches are keyed on source fingerprints (never on build outputs); ccache is layered on top so a cache miss only recompiles changed objects. Every Save step runs when its build step ran (not on a file-missing check), so rebuilds always re-seed the cache.
-- **Rule**: Push-to-main only drives `build-musl.yml`; `workflow_dispatch` is for targeted on-demand builds of either distro. The per-workflow concurrency group enforces one active build per workflow/branch — never manually cancel or re-dispatch a cancelled run.
+### `build.yml` — Main Parameter-Driven Build Pipeline
+- **Trigger**:
+  - `push`: `main` branch filtered to `minime/**`, `src/**`, `.github/workflows/**` (defaults to `alpine / rk3566 / muos`).
+  - `workflow_dispatch`: Single target selection via dropdowns (`libc`: `alpine` / `buildroot`, `soc`: `rk3566` / `rk3326` / `h700`, `ui`: `muos` / `minui` / `allium`).
+  - `workflow_call`: Reusable entrypoint called by `nightly.yml`.
+- **Purpose**: Builds bootloader, cores, UI, and OS image for a single target, uploading `.img.zst` and `.tar.zst` to the `testing` GitHub Release on main.
+- **Concurrency**: Per-target `minime-build-${{ github.ref }}-${{ libc }}-${{ soc }}-${{ ui }}` (`cancel-in-progress: true`).
+- **Jobs**:
+  - `setup` — Computes runner, libc container, ccache/dl paths, and enforces compatibility (`buildroot` + `h700` rejected).
+  - `bootloader` — Calls reusable `build-bootloader.yml` (U-Boot for all boards, cached).
+  - `cores` — Builds RetroArch cores for the target libc (`cores-{libc}`). Source-fingerprinted binary cache + ccache.
+  - `ui` — Builds only the requested UI for the target libc (`ui-{ui}-{libc}`). Source-fingerprinted binary cache + ccache + Cargo target.
+  - `build-os` — Runs `make components` (Phase 2) then `make image update` (Phase 4). Caches ccache and distfile DL mirrors; uploads `.img.zst` / `.tar.zst` to `testing` release.
+
+### `nightly.yml` — Daily Regression & Matrix Rebuilds
+- **Trigger**: Daily cron at 04:00 UTC (`0 4 * * *`, = 07:00 GMT+3); manual `workflow_dispatch`.
+- **Purpose**: Runs a static 15-target matrix over all valid combinations (all except `buildroot + h700`), calling `build.yml` concurrently.
+
+### `build-bootloader.yml` — U-Boot Builder (Reusable)
+- **Trigger**: Called by `build.yml`.
+- **Purpose**: Builds and caches U-Boot binaries for `rk3326`, `rk3566`, and `h700`. Source-cached by hash of `minime/uboot/**`.
 
 ### `containers.yml` — Build & Push Builder Images
 - **Trigger**: Push to `main` on `minime/targets/alpine/container/**` or `minime/targets/buildroot/container/**`; `workflow_dispatch`.
@@ -40,7 +49,7 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 ### Build Scripts (`minime/build/`)
 - **`minime/build/mkbootloader.sh`**: Builds U-Boot for `h700`, `rk3326`, or `rk3566` (invoked by the `build-bootloader` reusable workflow in `build-bootloader.yml`). `rk3566` and `rk3326` use the vendor Rockchip boot chain (committed rkbin DDR/BL31 blobs; `rk3326` additionally packs `uboot.img` via `loaderimage` and `trust.img` via `trust_merger`); `h700` builds ATF and U-Boot from source.
 - **`minime/build/cores/buildcores.sh`**: Builds all shared RetroArch cores from `minime/build/cores/manifest` (single source of truth: recipes, pins, patches) into a flat `out/` dir consumed by both UIs. Invoked by the `build-cores` job.
-- **`minime/build/mkui.sh`**: Compiles MinUI, Allium, and muOS for a given libc variant (`musl` or `glibc`). Invoked by the `build-ui-musl` / `build-ui-glibc` jobs in `build-musl.yml` / `build-glibc.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`; muOS applies `minime/ui/muos/patches` to the pristine `frontend` submodule, builds, and stages `bin/` + `muos/internal` `share/`+`script/` + the `minime/ui/muos/overlay` launcher. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
+- **`minime/build/mkui.sh`**: Compiles MinUI, Allium, and muOS for a given libc variant (`musl` or `glibc`). Invoked by the `ui` job in `build.yml`. MinUI injects the downloaded cores artifact via `make cores CORES_DIR=...`; Allium copies it into `RetroArch/.retroarch/cores/` and stages its bundled tools (dufs/collie/syncthing) into `.allium/bin/`; muOS applies `minime/ui/muos/patches` to the pristine `frontend` submodule, builds, and stages `bin/` + `muos/internal` `share/`+`script/` + the `minime/ui/muos/overlay` launcher. Outputs archives to `minime/ui/out/` (ephemeral runner path, not committed to git).
 - **`minime/build/genassets.sh`**: Extracts UI binaries from the `ui-{libc}` GH run artifact into the working tree before image assembly.
 - **`minime/build/mkimage.sh`**: Central image builder. Consumes compiled target artifacts (`system.erofs`, `Image`, `initramfs`, `*.dtb`, UI binaries) and prebuilt U-Boot binaries; assembles and compresses `{board}-{ui}.img.zst`.
 - **`minime/build/mkupdate.sh`**: Central OTA package generator. Packages the same artifacts into `{board}-{ui}.tar.zst` for live updates.

@@ -1,0 +1,71 @@
+name: Nightly Rebuilds
+
+on:
+  schedule:
+    # 04:00 UTC = 07:00 GMT+3 — nightly rebuild of all target combinations
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-build:
+    name: ${{ matrix.libc }} / ${{ matrix.soc }} / ${{ matrix.ui }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Alpine (musl) — 9 combinations (3 boards × 3 UIs)
+          - libc: alpine
+            soc: rk3566
+            ui: muos
+          - libc: alpine
+            soc: rk3566
+            ui: minui
+          - libc: alpine
+            soc: rk3566
+            ui: allium
+          - libc: alpine
+            soc: rk3326
+            ui: muos
+          - libc: alpine
+            soc: rk3326
+            ui: minui
+          - libc: alpine
+            soc: rk3326
+            ui: allium
+          - libc: alpine
+            soc: h700
+            ui: muos
+          - libc: alpine
+            soc: h700
+            ui: minui
+          - libc: alpine
+            soc: h700
+            ui: allium
+          # Buildroot (glibc) — 6 combinations (2 boards × 3 UIs; h700 excluded)
+          - libc: buildroot
+            soc: rk3566
+            ui: muos
+          - libc: buildroot
+            soc: rk3566
+            ui: minui
+          - libc: buildroot
+            soc: rk3566
+            ui: allium
+          - libc: buildroot
+            soc: rk3326
+            ui: muos
+          - libc: buildroot
+            soc: rk3326
+            ui: minui
+          - libc: buildroot
+            soc: rk3326
+            ui: allium
+    uses: ./.github/workflows/build.yml
+    with:
+      libc: ${{ matrix.libc }}
+      soc: ${{ matrix.soc }}
+      ui: ${{ matrix.ui }}
+    secrets: inherit
