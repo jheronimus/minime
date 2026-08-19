@@ -15,14 +15,28 @@ SRC_DIR="$CORES_DIR/src"
 OUT_DIR="$CORES_DIR/out"
 
 TARGET_CORE="${1:-}"
+FORCE="${FORCE:-0}"
 
 CROSS_COMPILE="${CROSS_COMPILE:-}"
 CC="${CC:-${CROSS_COMPILE}gcc}"
 CXX="${CXX:-${CROSS_COMPILE}g++}"
 AR="${AR:-${CROSS_COMPILE}ar}"
 JOBS="${JOBS:-$(nproc)}"
+PARALLEL_CORES="${PARALLEL_CORES:-}"
 
-rm -rf "$SRC_DIR"
+if [ -z "$PARALLEL_CORES" ]; then
+	if [ -n "$TARGET_CORE" ]; then
+		PARALLEL_CORES=1
+	elif [ "$JOBS" -ge 4 ]; then
+		PARALLEL_CORES=2
+	else
+		PARALLEL_CORES=1
+	fi
+fi
+
+CORE_JOBS=$(( (JOBS + PARALLEL_CORES - 1) / PARALLEL_CORES ))
+[ "$CORE_JOBS" -lt 1 ] && CORE_JOBS=1
+
 mkdir -p "$OUT_DIR" "$SRC_DIR"
 
 export CROSS_COMPILE CC CXX AR
@@ -47,20 +61,11 @@ get_ini_val() {
 	grep -E "^[[:space:]]*${key}[[:space:]]*=" "$file" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true
 }
 
-built=0
-
-for dir in "$CORES_DIR"/*/; do
-	[ -d "$dir" ] || continue
+build_core() {
+	dir="$1"
 	core="$(basename "$dir")"
-	[ "$core" = "src" ] && continue
-	[ "$core" = "out" ] && continue
-
-	if [ -n "$TARGET_CORE" ] && [ "$core" != "$TARGET_CORE" ]; then
-		continue
-	fi
-
 	ini="$dir/core.ini"
-	[ -f "$ini" ] || continue
+	[ -f "$ini" ] || return 0
 
 	repo="$(get_ini_val "$ini" "repo")"
 	hash="$(get_ini_val "$ini" "hash")"
@@ -75,20 +80,38 @@ for dir in "$CORES_DIR"/*/; do
 	builder="$(get_ini_val "$ini" "builder")"
 	[ -z "$builder" ] && builder="make"
 
+	so_name="${core_so:-${core}_libretro.so}"
+
+	if [ "$FORCE" != "1" ] && [ -s "$OUT_DIR/$so_name" ]; then
+		echo "=== Skipping $core ($so_name already built) ==="
+		echo "$core|$so_name|$repo|${hash:-}" >"$OUT_DIR/.core_${core}"
+		return 0
+	fi
+
 	echo "=== Building $core ==="
 
 	src="$SRC_DIR/$core"
+	rm -rf "$src"
+
 	if [ -n "$hash" ]; then
-		if ! clone_retry git clone --recursive "$repo" "$src" || ! (cd "$src" && git checkout "$hash"); then
-			[ "$optional" = "1" ] && echo "WARNING: $core clone failed (optional) — skipping" >&2 && continue
+		if ! clone_retry git clone --filter=blob:none --no-checkout "$repo" "$src" || \
+		   ! (cd "$src" && git checkout -q "$hash") || \
+		   ! (cd "$src" && git submodule update --init --recursive --depth 1 --recommend-shallow 2>/dev/null || true); then
+			if [ "$optional" = "1" ]; then
+				echo "WARNING: $core clone failed (optional) — skipping" >&2
+				return 0
+			fi
 			echo "ERROR: $core clone failed" >&2
-			exit 1
+			return 1
 		fi
 	else
 		if ! clone_retry git clone --depth 1 --recursive --shallow-submodules "$repo" "$src"; then
-			[ "$optional" = "1" ] && echo "WARNING: $core clone failed (optional) — skipping" >&2 && continue
+			if [ "$optional" = "1" ]; then
+				echo "WARNING: $core clone failed (optional) — skipping" >&2
+				return 0
+			fi
 			echo "ERROR: $core clone failed" >&2
-			exit 1
+			return 1
 		fi
 	fi
 
@@ -96,9 +119,12 @@ for dir in "$CORES_DIR"/*/; do
 		[ -f "$p" ] || continue
 		echo "  Applying patch $(basename "$p")..."
 		if ! (cd "$src" && git apply -p1 "$p"); then
-			[ "$optional" = "1" ] && echo "WARNING: $core patch '$(basename "$p")' failed (optional) — skipping" >&2 && continue 2
+			if [ "$optional" = "1" ]; then
+				echo "WARNING: $core patch '$(basename "$p")' failed (optional) — skipping" >&2
+				return 0
+			fi
 			echo "ERROR: $core patch '$(basename "$p")' failed" >&2
-			exit 1
+			return 1
 		fi
 	done
 
@@ -107,13 +133,13 @@ for dir in "$CORES_DIR"/*/; do
 		# shellcheck disable=SC2086
 		if ! (cd "$bdir" && cmake -B build -DCMAKE_BUILD_TYPE=Release \
 			-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_AR="$AR" $flags &&
-			make -C build -j"$JOBS"); then
+			make -C build -j"$CORE_JOBS"); then
 			if [ "$optional" = "1" ]; then
 				echo "WARNING: $core build failed (optional) — skipping" >&2
-				continue
+				return 0
 			fi
 			echo "ERROR: $core build failed" >&2
-			exit 1
+			return 1
 		fi
 	else
 		set -- make
@@ -121,17 +147,16 @@ for dir in "$CORES_DIR"/*/; do
 		[ -n "$CROSS_COMPILE" ] && set -- "$@" CROSS_COMPILE="$CROSS_COMPILE"
 		set -- "$@" CC="$CC" CXX="$CXX" AR="$AR" platform="$platform"
 		# shellcheck disable=SC2086
-		if ! (cd "$bdir" && "$@" $flags -j"$JOBS"); then
+		if ! (cd "$bdir" && "$@" $flags -j"$CORE_JOBS"); then
 			if [ "$optional" = "1" ]; then
 				echo "WARNING: $core build failed (optional) — skipping" >&2
-				continue
+				return 0
 			fi
 			echo "ERROR: $core build failed" >&2
-			exit 1
+			return 1
 		fi
 	fi
 
-	so_name="${core_so:-${core}_libretro.so}"
 	so_path="$bdir/$so_name"
 	if [ ! -f "$so_path" ] && [ "$builder" = "cmake" ]; then
 		so_path="$(find "$bdir/build" -name "$so_name" -print -quit 2>/dev/null || true)"
@@ -139,10 +164,10 @@ for dir in "$CORES_DIR"/*/; do
 	if [ -z "$so_path" ] || [ ! -f "$so_path" ]; then
 		if [ "$optional" = "1" ]; then
 			echo "WARNING: $core produced no $so_name (optional) — skipping" >&2
-			continue
+			return 0
 		fi
 		echo "ERROR: expected $so_name in $bdir" >&2
-		exit 1
+		return 1
 	fi
 	cp "$so_path" "$OUT_DIR/$so_name"
 	for shim in liblog.so libOpenSLES.so; do
@@ -150,9 +175,63 @@ for dir in "$CORES_DIR"/*/; do
 			cp "$bdir/$shim" "$OUT_DIR/$shim"
 		fi
 	done
-	echo "$core|$so_name|$repo|${hash:-}" >>"$OUT_DIR/cores.txt"
-	built=$((built + 1))
+
+	echo "$core|$so_name|$repo|${hash:-}" >"$OUT_DIR/.core_${core}"
+	rm -rf "$src"
+	return 0
+}
+
+status_dir=$(mktemp -d)
+running=0
+
+for dir in "$CORES_DIR"/*/; do
+	[ -d "$dir" ] || continue
+	core="$(basename "$dir")"
+	[ "$core" = "src" ] && continue
+	[ "$core" = "out" ] && continue
+
+	if [ -n "$TARGET_CORE" ] && [ "$core" != "$TARGET_CORE" ]; then
+		continue
+	fi
+
+	ini="$dir/core.ini"
+	[ -f "$ini" ] || continue
+
+	if [ "$PARALLEL_CORES" -le 1 ]; then
+		if ! build_core "$dir"; then
+			touch "$status_dir/fail_$core"
+		fi
+	else
+		(
+			if ! build_core "$dir"; then
+				touch "$status_dir/fail_$core"
+			fi
+		) &
+		running=$((running + 1))
+		if [ "$running" -ge "$PARALLEL_CORES" ]; then
+			wait
+			running=0
+		fi
+	fi
+done
+
+wait
+
+fail_count=$(find "$status_dir" -name "fail_*" 2>/dev/null | wc -l)
+rm -rf "$status_dir"
+
+if [ "$fail_count" -gt 0 ]; then
+	echo "ERROR: $fail_count core build(s) failed" >&2
+	exit 1
+fi
+
+: >"$OUT_DIR/cores.txt"
+for cf in "$OUT_DIR"/.core_*; do
+	[ -f "$cf" ] || continue
+	cat "$cf" >>"$OUT_DIR/cores.txt"
+	rm -f "$cf"
 done
 
 rm -rf "$SRC_DIR"
+built=$(find "$OUT_DIR" -maxdepth 1 -name "*_libretro.so" 2>/dev/null | wc -l)
 echo "Built $built core(s) into $OUT_DIR"
