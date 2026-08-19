@@ -30,3 +30,7 @@
 	branch = main
 	shallow = true
 	update = none
+[submodule "roms/tinyset"]
+	path = roms/tinyset
+	url = ssh://git@htpc.local:2222/ilembitov/tinyset.git
+	branch = main
