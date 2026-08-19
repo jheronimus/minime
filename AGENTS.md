@@ -20,7 +20,7 @@ Only the basic components required by launchers: alsa, wpa_supplicant, bluez, te
 - `minime/`: Central source of truth for hardware definitions, bootloaders, target software builders, and image packaging.
   - `boards/`: Board definitions, kernel patches, traits, and OpenRC overlays.
     - `common/`: Shared OpenRC services (`overlay/etc/init.d/`), sysctl, wifi config, `device.sh`.
-    - `h700/`, `rk3326/`, `rk3566/`: Per-board patches, traits, firmware, `boot.env`, and `genimage.cfg`. Per-device overlay DTS is generated from the traits registry by `minime/build/traits-gen.sh` (no `dts/` dirs).
+    - `h700/`, `rk3326/`, `rk3566/`: Per-board patches, traits, firmware, `boot.env`, and `genimage.cfg`. Per-device overlay DTS is generated from the traits registry by `minime/build/traits-gen.sh` (no `dts/` dirs). The full system design — intent (deterministic traits, no hand authoring, follow mainline not other firmwares), logic, and audit references — is in [`docs/traits-system.md`](docs/traits-system.md); kernel-version evaluation uses the `kernel-review` skill.
   - `uboot/`: U-Boot configs (`config/`), patches (`patches/`), and prebuilt binaries (`out/`).
   - `targets/`: Target software builders.
     - `alpine/`: Core Alpine target build system (`aports/`, `configs/`, `container/`, `Makefile`, `build.sh`).

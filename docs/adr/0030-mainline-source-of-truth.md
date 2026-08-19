@@ -57,3 +57,7 @@ Mainline Linux is the gate and the source of truth for device support:
   knowledge.
 - UI parser changes (traits.c/Allium reading the registry schema directly) and
   the H700 device-detection probe remain future work tracked in `docs/TODO.md`.
+
+See also [`docs/traits-system.md`](../traits-system.md) for the full intent,
+logic, and audit references, and the `kernel-review` skill for kernel-version
+evaluation.
