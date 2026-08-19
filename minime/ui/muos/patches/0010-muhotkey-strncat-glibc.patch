@@ -1,0 +1,27 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] muhotkey: use strncat for glibc portability
+
+Minime-specific port patch (see docs/adr/0028-muos-frontend-port.md).
+---
+--- a/module/muhotkey.c
++++ b/module/muhotkey.c
+@@ -756,15 +756,15 @@
+ 
+     if (c->is_sequence) {
+         for (int i = 0; i < c->sequence_length; ++i) {
+-            strlcat(inputs, input_name[c->sequence_inputs[i]], sizeof(inputs));
+-            if (i < c->sequence_length - 1) strlcat(inputs, ",", sizeof(inputs));
++            strncat(inputs, input_name[c->sequence_inputs[i]], sizeof(inputs) - strlen(inputs) - 1);
++            if (i < c->sequence_length - 1) strncat(inputs, ",", sizeof(inputs) - strlen(inputs) - 1);
+         }
+     } else {
+         int first = 1;
+         for (int i = 0; i < mux_input_count; ++i) {
+             if (c->type_mask & SAFE_BIT(i)) {
+-                if (!first) strlcat(inputs, ",", sizeof(inputs));
+-                strlcat(inputs, input_name[i], sizeof(inputs));
++                if (!first) strncat(inputs, ",", sizeof(inputs) - strlen(inputs) - 1);
++                strncat(inputs, input_name[i], sizeof(inputs) - strlen(inputs) - 1);
+                 first = 0;
+             }
+         }

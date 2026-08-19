@@ -9,10 +9,10 @@ trait-provided names (which are the DT node names, e.g. "gpio-keys-control",
 
 Signed-off-by: Minime <maintainers@minime-os.local>
 ---
- drivers/input/joystick/adc-joystick.c | 2 +-
+ drivers/input/joystick/adc-joystick.c | 3 ++-
  drivers/input/keyboard/adc-keys.c     | 2 +-
  drivers/input/keyboard/gpio_keys.c    | 2 +-
- 3 files changed, 3 insertions(+), 3 deletions(-)
+ 3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-joystick.c
 --- a/drivers/input/joystick/adc-joystick.c
@@ -37,14 +37,7 @@ diff --git a/drivers/input/joystick/adc-joystick.c b/drivers/input/joystick/adc-
 diff --git a/drivers/input/keyboard/adc-keys.c b/drivers/input/keyboard/adc-keys.c
 --- a/drivers/input/keyboard/adc-keys.c
 +++ b/drivers/input/keyboard/adc-keys.c
-@@ -11,5 +11,6 @@
- #include <linux/input.h>
- #include <linux/module.h>
-+#include <linux/of.h>
- #include <linux/platform_device.h>
- #include <linux/property.h>
- #include <linux/slab.h>
-@@ -149,6 +150,6 @@ static int adc_keys_probe(struct platform_device *pdev)
+@@ -149,6 +149,6 @@ static int adc_keys_probe(struct platform_device *pdev)
  	input_set_drvdata(input, st);
  
 -	input->name = pdev->name;
