@@ -1,7 +1,7 @@
 name: Build Minime
 
 concurrency:
-  group: minime-build-${{ github.ref }}-${{ inputs.libc || 'alpine' }}-${{ inputs.soc || 'rk3566' }}-${{ inputs.ui || 'muos' }}
+  group: minime-build-${{ github.ref }}-${{ inputs.libc || 'alpine' }}-${{ inputs.soc || 'rk3566' }}-${{ inputs.ui || 'minui' }}
   cancel-in-progress: true
 
 on:
@@ -33,10 +33,10 @@ on:
         description: 'Launcher UI'
         type: choice
         options:
-          - muos
           - minui
+          - muos
           - allium
-        default: muos
+        default: minui
   workflow_call:
     inputs:
       libc:
@@ -83,7 +83,7 @@ jobs:
           # Defaults for push event
           libc = os.environ.get("INPUT_LIBC") or "alpine"
           soc = os.environ.get("INPUT_SOC") or "rk3566"
-          ui = os.environ.get("INPUT_UI") or "muos"
+          ui = os.environ.get("INPUT_UI") or "minui"
           owner = os.environ.get("OWNER", "jheronimus")
 
           if libc == "buildroot" and soc == "h700":

@@ -10,8 +10,8 @@ This document describes all GitHub Actions CI/CD workflows, build scripts, entry
 
 ### `build.yml` — Main Parameter-Driven Build Pipeline
 - **Trigger**:
-  - `push`: `main` branch filtered to `minime/**`, `src/**`, `.github/workflows/**` (defaults to `alpine / rk3566 / muos`).
-  - `workflow_dispatch`: Single target selection via dropdowns (`libc`: `alpine` / `buildroot`, `soc`: `rk3566` / `rk3326` / `h700`, `ui`: `muos` / `minui` / `allium`).
+  - `push`: `main` branch filtered to `minime/**`, `src/**`, `.github/workflows/**` (defaults to `alpine / rk3566 / minui`).
+  - `workflow_dispatch`: Single target selection via dropdowns (`libc`: `alpine` / `buildroot`, `soc`: `rk3566` / `rk3326` / `h700`, `ui`: `minui` / `muos` / `allium`).
   - `workflow_call`: Reusable entrypoint called by `nightly.yml`.
 - **Purpose**: Builds bootloader, cores, UI, and OS image for a single target, uploading `.img.zst` and `.tar.zst` to the `testing` GitHub Release on main.
 - **Concurrency**: Per-target `minime-build-${{ github.ref }}-${{ libc }}-${{ soc }}-${{ ui }}` (`cancel-in-progress: true`).
