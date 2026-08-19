@@ -12,5 +12,4 @@ Use a parameter-driven GitHub Actions matrix pipeline powered by containerized r
 
 ## See Also
 - Build workflow: [`.github/workflows/build.yml`](../../.github/workflows/build.yml)
-- Infrastructure guide: [`docs/INFRA.md`](../INFRA.md)
 - Local quality gates: [`Justfile`](../../Justfile)

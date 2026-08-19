@@ -15,7 +15,7 @@ Minime is a lightweight custom Linux firmware for Anbernic handhelds (RK3326, H7
 - `packages/components/`: OS targets (`alpine/`, `buildroot/`), shared board overlays, sysctl, OpenRC services, and kernel configs (`boards/`).
 - `packages/ui/`: UI submodules (`allium`, `minui`, `muos/frontend`) and packaging builder (`build.sh`).
 - `packages/image/`: Single linear packager (`build.sh`) and trait generator (`gentraits.sh`).
-- `docs/`: Architecture Decision Records (`docs/adr/`), CI infrastructure (`docs/INFRA.md`), traits spec (`docs/traits/TRAITS.md`), and living task list (`docs/TODO.md`).
+- `docs/`: Architecture Decision Records (`docs/adr/`), traits spec (`docs/traits/TRAITS.md`), and living task list (`docs/TODO.md`).
 - `src/`: Shared out-of-tree drivers (`mali-kbase/`, `libmali/`, `drastic/`).
 - `roms/`: Preloaded ROMs package.
 
