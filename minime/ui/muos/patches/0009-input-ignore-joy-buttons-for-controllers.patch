@@ -1,0 +1,31 @@
+From: Minime <maintainers@minime-os.local>
+Subject: [PATCH] input: do not process raw joystick button events for tracked controllers
+
+When a device is opened as an SDL_GameController, SDL dispatches both
+SDL_CONTROLLERBUTTONDOWN and SDL_JOYBUTTONDOWN events. The joybutton handler
+was blindly updating pressed state using the fallback joy_button_map, which
+corrupted the controller mapping (e.g. mapping button 1 to vol_down and
+button 2 to vol_up). Only process SDL_JOYBUTTON events for devices that are
+not tracked as controllers.
+---
+diff --git a/common/input.c b/common/input.c
+index a10c14b..ee01e67 100755
+--- a/common/input.c
++++ b/common/input.c
+@@ -1322,14 +1322,14 @@ static void dispatch_input_event(const SDL_Event *ev, uint32_t *next_retry_tick
+             }
+             break;
+         case SDL_JOYBUTTONDOWN:
+-            if (ev->jbutton.which == primary_instance) {
++            if (ev->jbutton.which == primary_instance && !is_tracked_as_controller(ev->jbutton.which)) {
+                 process_sdl_joy_button(ev->jbutton.which, ev->jbutton.button, 1);
+                 if (ev->jbutton.button < 32)
+                     update_primary_pressed(ev->jbutton.which, joy_button_map[ev->jbutton.button], 1);
+             }
+             break;
+         case SDL_JOYBUTTONUP:
+-            if (ev->jbutton.which == primary_instance) {
++            if (ev->jbutton.which == primary_instance && !is_tracked_as_controller(ev->jbutton.which)) {
+                 process_sdl_joy_button(ev->jbutton.which, ev->jbutton.button, 0);
+                 if (ev->jbutton.button < 32)
+                     update_primary_pressed(ev->jbutton.which, joy_button_map[ev->jbutton.button], 0);
