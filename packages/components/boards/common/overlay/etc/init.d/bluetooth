@@ -40,7 +40,18 @@ start() {
 		return 1
 	fi
 
-	mkdir -p /var/lib/bluetooth
+	mkdir -p /run/bluetooth /run/bluealsa
+	mkdir -p /var/lib/bluetooth /var/lib/bluealsa 2>/dev/null || true
+	if ! touch /var/lib/bluetooth/.test 2>/dev/null; then
+		mount -t tmpfs tmpfs /var/lib/bluetooth 2>/dev/null || true
+	else
+		rm -f /var/lib/bluetooth/.test
+	fi
+	if ! touch /var/lib/bluealsa/.test 2>/dev/null; then
+		mount -t tmpfs tmpfs /var/lib/bluealsa 2>/dev/null || true
+	else
+		rm -f /var/lib/bluealsa/.test
+	fi
 	chmod 700 /var/lib/bluetooth 2>/dev/null || true
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluetoothd.pid \

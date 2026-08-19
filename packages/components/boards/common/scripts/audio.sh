@@ -12,6 +12,7 @@ set -eu
 
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
 ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
+RUN_ASOUNDRC="/run/asoundrc"
 
 get_trait() {
 	key="$1"
@@ -21,6 +22,7 @@ get_trait() {
 
 write_card_default() {
 	audio_card=$(get_trait audio_card)
+	rm -f "$RUN_ASOUNDRC" 2>/dev/null || true
 	# "na" and "default" both mean: leave ALSA to its own default routing.
 	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ] && [ "$audio_card" != "na" ]; then
 		printf 'pcm.!default {\n    type hw\n    card %s\n}\nctl.!default {\n    type hw\n    card %s\n}\n' \
@@ -42,8 +44,10 @@ init | bt-off)
 bt-on)
 	[ $# -ge 2 ] || usage
 	addr="$2"
-	printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave.pcm {\n        type bluealsa\n        device "%s"\n        profile "a2dp"\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
-		"$addr" "$addr" >"$ASOUNDRC_FILE"
+	content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave.pcm {\n        type bluealsa\n        device "%s"\n        profile "a2dp"\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
+		"$addr" "$addr")
+	printf '%s' "$content" >"$ASOUNDRC_FILE"
+	printf '%s' "$content" >"$RUN_ASOUNDRC"
 	;;
 *)
 	usage
