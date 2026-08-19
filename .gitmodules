@@ -34,3 +34,4 @@
 	path = roms/tinyset
 	url = ssh://git@htpc.local:2222/ilembitov/tinyset.git
 	branch = main
+	update = none
