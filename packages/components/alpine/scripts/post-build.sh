@@ -85,6 +85,8 @@ mkdir -p "${TARGET_DIR}/usr/share/minime/scripts"
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 [ -f "${COMMON_DIR}/scripts/audio.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/audio.sh" \
 	"${TARGET_DIR}/usr/share/minime/scripts/" || true
+[ -f "${COMMON_DIR}/scripts/audio-monitor.sh" ] && install -m 0755 "${COMMON_DIR}/scripts/audio-monitor.sh" \
+	"${TARGET_DIR}/usr/share/minime/scripts/" || true
 
 # 5. Point /etc/resolv.conf at openresolv's runtime output (iwd pushes the
 #    DHCP DNS servers to it via NameResolvingService=resolvconf).

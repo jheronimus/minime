@@ -68,12 +68,24 @@ start() {
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluealsa.pid \
 		-x "${bluealsa_bin}" -- -p a2dp-sink -p a2dp-source
+
+	# 3. Audio Monitor (watches D-Bus for dynamic connect/disconnect)
+	if [ -x /usr/share/minime/scripts/audio-monitor.sh ]; then
+		start-stop-daemon -S -q -b -m \
+			-p /run/audio-monitor.pid \
+			-x /usr/share/minime/scripts/audio-monitor.sh
+	fi
+
 	# BlueALSA failure is non-fatal (audio routing only)
 	eend 0
 }
 
 stop() {
 	ebegin "Stopping Bluetooth stack"
+
+	start-stop-daemon -K -q -p /run/audio-monitor.pid 2>/dev/null || true
+	rm -f /run/audio-monitor.pid
+	/usr/share/minime/scripts/audio.sh bt-off 2>/dev/null || true
 
 	mkdir -p /mnt/sdcard/.minime/config/bluetooth/storage 2>/dev/null || true
 	cp -a /var/lib/bluetooth/* /mnt/sdcard/.minime/config/bluetooth/storage/ 2>/dev/null || true
