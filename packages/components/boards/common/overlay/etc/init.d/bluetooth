@@ -6,36 +6,28 @@
 
 description="Bluetooth stack (bluetoothd + bluealsa)"
 
-# Resolve the dedicated ext4 state partition (label "minime-state"). Falls
-# back to the sibling partition of the mounted userdata card for a fresh
-# flash before the filesystem has been created on it.
-find_state_part() {
-	local part=""
+# BlueZ state lives in a small ext2 image file inside the FAT userdata
+# (`state.fs`), loop-mounted at /var/lib/bluetooth. A file (not a partition)
+# needs no reflash. ext2 has no journal; on corruption the image is rebuilt,
+# so pairing is re-creatable but the FAT is never at risk from a growing file.
+STATE_FILE="/mnt/sdcard/.minime/config/bluetooth/state.fs"
+STATE_SIZE_MB=2
 
-	if command -v blkid >/dev/null 2>&1; then
-		part="$(blkid -l -o device -t LABEL=minime-state 2>/dev/null | head -n1 || true)"
-		[ -n "${part}" ] && [ -b "${part}" ] && { printf '%s\n' "${part}"; return 0; }
+mount_state_file() {
+	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
+	if [ ! -f "${STATE_FILE}" ]; then
+		dd if=/dev/zero of="${STATE_FILE}" bs=1M count="${STATE_SIZE_MB}" 2>/dev/null || return 1
+		mkfs.ext2 -q -F -m 0 -i 8192 "${STATE_FILE}" 2>/dev/null || return 1
 	fi
-
-	local mnt_bn disk_bn part_num candidate
-	mnt_bn="$(awk '$2 == "/mnt/sdcard" {print $1; exit}' /proc/mounts 2>/dev/null || true)"
-	mnt_bn="${mnt_bn##*/}"
-	[ -n "${mnt_bn}" ] || return 1
-	case "${mnt_bn}" in
-	*mmcblk* | *nvme*)
-		disk_bn="${mnt_bn%p*}"
-		part_num="${mnt_bn##*p}"
-		;;
-	*)
-		disk_bn="${mnt_bn%%[0-9]*}"
-		part_num="${mnt_bn##*[a-z]}"
-		;;
-	esac
-	[ -n "${disk_bn}" ] || return 1
-	[ "${part_num}" -ge 1 ] 2>/dev/null || return 1
-	candidate="/dev/${disk_bn}p$((part_num + 1))"
-	[ -b "${candidate}" ] && { printf '%s\n' "${candidate}"; return 0; }
-	return 1
+	if ! mount -o loop,noatime "${STATE_FILE}" /var/lib/bluetooth 2>/dev/null; then
+		# Corrupt image: rebuild it (pairing is re-creatable).
+		e2fsck -p "${STATE_FILE}" >/dev/null 2>&1 || {
+			dd if=/dev/zero of="${STATE_FILE}" bs=1M count="${STATE_SIZE_MB}" 2>/dev/null || return 1
+			mkfs.ext2 -q -F -m 0 -i 8192 "${STATE_FILE}" 2>/dev/null || return 1
+		}
+		mount -o loop,noatime "${STATE_FILE}" /var/lib/bluetooth 2>/dev/null || return 1
+	fi
+	return 0
 }
 
 depend() {
@@ -76,19 +68,12 @@ start() {
 	mkdir -p /var/lib/bluetooth /var/lib/bluealsa 2>/dev/null || true
 	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
 
-	# Prefer the dedicated ext4 state partition: BlueZ state persists across
-	# reboots natively. Legacy single-partition cards fall back to tmpfs +
-	# storage.tar snapshot.
+	# Prefer the loop-mounted ext2 state image on the FAT card (works without
+	# reflashing). Falls back to tmpfs + storage.tar if the image cannot be
+	# mounted (e.g. no loop devices available).
 	BT_STATE_MOUNTED=0
-	if state_part="$(find_state_part)"; then
-		if ! mount -t ext4 -o noatime "${state_part}" /var/lib/bluetooth 2>/dev/null; then
-			# First boot: the seeded region is not yet formatted.
-			mkfs.ext4 -q -F -m 0 -L minime-state "${state_part}" 2>/dev/null || true
-			mount -t ext4 -o noatime "${state_part}" /var/lib/bluetooth 2>/dev/null || true
-		fi
-		if [ "$(awk '$2 == "/var/lib/bluetooth" {print $3; exit}' /proc/mounts 2>/dev/null || true)" = "ext4" ]; then
-			BT_STATE_MOUNTED=1
-		fi
+	if mount_state_file; then
+		BT_STATE_MOUNTED=1
 	fi
 
 	if [ "${BT_STATE_MOUNTED}" -ne 1 ]; then

@@ -202,22 +202,7 @@ if [ -f /mnt/card/.minime/config/first_boot_expand ]; then
 	mount --bind /proc /mnt/system/proc
 	mount --bind /sys /mnt/system/sys
 
-	# Grow partition 1 up to (but not into) the state partition (partition 2).
-	# The state partition is a fixed Linux-native area seeded at build time
-	# (see genimage.cfg); on cards that lack it (legacy seeds/OTAs) fall back
-	# to growing to the full card size.
-	P2_START=""
-	DISK_BN="$(basename "$DISK_DEV")"
-	P2_BN="${DISK_BN}p$((PART_NUM + 1))"
-	if [ -r "/sys/block/${DISK_BN}/${P2_BN}/start" ]; then
-		P2_START="$(cat "/sys/block/${DISK_BN}/${P2_BN}/start" 2>/dev/null || true)"
-	fi
-	if [ -n "${P2_START}" ] && [ "${P2_START}" -gt 0 ] 2>/dev/null; then
-		RESIZE_END="$((P2_START - 1))s"
-	else
-		RESIZE_END="100%"
-	fi
-	PARTED_OUT="$(chroot /mnt/system parted -s -f "$DISK_DEV" resizepart "$PART_NUM" "${RESIZE_END}" 2>&1)"
+	PARTED_OUT="$(chroot /mnt/system parted -s -f "$DISK_DEV" resizepart "$PART_NUM" 100% 2>&1)"
 	PARTED_RC=$?
 	chroot /mnt/system partprobe "$DISK_DEV" 2>/dev/null || true
 

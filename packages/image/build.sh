@@ -4,10 +4,10 @@
 #
 # Usage:
 #   ./build.sh --target <alpine|buildroot> --board <h700|rk3326|rk3566> \
-#              --input-dir <dir> --output-dir <dir> [--ui <minui|allium|muos>]
+#              --input-dir <dir> --output-dir <dir> [--ui <minui|allium|muos>] [--include-roms]
 set -eu
 
-TARGET="" BOARD="" INPUT_DIR="" OUTPUT_DIR="" UI="minui"
+TARGET="" BOARD="" INPUT_DIR="" OUTPUT_DIR="" UI="minui" INCLUDE_ROMS="${INCLUDE_ROMS:-0}"
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--target)
@@ -30,6 +30,14 @@ while [ $# -gt 0 ]; do
 		UI="$2"
 		shift 2
 		;;
+	--include-roms)
+		INCLUDE_ROMS=1
+		shift 1
+		;;
+	--no-roms)
+		INCLUDE_ROMS=0
+		shift 1
+		;;
 	*)
 		echo "Unknown arg: $1" >&2
 		exit 1
@@ -38,7 +46,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ -z "$TARGET" ] || [ -z "$BOARD" ] || [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_DIR" ] && {
-	echo "Usage: $0 --target <alpine|buildroot> --board <board> --input-dir <dir> --output-dir <dir> [--ui <ui>]" >&2
+	echo "Usage: $0 --target <alpine|buildroot> --board <board> --input-dir <dir> --output-dir <dir> [--ui <ui>] [--include-roms]" >&2
 	exit 1
 }
 
@@ -104,9 +112,13 @@ if [ "$UI" != "none" ]; then
 	fi
 fi
 
-if [ -f "${MINIME_ROOT}/roms/install.sh" ]; then
-	sh "${MINIME_ROOT}/roms/install.sh" "${STAGE_DIR}"
-fi
+case "${INCLUDE_ROMS}" in
+1 | true | TRUE | yes | YES)
+	if [ -f "${MINIME_ROOT}/roms/install.sh" ]; then
+		sh "${MINIME_ROOT}/roms/install.sh" "${STAGE_DIR}"
+	fi
+	;;
+esac
 
 MINIME_COMMIT="${MINIME_COMMIT:-$(git -C "${MINIME_ROOT}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 UI_COMMIT="${UI_COMMIT:-$(git -C "${MINIME_ROOT}/packages/ui/${UI}" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
@@ -155,9 +167,6 @@ VFAT_MB=$((STAGE_MB + 256))
 [ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}" status=none
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
-# Zero-filled ext4 state partition (4MB). Formatted on first boot by
-# init.d/bluetooth; compresses to ~nothing in the .img.zst.
-dd if=/dev/zero of="${BINARIES_DIR}/state.ext4" bs=1M count=4 status=none
 [ -f "${STAGE_DIR}/boot.scr" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${STAGE_DIR}/boot.scr" ::boot.scr
 for item in .minime .system .ui .allium .muos; do
 	[ -e "${STAGE_DIR}/${item}" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${STAGE_DIR}/${item}" :: && MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}" || true
