@@ -62,25 +62,6 @@ start() {
 		amixer -q sset 'DAC' unmute >/dev/null 2>&1 || true
 	fi
 
-	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ] && amixer -c "$audio_card" controls >/dev/null 2>&1; then
-		(
-			while true; do
-				if amixer -c "$audio_card" cget numid=1 2>/dev/null | grep -q "values=on"; then
-					target_state="HP"
-					current_val="0"
-				else
-					target_state="SPK"
-					current_val="1"
-				fi
-				if ! amixer -c "$audio_card" cget name='Playback Mux' 2>/dev/null | grep -q "values=$current_val"; then
-					amixer -c "$audio_card" sset 'Playback Mux' "$target_state" >/dev/null 2>&1
-				fi
-				sleep 2
-			done
-		) &
-		echo $! >/tmp/watch_jack.pid
-	fi
-
 	export HOME=/mnt/sdcard
 	export XDG_RUNTIME_DIR=/run
 	# Allium shells out to its bundled helpers (say/show/screenshot) which
@@ -119,11 +100,6 @@ stop() {
 
 	UI_STOP_CMD=$(read_ui_env UI_STOP_CMD)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
-
-	if [ -f /tmp/watch_jack.pid ]; then
-		kill "$(cat /tmp/watch_jack.pid)" 2>/dev/null || true
-		rm -f /tmp/watch_jack.pid
-	fi
 
 	if [ -n "$UI_STOP_CMD" ]; then
 		eval "$UI_STOP_CMD" >/dev/null 2>&1 || true
