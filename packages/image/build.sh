@@ -10,12 +10,30 @@ set -eu
 TARGET="" BOARD="" INPUT_DIR="" OUTPUT_DIR="" UI="minui"
 while [ $# -gt 0 ]; do
 	case "$1" in
-	--target) TARGET="$2"; shift 2 ;;
-	--board) BOARD="$2"; shift 2 ;;
-	--input-dir) INPUT_DIR="$2"; shift 2 ;;
-	--output-dir) OUTPUT_DIR="$2"; shift 2 ;;
-	--ui) UI="$2"; shift 2 ;;
-	*) echo "Unknown arg: $1" >&2; exit 1 ;;
+	--target)
+		TARGET="$2"
+		shift 2
+		;;
+	--board)
+		BOARD="$2"
+		shift 2
+		;;
+	--input-dir)
+		INPUT_DIR="$2"
+		shift 2
+		;;
+	--output-dir)
+		OUTPUT_DIR="$2"
+		shift 2
+		;;
+	--ui)
+		UI="$2"
+		shift 2
+		;;
+	*)
+		echo "Unknown arg: $1" >&2
+		exit 1
+		;;
 	esac
 done
 
@@ -38,8 +56,12 @@ mkdir -p "${OUTPUT_DIR}" "${BINARIES_DIR}" "${ROOTPATH_TMP}" "${STAGE_DIR}/.mini
 
 # 1. Stage OS payload
 for f in Image:kernel initramfs.img:initramfs system.erofs:system; do
-	src="${f%%:*}"; dst="${f##*:}"
-	[ -f "${INPUT_DIR}/${src}" ] || { echo "ERROR: ${src} missing in ${INPUT_DIR}" >&2; exit 1; }
+	src="${f%%:*}"
+	dst="${f##*:}"
+	[ -f "${INPUT_DIR}/${src}" ] || {
+		echo "ERROR: ${src} missing in ${INPUT_DIR}" >&2
+		exit 1
+	}
 	cp -f "${INPUT_DIR}/${src}" "${STAGE_DIR}/.minime/${dst}"
 done
 [ -d "${INPUT_DIR}/devices" ] && cp -f "${INPUT_DIR}/devices/"*.dtb "${STAGE_DIR}/.minime/devices/" 2>/dev/null || true
@@ -56,8 +78,8 @@ fi
 
 # 2. Stage UI payload & preloaded ROMs
 case "${TARGET}" in
-alpine|musl) LIBC="musl" ;;
-buildroot|glibc) LIBC="glibc" ;;
+alpine | musl) LIBC="musl" ;;
+buildroot | glibc) LIBC="glibc" ;;
 *) LIBC="musl" ;;
 esac
 
@@ -106,7 +128,9 @@ echo "Update package created: ${OUTPUT_DIR}/${PKG_NAME}.tar.zst"
 
 # 4. Stage SD boot script & device configs
 if [ -f "${COMMON_DIR}/boot.cmd" ] && [ -f "${BOARD_DIR}/boot.env" ]; then
-	BOOTARGS=""; EXTRA_ENV=""; . "${BOARD_DIR}/boot.env"
+	BOOTARGS=""
+	EXTRA_ENV=""
+	. "${BOARD_DIR}/boot.env"
 	sed -e "s|@BOOTARGS@|${BOOTARGS}|g" -e "s|@DEFAULT_DEVICE@|${DEFAULT_DEVICE}|g" -e "s|@EXTRA_ENV@|${EXTRA_ENV}|g" "${COMMON_DIR}/boot.cmd" >"${WORK_TMP}/boot.cmd"
 	mkimage -C none -A arm -T script -d "${WORK_TMP}/boot.cmd" "${STAGE_DIR}/boot.scr"
 fi
@@ -131,6 +155,9 @@ VFAT_MB=$((STAGE_MB + 256))
 [ "$VFAT_MB" -lt 1040 ] && VFAT_MB=1040
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}" status=none
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
+# Zero-filled ext4 state partition (4MB). Formatted on first boot by
+# init.d/bluetooth; compresses to ~nothing in the .img.zst.
+dd if=/dev/zero of="${BINARIES_DIR}/state.ext4" bs=1M count=4 status=none
 [ -f "${STAGE_DIR}/boot.scr" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${STAGE_DIR}/boot.scr" ::boot.scr
 for item in .minime .system .ui .allium .muos; do
 	[ -e "${STAGE_DIR}/${item}" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${STAGE_DIR}/${item}" :: && MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}" || true

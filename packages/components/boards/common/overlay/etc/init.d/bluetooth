@@ -1,10 +1,42 @@
 #!/sbin/openrc-run
-# shellcheck disable=SC2034
+# shellcheck disable=SC2034,SC3043
 # bluetooth: unified Bluetooth stack (bluetoothd + bluealsa).
 # Only started when the user has enabled Bluetooth under
 # /mnt/sdcard/.minime/config/bluetooth/enabled.
 
 description="Bluetooth stack (bluetoothd + bluealsa)"
+
+# Resolve the dedicated ext4 state partition (label "minime-state"). Falls
+# back to the sibling partition of the mounted userdata card for a fresh
+# flash before the filesystem has been created on it.
+find_state_part() {
+	local part=""
+
+	if command -v blkid >/dev/null 2>&1; then
+		part="$(blkid -l -o device -t LABEL=minime-state 2>/dev/null | head -n1 || true)"
+		[ -n "${part}" ] && [ -b "${part}" ] && { printf '%s\n' "${part}"; return 0; }
+	fi
+
+	local mnt_bn disk_bn part_num candidate
+	mnt_bn="$(awk '$2 == "/mnt/sdcard" {print $1; exit}' /proc/mounts 2>/dev/null || true)"
+	mnt_bn="${mnt_bn##*/}"
+	[ -n "${mnt_bn}" ] || return 1
+	case "${mnt_bn}" in
+	*mmcblk* | *nvme*)
+		disk_bn="${mnt_bn%p*}"
+		part_num="${mnt_bn##*p}"
+		;;
+	*)
+		disk_bn="${mnt_bn%%[0-9]*}"
+		part_num="${mnt_bn##*[a-z]}"
+		;;
+	esac
+	[ -n "${disk_bn}" ] || return 1
+	[ "${part_num}" -ge 1 ] 2>/dev/null || return 1
+	candidate="/dev/${disk_bn}p$((part_num + 1))"
+	[ -b "${candidate}" ] && { printf '%s\n' "${candidate}"; return 0; }
+	return 1
+}
 
 depend() {
 	need dbus modules
@@ -43,13 +75,31 @@ start() {
 	mkdir -p /run/bluetooth /run/bluealsa
 	mkdir -p /var/lib/bluetooth /var/lib/bluealsa 2>/dev/null || true
 	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
-	if ! touch /var/lib/bluetooth/.test 2>/dev/null; then
-		mount -t tmpfs tmpfs /var/lib/bluetooth 2>/dev/null || true
-	else
-		rm -f /var/lib/bluetooth/.test
+
+	# Prefer the dedicated ext4 state partition: BlueZ state persists across
+	# reboots natively. Legacy single-partition cards fall back to tmpfs +
+	# storage.tar snapshot.
+	BT_STATE_MOUNTED=0
+	if state_part="$(find_state_part)"; then
+		if ! mount -t ext4 -o noatime "${state_part}" /var/lib/bluetooth 2>/dev/null; then
+			# First boot: the seeded region is not yet formatted.
+			mkfs.ext4 -q -F -m 0 -L minime-state "${state_part}" 2>/dev/null || true
+			mount -t ext4 -o noatime "${state_part}" /var/lib/bluetooth 2>/dev/null || true
+		fi
+		if [ "$(awk '$2 == "/var/lib/bluetooth" {print $3; exit}' /proc/mounts 2>/dev/null || true)" = "ext4" ]; then
+			BT_STATE_MOUNTED=1
+		fi
 	fi
-	if [ -f /mnt/sdcard/.minime/config/bluetooth/storage.tar ]; then
-		tar -xf /mnt/sdcard/.minime/config/bluetooth/storage.tar -C /var/lib/bluetooth 2>/dev/null || true
+
+	if [ "${BT_STATE_MOUNTED}" -ne 1 ]; then
+		if ! touch /var/lib/bluetooth/.test 2>/dev/null; then
+			mount -t tmpfs tmpfs /var/lib/bluetooth 2>/dev/null || true
+		else
+			rm -f /var/lib/bluetooth/.test
+		fi
+		if [ -f /mnt/sdcard/.minime/config/bluetooth/storage.tar ]; then
+			tar -xf /mnt/sdcard/.minime/config/bluetooth/storage.tar -C /var/lib/bluetooth 2>/dev/null || true
+		fi
 	fi
 	if ! touch /var/lib/bluealsa/.test 2>/dev/null; then
 		mount -t tmpfs tmpfs /var/lib/bluealsa 2>/dev/null || true
@@ -79,13 +129,6 @@ start() {
 		-p /run/bluealsa.pid \
 		-x "${bluealsa_bin}" -- -p a2dp-source -p a2dp-sink
 
-	# 3. Audio Monitor (watches D-Bus for dynamic connect/disconnect)
-	if [ -x /usr/share/minime/scripts/audio-monitor.sh ]; then
-		start-stop-daemon -S -q -b -m \
-			-p /run/audio-monitor.pid \
-			-x /usr/share/minime/scripts/audio-monitor.sh
-	fi
-
 	# BlueALSA failure is non-fatal (audio routing only)
 	eend 0
 }
@@ -93,17 +136,19 @@ start() {
 stop() {
 	ebegin "Stopping Bluetooth stack"
 
-	start-stop-daemon -K -q -p /run/audio-monitor.pid 2>/dev/null || true
-	rm -f /run/audio-monitor.pid
 	/usr/share/minime/scripts/audio.sh bt-off 2>/dev/null || true
 
-	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
-	tmp_storage="/tmp/bluetooth-storage.tar"
-	rm -f "${tmp_storage}"
-	tar -cf "${tmp_storage}" -C /var/lib/bluetooth . 2>/dev/null || true
-	if [ -f "${tmp_storage}" ]; then
-		cp -f "${tmp_storage}" /mnt/sdcard/.minime/config/bluetooth/storage.tar 2>/dev/null || true
+	bt_fstype="$(awk '$2 == "/var/lib/bluetooth" {print $3; exit}' /proc/mounts 2>/dev/null || true)"
+	if [ "${bt_fstype}" = "tmpfs" ]; then
+		# Legacy fallback: snapshot the volatile tree to the FAT card.
+		mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
+		tmp_storage="/tmp/bluetooth-storage.tar"
 		rm -f "${tmp_storage}"
+		tar -cf "${tmp_storage}" -C /var/lib/bluetooth . 2>/dev/null || true
+		if [ -f "${tmp_storage}" ]; then
+			cp -f "${tmp_storage}" /mnt/sdcard/.minime/config/bluetooth/storage.tar 2>/dev/null || true
+			rm -f "${tmp_storage}"
+		fi
 	fi
 
 	start-stop-daemon -K -q -p /run/bluealsa.pid 2>/dev/null || true
@@ -111,6 +156,11 @@ stop() {
 
 	start-stop-daemon -K -q -p /run/bluetoothd.pid 2>/dev/null || true
 	rm -f /run/bluetoothd.pid
+
+	if [ -n "${bt_fstype}" ]; then
+		sync
+		umount /var/lib/bluetooth 2>/dev/null || true
+	fi
 
 	eend 0
 }
