@@ -42,11 +42,13 @@ start() {
 
 	mkdir -p /run/bluetooth /run/bluealsa
 	mkdir -p /var/lib/bluetooth /var/lib/bluealsa 2>/dev/null || true
+	mkdir -p /mnt/sdcard/.minime/config/bluetooth/storage 2>/dev/null || true
 	if ! touch /var/lib/bluetooth/.test 2>/dev/null; then
 		mount -t tmpfs tmpfs /var/lib/bluetooth 2>/dev/null || true
 	else
 		rm -f /var/lib/bluetooth/.test
 	fi
+	cp -a /mnt/sdcard/.minime/config/bluetooth/storage/* /var/lib/bluetooth/ 2>/dev/null || true
 	if ! touch /var/lib/bluealsa/.test 2>/dev/null; then
 		mount -t tmpfs tmpfs /var/lib/bluealsa 2>/dev/null || true
 	else
@@ -72,6 +74,9 @@ start() {
 
 stop() {
 	ebegin "Stopping Bluetooth stack"
+
+	mkdir -p /mnt/sdcard/.minime/config/bluetooth/storage 2>/dev/null || true
+	cp -a /var/lib/bluetooth/* /mnt/sdcard/.minime/config/bluetooth/storage/ 2>/dev/null || true
 
 	start-stop-daemon -K -q -p /run/bluealsa.pid 2>/dev/null || true
 	rm -f /run/bluealsa.pid
