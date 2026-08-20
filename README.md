@@ -33,7 +33,7 @@ This approach will allow simple OTA updates and easy switching between Alpine on
 Most firmwares are built for one specific UI - EmulationStation, MinUI, etc. Minime tries to treat UIs the way Linux distros treat GNOME, KDE, etc. It does two things to achieve this:
 
 - maintains a traits system. UIs don't have to support each device Minime supports. They just have to read the traits file that contains specifics like screen aspect ratio, controls, connectivity, lid and all the important system paths.
-- provides a simple ui.sh script. UIs have to ship a ui.env file that provides key information: what binary launches the UI, what processes will be spawned and that's it. After ui.sh starts, the UI can take over.
+- provides a standard OpenRC service (`/etc/init.d/ui`). UIs ship a `ui.env` file defining the entry binary, process names, and lifecycle hooks.
 
 Minime doesn't override user directories that UIs provide (like roms or bios or savestates) and doesn't override built-in dependencies. If a UI comes with its own emulation cores, Minime will not try to make it use something else.
 
@@ -41,18 +41,17 @@ Minime doesn't override user directories that UIs provide (like roms or bios or 
 
 A lot of firmwares split boot files, rootfs and userdata into several partitions.
 
-In Minime it's all a single FAT32 partition with a hidden .minime folder that contains the bootloader files, the read-only rootfs image and the initramfs.
+In Minime it's all a single FAT32 partition with a hidden `.minime` folder that contains the bootloader files, the read-only rootfs image and the initramfs.
 
-When you download the image, it is 1040MB (a FAT32 limit thing if we want to have a sane cluster size), but it does a trick where it thinks that any disk it will be flashed to will be 512GB (the max officially supported SD card size as per Anbernic specs). Then on first boot it will expand to the actual SD card size.
+When flashed, the image contains a minimal 1040MB FAT32 partition. On first boot, the initramfs stages the seed files into RAM, expands the partition to 100% of the actual SD card size via `parted`, formats FAT32, and restores the files.
 
 ## Device support
 
-It aspires (strong emphasis for the moment) to cover three lines of devices:
+Currently, only two devices are actively supported and tested:
 
-- RK3566 (testing on RG Arc D);
-- H700 (testing on RG35xxSP);
-- RK3326 (testing on RG351MP and RG351V).
+- RG Arc D (RK3566)
+- RG35xxSP v1 (H700)
 
 # Credits
 [Rocknix](https://github.com/ROCKNIX/distribution) for platform-specific patches and the libmali workaround for mainline.
-[MinUI](https://github.com/shauninman/MinUI) and [Allium](https://github.com/goweiwen/Allium) as the main launcher options.
+[MinUI](https://github.com/shauninman/MinUI), [Allium](https://github.com/goweiwen/Allium), and [muOS](https://muos.dev/) as launcher options.
