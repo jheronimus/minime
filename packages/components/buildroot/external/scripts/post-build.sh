@@ -93,10 +93,6 @@ if [ -f "${COMMON_DIR}/scripts/audio.sh" ]; then
 	cp -f "${COMMON_DIR}/scripts/audio.sh" "${TARGET_DIR}/usr/share/minime/scripts/"
 	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/audio.sh"
 fi
-if [ -f "${COMMON_DIR}/scripts/audio-monitor.sh" ]; then
-	cp -f "${COMMON_DIR}/scripts/audio-monitor.sh" "${TARGET_DIR}/usr/share/minime/scripts/"
-	chmod +x "${TARGET_DIR}/usr/share/minime/scripts/audio-monitor.sh"
-fi
 
 # 7. OpenRC SysV Cleanup
 # Clean up legacy SysV scripts created by some packages, as we use pure OpenRC
