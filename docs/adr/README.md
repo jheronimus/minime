@@ -17,3 +17,4 @@ This directory documents the architectural decisions for the Minime monorepo. Ea
 | [`0011-networking`](0011-networking.md) | Networking & Wi-Fi | wpa_supplicant, DHCP, mDNS, Dropbear SSH |
 | [`0012-power-and-thermal`](0012-power-and-thermal.md) | Power & Thermal Management | Governors, thermal tripping, charger boot |
 | [`0013-input`](0013-input.md) | Input Subsystem & Hotkeys | Evdev mapping, traits, keymon, hotkeys |
+| [`0014-bluetooth`](0014-bluetooth.md) | Bluetooth Audio & Persistence | BlueZ, BlueALSA, FAT-compatible state, mid-game switching |
