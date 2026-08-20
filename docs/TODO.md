@@ -36,11 +36,8 @@
 
 ## Display, Audio & Input
 
-- [ ] Comprehensive input mapping & hotkeys across all Minime devices in MinUI and Allium ([ADR 0013](adr/0013-input.md))
-  - [THEORY] Configure MinUI (`platform.c` / `minarch`) and Allium (`input.rs` / `alliumd`) to handle input mappings across all form factors:
-    - **6-button layout (RG ARC-D / ARC-S)**: Pass `key_c=306` and `key_z=309` alongside A/B/X/Y to `RETRO_DEVICE_ID_JOYPAD_C` and `RETRO_DEVICE_ID_JOYPAD_Z` for Genesis/MD and 6-button arcade cores.
-    - **Single/dual-stick & vertical layouts**: Support single-stick vertical devices (RG351V with dedicated `F` key), dual-stick devices (RG35XX-H, RG353 family, RG503, RG351P/M/MP), and stickless devices (RG28XX, RG34XX, RG35XX Plus/SP).
-    - **Unified hotkey convention**: Menu button as primary default (`key_menu != na`), fallback to Select on devices lacking a function key.
+- [ ] Comprehensive input mapping & hotkeys across all Minime devices in Allium (MinUI complete, [ADR 0013](adr/0013-input.md))
+  - [THEORY] Configure Allium (`input.rs` / `alliumd` / `play`) to handle input mappings across all form factors (deferred). MinUI support is implemented in `platform.c` / `minarch` with 6-button Arc support, SMS/PCE/2-4 button physical mapping, and Select shortcut modifier.
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 
@@ -53,6 +50,7 @@
 
 ## Completed
 
+- [x] Comprehensive input mapping & hotkeys in MinUI: 6-button RG ARC layout, PCE 6-button, SMS/GG, 2/4-button physical mapping, and Select shortcut modifier ([ADR 0013](adr/0013-input.md))
 - [x] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([docs/traits/TRAITS.md](traits/TRAITS.md))
 - [x] Lightweight C reference reader implementation ([docs/traits/traits.c](traits/traits.c) and `traits.h`)
 - [x] Modular RetroArch core builders and configs in `packages/cores/*/core.ini` ([ADR 0005](adr/0005-retroarch-cores.md))
