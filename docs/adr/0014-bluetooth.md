@@ -1,24 +1,23 @@
 # Bluetooth Audio & Persistence
 
 ## Problem
-Minime must support Bluetooth pairing and A2DP audio while keeping the userdata partition compatible with FAT32/exFAT. Bluetooth audio must also survive earbuds disconnecting during gameplay without freezing the emulator or losing speaker fallback.
-
-BlueZ stores adapter and device state in directories named with colon-separated MAC addresses, such as `A8:6E:4E:FA:69:8E`. FAT-compatible filesystems reject `:` in filenames. BlueALSA PCM handles can also fail when an A2DP transport disappears while an emulator still owns the ALSA device.
+Minime must support Bluetooth pairing and A2DP audio while keeping the userdata partition FAT32/exFAT-compatible. BlueZ stores adapter and device state in directories named with colon-separated MAC addresses (e.g. `A8:6E:4E:FA:69:8E`); FAT-compatible filesystems reject `:` in filenames, so the state cannot live directly on the userdata card.
 
 ## Solution
-Use BlueZ and BlueALSA as the Bluetooth stack. Keep BlueZ's native runtime tree in `/var/lib/bluetooth`, and persist it as `/mnt/sdcard/.minime/config/bluetooth/storage.tar`. The Bluetooth OpenRC service extracts the archive at startup and recreates it at shutdown. This preserves the FAT32/exFAT userdata contract without encoding BlueZ's directory names.
+Use BlueZ and BlueALSA as the Bluetooth stack. Persist BlueZ state on a dedicated 4 MB ext4 state partition (`/dev/...p2`, label `minime-state`, see [0009-storage](0009-storage.md)) mounted at `/var/lib/bluetooth` by the Bluetooth OpenRC service. The service formats it on first use (`mkfs.ext4`) and unmounts it on shutdown. Already-flashed single-partition cards fall back to a tmpfs + `storage.tar` snapshot in the config directory until they are reflashed with the new layout.
 
-Keep game audio on the hardware speaker PCM and mirror fixed-format audio through ALSA's `file` PCM to `/run/bt-audio.fifo`. The UI-agnostic `bt-mirror` helper keeps the FIFO reader open, drains it when no sink is connected, and feeds BlueALSA through `aplay` when an A2DP device is connected. `audio-monitor.sh` watches BlueZ, updates the target, and owns the connection transitions. `audio.sh` binds Bluetooth volume to the board's existing hardware mixer control through `softvol`.
+For audio, adopt the native BlueALSA path (the same model NextUI uses): `audio.sh` rewrites `/run/asoundrc` so `pcm.!default` routes to the connected A2DP device through a `softvol` bound to the board's existing hardware volume control. The running emulator's SND layer (`workspace/all/common/api.c`) stats `/run/asoundrc` once a second (`SND_checkRoute`) and re-opens SDL audio against the new default (`SND_reopen`) — so the game's stream follows the route change within ~1s without any game cooperation. `keymon` owns the event detection: it watches the codec jack input device (`EV_SW`/`SW_HEADPHONE_INSERT`) for headphones and polls `bluetoothctl` for connected Audio Sinks, calling `audio.sh bt-on`/`bt-off` on state changes.
 
-These are deliberate compatibility adapters, not a new audio framework. PipeWire/PulseAudio and a native filesystem remain parked alternatives if the maintenance cost becomes unacceptable.
+A mid-game disconnect is handled by the same route change: `keymon` detects the sink leaving, `audio.sh bt-off` restores the hardware route, and `SND_reopen` re-opens the game's audio against the speaker. This is the same trade-off NextUI accepts (no simultaneous speaker+BT output; a lost transport can stall SDL's close until the route change lands) and is the lowest-latency ALSA-only design available.
+
+This replaces the earlier mirror design (`bt-mirror` + ALSA `file` FIFO) which kept the game pinned to the hardware PCM and mirrored audio to BlueALSA through a custom daemon. The mirror solved the same disconnect-freeze problem with a larger latency footprint and an extra component; the native route removes the daemon and the FIFO entirely.
 
 ## Examples
-- Bluetooth service and persistence: `packages/components/boards/common/overlay/etc/init.d/bluetooth`
+- State mount + persistence: `packages/components/boards/common/overlay/etc/init.d/bluetooth`
 - ALSA route generation: `packages/components/boards/common/scripts/audio.sh`
-- Connection monitor: `packages/components/boards/common/scripts/audio-monitor.sh`
-- Mirror helper: `src/bt-mirror/`
-- Alpine package: `packages/components/alpine/aports/bt-mirror/`
-- Buildroot package: `packages/components/buildroot/external/package/bt-mirror/`
+- Route-change reopen: `workspace/all/common/api.c` (`SND_checkRoute`/`SND_reopen`)
+- Event detection: `packages/ui/minui/workspace/minime/keymon/keymon.c`
+- Trait-driven jack/power: `packages/ui/minui/workspace/minime/platform/traits.c`
 
 ## See Also
 - Storage layout: [`0009-storage`](0009-storage.md)
