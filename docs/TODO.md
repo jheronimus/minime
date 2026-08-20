@@ -36,8 +36,6 @@
 
 ## Display, Audio & Input
 
-- [ ] Comprehensive input mapping & hotkeys across all Minime devices in Allium (MinUI complete, [ADR 0013](adr/0013-input.md))
-  - [THEORY] Configure Allium (`input.rs` / `alliumd` / `play`) to handle input mappings across all form factors (deferred). MinUI support is implemented in `platform.c` / `minarch` with 6-button Arc support, SMS/PCE/2-4 button physical mapping, and Select shortcut modifier.
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 
@@ -50,7 +48,7 @@
 
 ## Completed
 
-- [x] Comprehensive input mapping & hotkeys in MinUI: 6-button RG ARC layout, PCE 6-button, SMS/GG, 2/4-button physical mapping, and Select shortcut modifier ([ADR 0013](adr/0013-input.md))
+- [x] Comprehensive input mapping & hotkeys across all Minime devices in MinUI: 6-button RG ARC layout, PCE 6-button, SMS/GG, 2/4-button physical mapping, Select shortcut modifier, modifier+L1/R1 rewind/FF, and modifier+L2/R2 load/save ([ADR 0013](adr/0013-input.md))
 - [x] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([docs/traits/TRAITS.md](traits/TRAITS.md))
 - [x] Lightweight C reference reader implementation ([docs/traits/traits.c](traits/traits.c) and `traits.h`)
 - [x] Modular RetroArch core builders and configs in `packages/cores/*/core.ini` ([ADR 0005](adr/0005-retroarch-cores.md))
