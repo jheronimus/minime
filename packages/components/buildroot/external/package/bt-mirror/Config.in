@@ -1,0 +1,7 @@
+config BR2_PACKAGE_BT_MIRROR
+	bool "bt-mirror"
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ALSA_UTILS
+	select BR2_PACKAGE_BLUEZ_ALSA
+	help
+	  Minime Bluetooth audio mirror helper.

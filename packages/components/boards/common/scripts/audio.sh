@@ -1,5 +1,5 @@
 #!/bin/sh
-# shellcheck shell=sh
+# shellcheck shell=sh disable=SC2013
 # audio.sh: ALSA audio ownership (single source of truth for .asoundrc).
 # The firmware owns ALSA routing; the UI delegates here instead of writing
 # .asoundrc itself.
@@ -13,11 +13,24 @@ set -eu
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
 ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
 RUN_ASOUNDRC="/run/asoundrc"
+MIRROR_FIFO="/run/bt-audio.fifo"
 
 get_trait() {
 	key="$1"
 	[ -f "$TRAITS_FILE" ] || return 0
 	grep "^${key}=" "$TRAITS_FILE" | cut -d= -f2 | tr -d '\r' || true
+}
+
+get_mixer_card() {
+	mixer=$(get_trait audio_mixer)
+	[ -n "$mixer" ] && [ "$mixer" != "na" ] || return 1
+	for card in $(sed -n 's/^ *\([0-9][0-9]*\) .*/\1/p' /proc/asound/cards 2>/dev/null); do
+		if amixer -c "$card" sget "$mixer" >/dev/null 2>&1; then
+			echo "$card"
+			return 0
+		fi
+	done
+	return 1
 }
 
 write_card_default() {
@@ -59,8 +72,13 @@ bt-on)
 	# plug layer resample (e.g. 44.1 kHz games) instead of asking BlueALSA
 	# to renegotiate the stream, which BlueZ refuses while the transport is
 	# settling and tears the A2DP PCM down (silent games).
-	content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave {\n        pcm {\n            type bluealsa\n            device "%s"\n            profile "a2dp"\n        }\n        rate 48000\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
-		"$addr" "$addr")
+	if mixer_card=$(get_mixer_card); then
+		content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave {\n        pcm {\n            type file\n            slave.pcm "hw:%s,0"\n            file "%s"\n            format raw\n        }\n        rate 48000\n        channels 2\n        format S16_LE\n    }\n}\npcm.bt_output {\n    type softvol\n    slave.pcm "plug_bt"\n    control { name "%s" card %s }\n    min_dB -40.0\n    max_dB 0.0\n}\npcm.plug_bt {\n    type plug\n    slave {\n        pcm {\n            type bluealsa\n            device "%s"\n            profile "a2dp"\n        }\n        rate 48000\n    }\n}\nctl.!default {\n    type hw\n    card %s\n}\n' \
+			"$addr" "$mixer_card" "$MIRROR_FIFO" "$(get_trait audio_mixer)" "$mixer_card" "$addr" "$mixer_card")
+	else
+		content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave {\n        pcm {\n            type bluealsa\n            device "%s"\n            profile "a2dp"\n        }\n        rate 48000\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
+			"$addr" "$addr")
+	fi
 	printf '%s' "$content" >"$ASOUNDRC_FILE"
 	printf '%s' "$content" >"$RUN_ASOUNDRC"
 	;;

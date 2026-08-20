@@ -10,6 +10,11 @@
 set -u
 
 AUDIO_SCRIPT="/usr/share/minime/scripts/audio.sh"
+MIRROR_TARGET="/run/bt-audio-target"
+
+set_target() {
+	printf '%s\n' "$1" >"$MIRROR_TARGET"
+}
 
 recheck() {
 	connected_sink=""
@@ -21,10 +26,18 @@ recheck() {
 	done
 	if [ -n "$connected_sink" ]; then
 		"$AUDIO_SCRIPT" bt-on "$connected_sink"
+		set_target "$connected_sink"
 	else
+		set_target ""
 		"$AUDIO_SCRIPT" bt-off
 	fi
 }
+
+# Keep the FIFO open for the lifetime of the system. The helper drains the
+# mirrored stream when Bluetooth is absent and feeds BlueALSA when present.
+if [ -x /usr/bin/bt-mirror ]; then
+	start-stop-daemon -S -q -b -m -p /run/bt-mirror.pid -x /usr/bin/bt-mirror
+fi
 
 # Re-assert on startup and periodically (idempotent, cheap).
 recheck
@@ -33,7 +46,7 @@ recheck
 	recheck
 done) &
 loop_pid=$!
-trap 'kill "$loop_pid" 2>/dev/null' EXIT INT TERM
+trap 'kill "$loop_pid" 2>/dev/null; start-stop-daemon -K -q -p /run/bt-mirror.pid 2>/dev/null || true' EXIT INT TERM
 
 dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='org.bluez.Device1'" 2>/dev/null | while read -r line; do
 	case "$line" in
@@ -47,9 +60,11 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
 			if [ -n "${dev_mac:-}" ]; then
 				if bluetoothctl info "$dev_mac" 2>/dev/null | grep -q "Audio Sink"; then
 					"$AUDIO_SCRIPT" bt-on "$dev_mac"
+					set_target "$dev_mac"
 				fi
 			fi
 		elif echo "$var_line" | grep -q "boolean false"; then
+			set_target ""
 			"$AUDIO_SCRIPT" bt-off
 		fi
 		;;
