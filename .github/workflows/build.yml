@@ -37,6 +37,10 @@ on:
           - muos
           - allium
         default: minui
+      include_roms:
+        description: 'Include preloaded ROMs'
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       libc:
@@ -51,6 +55,11 @@ on:
         description: 'Launcher UI'
         type: string
         required: true
+      include_roms:
+        description: 'Include preloaded ROMs'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -63,6 +72,7 @@ jobs:
       libc: ${{ steps.params.outputs.libc }}
       soc: ${{ steps.params.outputs.soc }}
       ui: ${{ steps.params.outputs.ui }}
+      include_roms: ${{ steps.params.outputs.include_roms }}
       musl_or_glibc: ${{ steps.params.outputs.musl_or_glibc }}
       runner: ${{ steps.params.outputs.runner }}
       container: ${{ steps.params.outputs.container }}
@@ -75,6 +85,7 @@ jobs:
           INPUT_LIBC: ${{ inputs.libc }}
           INPUT_SOC: ${{ inputs.soc }}
           INPUT_UI: ${{ inputs.ui }}
+          INPUT_INCLUDE_ROMS: ${{ inputs.include_roms }}
           OWNER: ${{ github.repository_owner }}
         run: |
           python3 - <<'PY'
@@ -85,6 +96,8 @@ jobs:
           soc = os.environ.get("INPUT_SOC") or "rk3566"
           ui = os.environ.get("INPUT_UI") or "minui"
           owner = os.environ.get("OWNER", "jheronimus")
+          include_roms_raw = os.environ.get("INPUT_INCLUDE_ROMS", "false")
+          include_roms = "1" if str(include_roms_raw).lower() in ("true", "1", "yes") else "0"
 
           if libc == "buildroot" and soc == "h700":
               raise SystemExit("Error: h700 is not supported on Buildroot.")
@@ -99,6 +112,7 @@ jobs:
               f.write(f"libc={libc}\n")
               f.write(f"soc={soc}\n")
               f.write(f"ui={ui}\n")
+              f.write(f"include_roms={include_roms}\n")
               f.write(f"musl_or_glibc={musl_or_glibc}\n")
               f.write(f"runner={runner}\n")
               f.write(f"container={container}\n")
@@ -372,7 +386,7 @@ jobs:
           MINIME_COMMIT="$(git rev-parse --short HEAD)"
           UI_COMMIT="$(git rev-parse --short HEAD:packages/ui/${{ needs.setup.outputs.ui }})"
           export MINIME_COMMIT UI_COMMIT
-          make -C packages/components/${{ needs.setup.outputs.libc }} image update BOARD=${{ needs.setup.outputs.soc }} UI=${{ needs.setup.outputs.ui }}
+          make -C packages/components/${{ needs.setup.outputs.libc }} image update BOARD=${{ needs.setup.outputs.soc }} UI=${{ needs.setup.outputs.ui }} INCLUDE_ROMS=${{ needs.setup.outputs.include_roms }}
 
       - name: Save CCache
         if: always() && steps.build-components.outcome == 'success'

@@ -2,9 +2,14 @@ name: Nightly Rebuilds
 
 on:
   schedule:
-    # 04:00 UTC = 07:00 GMT+3 — nightly rebuild of all target combinations
+    # 04:00 UTC = 07:00 GMT+3 — nightly rebuild of MinUI targets
     - cron: '0 4 * * *'
   workflow_dispatch:
+    inputs:
+      include_roms:
+        description: 'Include preloaded ROMs'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -16,56 +21,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Alpine (musl) — 9 combinations (3 boards × 3 UIs)
-          - libc: alpine
-            soc: rk3566
-            ui: muos
+          # Alpine (musl) — 3 boards × MinUI
           - libc: alpine
             soc: rk3566
             ui: minui
           - libc: alpine
-            soc: rk3566
-            ui: allium
-          - libc: alpine
             soc: rk3326
-            ui: muos
-          - libc: alpine
-            soc: rk3326
-            ui: minui
-          - libc: alpine
-            soc: rk3326
-            ui: allium
-          - libc: alpine
-            soc: h700
-            ui: muos
-          - libc: alpine
-            soc: h700
             ui: minui
           - libc: alpine
             soc: h700
-            ui: allium
-          # Buildroot (glibc) — 6 combinations (2 boards × 3 UIs; h700 excluded)
-          - libc: buildroot
-            soc: rk3566
-            ui: muos
+            ui: minui
+          # Buildroot (glibc) — 2 boards × MinUI (h700 excluded)
           - libc: buildroot
             soc: rk3566
             ui: minui
           - libc: buildroot
-            soc: rk3566
-            ui: allium
-          - libc: buildroot
-            soc: rk3326
-            ui: muos
-          - libc: buildroot
             soc: rk3326
             ui: minui
-          - libc: buildroot
-            soc: rk3326
-            ui: allium
     uses: ./.github/workflows/build.yml
     with:
       libc: ${{ matrix.libc }}
       soc: ${{ matrix.soc }}
       ui: ${{ matrix.ui }}
+      include_roms: ${{ inputs.include_roms || false }}
     secrets: inherit

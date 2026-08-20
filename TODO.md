@@ -2,16 +2,11 @@
 
 ## UI
 
-- [ ] MinUI: swap pak defaults to the ecosystem cores — SFC.pak→snes9x, MD.pak→genesis_plus_gx, NGP/NGPC.pak→mednafen_ngp, GBA.pak→mgba (+ rename MGBA.pak to a gpsp fallback pak)
-- [ ] MinUI: add DC/N64/PSP paks once minarch grows GL support (blocked on frontend GL work)
-- [ ] muOS: add a ppsspp Pickles coredef (`retro/coredef/`) and the fbneo/arcade assign; consider `mednafen_supergrafx` + `mednafen_lynx` coredefs
-- [ ] Debug Wi-Fi, BT and Power PAKs in MinUI, make sure everything works well
+
+- [ ] Debug Wi-Fi and Power PAKs in MinUI, make sure everything works well
 - [ ] Add boxart support and explore scraper integration (Allium native scraper)
 - [ ] Write a MinUI-native frontend to PortMaster (depends on boxart support for screenshots)
 - [ ] Reimplement the multi-version ROM feature in MinUI
-- [ ] Allium: display proper console names for MinUI-style Roms folders (Option 1, deferred)
-  - [THEORY] `ConsoleMapper::get_console_by_dir` (`crates/allium-launcher/src/consoles.rs`) is exact-match only, so a MinUI-named folder like `Game Boy (GB)` displays the raw folder name instead of the console name. Teach it to also match `(ABBREV)` like `get_console` already does.
-- [ ] Allium: adopt MinUI's append/merge `wifi.cfg` convention so saving from either UI does not clobber other networks
 
 ## Saturn (YabaSanshiro libretro port)
 
@@ -48,6 +43,7 @@
 
 ## Completed
 
+- [x] Debug the Bluetooth PAK in MinUI end-to-end: native BlueALSA routing (softvol bound to the hw volume control), keymon-driven connect/disconnect detection, mid-game disconnect recovery to speakers, and BlueZ state persistence via a loop-mounted ext2 image on the FAT card ([ADR 0014](adr/0014-bluetooth.md))
 - [x] Comprehensive input mapping & hotkeys across all Minime devices in MinUI: 6-button RG ARC layout, PCE 6-button, SMS/GG, 2/4-button physical mapping, Select shortcut modifier, modifier+L1/R1 rewind/FF, and modifier+L2/R2 load/save ([ADR 0013](adr/0013-input.md))
 - [x] Add `input_stick_device_name` trait and multi-evdev joystick polling to Allium and MinUI ([docs/traits/TRAITS.md](traits/TRAITS.md))
 - [x] Lightweight C reference reader implementation ([docs/traits/traits.c](traits/traits.c) and `traits.h`)

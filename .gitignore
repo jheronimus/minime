@@ -18,7 +18,6 @@ packages/components/buildroot/logs/
 
 # Build and local configurations
 **/local.mk
-**/TODO.md
 **/.antigravitycli/
 
 # Python caching

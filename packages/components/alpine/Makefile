@@ -38,8 +38,8 @@ help:
 	@printf '%s\n' \
 		"Minime Alpine targets:" \
 		"  make components BOARD=rk3566    Build system components (kernel, rootfs, APKs)" \
-		"  make image BOARD=rk3566 UI=minui Build full release SD image" \
-		"  make update BOARD=rk3566 UI=minui Build update tarball package" \
+		"  make image BOARD=rk3566 UI=minui [INCLUDE_ROMS=1] Build full release SD image" \
+		"  make update BOARD=rk3566 UI=minui [INCLUDE_ROMS=1] Build update tarball package" \
 		"  make clean                      Remove built outputs"
 
 # CI runs inside the builder container (GitHub container job), so the build
