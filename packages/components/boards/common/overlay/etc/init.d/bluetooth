@@ -63,11 +63,19 @@ start() {
 		return 1
 	fi
 
+	# Wait for bluetoothd to register on D-Bus so BlueALSA endpoints bind reliably
+	for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+		if gdbus call --system --dest org.bluez --object-path /org/bluez --method org.freedesktop.DBus.Peer.Ping >/dev/null 2>&1; then
+			break
+		fi
+		sleep 0.1
+	done
+
 	# 2. BlueALSA
 	bluealsa_bin="$(command -v bluealsa 2>/dev/null || echo /usr/bin/bluealsa)"
 	start-stop-daemon -S -q -b -m \
 		-p /run/bluealsa.pid \
-		-x "${bluealsa_bin}" -- -p a2dp-sink -p a2dp-source
+		-x "${bluealsa_bin}" -- -p a2dp-source -p a2dp-sink
 
 	# 3. Audio Monitor (watches D-Bus for dynamic connect/disconnect)
 	if [ -x /usr/share/minime/scripts/audio-monitor.sh ]; then
