@@ -42,13 +42,15 @@ start() {
 
 	mkdir -p /run/bluetooth /run/bluealsa
 	mkdir -p /var/lib/bluetooth /var/lib/bluealsa 2>/dev/null || true
-	mkdir -p /mnt/sdcard/.minime/config/bluetooth/storage 2>/dev/null || true
+	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
 	if ! touch /var/lib/bluetooth/.test 2>/dev/null; then
 		mount -t tmpfs tmpfs /var/lib/bluetooth 2>/dev/null || true
 	else
 		rm -f /var/lib/bluetooth/.test
 	fi
-	cp -a /mnt/sdcard/.minime/config/bluetooth/storage/* /var/lib/bluetooth/ 2>/dev/null || true
+	if [ -f /mnt/sdcard/.minime/config/bluetooth/storage.tar ]; then
+		tar -xf /mnt/sdcard/.minime/config/bluetooth/storage.tar -C /var/lib/bluetooth 2>/dev/null || true
+	fi
 	if ! touch /var/lib/bluealsa/.test 2>/dev/null; then
 		mount -t tmpfs tmpfs /var/lib/bluealsa 2>/dev/null || true
 	else
@@ -95,8 +97,14 @@ stop() {
 	rm -f /run/audio-monitor.pid
 	/usr/share/minime/scripts/audio.sh bt-off 2>/dev/null || true
 
-	mkdir -p /mnt/sdcard/.minime/config/bluetooth/storage 2>/dev/null || true
-	cp -a /var/lib/bluetooth/* /mnt/sdcard/.minime/config/bluetooth/storage/ 2>/dev/null || true
+	mkdir -p /mnt/sdcard/.minime/config/bluetooth 2>/dev/null || true
+	tmp_storage="/tmp/bluetooth-storage.tar"
+	rm -f "${tmp_storage}"
+	tar -cf "${tmp_storage}" -C /var/lib/bluetooth . 2>/dev/null || true
+	if [ -f "${tmp_storage}" ]; then
+		cp -f "${tmp_storage}" /mnt/sdcard/.minime/config/bluetooth/storage.tar 2>/dev/null || true
+		rm -f "${tmp_storage}"
+	fi
 
 	start-stop-daemon -K -q -p /run/bluealsa.pid 2>/dev/null || true
 	rm -f /run/bluealsa.pid
