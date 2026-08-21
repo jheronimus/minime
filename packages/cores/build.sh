@@ -170,7 +170,7 @@ build_core() {
 		return 1
 	fi
 	cp "$so_path" "$OUT_DIR/$so_name"
-	for shim in liblog.so libOpenSLES.so; do
+	for shim in liblog.so libOpenSLES.so libashmem.so libandroid.so; do
 		if [ -f "$bdir/$shim" ]; then
 			cp "$bdir/$shim" "$OUT_DIR/$shim"
 		fi
