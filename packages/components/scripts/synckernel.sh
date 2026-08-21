@@ -5,8 +5,8 @@
 set -eu
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-APKBUILD_PATH="${ROOT_DIR}/minime/targets/alpine/aports/tinykernel/APKBUILD"
-CONFIG_PATH="${ROOT_DIR}/minime/targets/buildroot/external/configs/common.config"
+APKBUILD_PATH="${ROOT_DIR}/packages/components/alpine/aports/tinykernel/APKBUILD"
+CONFIG_PATH="${ROOT_DIR}/packages/components/buildroot/external/configs/common.config"
 ALPINE_URL="https://gitlab.alpinelinux.org/alpine/aports/-/raw/master/community/linux-stable/APKBUILD"
 
 echo "Fetching latest Alpine stable version from ${ALPINE_URL}..."
@@ -28,8 +28,9 @@ echo "Downloading and computing sha512 hash for $dl_url..."
 # a pipe would mask curl's exit status, since sha512sum still succeeds on the
 # partial bytes it received and the wrong hash would be written to the
 # APKBUILD (the failure that broke the 2026-08-15 builds).
+# --http1.1 prevents CDN HTTP/2 multiplex stream resets (exit 92) on large downloads.
 tmpfile="${dl_filename}.tmp"
-curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 -o "${tmpfile}" "$dl_url"
+curl -fsSL --http1.1 --retry 3 --retry-all-errors --retry-delay 2 -o "${tmpfile}" "$dl_url"
 sha512=$(sha512sum "${tmpfile}" | awk '{print $1}')
 rm -f "${tmpfile}"
 
