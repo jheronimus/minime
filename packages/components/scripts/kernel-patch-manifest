@@ -3,8 +3,8 @@
 # Each section names one patch file under minime/boards/<board>/patches/linux/
 # followed by "upstream=<value>". This file is the single source of truth for
 # patch triage: as kernel patches land in mainline, mark the section
-# "upstream=master" (content confirmed in linux.git master). The daily
-# sync-kernel workflow then auto-drops the patch on the next kernel bump.
+# "upstream=master" (content confirmed in linux.git master) so it can be dropped
+# on the next manual kernel bump.
 #
 # Values:
 #   upstream=-          keep; content not (yet) confirmed upstream

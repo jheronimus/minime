@@ -189,8 +189,7 @@ issue/PR search.
 - **Finding the agent cannot turn into a confident diff** (unclear root cause,
   needs hardware evidence to decide the direction) → an issue write-up only, so a
   human with hardware can action it.
-- Branch names: `cleanup/<topic-slug>` on each repo. Never bump submodule SHAs —
-  `update-submodules.yml` handles that after merges.
+- Branch names: `cleanup/<topic-slug>` on each repo. Submodule SHAs in minime are bumped explicitly in PR commits.
 - Before opening an issue/PR, search open **and** closed issues/PRs across the
   repos **and** the session records in `docs/cleanup/` for prior coverage of the
   topic (keywords). Do not re-propose a rejected topic unless something changed

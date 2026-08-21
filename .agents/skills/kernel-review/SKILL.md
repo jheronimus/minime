@@ -1,6 +1,6 @@
 ---
 name: kernel-review
-description: Evaluate a new kernel version for Minime — determine which new Anbernic devices mainline added, which of Minime's kernel patches can be dropped as their content lands upstream, which patches are needed for newly-added devices, and implement new device support in the traits registry. Use when a kernel version bump is proposed or merged (synckernel.sh / sync-kernel.yml), when checking "what's new in kernel <version>", or when adding support for a new Anbernic handheld. Triggers: "new kernel", "kernel bump", "evaluate new devices", "what's new in 7.x", "add support for <device>".
+description: Evaluate a new kernel version for Minime — determine which new Anbernic devices mainline added, which of Minime's kernel patches can be dropped as their content lands upstream, which patches are needed for newly-added devices, and implement new device support in the traits registry. Use when a kernel version bump is proposed (synckernel.sh), when checking "what's new in kernel <version>", or when adding support for a new Anbernic handheld. Triggers: "new kernel", "kernel bump", "evaluate new devices", "what's new in 7.x", "add support for <device>".
 ---
 
 # Kernel Version Review
@@ -20,8 +20,7 @@ Read those first.
   import its patches, DTS, or quirk scripts. Only scalar quirk *values* may be
   harvested as data (with provenance noted in the trait file).
 - **Every patch is tracked.** `packages/components/scripts/kernel-patch-manifest` records
-  each patch's upstream status; `sync-kernel.yml` auto-drops patches marked
-  `upstream=master`. A kernel review updates this manifest.
+  each patch's upstream status. A kernel review updates this manifest.
 - **Registry is the single source of truth.** After any device change, run
   `just validate-static` (traits-gen check + consumer-parity guard) and
   verify with `traits-gen dtbs <board>` / `overlays <board> <dir>`.
@@ -53,8 +52,7 @@ content is now present in the target kernel:
   properties.
 
 If present, set `upstream=<version>` in the manifest (or `upstream=master` if
-only confirmed in master). Patches marked `upstream=master` are auto-dropped
-by `sync-kernel.yml` on the next bump; for a manual bump, drop them yourself
+only confirmed in master). For a manual bump, drop them
 with `git rm` and remove their manifest sections. Update any affected config
 fragments (`tiny-*.config`, Buildroot configs) if the patch previously enabled
 a now-default symbol.

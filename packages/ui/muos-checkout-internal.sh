@@ -2,8 +2,7 @@
 # Sparse-checkout the muOS internal payload (share/ + script/) into
 # packages/ui/muos/internal without pulling the whole ~1 GB tree (bin/, init/,
 # device/, ...). The submodule is declared with `update = none` in .gitmodules,
-# so recursive checkouts skip it; this helper is used by the muos build jobs
-# and by update-submodules.yml.
+# so recursive checkouts skip it; this helper is used by the muos build jobs.
 #
 # Usage: muos-checkout-internal.sh <ref>
 #   <ref>  commit SHA (from the parent gitlink) or a branch/tag name
