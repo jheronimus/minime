@@ -13,11 +13,6 @@
 - [ ] Frontend GL support (GLSM/hardware contexts in minarch/Allium) to run the core's GL renderer. The software (Titan) path draws no visible video in this core (verified on-device with a real BIOS: opaque-black frames) — see [ADR 0005](adr/0005-retroarch-cores.md). This is the main blocker for playable Saturn; also unlocks GL/Vulkan for other cores.
 - [ ] Multi-disc support: implement `retro_disk_control_callback` so minarch's disc-swap menu works for multi-disc games (e.g. Panzer Dragoon Saga). Needs a glue hook to reinit the CD core on `replace_image_index` ([ADR 0005](adr/0005-retroarch-cores.md)).
 
-## Kernel & Performance
-
-- [ ] Calibrate Dynamic Memory Channel (DMC) Devfreq scaling
-  - [THEORY] Lower polling intervals to 50ms/100ms and adjust up/down thresholds to boost RAM throughput under heavy load.
-
 ## Power Management & Suspend
 
 - [ ] Re-implement charger-triggered boot handling ([ADR 0012](adr/0012-power-and-thermal.md))
