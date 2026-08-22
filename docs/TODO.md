@@ -24,10 +24,10 @@
 
 ## Display, Audio & Input
 
-- [ ] Fix shortcuts on RG ARC (both select and menu buttons act as menu buttons)
-  - [THEORY] On RG ARC (6-button layout), `key_menu` and `key_select` traits or `keymon` input loop treat Select and Menu identically for shortcuts. Disambiguate keycodes in traits/keymon so Select functions strictly as game Select and only the dedicated Menu button triggers system shortcuts.
-- [ ] Fix audio jack switching on RK3566 / RG ARC (speakers still play when headphones are plugged in)
-  - [THEORY] External speaker amplifier remains powered when 3.5mm jack is inserted. Verify `hp-det-gpios` polarity in device tree, kernel DAPM `Internal Speakers` pin-switch, or ALSA jack switch events so the speaker amplifier is properly gated upon headphone insertion.
+- [x] Fix shortcuts on RG ARC (both select and menu buttons act as menu buttons)
+  - [x] Disambiguated modifier button handling in `minarch.c` to bind `mod_btn` to `BTN_MENU` when a dedicated menu button exists (`PLAT_hasMenuButton()`), reserving `BTN_SELECT` strictly as in-game Select.
+- [x] Fix audio jack switching on RK3566 / RG ARC (speakers still play when headphones are plugged in)
+  - [x] Added `jack-in`/`jack-out` ALSA DAPM pin-switch gating (`Internal Speakers`) to `audio.sh`, delegated from `libmsettings` on hardware switch events (`SW_HEADPHONE_INSERT`).
 - [ ] Verify RG DS dual-display traits on hardware: `gpu_device`/`gpu_device2` fb-node ordering, `screen2_backlight_path`, `audio_mic` (DTB wires a microphone; confirm evdev/ALSA surfaces it)
 - [ ] Implement driver/DTS level screen rotation instead of per-application handling
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
