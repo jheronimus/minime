@@ -24,10 +24,6 @@
 
 ## Display, Audio & Input
 
-- [x] Fix shortcuts on RG ARC (both select and menu buttons act as menu buttons)
-  - [x] Disambiguated modifier button handling in `minarch.c` to bind `mod_btn` to `BTN_MENU` when a dedicated menu button exists (`PLAT_hasMenuButton()`), reserving `BTN_SELECT` strictly as in-game Select.
-- [x] Fix audio jack switching on RK3566 / RG ARC (speakers still play when headphones are plugged in)
-  - [x] Added `jack-in`/`jack-out` ALSA DAPM pin-switch gating (`Internal Speakers`) to `audio.sh`, delegated from `libmsettings` on hardware switch events (`SW_HEADPHONE_INSERT`).
 - [ ] Verify RG DS dual-display traits on hardware: `gpu_device`/`gpu_device2` fb-node ordering, `screen2_backlight_path`, `audio_mic` (DTB wires a microphone; confirm evdev/ALSA surfaces it)
 - [ ] Implement driver/DTS level screen rotation instead of per-application handling
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
@@ -71,6 +67,10 @@
 
 ## Completed
 
+- [x] Fix shortcuts on RG ARC (both select and menu buttons act as menu buttons)
+  - [x] Disambiguated modifier button handling in `minarch.c` to bind `mod_btn` to `BTN_MENU` when a dedicated menu button exists (`PLAT_hasMenuButton()`), reserving `BTN_SELECT` strictly as in-game Select.
+- [x] Fix audio jack switching on RK3566 / RG ARC (speakers still play when headphones are plugged in)
+  - [x] Added `start-interface`/`stop-interface` ALSA DAPM pin-switch gating (`Internal Speakers`) to `audio.sh`, delegated from `libmsettings` on hardware switch events (`SW_HEADPHONE_INSERT`).
 - [x] Reorganize board defconfigs and shared package base between Alpine and Buildroot
 - [x] Enable CPU/GPU overclock (up to 2.0 GHz) and undervolt support for RK3566 via DTS overlays/bootloader options
 - [x] Fix power button on RG35xxSP not waking the device up from sleep
