@@ -58,10 +58,8 @@ start() {
 	# unmuted for sound to pass; the boot-time unmute covers it.
 	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
 		amixer -q -c "$audio_card" sset 'DAC' unmute >/dev/null 2>&1 || true
-		amixer -q -c "$audio_card" sset 'Playback Mux' 'HP' >/dev/null 2>&1 || true
 	else
 		amixer -q sset 'DAC' unmute >/dev/null 2>&1 || true
-		amixer -q sset 'Playback Mux' 'HP' >/dev/null 2>&1 || true
 	fi
 
 	export HOME=/mnt/sdcard
