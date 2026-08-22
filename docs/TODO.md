@@ -50,7 +50,6 @@
 - [ ] Fix dead DTB auto-detect path in `boot.cmd`: `device` is resolved from `device.cfg`/`fdtfile` but the DTB load hardcodes `.minime/dtb`
   - [THEORY] Either load `.minime/devices/${device}` when set, or drop the resolution entirely; RK3326 `first-boot-probe.sh` currently writes `device.cfg` that nothing consumes.
 - [ ] RK3326 bringup (make `rk3326` a supported board in `minime/targets/*/Makefile` + CI matrix)
-- [ ] Add RG353M support end-to-end (U-Boot rgxx3 FDT fixup + traits already added in `rg353m.ini`)
 
 - [ ] Implement a firstboot device-selector to assist hardware auto-detection ([spec](file:///Users/ilembitov/Projects/minime/docs/spec/firstboot-device-selector.md))
   - [THEORY] Support headless/non-functional screen selection using D-pad up/down inputs, rumble haptics, fast reboot cycles (~2s), and `BTN_A` confirmation once display lights up.
@@ -67,6 +66,7 @@
 
 ## Completed
 
+- [x] Add RG353M support end-to-end (U-Boot rgxx3 FDT fixup + traits in `rg353m.ini`, boots `rg353p` DTB)
 - [x] Fix shortcuts on RG ARC (both select and menu buttons act as menu buttons)
   - [x] Disambiguated modifier button handling in `minarch.c` to bind `mod_btn` to `BTN_MENU` when a dedicated menu button exists (`PLAT_hasMenuButton()`), reserving `BTN_SELECT` strictly as in-game Select.
 - [x] Fix audio jack switching on RK3566 / RG ARC (speakers still play when headphones are plugged in)
