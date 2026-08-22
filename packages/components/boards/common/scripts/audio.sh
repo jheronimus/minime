@@ -34,10 +34,26 @@ get_trait() {
 	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' || true
 }
 
-run_amixer() {
+get_codec_card() {
 	audio_card=$(get_trait audio_card)
 	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
-		amixer -q -c "$audio_card" "$@" 2>/dev/null || true
+		echo "$audio_card"
+		return
+	fi
+	if [ -f /proc/asound/cards ]; then
+		card=$(grep -v -i hdmi /proc/asound/cards 2>/dev/null | grep -o '\[.*\]' | head -n 1 | tr -d '[] ' || true)
+		if [ -n "$card" ]; then
+			echo "$card"
+			return
+		fi
+	fi
+	echo "default"
+}
+
+run_amixer() {
+	card="$(get_codec_card)"
+	if [ -n "$card" ] && [ "$card" != "default" ]; then
+		amixer -q -c "$card" "$@" 2>/dev/null || true
 	else
 		amixer -q "$@" 2>/dev/null || true
 	fi
@@ -56,13 +72,13 @@ get_hdmi_card() {
 		return
 	fi
 	if [ -f /proc/asound/cards ]; then
-		awk '/\[.*[Hh][Dd][Mm][Ii]/ { gsub(/.*\[| *].*/, ""); print; exit }' /proc/asound/cards 2>/dev/null || true
+		grep -i hdmi /proc/asound/cards 2>/dev/null | grep -o '\[.*\]' | head -n 1 | tr -d '[] ' || true
 	fi
 }
 
 stop_interface() {
-	iface="$1"
-	case "$iface" in
+	stop_target="$1"
+	case "$stop_target" in
 	speakers)
 		run_amixer sset 'Internal Speakers' off
 		run_amixer sset 'Internal Speakers' mute
@@ -83,24 +99,24 @@ stop_interface() {
 		fi
 		;;
 	*)
-		echo "audio.sh: unknown interface '$iface' (expected: $INTERFACES)" >&2
+		echo "audio.sh: unknown interface '$stop_target' (expected: $INTERFACES)" >&2
 		return 1
 		;;
 	esac
 }
 
 start_interface() {
-	iface="$1"
+	start_target="$1"
 	shift || true
 
 	# Stop all other interfaces first (mutual exclusivity)
 	for other in $INTERFACES; do
-		if [ "$other" != "$iface" ]; then
+		if [ "$other" != "$start_target" ]; then
 			stop_interface "$other"
 		fi
 	done
 
-	case "$iface" in
+	case "$start_target" in
 	speakers)
 		rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
 		run_amixer sset 'Internal Speakers' on
@@ -144,7 +160,7 @@ start_interface() {
 		printf '%s' "$content" >"$RUN_ASOUNDRC"
 		;;
 	*)
-		echo "audio.sh: unknown interface '$iface' (expected: $INTERFACES)" >&2
+		echo "audio.sh: unknown interface '$start_target' (expected: $INTERFACES)" >&2
 		return 1
 		;;
 	esac
