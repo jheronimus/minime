@@ -126,7 +126,7 @@ start() {
 stop() {
 	ebegin "Stopping Bluetooth stack"
 
-	/usr/share/minime/scripts/audio.sh bt-off 2>/dev/null || true
+	/usr/share/minime/scripts/audio.sh stop-interface bluetooth 2>/dev/null || true
 
 	bt_fstype="$(awk '$2 == "/var/lib/bluetooth" {print $3; exit}' /proc/mounts 2>/dev/null || true)"
 	if [ "${bt_fstype}" = "tmpfs" ]; then

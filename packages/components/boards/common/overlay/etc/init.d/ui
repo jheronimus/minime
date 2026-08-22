@@ -48,7 +48,7 @@ start() {
 	audio_mixer=$(get_trait audio_mixer)
 
 	# Firmware owns ALSA routing: generate the boot-time .asoundrc from traits.
-	/usr/share/minime/scripts/audio.sh init
+	/usr/share/minime/scripts/audio.sh start-interface speakers
 
 	if [ -n "$audio_mixer" ]; then
 		amixer sset "$audio_mixer" 100% unmute >/dev/null 2>&1 || true

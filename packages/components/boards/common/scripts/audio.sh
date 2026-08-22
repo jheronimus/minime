@@ -1,22 +1,29 @@
 #!/bin/sh
 # shellcheck shell=sh
-# audio.sh: ALSA audio ownership (single source of truth for .asoundrc).
-# The firmware owns ALSA routing; the UI delegates here instead of writing
-# .asoundrc itself.
+# audio.sh: ALSA audio ownership (single source of truth for .asoundrc and mixer routing).
+# The firmware owns ALSA routing; the UI delegates here instead of managing
+# .asoundrc or mixer controls directly.
 #
-# Routing model: the game's default PCM is re-pointed by writing /run/asoundrc.
-# The running emulator's SND layer (workspace/all/common/api.c) notices the
-# mtime change and re-opens SDL audio against the new default within ~1s.
+# Interfaces:
+#   speakers    Onboard speakers (unmutes Internal Speakers / Speaker Amp, sets SPK path)
+#   headphones  Wired 3.5mm jack (mutes Internal Speakers / Speaker Amp, sets HP path)
+#   bluetooth   Bluetooth A2DP sink (generates BlueALSA /run/asoundrc route)
+#   hdmi        HDMI audio sink (generates HDMI /run/asoundrc route)
 #
-# Subcommands:
-#   init         clear any stale dynamic .asoundrc
-#   bt-off       restore hardware routing (same as init)
-#   bt-on <addr> route .asoundrc to a connected Bluetooth (bluealsa) device
-#   jack-in      headphone inserted: mute internal speakers
-#   jack-out     headphone removed: unmute internal speakers
+# Commands:
+#   start-interface <interface> [args]  Start interface and stop all other interfaces
+#   stop-interface  <interface>         Stop the given interface
+#
+# Legacy / convenience aliases:
+#   init                                Reset to default speakers interface
+#   bt-on <addr>                        Alias for start-interface bluetooth <addr>
+#   bt-off                              Alias for stop-interface bluetooth
+#   jack-in                             Alias for start-interface headphones
+#   jack-out                            Alias for start-interface speakers
 
 set -eu
 
+INTERFACES="speakers headphones bluetooth hdmi"
 ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
 RUN_ASOUNDRC="/run/asoundrc"
 TRAITS_FILE="/mnt/sdcard/.minime/traits"
@@ -27,59 +34,153 @@ get_trait() {
 	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' || true
 }
 
-set_speaker_gating() {
-	state="$1" # "off" or "on"
+run_amixer() {
 	audio_card=$(get_trait audio_card)
-	card_args=""
 	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
-		card_args="-c $audio_card"
-	fi
-
-	if [ "$state" = "off" ]; then
-		# Mute/disable internal speaker and external speaker amp
-		amixer -q $card_args sset 'Internal Speakers' off 2>/dev/null || true
-		amixer -q $card_args sset 'Internal Speakers' mute 2>/dev/null || true
-		amixer -q $card_args sset 'Speaker' mute 2>/dev/null || true
-		amixer -q $card_args sset 'Speaker Amp' mute 2>/dev/null || true
-		amixer -q $card_args sset 'Playback Path' HP_NO_MIC 2>/dev/null || true
+		amixer -q -c "$audio_card" "$@" 2>/dev/null || true
 	else
-		# Unmute/enable internal speaker and external speaker amp
-		amixer -q $card_args sset 'Internal Speakers' on 2>/dev/null || true
-		amixer -q $card_args sset 'Internal Speakers' unmute 2>/dev/null || true
-		amixer -q $card_args sset 'Speaker' unmute 2>/dev/null || true
-		amixer -q $card_args sset 'Speaker Amp' unmute 2>/dev/null || true
-		amixer -q $card_args sset 'Playback Path' SPK 2>/dev/null || true
+		amixer -q "$@" 2>/dev/null || true
 	fi
 }
 
+get_connected_bt_sink() {
+	if command -v bluetoothctl >/dev/null 2>&1; then
+		bluetoothctl devices Connected 2>/dev/null | awk '/Device/ { print $2; exit }' || true
+	fi
+}
+
+get_hdmi_card() {
+	card=$(get_trait audio_hdmi_card)
+	if [ -n "$card" ]; then
+		echo "$card"
+		return
+	fi
+	if [ -f /proc/asound/cards ]; then
+		awk '/\[.*[Hh][Dd][Mm][Ii]/ { gsub(/.*\[| *].*/, ""); print; exit }' /proc/asound/cards 2>/dev/null || true
+	fi
+}
+
+stop_interface() {
+	iface="$1"
+	case "$iface" in
+	speakers)
+		run_amixer sset 'Internal Speakers' off
+		run_amixer sset 'Internal Speakers' mute
+		run_amixer sset 'Speaker' mute
+		run_amixer sset 'Speaker Amp' mute
+		;;
+	headphones)
+		run_amixer sset 'Headphone' mute
+		;;
+	bluetooth)
+		if grep -q "bluealsa" "$RUN_ASOUNDRC" 2>/dev/null; then
+			rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
+		fi
+		;;
+	hdmi)
+		if grep -q "hw:.*" "$RUN_ASOUNDRC" 2>/dev/null; then
+			rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
+		fi
+		;;
+	*)
+		echo "audio.sh: unknown interface '$iface' (expected: $INTERFACES)" >&2
+		return 1
+		;;
+	esac
+}
+
+start_interface() {
+	iface="$1"
+	shift || true
+
+	# Stop all other interfaces first (mutual exclusivity)
+	for other in $INTERFACES; do
+		if [ "$other" != "$iface" ]; then
+			stop_interface "$other"
+		fi
+	done
+
+	case "$iface" in
+	speakers)
+		rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
+		run_amixer sset 'Internal Speakers' on
+		run_amixer sset 'Internal Speakers' unmute
+		run_amixer sset 'Speaker' unmute
+		run_amixer sset 'Speaker Amp' unmute
+		run_amixer sset 'Playback Path' SPK
+		;;
+	headphones)
+		rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
+		run_amixer sset 'Internal Speakers' off
+		run_amixer sset 'Internal Speakers' mute
+		run_amixer sset 'Speaker Amp' mute
+		run_amixer sset 'Headphone' unmute
+		run_amixer sset 'Playback Path' HP_NO_MIC
+		;;
+	bluetooth)
+		addr="${1:-}"
+		if [ -z "$addr" ]; then
+			addr="$(get_connected_bt_sink)"
+		fi
+		if [ -z "$addr" ]; then
+			echo "audio.sh: error: no Bluetooth audio device specified or connected" >&2
+			return 1
+		fi
+		if grep -q "device \"$addr\"" "$RUN_ASOUNDRC" 2>/dev/null; then
+			return 0
+		fi
+		content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave {\n        pcm {\n            type bluealsa\n            device "%s"\n            profile "a2dp"\n        }\n        rate 48000\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
+			"$addr" "$addr")
+		printf '%s' "$content" >"$RUN_ASOUNDRC"
+		;;
+	hdmi)
+		hdmi_card="$(get_hdmi_card)"
+		if [ -z "$hdmi_card" ]; then
+			echo "audio.sh: error: no HDMI audio card detected" >&2
+			return 1
+		fi
+		content=$(printf 'pcm.!default {\n    type plug\n    slave.pcm "hw:%s,0"\n}\nctl.!default {\n    type hw\n    card "%s"\n}\n' \
+			"$hdmi_card" "$hdmi_card")
+		printf '%s' "$content" >"$RUN_ASOUNDRC"
+		;;
+	*)
+		echo "audio.sh: unknown interface '$iface' (expected: $INTERFACES)" >&2
+		return 1
+		;;
+	esac
+}
+
 usage() {
-	echo "Usage: ${0##*/} {init|bt-off|bt-on <addr>|jack-in|jack-out}" >&2
+	echo "Usage: ${0##*/} {start-interface <interface> [args]|stop-interface <interface>}" >&2
+	echo "Interfaces: $INTERFACES" >&2
 	exit 1
 }
 
 case "${1:-}" in
-init | bt-off)
-	rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
+start-interface)
+	[ $# -ge 2 ] || usage
+	shift
+	start_interface "$@"
+	;;
+stop-interface)
+	[ $# -ge 2 ] || usage
+	stop_interface "$2"
+	;;
+init)
+	start_interface speakers
 	;;
 bt-on)
 	[ $# -ge 2 ] || usage
-	addr="$2"
-	# Idempotent: don't rewrite when already routed to this device.
-	if grep -q "device \"$addr\"" "$RUN_ASOUNDRC" 2>/dev/null; then
-		exit 0
-	fi
-	# A2DP always negotiates 48 kHz SBC. The plug layer resamples the game's
-	# native rate (e.g. 44.1 kHz) to 48 kHz instead of asking BlueALSA to
-	# renegotiate.
-	content=$(printf 'defaults.bluealsa.device "%s"\ndefaults.bluealsa.profile "a2dp"\npcm.!default {\n    type plug\n    slave {\n        pcm {\n            type bluealsa\n            device "%s"\n            profile "a2dp"\n        }\n        rate 48000\n    }\n}\nctl.!default {\n    type bluealsa\n}\n' \
-		"$addr" "$addr")
-	printf '%s' "$content" >"$RUN_ASOUNDRC"
+	start_interface bluetooth "$2"
+	;;
+bt-off)
+	stop_interface bluetooth
 	;;
 jack-in)
-	set_speaker_gating off
+	start_interface headphones
 	;;
 jack-out)
-	set_speaker_gating on
+	start_interface speakers
 	;;
 *)
 	usage
