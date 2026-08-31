@@ -53,15 +53,16 @@ mkdir -p "${LOG_DIR}"
 # 0. Ensure Buildroot source is present
 #──────────────────────────────────────────────────────────────────────────────
 
-BUILDROOT_VERSION="2026.05.1"
+BUILDROOT_VERSION="2026.05.2"
 BUILDROOT_URL="https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.tar.gz"
 
 ensure_buildroot() {
-	if [ -d "${BUILDROOT_DIR}" ]; then
+	if [ -f "${BUILDROOT_DIR}/Makefile" ] && grep -q "export BR2_VERSION := ${BUILDROOT_VERSION}" "${BUILDROOT_DIR}/Makefile"; then
 		log "Buildroot ${BUILDROOT_VERSION} already present in ${BUILDROOT_DIR}"
 		return
 	fi
 	log "Downloading Buildroot ${BUILDROOT_VERSION}..."
+	rm -rf "${BUILDROOT_DIR}"
 	mkdir -p "${BUILDROOT_DIR}"
 	curl -fL -o /tmp/buildroot.tar.gz "${BUILDROOT_URL}"
 	tar xf /tmp/buildroot.tar.gz --strip-components=1 -C "${BUILDROOT_DIR}"

@@ -26,6 +26,10 @@ ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G31_G2P0),y)
 LIBMALI_BOARD = rk3326
 LIBMALI_BLOB = libmali-bifrost-g31-g2p0-gbm.so
 endif
+ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G52_G29P1),y)
+LIBMALI_BOARD = rk3566
+LIBMALI_BLOB = libmali-bifrost-g52-g29p1-gbm.so
+endif
 ifeq ($(BR2_PACKAGE_LIBMALI_BIFROST_G52_G13P0),y)
 LIBMALI_BOARD = rk3566
 LIBMALI_BLOB = libmali-bifrost-g52-g13p0-gbm.so
