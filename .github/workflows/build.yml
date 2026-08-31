@@ -98,9 +98,6 @@ jobs:
           include_roms_raw = os.environ.get("INPUT_INCLUDE_ROMS", "false")
           include_roms = "1" if str(include_roms_raw).lower() in ("true", "1", "yes") else "0"
 
-          if libc == "buildroot" and soc == "h700":
-              raise SystemExit("Error: h700 is not supported on Buildroot.")
-
           musl_or_glibc = "musl" if libc == "alpine" else "glibc"
           runner = "ubuntu-24.04-arm" if libc == "alpine" else "ubuntu-latest"
           container = f"ghcr.io/{owner}/minime-{musl_or_glibc}:latest"

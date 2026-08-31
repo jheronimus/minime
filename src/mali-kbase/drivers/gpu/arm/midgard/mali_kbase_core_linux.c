@@ -112,6 +112,7 @@
 
 #include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 
 #include <tl/mali_kbase_timeline.h>
 
@@ -4615,6 +4616,22 @@ int power_control_init(struct kbase_device *kbdev)
 
 	pdev = to_platform_device(kbdev->dev);
 
+#if IS_ENABLED(CONFIG_RESET_CONTROLLER)
+	kbdev->resets = devm_reset_control_array_get_optional_shared(kbdev->dev);
+	if (IS_ERR(kbdev->resets)) {
+		err = PTR_ERR(kbdev->resets);
+		if (err == -EPROBE_DEFER)
+			return err;
+		kbdev->resets = NULL;
+	} else if (kbdev->resets) {
+		err = reset_control_deassert(kbdev->resets);
+		if (err) {
+			dev_err(kbdev->dev, "Failed to deassert resets (%d)\n", err);
+			return err;
+		}
+	}
+#endif
+
 #if defined(CONFIG_REGULATOR)
 	/* Since the error code EPROBE_DEFER causes the entire probing
 	 * procedure to be restarted from scratch at a later time,
@@ -4775,6 +4792,11 @@ void power_control_term(struct kbase_device *kbdev)
 			kbdev->regulators[i] = NULL;
 		}
 	}
+#endif
+
+#if IS_ENABLED(CONFIG_RESET_CONTROLLER)
+	if (kbdev->resets)
+		reset_control_assert(kbdev->resets);
 #endif
 }
 

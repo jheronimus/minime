@@ -31,12 +31,15 @@ jobs:
           - libc: alpine
             soc: h700
             ui: minui
-          # Buildroot (glibc) — 2 boards × MinUI (h700 excluded)
+          # Buildroot (glibc) — 3 boards × MinUI
           - libc: buildroot
             soc: rk3566
             ui: minui
           - libc: buildroot
             soc: rk3326
+            ui: minui
+          - libc: buildroot
+            soc: h700
             ui: minui
     uses: ./.github/workflows/build.yml
     with:

@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/regulator/consumer.h>
+#include <linux/reset.h>
 
 #include "mali_kbase_config_platform.h"
 
@@ -56,11 +57,21 @@ static void enable_gpu_power_control(struct kbase_device *kbdev)
 		if (kbdev->clocks[i])
 			clk_prepare_enable(kbdev->clocks[i]);
 	}
+
+#if IS_ENABLED(CONFIG_RESET_CONTROLLER)
+	if (kbdev->resets)
+		reset_control_deassert(kbdev->resets);
+#endif
 }
 
 static void disable_gpu_power_control(struct kbase_device *kbdev)
 {
 	unsigned int i;
+
+#if IS_ENABLED(CONFIG_RESET_CONTROLLER)
+	if (kbdev->resets)
+		reset_control_assert(kbdev->resets);
+#endif
 
 	for (i = 0; i < kbdev->nr_clocks; i++) {
 		if (kbdev->clocks[i])
@@ -73,7 +84,6 @@ static void disable_gpu_power_control(struct kbase_device *kbdev)
 			regulator_disable(kbdev->regulators[i]);
 	}
 #endif
-
 }
 
 static int pm_callback_power_on(struct kbase_device *kbdev)

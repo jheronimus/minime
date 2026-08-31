@@ -10,7 +10,7 @@ The goal of Minime is to provide a simple foundation to play around with differe
 Under the hood Minime actually builds on two foundations:
 
 - Alpine offers panfrost-enabled images, but uses the musl LibC library, so can't really run a lot of closed source software.
-- Buildroot offers glibc, but it builds everything from scratch, so building Panfrost, LLVM, etc would take several hours easily. So it uses libmali driver blobs, but those do not work with H700 on mainline kernel (at least I haven't figured out how).
+- Buildroot offers glibc, using libmali driver blobs (wrapped and shimmed for DRM/GBM support) for ultra-fast builds.
 
 Both targets are used to basically produce three main files:
 - the kernel

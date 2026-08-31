@@ -1105,6 +1105,9 @@ struct kbase_device {
 
 	struct clk *clocks[BASE_MAX_NR_CLOCKS_REGULATORS];
 	unsigned int nr_clocks;
+#if IS_ENABLED(CONFIG_RESET_CONTROLLER)
+	struct reset_control *resets;
+#endif
 #if IS_ENABLED(CONFIG_REGULATOR)
 	struct regulator *regulators[BASE_MAX_NR_CLOCKS_REGULATORS];
 	unsigned int nr_regulators;
