@@ -45,7 +45,7 @@ if has_egl
   libhook_inc += include_directories('../include')
   libhook_cflags += '-DHAS_EGL'
 
-  if cc.has_function('wl_egl_window_create', dependencies : mali)
+  if has_wayland and cc.has_function('wl_egl_window_create', dependencies : mali)
     libhook_cflags += '-DHAS_WAYLAND'
   endif
 

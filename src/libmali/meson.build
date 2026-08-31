@@ -52,10 +52,10 @@ is_utgard = gpu.split('-')[0] == 'utgard'
 is_px3se = gpu == 'utgard-400' and subversion == 'r3p0'
 
 # Parse platforms
-has_gbm = cc.has_function('gbm_create_device', dependencies : mali)
-has_x11 = run_command('grep', '-wq', 'libxcb.so', default_lib,
+has_gbm = platform.contains('gbm') and cc.has_function('gbm_create_device', dependencies : mali)
+has_x11 = platform.contains('x11') and run_command('grep', '-wq', 'libxcb.so', default_lib,
   check : false).returncode() == 0
-has_wayland = run_command('grep', '-wq', 'libwayland-client.so', default_lib,
+has_wayland = platform.contains('wayland') and run_command('grep', '-wq', 'libwayland-client.so', default_lib,
   check : false).returncode() == 0
 
 message('Using ' + default_lib + ' with' + (has_x11 ? ' x11' : '') +

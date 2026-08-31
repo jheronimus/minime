@@ -67,6 +67,7 @@ LIBMALI_CONF_OPTS = \
 	-Dkhr-header=false \
 	-Dvendor-package=false \
 	-Dwrappers=enabled \
+	-Dwayland-egl=false \
 	-Dhooks=true
 
 define LIBMALI_BUILD_SHIM
