@@ -67,6 +67,7 @@ RUN apk add --no-cache --no-progress \
 		alsa-lib-dev \
 		libdrm-dev \
 		mesa-dev \
+		libsamplerate-dev \
 		py3-pycryptodome \
 		py3-requests \
 		py3-yaml \

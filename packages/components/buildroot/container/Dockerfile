@@ -35,6 +35,7 @@ RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-i
 		libgles2-mesa-dev:arm64 \
 		libgbm-dev:arm64 \
 		libzstd-dev:arm64 \
+		libsamplerate0-dev:arm64 \
 		mold \
 		zstd \
 		libelf-dev \
