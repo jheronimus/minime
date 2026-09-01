@@ -130,10 +130,20 @@ build_core() {
 
 	bdir="$src${buildpath:+/$buildpath}"
 	if [ "$builder" = "cmake" ]; then
+		cmake_cc="$CC"
+		cmake_cxx="$CXX"
+		cmake_launcher=""
+		case "$cmake_cc" in
+			"ccache "*)
+				cmake_launcher="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+				cmake_cc="${cmake_cc#ccache }"
+				cmake_cxx="${cmake_cxx#ccache }"
+				;;
+		esac
 		# shellcheck disable=SC2086
 		if ! (cd "$bdir" && cmake -B build -DCMAKE_BUILD_TYPE=Release \
-			-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_AR="$AR" $flags &&
-			make -C build -j"$CORE_JOBS"); then
+			-DCMAKE_C_COMPILER="$cmake_cc" -DCMAKE_CXX_COMPILER="$cmake_cxx" -DCMAKE_AR="$AR" $cmake_launcher $flags &&
+			cmake --build build -j"$CORE_JOBS"); then
 			if [ "$optional" = "1" ]; then
 				echo "WARNING: $core build failed (optional) — skipping" >&2
 				return 0
