@@ -83,6 +83,7 @@ bluez-alsa
 alsa-lib
 alsa-utils
 alsa-plugins
+libsamplerate
 # ── OpenGL ES / DRM/GBM / KMS / Vulkan (Mesa Panfrost & PanVK) ───────────
 mesa
 mesa-gl
