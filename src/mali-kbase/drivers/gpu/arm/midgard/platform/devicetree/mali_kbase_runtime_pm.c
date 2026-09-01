@@ -41,7 +41,22 @@
  * Fix: always call clk_prepare_enable/clk_disable_unprepare
  * (ref-counted) so the count stays balanced regardless of pm_clk
  * activity.  Same treatment for regulators.
+ *
+ * Boot-time pm_runtime_set_active() marks the device active before
+ * any power_control_enable() call.  The first pm_callback_power_on()
+ * therefore sees pm_runtime_get_sync() returning 1 and skips
+ * runtime_on(), leaving clocks/regulators/resets in their
+ * pre-enable state.  When pm_callback_power_off() later triggers
+ * runtime_off(), disable_gpu_power_control() fires against hardware
+ * that was never enabled — producing the "unbalanced disables" WARN
+ * and (on Allwinner H700) leaving the GPU in a corrupted state that
+ * causes DATA_INVALID_FAULT on the next render submission.
+ *
+ * Guard enable/disable with a boolean that tracks whether we
+ * actually enabled the power-control rails.
  */
+static bool gpu_power_control_enabled;
+
 static void enable_gpu_power_control(struct kbase_device *kbdev)
 {
 	unsigned int i;
@@ -62,11 +77,16 @@ static void enable_gpu_power_control(struct kbase_device *kbdev)
 	if (kbdev->resets)
 		reset_control_deassert(kbdev->resets);
 #endif
+
+	gpu_power_control_enabled = true;
 }
 
 static void disable_gpu_power_control(struct kbase_device *kbdev)
 {
 	unsigned int i;
+
+	if (!gpu_power_control_enabled)
+		return;
 
 #if IS_ENABLED(CONFIG_RESET_CONTROLLER)
 	if (kbdev->resets)
@@ -84,6 +104,8 @@ static void disable_gpu_power_control(struct kbase_device *kbdev)
 			regulator_disable(kbdev->regulators[i]);
 	}
 #endif
+
+	gpu_power_control_enabled = false;
 }
 
 static int pm_callback_power_on(struct kbase_device *kbdev)
