@@ -78,3 +78,9 @@ void GFX_flip(SDL_Surface* screen) {
 - Weak symbols: Use `FALLBACK_IMPLEMENTATION` (`__attribute__((weak))`) for optional platform HAL hooks.
 - GCC nested functions: Allowed in localized scopes when helper logic is tightly coupled to a single function.
 - **Boolean Types & Predicates**: Use `int` (`1` for true, `0` for false) for all boolean flags, state variables, and predicate function return values (`is*`, `has*`, `can*`). Avoid `#include <stdbool.h>` and `bool` in headers and HAL APIs to preserve MinUI header purity and ABI consistency.
+
+## Architecture & Traits Encapsulation
+
+- **Strict Platform Decoupling**: MinUI Core (`workspace/all/`) must remain pure MinUI HAL. It must NEVER `#include "traits.h"` or invoke `MINIME_traits()`.
+- **Platform Adapter Boundary**: All hardware-specific queries and traits-derived properties must be resolved inside the platform layer (`workspace/minime/platform/`) and exposed to MinUI Core via clean `PLAT_*` HAL queries (`platform.h`).
+- Enforced automatically via `just check-minui` / `./scripts/check-minui.sh`.

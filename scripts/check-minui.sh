@@ -87,6 +87,13 @@ for f in $FILES; do
 	fi
 done
 
+# Check traits isolation: workspace/all/ must never include traits.h or call MINIME_traits
+if grep -rnE '(#include "traits\.h"|MINIME_traits)' packages/ui/minui/workspace/all/ >/dev/null 2>&1; then
+        echo "ERROR: traits isolation violation in packages/ui/minui/workspace/all/:" >&2
+        grep -rnE '(#include "traits\.h"|MINIME_traits)' packages/ui/minui/workspace/all/ >&2 || true
+        FAILURES=$((FAILURES + 1))
+fi
+
 if [ "$FAILURES" -gt 0 ]; then
 	echo "MinUI C convention validation failed with $FAILURES error(s)." >&2
 	exit 1
