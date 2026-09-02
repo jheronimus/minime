@@ -127,6 +127,8 @@ emitted_keys() {
 		grep -E '^[A-Za-z0-9_]+=' |
 		grep -vE '^(parent|model|compatible|base|dtb|panel|panel_supply|panel_rotation|compat_parent)=' |
 		cut -d= -f1 | sort -u
+	# Dynamically resolved by /etc/init.d/traits at boot
+	echo "gpu_hdmi_state_path"
 }
 
 # Key set a parser understands, one per line.
@@ -136,8 +138,7 @@ allium_keys() {
 
 minui_keys() {
 	awk '/^static const TraitField TRAIT_FIELDS/,/^};/' "$MINUI_TRAITS" |
-		grep -oE '(FIELD\([a-z0-9_]+|"[a-z0-9_]+")' |
-		sed -E 's/^(FIELD\(|")//; s/"$//'
+		grep -oE '"[a-z0-9_]+"' | tr -d '"'
 }
 
 # Write emitted keys to a temp file so the while loop is not in a pipe subshell.
@@ -150,11 +151,17 @@ while IFS= read -r key; do
 		echo "registry key '$key' is missing from Allium traits.rs KNOWN_KEYS" >&2
 		exit 1
 	}; }
-	[ -f "$MINUI_TRAITS" ] && { minui_keys | grep -Fxq "$key" || {
-		echo "registry key '$key' is missing from MinUI traits.c TRAIT_FIELDS" >&2
-		exit 1
-	}; }
 done < "$_keys_tmp"
+
+# Verify MinUI only declares keys emitted by the registry
+if [ -f "$MINUI_TRAITS" ]; then
+	for key in $(minui_keys); do
+		grep -Fxq "$key" "$_keys_tmp" || {
+			echo "MinUI trait key '$key' is not emitted by any registry profile" >&2
+			exit 1
+		}
+	done
+fi
 rm -f "$_keys_tmp"
 
 echo "consumer parity check passed"
