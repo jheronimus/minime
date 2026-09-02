@@ -108,6 +108,20 @@ render_traits() {
 		for file in $chain; do
 			emit_file "$file"
 		done
+
+		# Resolve dynamic DRM connector status path if HDMI connector is configured
+		connector="$(read_device_key gpu_hdmi_connector "$device_file")"
+		[ -n "$connector" ] || connector="$(grep -E '^gpu_hdmi_connector=' "$output" 2>/dev/null | tail -n 1 | cut -d= -f2 || true)"
+		if [ -n "$connector" ] && [ "$connector" != "na" ]; then
+			hdmi_path="na"
+			for p in /sys/class/drm/card*-"${connector}"/status; do
+				if [ -f "$p" ]; then
+					hdmi_path="$p"
+					break
+				fi
+			done
+			echo "gpu_hdmi_state_path=$hdmi_path"
+		fi
 	} > "$output"
 }
 
