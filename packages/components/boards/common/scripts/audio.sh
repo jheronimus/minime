@@ -31,7 +31,7 @@ TRAITS_FILE="/mnt/sdcard/.minime/traits"
 get_trait() {
 	key="$1"
 	[ -f "$TRAITS_FILE" ] || return 0
-	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' || true
+	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2 | tr -d '\r' || true
 }
 
 get_codec_card() {

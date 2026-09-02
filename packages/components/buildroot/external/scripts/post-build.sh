@@ -100,6 +100,14 @@ TARGET_INITD="${TARGET_DIR}/etc/init.d"
 TARGET_RUNLEVELS="${TARGET_DIR}/etc/runlevels"
 rm -f "${TARGET_INITD}/S"* "${TARGET_RUNLEVELS}"/*/sysv-rcs "${TARGET_INITD}/sysv-rcs" 2>/dev/null || true
 
+# 7a. Drop the stock OpenRC network/staticroute services from the boot runlevel.
+# Minime brings up Wi-Fi via the iwd-based wifi service (see docs/adr/0011),
+# and the OpenRC `network` service invokes iproute2-only syntax
+# (`ip -f inet6 addr show tentative`) that BusyBox cannot parse, spamming
+# "ip: can't find device 'tentative'" at every boot. loopback is kept: it
+# only sets lo up/down and provides 127.0.0.1 for local daemons.
+rm -f "${TARGET_RUNLEVELS}/boot/network" "${TARGET_RUNLEVELS}/boot/staticroute" 2>/dev/null || true
+
 # 8. Touch a marker file used by initramfs-init.sh to advance system time on cold
 #    boot if the hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"

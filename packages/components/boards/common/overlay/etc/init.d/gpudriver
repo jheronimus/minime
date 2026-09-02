@@ -17,7 +17,7 @@ depend() {
 get_trait() {
 	key="$1"
 	[ -f "$TRAITS_FILE" ] || return 0
-	grep "^${key}=" "$TRAITS_FILE" | head -n 1 | cut -d= -f2 | tr -d '\r' || true
+	grep "^${key}=" "$TRAITS_FILE" | tail -n 1 | cut -d= -f2 | tr -d '\r' || true
 }
 
 start() {
