@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "path": ".agents/skills"
+    },
+    {
+      "path": ".agents/ui/minui/skills"
+    }
+  ]
+}
