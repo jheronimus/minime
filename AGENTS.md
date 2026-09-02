@@ -31,6 +31,6 @@ make -C packages/components/<alpine|buildroot> image BOARD=<board>       →  pa
 - **No Temporary Workarounds**: Fix local/runner states directly. Never add temporary configs or hacks.
 - **Single Source of Truth**: Exactly one canonical location per fact. Point to code directly.
 - **Doc Size Limit (5 KB)**: No markdown file in this repository may exceed 5 KB (except `docs/TODO.md`).
-- **Minimal UI Intrusion**: Confine UI changes strictly to the Minime platform port directory (`workspace/minime/`, `src/platform/minime/`).
+- **Minimal UI Intrusion**: Confine UI changes strictly to the Minime platform port directory (`workspace/minime/`, `src/platform/minime/`), with an exception for pruning dead code superseded by Minime's port and traits system.
 - **Live Verification**: Deploy OTA updates with `just ota <ui>` or `update.sh <ui>`, and inspect logs via `just shell <cmd>`.
 - **Quality Gates**: Run `just validate-static` (fast static gate) or `just validate` (full gate). `--no-verify` is strictly prohibited.
