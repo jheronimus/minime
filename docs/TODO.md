@@ -30,6 +30,10 @@
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
 - [ ] Investigate touchscreen support on RG ARC and why it does not work in DraStic
   - [THEORY] RG ARC-D features a Goodix I2C capacitive touchscreen (`Goodix Capacitive TouchScreen`, `/dev/input/event1`). `minarch` / SDL2 may not be reading or forwarding `RETRO_DEVICE_POINTER` events to the libretro core, or touch coordinates may need axis swapping/scaling to match the 256x192 bottom screen under the device's 90° panel rotation.
+- [ ] Check and verify that audio is working properly in DraStic
+  - [THEORY] Check pitch, startup cadence, and steady-state audio across multiple games following the SPU routine table fix and pre-roll buffer addition.
+- [ ] Investigate rewind and fast forward in DraStic
+  - [THEORY] Continuous rewind currently serializes 6.5 MB uncompressed state every tick, degrading framerate from 60 FPS to 15 FPS and causing audio starvation. Explore tuning MinArch rewind granularity/cadence (e.g. 100–200 ms interval), asynchronous state capture worker, and audio muting/pacing during fast forward.
 
 ## Board Infrastructure & System
 
