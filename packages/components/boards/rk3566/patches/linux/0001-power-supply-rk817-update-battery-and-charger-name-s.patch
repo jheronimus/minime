@@ -1,49 +1,16 @@
 From 4073e61f1661fb6749683527ed494cf0d34f02a9 Mon Sep 17 00:00:00 2001
 From: ab0tj <github@delorted.com>
 Date: Wed, 22 Nov 2023 21:05:38 +0000
-Subject: [PATCH] power: supply: rk817: update battery name and add voltage-based capacity fallback
+Subject: [PATCH] power: supply: rk817: update battery name, so status can be read by emulationstation
 
 ---
- drivers/power/supply/rk817_charger.c | 29 +++++++++++++++++++++++++++--
- 1 file changed, 27 insertions(+), 2 deletions(-)
+ drivers/power/supply/rk817_charger.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
 --- a/drivers/power/supply/rk817_charger.c
 +++ b/drivers/power/supply/rk817_charger.c
-@@ -373,6 +373,18 @@ static void rk817_read_props(struct rk817_charger *charger)
- 	charger->volt_avg_uv = (charger->voltage_k * tmp) + 1000 *
- 				charger->voltage_b;
- 
-+	if (charger->soc <= 0 && charger->volt_avg_uv > 0 &&
-+	    charger->bat_voltage_max_design_uv > charger->bat_voltage_min_design_uv) {
-+		int soc_pct = (charger->volt_avg_uv - charger->bat_voltage_min_design_uv) * 100 /
-+			      (charger->bat_voltage_max_design_uv - charger->bat_voltage_min_design_uv);
-+		if (soc_pct > 100)
-+			soc_pct = 100;
-+		if (soc_pct < 0)
-+			soc_pct = 0;
-+		charger->soc = soc_pct * 1000;
-+		charger->charge_now_uah = soc_pct * charger->fcc_mah * 10;
-+	}
-+
- 	/*
- 	 * Update reported current. Note value from registers is a signed 16
- 	 * bit int.
-@@ -508,6 +520,11 @@ static int rk817_bat_get_prop(struct power_supply *ps,
- 	case POWER_SUPPLY_PROP_CAPACITY:
- 		/* Add 500 so that values like 99999 are 100% not 99%. */
- 		val->intval = (charger->soc + 500) / 1000;
-+		if (val->intval <= 0 && charger->volt_avg_uv > 0 &&
-+		    charger->bat_voltage_max_design_uv > charger->bat_voltage_min_design_uv) {
-+			val->intval = (charger->volt_avg_uv - charger->bat_voltage_min_design_uv) * 100 /
-+				      (charger->bat_voltage_max_design_uv - charger->bat_voltage_min_design_uv);
-+		}
- 		if (val->intval > 100)
- 			val->intval = 100;
- 		if (val->intval < 0)
-@@ -681,7 +698,7 @@ static int rk817_bat_prop_writeable(struct power_supply *psy,
- }
- 
+@@ -680,5 +680,5 @@
  static const struct power_supply_desc rk817_bat_desc = {
 -	.name = "rk817-battery",
 +	.name = "battery",

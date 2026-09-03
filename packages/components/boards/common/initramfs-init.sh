@@ -55,16 +55,11 @@ finish_card_mount() {
 	0 | 1)
 		log_card "[INITRAMFS] FAT fsck completed (exit $FSCK_RC)"
 		;;
-	2)
-		log_card "[INITRAMFS] FAT fsck repaired $CARD_DEV; rebooting to complete recovery"
-		sync
-		reboot -f
-		;;
 	*)
-		log_card "ERROR: FAT fsck failed for $CARD_DEV (exit $FSCK_RC)"
-		exec sh
+		log_card "[INITRAMFS] WARNING: FAT fsck exited with code $FSCK_RC"
 		;;
 	esac
+	rm -f /mnt/card/FSCK*.REC /mnt/card/fsck*.rec 2>/dev/null || true
 	log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
 	return 0
 }

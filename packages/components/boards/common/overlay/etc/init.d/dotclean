@@ -46,6 +46,7 @@ start() {
 		for mnt in /mnt/*/; do
 			[ -d "${mnt}" ] || continue
 			find "${mnt}" \( -name .DS_Store -o -name "._*" \) -type f -delete 2>/dev/null
+			find "${mnt}" -maxdepth 1 \( -name "FSCK*.REC" -o -name "fsck*.rec" \) -delete 2>/dev/null
 			rm -rf "${mnt}.Spotlight-V100" "${mnt}.Trashes" "${mnt}.fseventsd" 2>/dev/null
 			logger -t dotclean "cleaned ${mnt}" 2>/dev/null || true
 			sync
