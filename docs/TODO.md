@@ -28,6 +28,8 @@
 
 - [ ] Fix display refresh timing (60 Hz) and oversharpening via kernel/DTS overlays
 - [ ] Support low-latency Bluetooth audio (aptX and low-latency codecs)
+- [ ] Investigate touchscreen support on RG ARC and why it does not work in DraStic
+  - [THEORY] RG ARC-D features a Goodix I2C capacitive touchscreen (`Goodix Capacitive TouchScreen`, `/dev/input/event1`). `minarch` / SDL2 may not be reading or forwarding `RETRO_DEVICE_POINTER` events to the libretro core, or touch coordinates may need axis swapping/scaling to match the 256x192 bottom screen under the device's 90° panel rotation.
 
 ## Board Infrastructure & System
 
