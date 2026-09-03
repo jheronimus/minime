@@ -124,6 +124,7 @@ start_interface() {
 		run_amixer sset 'Speaker' unmute
 		run_amixer sset 'Speaker Amp' unmute
 		run_amixer sset 'Playback Path' SPK
+		run_amixer sset 'Playback Mux' HP
 		;;
 	headphones)
 		rm -f "$RUN_ASOUNDRC" "$ASOUNDRC_FILE" 2>/dev/null || true
