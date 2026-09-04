@@ -10,8 +10,19 @@ set -eu
 
 IP_ARG="${1:-}"
 CMD="$(cat "${REMOTE_CMD_FILE:-}" 2>/dev/null || true)"
-
 MODE="ssh"
+
+if [ -z "$CMD" ] && [ $# -ge 1 ]; then
+	if [ "$1" = "--telnet" ]; then
+		MODE="telnet"
+		CMD="${2:-}"
+		IP_ARG="${3:-}"
+	else
+		CMD="$1"
+		IP_ARG="${2:-}"
+	fi
+fi
+
 IP="$IP_ARG"
 if [ "$CMD" = "--telnet" ]; then
 	MODE="telnet"
