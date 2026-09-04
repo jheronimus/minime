@@ -31,13 +31,10 @@ EOF
 	if [ "${SOC_NAME:-}" = "rk3566" ]; then
 		cat <<'EOF' >>"${target_cfg}"
 # CPU undervolt (RK3566 only). Lowers CPU core voltage per OPP to reduce
-# power and thermals. Opt-in: silicon lottery varies and an unstable
-# setting can corrupt data, not just crash.
+# power and thermals.
 # Allowed values: off, l1, l2, l3 (l3 is most aggressive).
-# Recovery: mount this FAT partition on a PC and set undervolt=off.
-# Default off: silicon lottery varies; opt in via the Power settings
-# menu or by setting undervolt=l1|l2|l3 below.
-undervolt=off
+# Default: l1 (conservative undervolt). Recovery: set undervolt=off.
+undervolt=l1
 EOF
 	fi
 

@@ -43,11 +43,6 @@ typedef struct MinimeTraitsRef {
     // [cpu]
     char cpu_governor_path[MINIME_TRAIT_PATH_MAX];
     char cpu_clock_path[MINIME_TRAIT_PATH_MAX];
-    int cpu_clock_menu;
-    int cpu_clock_powersave;
-    int cpu_clock_normal;
-    int cpu_clock_performance;
-    int cpu_undervolt_supported;
     char cpu_thermal_path[MINIME_TRAIT_PATH_MAX];
 
     // [gpu]

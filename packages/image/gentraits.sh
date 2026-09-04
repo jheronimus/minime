@@ -108,8 +108,7 @@ parent_file() {
 
 PLATFORM_KEYS="
 screen_backlight_path screen_backlight_max screen_blank_path
-cpu_governor_path cpu_clock_path cpu_clock_menu cpu_clock_powersave
-cpu_clock_normal cpu_clock_performance cpu_undervolt_supported cpu_thermal_path
+cpu_governor_path cpu_clock_path cpu_thermal_path
 gpu_device audio_card audio_mixer
 input_gamepad_device_name input_power_device_name input_volume_device_name
 input_lid_device_name input_rumble_device_name

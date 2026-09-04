@@ -95,6 +95,10 @@ else
 	reset
 fi
 
+if test -z "${undervolt}"; then
+	setenv undervolt "l1"
+fi
+
 if test "${undervolt}" = "l1" -o "${undervolt}" = "l2" -o "${undervolt}" = "l3"; then
 	if fatload ${bootdevtype} ${bootdevnum} ${scriptaddr} .minime/overlays/rk3566-undervolt-cpu-${undervolt}.dtbo; then
 		fdt apply ${scriptaddr}

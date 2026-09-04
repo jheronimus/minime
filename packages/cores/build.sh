@@ -129,6 +129,7 @@ build_core() {
 	done
 
 	bdir="$src${buildpath:+/$buildpath}"
+	common_opt_flags="-Ofast -DNDEBUG -fomit-frame-pointer -fno-strict-aliasing -march=armv8-a+crc -mtune=cortex-a53"
 	if [ "$builder" = "cmake" ]; then
 		cmake_cc="$CC"
 		cmake_cxx="$CXX"
@@ -142,7 +143,9 @@ build_core() {
 		esac
 		# shellcheck disable=SC2086
 		if ! (cd "$bdir" && cmake -B build -DCMAKE_BUILD_TYPE=Release \
-			-DCMAKE_C_COMPILER="$cmake_cc" -DCMAKE_CXX_COMPILER="$cmake_cxx" -DCMAKE_AR="$AR" $cmake_launcher $flags &&
+			-DCMAKE_C_COMPILER="$cmake_cc" -DCMAKE_CXX_COMPILER="$cmake_cxx" -DCMAKE_AR="$AR" \
+			-DCMAKE_C_FLAGS_RELEASE="$common_opt_flags" -DCMAKE_CXX_FLAGS_RELEASE="$common_opt_flags" \
+			$cmake_launcher $flags &&
 			cmake --build build -j"$CORE_JOBS"); then
 			if [ "$optional" = "1" ]; then
 				echo "WARNING: $core build failed (optional) — skipping" >&2
@@ -157,7 +160,7 @@ build_core() {
 		[ -n "$CROSS_COMPILE" ] && set -- "$@" CROSS_COMPILE="$CROSS_COMPILE"
 		set -- "$@" CC="$CC" CXX="$CXX" AR="$AR" platform="$platform"
 		# shellcheck disable=SC2086
-		if ! (cd "$bdir" && "$@" $flags -j"$CORE_JOBS"); then
+		if ! (cd "$bdir" && CFLAGS="${CFLAGS:-} $common_opt_flags" CXXFLAGS="${CXXFLAGS:-} $common_opt_flags" "$@" $flags -j"$CORE_JOBS"); then
 			if [ "$optional" = "1" ]; then
 				echo "WARNING: $core build failed (optional) — skipping" >&2
 				return 0

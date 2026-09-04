@@ -30,7 +30,19 @@ start() {
 
 	ebegin "Loading GPU driver ($gpu_driver)"
 	modprobe "$gpu_driver" 2>/dev/null || true
-	eend $?
+	rc=$?
+
+	clk_min=$(get_trait gpu_clock_min)
+	for dev in /sys/class/devfreq/*gpu*; do
+		[ -d "$dev" ] || continue
+		if grep -q "performance" "$dev/available_governors" 2>/dev/null; then
+			echo "performance" > "$dev/governor" 2>/dev/null || true
+		elif [ -n "$clk_min" ] && [ "$clk_min" != "na" ] && [ -f "$dev/min_freq" ]; then
+			echo "$clk_min" > "$dev/min_freq" 2>/dev/null || true
+		fi
+	done
+
+	eend $rc
 }
 
 stop() {
