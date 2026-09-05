@@ -18,7 +18,8 @@ find . -type f -name "*.sh" \
 	-not -path "*/pkg/*" \
 	-not -path "*/downloads/*" \
 	-not -path "*/src/yabause/libchdr/*" \
-	-not -path "*/src/yabause/yabause/*" |
+	-not -path "*/src/yabause/yabause/*" \
+	-not -path "*/src/drastic/libs/tools/toolchain/*" |
 	sort >"$tmp"
 
 while read -r f || [ -n "$f" ]; do
