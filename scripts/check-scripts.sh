@@ -19,6 +19,8 @@ find . -type f -name "*.sh" \
 	-not -path "*/downloads/*" \
 	-not -path "*/src/yabause/libchdr/*" \
 	-not -path "*/src/yabause/yabause/*" \
+	-not -path "*/src/drastic/libs/scratch/*" \
+	-not -path "*/src/drastic/libs/tools/permuter/*" \
 	-not -path "*/src/drastic/libs/tools/toolchain/*" |
 	sort >"$tmp"
 
