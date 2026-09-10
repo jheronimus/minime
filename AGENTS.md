@@ -26,6 +26,21 @@ make -C packages/components/<alpine|buildroot> components BOARD=<board>  →  co
 make -C packages/components/<alpine|buildroot> image BOARD=<board>       →  packages/image/build.sh
 ```
 
+## DraStic core reconstruction (`src/drastic/libs`)
+
+Byte-exact C reconstruction of `libdrastic_arm64.so`. Rules and details live in
+[`src/drastic/libs/AGENTS.md`](src/drastic/libs/AGENTS.md). The loop:
+
+```sh
+cd src/drastic/libs
+just setup        # once: toolchain + manifest + build inputs
+just next         # pick the next function
+just bundle <u>   # context: assembly, decomp, types, strings, calls
+# edit src/slices/<u>.c (replace the __asm__ body with C)
+just diff <u>     # repeat until it reports 100%
+just check        # whole-library parity gate
+```
+
 ## Agent Directives
 
 - **No Temporary Workarounds**: Fix local/runner states directly. Never add temporary configs or hacks.
