@@ -1,4 +1,6 @@
-default: validate
+# Default when run with no arguments: list available recipes.
+default:
+    @just --list
 
 # ── Validation gates (local-only; every check lives in scripts/) ──────────────
 
