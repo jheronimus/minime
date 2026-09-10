@@ -37,8 +37,8 @@ just setup        # once: toolchain + manifest + build inputs
 just next         # pick the next function
 just bundle <u>   # context: assembly, decomp, types, strings, calls
 # edit src/slices/<u>.c (replace the __asm__ body with C)
-just diff <u>     # repeat until it reports 100%
-just check        # whole-library parity gate
+just diff <u>     # fast feedback; reduce the diffs
+just check        # authoritative parity gate
 ```
 
 ## Agent Directives
