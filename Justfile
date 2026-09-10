@@ -1,4 +1,5 @@
-# Default when run with no arguments: list available recipes.
+# List recipes when run with no arguments.
+[private]
 default:
     @just --list
 
