@@ -46,7 +46,7 @@ card
 packages/cores/out/
 packages/cores/src/
 
-# Console BIOS ROMs live in the private forgejo repo (jheronimus/console-bios)
+# Console BIOS ROMs live in the private Soft Serve repo (jheronimus/console-bios)
 # They must never be committed here. Mount/copy them in for local builds only.
 bios/
 
