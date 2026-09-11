@@ -16,7 +16,7 @@ for d in \
 	"${ROOT_DIR}/packages/components/boards" \
 	"${ROOT_DIR}/packages/bootloader" \
 	"${ROOT_DIR}/packages/cores" \
-	"${ROOT_DIR}/packages/ui/muos" \
+	"${ROOT_DIR}/packages/ui/muos/patches" \
 	"${ROOT_DIR}/packages/components/alpine/aports" \
 	"${ROOT_DIR}/packages/components/buildroot/external/package"; do
 	if [ -d "$d" ]; then
