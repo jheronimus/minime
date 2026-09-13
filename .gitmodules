@@ -39,12 +39,12 @@
 	url = git@soft-serve:tinyset.git
 	branch = main
 	update = none
-# Sega frontend UI (stored on private Soft Serve).
+# Blast16 Sega frontend UI (stored on private Soft Serve).
 # update=none: GitHub Actions runners cannot reach the homelab SSH endpoint;
 # recursive checkouts skip it. Init manually with:
-# `git submodule update --init packages/ui/sega`
-[submodule "packages/ui/sega"]
-	path = packages/ui/sega
-	url = git@soft-serve:sega.git
+# `git submodule update --init packages/ui/blast16`
+[submodule "packages/ui/blast16"]
+	path = packages/ui/blast16
+	url = git@soft-serve:blast16.git
 	branch = main
 	update = none
