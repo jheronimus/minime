@@ -1,0 +1,15 @@
+# Minime Alpine world (Blast16) — LÖVE runtime package set.
+#
+# These are the dynamically-linked dependencies of the LÖVE 11.5
+# engine built for the blast16 Sega frontend.  blastem itself only
+# needs SDL2 + GLES, which are already in world-common.
+#
+# Kept separate from world-common so Blast16's audio/font stack
+# does not leak into other Minime images.
+
+freetype
+libogg
+libvorbis
+libtheora
+libmodplug
+openal-soft

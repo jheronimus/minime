@@ -158,8 +158,8 @@ build_local_apks() {
 	build_tinykernel
 
 	case "${UI}" in
-	minui | allium) ;;
-	*) die "unsupported UI=${UI} (supported: minui, allium)" ;;
+	minui | allium | blast16) ;;
+	*) die "unsupported UI=${UI} (supported: minui, allium, blast16)" ;;
 	esac
 
 	# All other local packages share one abuild run: each APKBUILD produces
@@ -335,6 +335,16 @@ assemble_rootfs() {
 	# Resolve the full package list and install it.
 	WORLD_PKGS="$(cat "${WORLD_COMMON}" "${WORLD_BOARD}" | grep -v '^#' | tr '\n' ' ')"
 	[ -n "${WORLD_PKGS}" ] || die "resolved package list is empty"
+
+	# Blast16's LÖVE runtime needs its audio/font stack that the rest of
+	# minime does not.  world-blast is only installed for the blast16 UI so
+	# the extra packages stay out of every other image.
+	if [ "${UI}" = "blast16" ]; then
+		WORLD_BLAST="${ALPINE_DIR}/configs/world-blast"
+		[ -f "${WORLD_BLAST}" ] || die "missing ${WORLD_BLAST}"
+		WORLD_PKGS="${WORLD_PKGS} $(grep -v '^#' "${WORLD_BLAST}" | tr '\n' ' ')"
+		log "UI=${UI}: adding world-blast LÖVE runtime packages"
+	fi
 
 	# Optional diagnostic/stress tooling (ADR 0018 stability test).  Release
 	# images stay lean; only TEST_PACKAGES=1 builds carry these.
