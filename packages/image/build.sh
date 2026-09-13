@@ -168,7 +168,7 @@ VFAT_MB=$((STAGE_MB + 256))
 dd if=/dev/zero of="${BINARIES_DIR}/userdata.vfat" bs=1M count="${VFAT_MB}" status=none
 mkdosfs -F 32 -s 32 -n minime "${BINARIES_DIR}/userdata.vfat"
 [ -f "${STAGE_DIR}/boot.scr" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" "${STAGE_DIR}/boot.scr" ::boot.scr
-for item in .minime .system .ui .allium .muos; do
+for item in .minime .system .ui .allium .muos .blast; do
 	[ -e "${STAGE_DIR}/${item}" ] && MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "${STAGE_DIR}/${item}" :: && MTOOLS_SKIP_CHECK=1 mattrib -i "${BINARIES_DIR}/userdata.vfat" +h "::${item}" || true
 done
 for item in "${STAGE_DIR}"/*; do

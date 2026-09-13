@@ -35,6 +35,7 @@ on:
           - minui
           - muos
           - allium
+          - blast16
         default: minui
       include_roms:
         description: 'Include preloaded ROMs'
@@ -283,6 +284,14 @@ jobs:
           internal_sha="$(git ls-tree HEAD packages/ui/muos/internal | awk '{print $3}')"
           packages/ui/muos-checkout-internal.sh "$internal_sha"
 
+      - name: Checkout Blast16 (private payload)
+        if: needs.setup.outputs.ui == 'blast16'
+        env:
+          BLAST16_PAT: ${{ secrets.BLAST }}
+        run: |
+          blast16_sha="$(git ls-tree HEAD packages/ui/blast16 | awk '{print $3}')"
+          packages/ui/blast16-checkout.sh "$blast16_sha"
+
       - name: Restore MinUI Cache
         if: needs.setup.outputs.ui == 'minui'
         id: cache-minui-restore
@@ -306,6 +315,14 @@ jobs:
         with:
           path: packages/ui/out
           key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/muos/frontend/HEAD', '.git/modules/packages/ui/muos/internal/HEAD', 'packages/ui/muos/overlay/**', 'packages/ui/muos/patches/**', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
+
+      - name: Restore Blast16 Cache
+        if: needs.setup.outputs.ui == 'blast16'
+        id: cache-blast16-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: packages/ui/out
+          key: ui-blast16-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/blast16/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Restore UI CCache
         id: ccache-ui-restore
@@ -341,7 +358,8 @@ jobs:
         if: |
           (needs.setup.outputs.ui == 'minui' && (steps.cache-minui-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/minui-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
           (needs.setup.outputs.ui == 'allium' && (steps.cache-allium-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/allium-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
-          (needs.setup.outputs.ui == 'muos' && (steps.cache-muos-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/muos-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == ''))
+          (needs.setup.outputs.ui == 'muos' && (steps.cache-muos-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/muos-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == '')) ||
+          (needs.setup.outputs.ui == 'blast16' && (steps.cache-blast16-restore.outputs.cache-hit != 'true' || hashFiles(format('packages/ui/out/blast16-{0}-aarch64.tar.zst', needs.setup.outputs.musl_or_glibc)) == ''))
         run: |
           packages/ui/build.sh ${{ needs.setup.outputs.ui }} ${{ needs.setup.outputs.musl_or_glibc }}
 
@@ -375,6 +393,13 @@ jobs:
         with:
           path: packages/ui/out
           key: ui-muos-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/muos/frontend/HEAD', '.git/modules/packages/ui/muos/internal/HEAD', 'packages/ui/muos/overlay/**', 'packages/ui/muos/patches/**', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
+
+      - name: Save Blast16 Cache
+        if: always() && needs.setup.outputs.ui == 'blast16' && steps.compile-ui.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: packages/ui/out
+          key: ui-blast16-${{ needs.setup.outputs.musl_or_glibc }}-${{ hashFiles('.git/modules/packages/ui/blast16/HEAD', 'packages/ui/build.sh', 'packages/cores/**/core.ini', 'packages/cores/build.sh', 'packages/cores/**/*.patch') }}
 
       - name: Save UI CCache
         if: always() && steps.compile-ui.outcome == 'success'

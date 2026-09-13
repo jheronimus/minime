@@ -40,9 +40,9 @@
 	branch = main
 	update = none
 # Blast16 Sega frontend UI (private GitHub repo).
-# update=none: the runner cannot authenticate to the private repo yet; wire a
-# deploy key / PAT secret and drop `update = none` once the blast16 CI job
-# exists. Init locally with:
+# update=none: kept so the bootloader/cores/build-os jobs skip it (they cannot
+# authenticate to the private repo). The blast16 ui job clones it on demand via
+# packages/ui/blast16-checkout.sh (auth: BLAST16_PAT secret). Init locally with:
 # `git submodule update --init packages/ui/blast16`
 [submodule "packages/ui/blast16"]
 	path = packages/ui/blast16

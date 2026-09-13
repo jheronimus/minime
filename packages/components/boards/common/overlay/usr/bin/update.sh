@@ -34,7 +34,7 @@ TRAITS_FILE="${SDCARD}/.minime/traits"
 # --- Helpers --------------------------------------------------------------
 
 usage() {
-	echo "Usage: ${0##*/} [alpine|buildroot] [minui|allium]" >&2
+	echo "Usage: ${0##*/} [alpine|buildroot] [minui|allium|muos|blast16]" >&2
 	exit 1
 }
 
@@ -68,14 +68,14 @@ detect_board() {
 	case "${compat}" in
 	*"sun50i-h700"*) echo "h700" ;;
 	*"rk3326"*) echo "rk3326" ;;
-	*"rk3566"*|*"rk3568"*) echo "rk3566" ;;
+	*"rk3566"* | *"rk3568"*) echo "rk3566" ;;
 	*)
 		# Fallback: /mnt/sdcard/.minime/dtb, e.g. sun50i-h700-*.dtb
 		dtb="$(basename "${SDCARD}/.minime/dtb" 2>/dev/null || true)"
 		case "${dtb}" in
 		"sun50i-h700-"*) echo "h700" ;;
 		"rk3326-"*) echo "rk3326" ;;
-		"rk3566-"*|"rk3568-"*) echo "rk3566" ;;
+		"rk3566-"* | "rk3568-"*) echo "rk3566" ;;
 		*) die "cannot detect board (compatible='${compat}' dtb='${dtb}')" ;;
 		esac
 		;;
@@ -167,11 +167,11 @@ while [ $# -gt 0 ]; do
 		alpine | buildroot)
 			TARGET="${arg}"
 			;;
-		minui | allium | muos)
+		minui | allium | muos | blast16)
 			UI="${arg}"
 			;;
 		*)
-			die "unsupported argument '$1' (expected alpine, buildroot, minui, allium, or muos)"
+			die "unsupported argument '$1' (expected alpine, buildroot, minui, allium, muos, or blast16)"
 			;;
 		esac
 		shift
@@ -195,8 +195,8 @@ alpine | buildroot) ;;
 esac
 
 case "${UI}" in
-minui | allium | muos) ;;
-*) die "unsupported UI '${UI}' (expected minui, allium, or muos)" ;;
+minui | allium | muos | blast16) ;;
+*) die "unsupported UI '${UI}' (expected minui, allium, muos, or blast16)" ;;
 esac
 
 log "board=${BOARD} target=${TARGET} (installed: ${FROM_TARGET}) ui=${UI} (installed: ${FROM_UI:-unknown})"
@@ -267,6 +267,9 @@ allium)
 muos)
 	rm -rf "${SDCARD}/.muos"
 	;;
+blast16)
+	rm -rf "${SDCARD}/.blast"
+	;;
 esac
 unzstd -c "${ARCHIVE}" | tar -xf - -C "${SDCARD}"
 
@@ -283,6 +286,10 @@ allium)
 muos)
 	[ -x "${SDCARD}/.muos/bin/muxfrontend" ] ||
 		die "install incomplete: .muos/bin/muxfrontend missing; leaving archive at ${ARCHIVE}"
+	;;
+blast16)
+	[ -x "${SDCARD}/.blast/blast16" ] ||
+		die "install incomplete: .blast/blast16 missing; leaving archive at ${ARCHIVE}"
 	;;
 esac
 

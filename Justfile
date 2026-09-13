@@ -317,8 +317,8 @@ shell cmd="" ip="":
     ./scripts/remote-cmd.sh "{{ip}}"
     rm -f "$tmp"
 
-# OTA-update the device to a UI (minui | allium | muos). For muos, if the
-# installed on-device updater predates muos support, bootstraps through a
+# OTA-update the device to a UI (minui | allium | muos | blast16). For muos, if
+# the installed on-device updater predates muos support, bootstraps through a
 # supported UI first to pull the current OS, then switches to muos.
 # Usage:
 #   just ota <ui> [ip]
@@ -327,8 +327,8 @@ ota ui="" ip="":
     set -euo pipefail
     ui="{{ui}}"
     case "$ui" in
-      minui|allium|muos) ;;
-      *) echo "ERROR: unknown UI '$ui' (expected minui, allium, or muos)" >&2; exit 1 ;;
+      minui|allium|muos|blast16) ;;
+      *) echo "ERROR: unknown UI '$ui' (expected minui, allium, muos, or blast16)" >&2; exit 1 ;;
     esac
     ip="{{ip}}"
     if [ "$ui" = "muos" ] && ! just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null; then

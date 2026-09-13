@@ -7,6 +7,7 @@
 - [ ] Add boxart support and explore scraper integration (Allium native scraper)
 - [ ] Write a MinUI-native frontend to PortMaster (depends on boxart support for screenshots)
 - [ ] Reimplement the multi-version ROM feature in MinUI
+- [ ] Revise `update.sh` UI-update mechanism so a UI update does not wipe UI state (today it `rm -rf`s the whole old payload dir including favourites/settings/input mappings). Proposed: keep state under `.minime/` (the dir update.sh preserves) instead of inside the payload dir
 
 ## Saturn (YabaSanshiro libretro port)
 
