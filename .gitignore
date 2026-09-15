@@ -19,6 +19,7 @@ packages/components/buildroot/logs/
 # Build and local configurations
 **/local.mk
 **/.antigravitycli/
+.mise.local.toml
 
 # Python caching
 **/__pycache__/
