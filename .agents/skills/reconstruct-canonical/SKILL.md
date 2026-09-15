@@ -1,22 +1,17 @@
 ---
 name: reconstruct-canonical
-description: Reconstruct and consolidate decompiled C functions into clean canonical modules in src/*.c, fill gaps, rename variables/functions descriptively, evaluate parity gates (100% or deferred 99% criteria), and prune solved slices. Use when consolidating functions into a module, finishing a C subsystem, or running /reconstruct-canonical.
+description: Reconstruct and consolidate decompiled C functions into clean canonical modules in src/*.c, fill gaps, rename variables/functions descriptively, evaluate parity gates, and prune solved assembly functions. Use when consolidating functions into a module, finishing a C subsystem, or running /reconstruct-canonical.
 ---
 
 # Reconstruct Canonical Module
 
-Consolidate isolated function slices into clean, idiomatic, canonical C modules in `src/<module>.c`, enforce naming and readability standards, evaluate parity gates, and prune source slices.
+Decompile assembly functions directly into clean, idiomatic C in `src/<module>.c` and remove completed functions from `src/<module>_asm.S`, maintaining 100.000% whole-library bit-exact parity.
 
-## Acceptance Criteria: 100% vs 99% Deferred
+## Acceptance Criteria & Parity Gate
 
-Whole-library SHA-256 parity (`just check`) must NEVER regress from 100.000%.
-Individual functions within a module must satisfy one of two gates:
-
-1. **Bit-Exact (100.000%)**: Zero instruction diffs in `diff_unit`. Linked directly into parity build.
-2. **Deferred Canonical (>= 99.0% / < 5 diffs)**: Promoted to `src/<module>.c` and tracked in `tools/skip_deferred.txt` only when:
-   - **Semantic Equivalence (100%)**: All branches, registers, side effects, and calculations are complete.
-   - **Diff Family**: Diffs in `diff_unit --diagnose` are strictly commutative swaps (`orr`, `add`), `csel` condition inversions (`hi` vs `lo`), or LLVM `BranchFolding`/`TailMerging` branch shifts. Zero opcode changes, zero unmapped constants.
-   - **No Workaround**: Retains reference assembly in `skip_deferred.txt` so `just check` remains 100.000% bit-exact.
+- **Parity Invariant**: Whole-library SHA-256 parity (`just check`) must NEVER regress from 100.000% (`3b27eee0...`).
+- **Bit-Exact C (100.000%)**: Zero instruction diffs against target binary. The C implementation replaces the function in `src/<module>_asm.S`.
+- **In-Progress / Deferred Functions**: If a function is under development or deferred, keep the reference assembly in `src/<module>_asm.S` and guard the C version in `src/<module>.c` with `#ifndef MATCHING_PARITY` so `just check` remains 100.000% bit-exact.
 
 ## Readability Standards
 
@@ -25,50 +20,24 @@ Individual functions within a module must satisfy one of two gates:
 - **Typed Structs**: Zero raw pointer math (`*(u32 *)((char *)p + 0x10)` -> `input->current_keys`).
 - **Enums & Bitmasks**: Replace magic numbers with named enums/macros (e.g. `INPUT_MODE_REPLAY = 2`).
 - **Natural Control Flow**: Replace Ghidra `goto` artifacts with idiomatic `if/else`, `switch`, and guard clauses.
-- **Automated Gate**: Must pass `python3 tools/check_readable.py` without warnings.
-
-### ASM Readability (for permanent `skip_asm.txt` units)
-- **Standard ARM UAL**: Use symbolic AArch64 mnemonics (`ldr`, `str`, `b.eq`). Never raw `.inst 0x...` opcodes.
-- **Symbolic Labels**: Use semantic local labels (`.L_read_loop:`, `.L_exit:`) instead of hardcoded hex offsets (`#0x808fc`).
-- **Register Context**: Include register role headers at function entry (`// x0: input, x1: event_type`).
-
-## Quick Start
-
-1. Identify module functions via `tools/manifest.json`, `ref/dwarf/dwarf.json`, and `tools/mine_clusters.py`.
-2. Consolidate slice C code and fill remaining gaps in `src/<module>.c` and `src/include/<module>.h`.
-3. Apply readability standards; verify with `python3 tools/check_readable.py`.
-4. Run `python3 tools/diff_unit.py <unit> --diagnose` for every function in the module.
-5. If 100%, update slice in `src/slices/`. If 99%+ with only layout diffs, record in `tools/skip_deferred.txt`.
-6. Verify whole-library SHA-256: `just check`.
+- **Automated Gate**: Verify with `python3 tools/check_readable.py`.
 
 ## Workflows
 
-### Phase 1: Cluster & Inventory
+### 1. Triage Next Function
 ```bash
-python3 tools/mine_clusters.py
-grep -i "<module>" tools/manifest.json
-python3 -c "import json; d=json.load(open('ref/dwarf/dwarf.json')); [print(v['name'], v.get('decl_line')) for v in d['subprograms'].values() if v.get('decl_file') == '<module>.c']"
+just next
+just bundle <unit>
 ```
-Extract canonical function and local variable names directly from DWARF before writing code.
 
-### Phase 2: Gap Filling & Semantic Decompilation
-1. Create or open `src/<module>.c` and header `src/include/<module>.h`.
-2. Implement missing functions directly in C using established structs, DWARF types, and enums.
-3. Compiler: Android NDK r21e Clang 9.0.9 (`-target aarch64-linux-android29 -O3 -funwind-tables -fno-slp-vectorize -fPIC -Wall -fstack-protector-strong`).
+### 2. Decompile & Reconstruct
+1. Open `src/<module>.c` and add the clean C implementation.
+2. Open `src/<module>_asm.S` and remove the corresponding assembly block for the unit once it matches 100% bit-for-bit.
+3. If all functions in a module are reconstructed in C with 100% parity, delete `src/<module>_asm.S`.
 
-### Phase 3: Parity Tuning & Compiler Patterns
-- **Stack Canaries**: Functions with local buffers or `va_list` require `-fstack-protector-strong` to emit target `tpidr_el0` frames.
-- **Hidden Visibility**: When referencing rodata labels in PIC mode, mark externs `__attribute__((visibility("hidden")))` to avoid GOT indirection and emit direct `adrp`/`add`.
-- **Condition Inversions**: Min/max ternaries often flip `csel` condition codes (`hi` vs `lo`) and operand order. This is standard LLVM canonicalization (Tier 2).
-- **Tail Merging & Switch Ordering**: Case order dictates basic block layout. Sinking identical trailing calls triggers tail-merging.
-- **Commutative Operands**: LLVM canonicalizes by complexity (`Instruction > Load > Argument > Constant`).
-
-### Phase 4: Consolidation & Verification
-1. Ensure all subsystem functions are consolidated in `src/<module>.c`.
-2. Mirror authentic C implementations to `src/slices/func_<addr>.c` for individual unit compilation.
-3. Record any >= 99.0% units in `tools/skip_deferred.txt` to guarantee 100.000% target binary match.
-4. Run full validation:
+### 3. Verify Parity
 ```bash
-just check
-just validate-static
+just diff <unit>   # Fast feedback on instruction parity
+just check         # Authoritative whole-library bit-exact parity
+just report        # Update STATUS.md and KPI metrics
 ```
