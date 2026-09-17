@@ -463,7 +463,7 @@ jobs:
 
       - name: Build Components
         id: build-components
-        run: make -C packages/components/${{ needs.setup.outputs.libc }} components BOARD=${{ needs.setup.outputs.soc }}
+        run: make -C packages/components/${{ needs.setup.outputs.libc }} components BOARD=${{ needs.setup.outputs.soc }} UI=${{ needs.setup.outputs.ui }}
 
       - name: Build Image & Update Package
         run: |

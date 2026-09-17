@@ -301,9 +301,7 @@ elif [ "$UI" = "blast16" ]; then
 	cat "$LOVE_BIN" "$ROOT_DIR/packages/ui/blast16/dist/blast16.love" > "$STAGE_DIR/.blast/blast16"
 	chmod +x "$STAGE_DIR/.blast/blast16"
 
-	if [ -f "$ROOT_DIR/packages/ui/blast16/love/build/liblove-11.5.so" ]; then
-		cp "$ROOT_DIR/packages/ui/blast16/love/build/liblove-11.5.so" "$STAGE_DIR/.blast/lib/"
-	fi
+	cp -a "$ROOT_DIR/packages/ui/blast16/love/build/"*.so* "$STAGE_DIR/.blast/lib/" 2>/dev/null || true
 
 	cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/blastem" "$STAGE_DIR/.blast/bin/blastem"
 	chmod +x "$STAGE_DIR/.blast/bin/blastem"

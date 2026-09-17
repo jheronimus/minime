@@ -341,9 +341,12 @@ ota ui="" ip="":
     set -euo pipefail
     ui="{{ui}}"
     case "$ui" in
-      minui|allium|muos|blast16) ;;
-      *) echo "ERROR: unknown UI '$ui' (expected minui, allium, muos, or blast16)" >&2; exit 1 ;;
+      minui|allium|muos|blast16|arc) ;;
+      *) echo "ERROR: unknown UI '$ui' (expected minui, allium, muos, blast16, or arc)" >&2; exit 1 ;;
     esac
+    if [ "$ui" = "arc" ]; then
+        ui="blast16"
+    fi
     ip="{{ip}}"
     if [ "$ui" = "muos" ] && ! just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null; then
         echo "Installed updater predates muos support; bootstrapping via minui first..."
@@ -353,6 +356,12 @@ ota ui="" ip="":
             just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null && break
         done
         just shell "grep -q muos /usr/bin/update.sh" "$ip" 2>/dev/null || { echo "ERROR: bootstrap did not install a muos-capable updater" >&2; exit 1; }
+    fi
+    if [ "$ui" = "blast16" ] && ! just shell "grep -q blast16 /usr/bin/update.sh" "$ip" 2>/dev/null; then
+        echo "Installed updater predates blast16/arc support; copying updater to device..."
+        just upload packages/components/boards/common/overlay/usr/bin/update.sh /tmp/update.sh "$ip"
+        just shell "chmod +x /tmp/update.sh && /tmp/update.sh blast16" "$ip"
+        exit 0
     fi
     just shell "update.sh $ui" "$ip"
 
