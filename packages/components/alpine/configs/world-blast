@@ -13,3 +13,4 @@ libvorbis
 libtheora
 libmodplug
 openal-soft
+luajit

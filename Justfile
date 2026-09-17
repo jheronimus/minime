@@ -133,6 +133,13 @@ build-muos target="musl":
     echo "Building muOS for target {{target}}..."
     ./packages/ui/build.sh muos {{target}}
 
+# Build Blast16 binaries locally for target C library (musl or glibc)
+build-blast16 target="musl":
+    #!/usr/bin/env sh
+    set -eu
+    echo "Building Blast16 for target {{target}}..."
+    ./packages/ui/build.sh blast16 {{target}}
+
 # ── Developer setup ───────────────────────────────────────────────────────────
 
 # Install git pre-commit/pre-push hooks that run `just validate-static` (the

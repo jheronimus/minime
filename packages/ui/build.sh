@@ -227,6 +227,109 @@ elif [ "$UI" = "muos" ]; then
 	zstd -q -9 -f "$OUT_TAR"
 	rm -f "$OUT_TAR"
 	echo "Created ${OUT_TAR}.zst"
+
+elif [ "$UI" = "blast16" ]; then
+	echo "Building Blast16 binaries for ${LIBC}..."
+	cd "$ROOT_DIR/packages/ui/blast16"
+
+	if [ "$LIBC" = "musl" ]; then
+		docker run --rm -u root \
+			-v "$HOME/.ui-ccache-musl:/root/.ccache" \
+			-v "${GITHUB_WORKSPACE:-$ROOT_DIR}:/workspace" \
+			"ghcr.io/${OWNER}/minime-musl:latest" \
+			/bin/bash -c "apk add --no-cache cmake luajit-dev freetype-dev libogg-dev libvorbis-dev libtheora-dev libmodplug-dev openal-soft-dev sdl2-dev zlib-dev libpng-dev mesa-dev python3 zip unzip && \
+				cd /workspace/packages/ui/blast16/cores/blastem && \
+				make clean && \
+				make CPU=aarch64 USE_GLES=1 NO_FILE_CHOOSER=1 CC=\"ccache gcc\" blastem -j\$(nproc) && \
+				cd /workspace/packages/ui/blast16/love && \
+				rm -rf build && \
+				cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
+				cmake --build build -j\$(nproc) && \
+				chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/ui/blast16"
+	else
+		docker run --rm -u root \
+			-v "$HOME/.ui-ccache-glibc:/root/.ccache" \
+			-v "${GITHUB_WORKSPACE:-$ROOT_DIR}:/workspace" \
+			"ghcr.io/${OWNER}/minime-glibc:latest" \
+			/bin/bash -c "apt-get update && apt-get install -y --no-install-recommends \
+				crossbuild-essential-arm64 libsdl2-dev:arm64 libgles2-mesa-dev:arm64 libgl1-mesa-dev:arm64 \
+				libfreetype-dev:arm64 libogg-dev:arm64 libvorbis-dev:arm64 libtheora-dev:arm64 \
+				libmodplug-dev:arm64 libopenal-dev:arm64 libluajit-5.1-dev:arm64 zlib1g-dev:arm64 \
+				python3 zip unzip && \
+				cd /workspace/packages/ui/blast16/cores/blastem && \
+				make clean && \
+				PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig make CPU=aarch64 USE_GLES=1 NO_FILE_CHOOSER=1 CC=\"ccache aarch64-linux-gnu-gcc\" blastem -j\$(nproc) && \
+				cd /workspace/packages/ui/blast16/love && \
+				rm -rf build && \
+				cmake -B build -DCMAKE_BUILD_TYPE=Release \
+					-DCMAKE_SYSTEM_NAME=Linux \
+					-DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+					-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+					-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+					-DCMAKE_C_COMPILER_LAUNCHER=ccache \
+					-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+					-DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+					-DPKG_CONFIG_EXECUTABLE=aarch64-linux-gnu-pkg-config && \
+				cmake --build build -j\$(nproc) && \
+				chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/ui/blast16"
+	fi
+
+	BUILD_STAGE=$(mktemp -d)
+	cp "$ROOT_DIR/packages/ui/blast16/src/main.lua" "$ROOT_DIR/packages/ui/blast16/src/conf.lua" "$ROOT_DIR/packages/ui/blast16/src/globals.lua" "$BUILD_STAGE/"
+	cp -r "$ROOT_DIR/packages/ui/blast16/src" "$BUILD_STAGE/src"
+	cp -r "$ROOT_DIR/packages/ui/blast16/assets" "$BUILD_STAGE/assets"
+	mkdir -p "$ROOT_DIR/packages/ui/blast16/dist"
+	(cd "$BUILD_STAGE" && zip -9 -q -r "$ROOT_DIR/packages/ui/blast16/dist/blast16.love" . -x "*.DS_Store" "*__MACOSX*")
+	rm -rf "$BUILD_STAGE"
+
+	STAGE_DIR=$(mktemp -d)
+	mkdir -p "$STAGE_DIR/.blast/bin"
+	mkdir -p "$STAGE_DIR/.blast/lib"
+	mkdir -p "$STAGE_DIR/.blast/data"
+	mkdir -p "$STAGE_DIR/.blast/shaders"
+	mkdir -p "$STAGE_DIR/.minime"
+	mkdir -p "$STAGE_DIR/Roms/Sega Genesis (MD)"
+	mkdir -p "$STAGE_DIR/Roms/Sega Master System (SMS)"
+	mkdir -p "$STAGE_DIR/Roms/Sega Game Gear (GG)"
+	mkdir -p "$STAGE_DIR/Roms/Sega CD"
+	mkdir -p "$STAGE_DIR/Roms/Sega 32X"
+	mkdir -p "$STAGE_DIR/Saves/blastem"
+	mkdir -p "$STAGE_DIR/BIOS"
+
+	LOVE_BIN="$ROOT_DIR/packages/ui/blast16/love/build/love"
+	cat "$LOVE_BIN" "$ROOT_DIR/packages/ui/blast16/dist/blast16.love" > "$STAGE_DIR/.blast/blast16"
+	chmod +x "$STAGE_DIR/.blast/blast16"
+
+	if [ -f "$ROOT_DIR/packages/ui/blast16/love/build/liblove-11.5.so" ]; then
+		cp "$ROOT_DIR/packages/ui/blast16/love/build/liblove-11.5.so" "$STAGE_DIR/.blast/lib/"
+	fi
+
+	cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/blastem" "$STAGE_DIR/.blast/bin/blastem"
+	chmod +x "$STAGE_DIR/.blast/bin/blastem"
+
+	cp "$ROOT_DIR/packages/ui/blast16/scripts/run.sh" "$STAGE_DIR/.blast/launch.sh"
+	chmod +x "$STAGE_DIR/.blast/launch.sh"
+
+	cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/blastem.cfg" "$STAGE_DIR/.blast/blastem.cfg"
+	cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/blastem.cfg" "$STAGE_DIR/.blast/bin/default.cfg"
+	[ -f "$ROOT_DIR/packages/ui/blast16/cores/blastem/rom.db" ] && cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/rom.db" "$STAGE_DIR/.blast/bin/rom.db"
+	[ -f "$ROOT_DIR/packages/ui/blast16/cores/blastem/gamecontrollerdb.txt" ] && cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/gamecontrollerdb.txt" "$STAGE_DIR/.blast/bin/gamecontrollerdb.txt"
+	cp -r "$ROOT_DIR/packages/ui/blast16/cores/blastem/shaders/." "$STAGE_DIR/.blast/shaders/" 2>/dev/null || true
+	cp -r "$ROOT_DIR/packages/ui/blast16/cores/blastem/shaders/." "$STAGE_DIR/.blast/bin/" 2>/dev/null || true
+
+	cat << 'EOF' > "$STAGE_DIR/.minime/ui.env"
+UI_NAME="Blast16"
+UI_BIN="/mnt/sdcard/.blast/launch.sh"
+UI_PROCESSES="blast16 blastem"
+UI_STOP_CMD="killall -TERM blast16 blastem"
+EOF
+
+	OUT_TAR="$ROOT_DIR/packages/ui/out/blast16-${LIBC}-aarch64.tar"
+	tar -cf "$OUT_TAR" -C "$STAGE_DIR" .
+	zstd -q -9 -f "$OUT_TAR"
+	rm -f "$OUT_TAR"
+	rm -rf "$STAGE_DIR"
+	echo "Created ${OUT_TAR}.zst"
 else
 	echo "Unknown UI: $UI" >&2
 	exit 1

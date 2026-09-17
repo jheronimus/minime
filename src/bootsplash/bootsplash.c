@@ -47,16 +47,27 @@
 #define DRM_PLANE_TYPE_PRIMARY 1
 #endif
 
-#define LOGO_ROWS 4
-#define LOGO_COLS 30
+#define MAX_LOGO_ROWS 4
+#define MAX_LOGO_COLS 40
 #define MAX_INPUTS 16
 #define TIMEOUT_SECS 60
 
-static const char *logo_lines[LOGO_ROWS] = {
+static int g_logo_rows = 4;
+static int g_logo_cols = 30;
+static int g_is_blast16 = 0;
+
+static const char *minime_logo_lines[MAX_LOGO_ROWS] = {
 	"       ▀        ▀         ▀▀▀▀",
 	"█▀█▀█  █  █▀▀█  █  █▀█▀█  █▀▀█",
 	"█ █ █  █  █  █  █  █ █ █  █▄▄█",
 	"█ █ █  █  █  █  █  █ █ █  █▄▄▄"
+};
+
+static const char *blast16_logo_lines[MAX_LOGO_ROWS] = {
+	"█▀▀█ █    █▀▀█ █▀▀▀ ▀█▀   ▄█  █▀▀█",
+	"█▀▀▄ █    █▀▀█ ▀▀▀█  █     █  █▄▄▄",
+	"█  █ █    █  █    █  █     █  █  █",
+	"█▄▄█ █▄▄▄ █  █ ▄▄▄█  ▀    ▄█▄ █▄▄█"
 };
 
 enum glyph_type {
@@ -66,7 +77,8 @@ enum glyph_type {
 	GLYPH_LOWER
 };
 
-static enum glyph_type logo_grid[LOGO_ROWS][LOGO_COLS];
+static enum glyph_type logo_grid[MAX_LOGO_ROWS][MAX_LOGO_COLS];
+
 
 struct render_surface {
 	uint8_t *mem;
@@ -115,13 +127,42 @@ static void sig_handler(int sig)
 	g_running = 0;
 }
 
+static int check_ui_blast16(void)
+{
+	const char *ui_files[] = {
+		"/mnt/sdcard/.minime/ui.env",
+		"/usr/share/minime/ui.env",
+		"/etc/minime/ui.env",
+		NULL
+	};
+	for (int i = 0; ui_files[i]; i++) {
+		FILE *f = fopen(ui_files[i], "r");
+		if (!f)
+			continue;
+		char line[128];
+		while (fgets(line, sizeof(line), f)) {
+			if (strstr(line, "Blast16") || strstr(line, "blast16")) {
+				fclose(f);
+				return 1;
+			}
+		}
+		fclose(f);
+	}
+	return 0;
+}
+
 static void parse_logo_grid(void)
 {
+	g_is_blast16 = check_ui_blast16();
+	const char * const *lines = g_is_blast16 ? blast16_logo_lines : minime_logo_lines;
+	g_logo_rows = 4;
+	g_logo_cols = g_is_blast16 ? 34 : 30;
+
 	memset(logo_grid, 0, sizeof(logo_grid));
-	for (int r = 0; r < LOGO_ROWS; r++) {
-		const unsigned char *p = (const unsigned char *)logo_lines[r];
+	for (int r = 0; r < g_logo_rows; r++) {
+		const unsigned char *p = (const unsigned char *)lines[r];
 		int c = 0;
-		while (*p && c < LOGO_COLS) {
+		while (*p && c < g_logo_cols) {
 			if (*p == ' ') {
 				logo_grid[r][c++] = GLYPH_SPACE;
 				p++;
@@ -142,6 +183,7 @@ static void parse_logo_grid(void)
 		}
 	}
 }
+
 
 static inline uint32_t pack_rgb32(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -223,8 +265,8 @@ static void draw_glyph(const struct render_surface *surf, uint32_t x, uint32_t y
 static void draw_wordmark(const struct render_surface *surf, uint32_t start_x, uint32_t start_y,
 			  uint32_t cell_w, uint32_t cell_h, uint32_t color)
 {
-	for (int r = 0; r < LOGO_ROWS; r++) {
-		for (int c = 0; c < LOGO_COLS; c++) {
+	for (int r = 0; r < g_logo_rows; r++) {
+		for (int c = 0; c < g_logo_cols; c++) {
 			enum glyph_type g = logo_grid[r][c];
 			if (g != GLYPH_SPACE) {
 				uint32_t gx = start_x + (uint32_t)c * cell_w;
@@ -252,9 +294,17 @@ static void draw_gradient_bar(const struct render_surface *surf, uint32_t track_
 			float t = 1.0f - ((float)d / (float)beam_w);
 			float intensity = t * t * (3.0f - 2.0f * t);
 
-			uint8_t r = (uint8_t)(intensity * 180.0f);
-			uint8_t g = (uint8_t)(30.0f * (1.0f - intensity) + intensity * 240.0f);
-			uint8_t b = (uint8_t)(80.0f * (1.0f - intensity) + intensity * 255.0f);
+			uint8_t r, g, b;
+			if (g_is_blast16) {
+				/* Sega blue beam */
+				r = (uint8_t)(intensity * 20.0f);
+				g = (uint8_t)(90.0f * (1.0f - intensity) + intensity * 200.0f);
+				b = (uint8_t)(160.0f * (1.0f - intensity) + intensity * 255.0f);
+			} else {
+				r = (uint8_t)(intensity * 180.0f);
+				g = (uint8_t)(30.0f * (1.0f - intensity) + intensity * 240.0f);
+				b = (uint8_t)(80.0f * (1.0f - intensity) + intensity * 255.0f);
+			}
 			scratch_buf[x] = (surf->bpp == 16) ? pack_rgb16(r, g, b) : pack_rgb32(r, g, b);
 		} else {
 			scratch_buf[x] = 0;
@@ -267,6 +317,7 @@ static void draw_gradient_bar(const struct render_surface *surf, uint32_t track_
 		}
 	}
 }
+
 
 /* ──────────────── DRM Helpers ──────────────── */
 
@@ -810,13 +861,14 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGHUP, &sa, NULL);
 
-	parse_logo_grid();
-
 	int key_vol_up = KEY_VOLUMEUP;
 	int key_vol_down = KEY_VOLUMEDOWN;
 	int screen_rot = 0;
 	uint32_t trait_w = 0, trait_h = 0;
 	read_traits(&key_vol_up, &key_vol_down, &screen_rot, &trait_w, &trait_h);
+
+	parse_logo_grid();
+
 
 	bool persist = false;
 	for (int i = 1; i < argc; i++) {
@@ -909,13 +961,14 @@ int main(int argc, char **argv)
 	uint32_t log_w = surf.log_width;
 	uint32_t log_h = surf.log_height;
 
-	uint32_t cell_w = log_w / 40;
+	uint32_t cell_w = log_w / (g_logo_cols + 10);
 	if (cell_w < 4) cell_w = 4;
 	if (cell_w > 18) cell_w = 18;
 	uint32_t cell_h = cell_w;
 
-	uint32_t word_w = LOGO_COLS * cell_w;
-	uint32_t word_h = LOGO_ROWS * cell_h;
+	uint32_t word_w = g_logo_cols * cell_w;
+	uint32_t word_h = g_logo_rows * cell_h;
+
 	uint32_t gap_h = (cell_h * 3) / 2;
 	uint32_t bar_h = (cell_h * 2) / 3;
 	if (bar_h < 6) bar_h = 6;
