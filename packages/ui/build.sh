@@ -244,7 +244,7 @@ elif [ "$UI" = "blast16" ]; then
 				make CPU=aarch64 USE_GLES=1 NO_FILE_CHOOSER=1 CC=\"ccache gcc\" blastem -j\$(nproc) && \
 				cd /workspace/packages/ui/blast16/love && \
 				rm -rf build && \
-				cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
+				cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
 				cmake --build build -j\$(nproc) && \
 				chown -R \$(stat -c '%u:%g' /workspace) /workspace/packages/ui/blast16"
 	else
@@ -262,7 +262,7 @@ elif [ "$UI" = "blast16" ]; then
 				PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig make CPU=aarch64 USE_GLES=1 NO_FILE_CHOOSER=1 CC=\"ccache aarch64-linux-gnu-gcc\" blastem -j\$(nproc) && \
 				cd /workspace/packages/ui/blast16/love && \
 				rm -rf build && \
-				cmake -B build -DCMAKE_BUILD_TYPE=Release \
+				cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
 					-DCMAKE_SYSTEM_NAME=Linux \
 					-DCMAKE_SYSTEM_PROCESSOR=aarch64 \
 					-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
