@@ -28,6 +28,7 @@ while [ $# -gt 0 ]; do
 		;;
 	--ui)
 		UI="$2"
+		[ "$UI" = "arc" ] && UI="blast16"
 		shift 2
 		;;
 	--include-roms)

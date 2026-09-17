@@ -170,6 +170,9 @@ while [ $# -gt 0 ]; do
 		minui | allium | muos | blast16)
 			UI="${arg}"
 			;;
+		arc)
+			UI="blast16"
+			;;
 		*)
 			die "unsupported argument '$1' (expected alpine, buildroot, minui, allium, muos, or blast16)"
 			;;

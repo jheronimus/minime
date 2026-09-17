@@ -140,6 +140,13 @@ build-blast16 target="musl":
     echo "Building Blast16 for target {{target}}..."
     ./packages/ui/build.sh blast16 {{target}}
 
+# Build Arc binaries locally for target C library (musl or glibc)
+build-arc target="musl":
+    #!/usr/bin/env sh
+    set -eu
+    echo "Building Arc for target {{target}}..."
+    ./packages/ui/build.sh arc {{target}}
+
 # ── Developer setup ───────────────────────────────────────────────────────────
 
 # Install git pre-commit/pre-push hooks that run `just validate-static` (the

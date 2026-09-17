@@ -339,7 +339,7 @@ assemble_rootfs() {
 	# Blast16's LÖVE runtime needs its audio/font stack that the rest of
 	# minime does not.  world-blast is only installed for the blast16 UI so
 	# the extra packages stay out of every other image.
-	if [ "${UI}" = "blast16" ]; then
+	if [ "${UI}" = "blast16" ] || [ "${UI}" = "arc" ]; then
 		WORLD_BLAST="${ALPINE_DIR}/configs/world-blast"
 		[ -f "${WORLD_BLAST}" ] || die "missing ${WORLD_BLAST}"
 		WORLD_PKGS="${WORLD_PKGS} $(grep -v '^#' "${WORLD_BLAST}" | tr '\n' ' ')"

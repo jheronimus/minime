@@ -36,6 +36,7 @@ on:
           - muos
           - allium
           - blast16
+          - arc
         default: minui
       include_roms:
         description: 'Include preloaded ROMs'
@@ -95,6 +96,8 @@ jobs:
           libc = os.environ.get("INPUT_LIBC") or "alpine"
           soc = os.environ.get("INPUT_SOC") or "rk3566"
           ui = os.environ.get("INPUT_UI") or "minui"
+          if ui == "arc":
+              ui = "blast16"
           owner = os.environ.get("OWNER", "jheronimus")
           include_roms_raw = os.environ.get("INPUT_INCLUDE_ROMS", "false")
           include_roms = "1" if str(include_roms_raw).lower() in ("true", "1", "yes") else "0"

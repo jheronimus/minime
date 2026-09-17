@@ -2,6 +2,7 @@
 set -eu
 
 UI="${1:-}"
+[ "$UI" = "arc" ] && UI="blast16"
 LIBC="${2:-}"
 
 if [ -z "$UI" ] || [ -z "$LIBC" ]; then

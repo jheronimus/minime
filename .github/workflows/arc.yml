@@ -1,0 +1,33 @@
+name: Arc
+
+concurrency:
+  group: arc-build-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'src/**'
+      - '.github/workflows/arc.yml'
+  workflow_dispatch:
+    inputs:
+      include_roms:
+        description: 'Include preloaded ROMs'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  arc:
+    name: Arc
+    uses: ./.github/workflows/build.yml
+    with:
+      libc: alpine
+      soc: rk3566
+      ui: arc
+      include_roms: ${{ inputs.include_roms || false }}
+    secrets: inherit
