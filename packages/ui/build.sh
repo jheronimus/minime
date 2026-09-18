@@ -279,6 +279,7 @@ elif [ "$UI" = "blast16" ]; then
 	cp "$ROOT_DIR/packages/ui/blast16/src/main.lua" "$ROOT_DIR/packages/ui/blast16/src/conf.lua" "$ROOT_DIR/packages/ui/blast16/src/globals.lua" "$BUILD_STAGE/"
 	cp -r "$ROOT_DIR/packages/ui/blast16/src" "$BUILD_STAGE/src"
 	cp -r "$ROOT_DIR/packages/ui/blast16/assets" "$BUILD_STAGE/assets"
+	[ -d "$ROOT_DIR/packages/ui/blast16/data" ] && cp -r "$ROOT_DIR/packages/ui/blast16/data" "$BUILD_STAGE/data" || true
 	mkdir -p "$ROOT_DIR/packages/ui/blast16/dist"
 	(cd "$BUILD_STAGE" && zip -9 -q -r "$ROOT_DIR/packages/ui/blast16/dist/blast16.love" . -x "*.DS_Store" "*__MACOSX*")
 	rm -rf "$BUILD_STAGE"
@@ -313,6 +314,8 @@ elif [ "$UI" = "blast16" ]; then
 	cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/blastem.cfg" "$STAGE_DIR/.blast/bin/default.cfg"
 	[ -f "$ROOT_DIR/packages/ui/blast16/cores/blastem/rom.db" ] && cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/rom.db" "$STAGE_DIR/.blast/bin/rom.db"
 	[ -f "$ROOT_DIR/packages/ui/blast16/cores/blastem/gamecontrollerdb.txt" ] && cp "$ROOT_DIR/packages/ui/blast16/cores/blastem/gamecontrollerdb.txt" "$STAGE_DIR/.blast/bin/gamecontrollerdb.txt"
+	[ -f "$ROOT_DIR/packages/ui/blast16/assets/fonts/corp_round_v1.ttf" ] && cp "$ROOT_DIR/packages/ui/blast16/assets/fonts/corp_round_v1.ttf" "$STAGE_DIR/.blast/bin/default.ttf"
+	[ -d "$ROOT_DIR/packages/ui/blast16/data/blast16/input" ] && cp -r "$ROOT_DIR/packages/ui/blast16/data/blast16/input" "$STAGE_DIR/.blast/data/"
 	cp -r "$ROOT_DIR/packages/ui/blast16/cores/blastem/shaders/." "$STAGE_DIR/.blast/shaders/" 2>/dev/null || true
 	cp -r "$ROOT_DIR/packages/ui/blast16/cores/blastem/shaders/." "$STAGE_DIR/.blast/bin/" 2>/dev/null || true
 
