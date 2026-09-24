@@ -37,6 +37,10 @@ Most firmwares are built for one specific UI - EmulationStation, MinUI, etc. Min
 
 Minime doesn't override user directories that UIs provide (like roms or bios or savestates) and doesn't override built-in dependencies. If a UI comes with its own emulation cores, Minime will not try to make it use something else.
 
+## DraStic reconstruction
+
+The private DraStic core work is tracked in [`src/drastic/libs/`](src/drastic/libs/). Phase 1 canonical module consolidation is complete; Phase 2 module-by-module C reconstruction is active. Use `just doctor`, `just next`, and the exact `just variant`/`just promote` gates documented there.
+
 ## Simple partition structure
 
 A lot of firmwares split boot files, rootfs and userdata into several partitions.

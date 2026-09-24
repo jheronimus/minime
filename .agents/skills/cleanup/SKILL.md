@@ -36,7 +36,7 @@ Regions and their upstream baselines:
 | `packages/ui/minui` | `workspace/minime/`, `workspace/all/` | https://github.com/shauninman/MinUI (`main`) |
 | `packages/ui/allium` | `crates/common/src/platform/minime`, `crates/play/src/platform/minime` (feature `minime`) | https://github.com/goweiwen/Allium (`main`) |
 | `src/yabause` | `yabause/src/libretro/` (ours), `libchdr/` (vendored) | `upstream` branch of the fork (vanilla tarballs) |
-| `src/drastic` | per ADR 0024 | record a vanilla baseline if none exists |
+| `src/drastic` | decompilation project; see `src/drastic/libs/AGENTS.md` | proprietary target plus deterministic binary/DWARF oracles; no upstream source baseline |
 
 Fetch the upstream baseline at run time (or use the fork's configured upstream
 remote, e.g. `upstream-main` in minui). Diff the fork's `main` against it. For

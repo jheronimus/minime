@@ -3,6 +3,18 @@
 default:
     @just --list
 
+# Validate the private DraStic Phase 2 reconstruction tree when it is checked out.
+validate-drastic:
+    just --justfile src/drastic/libs/justfile validate
+
+# Generate Phase 2 DraStic C candidates in scratch
+reconstruct *flags:
+    just --justfile src/drastic/libs/justfile reconstruct {{flags}}
+
+# Generate Phase 2 DraStic C candidates using local llama.cpp server
+reconstruct-local *flags:
+    just --justfile src/drastic/libs/justfile reconstruct-local {{flags}}
+
 # ── Validation gates (local-only; every check lives in scripts/) ──────────────
 
 # Full gate: fast static checks + UI formatting (check-allium/minui/yabause
