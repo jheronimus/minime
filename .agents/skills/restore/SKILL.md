@@ -1,42 +1,39 @@
 ---
 name: restore
-description: Reconstruct DraStic ARM64 functions in Phase 1 (functional equivalence via Unicorn fuzzing under #ifndef MATCHING_PARITY) and Phase 2 (exact binary parity polish and assembly elimination).
+description: Reconstruct DraStic ARM64 functions in Phase 1 (functional equivalence via Unicorn fuzzing under #ifndef MATCHING_PARITY).
 ---
 
-# DraStic Code Restoration
+# DraStic Phase 1 Code Restoration
 
-Reconstruct DraStic ARM64 functions from fallback assembly (`src/*_asm.S`) into clean, readable, canonical C (`src/*.c`) following the Two-Stage Reconstruction Pipeline.
+Reconstruct assembly functions from `src/*_asm.S` into clean, readable, canonical C in `src/<module>.c` under `#ifndef MATCHING_PARITY` and verify functional equivalence using Unicorn fuzzing (`just equiv`).
 
-## Two-Stage Pipeline
+## Reconstruction Directives
 
-1. **Stage 1 (Functional Equivalence / Fuzzy Parity)**:
-   - Decompile target assembly into clean, idiomatic C in `src/<module>.c`.
-   - Keep the C implementation guarded under `#ifndef MATCHING_PARITY`.
-   - Retain fallback assembly in `src/<module>_asm.S` so whole-library bit parity (`just check`) is preserved.
-   - Verify functional correctness with `just equiv <unit>` (Unicorn micro-execution fuzzing against original assembly across randomized inputs).
+1. **Clean & Idiomatic C**:
+   - Write clean, readable C using types and structs from `src/include/`.
+   - Use authentic names from the DWARF oracle / bundle; do not invent identities.
+   - Zero raw pointer math; use typed struct pointers and named constants.
+   - For vectorized raster/blitter code, use standard `<arm_neon.h>` intrinsics (`vld1q_*`, `vst1q_*`, etc.) directly.
+   - Naked functions, inline assembly (`__asm__`), and `.inst` in C bodies are strictly prohibited.
 
-2. **Stage 2 (Binary Parity Polish)**:
-   - Tune compiler levers and code structure with `just diff <unit>` or `just variant <unit> <cand>` to reach 100.000% bit-exact objdiff match.
-   - Once exact parity is reached, remove `#ifndef MATCHING_PARITY` and delete the corresponding assembly block from `src/<module>_asm.S`.
-   - When an entire module reaches 100% C parity, eliminate its `*_asm.S` file.
+2. **Phase 1 Guarding & Verification**:
+   - Always wrap newly authored C implementations under `#ifndef MATCHING_PARITY`.
+   - Keep fallback assembly in `src/<module>_asm.S` intact so whole-library parity (`just check`) never breaks.
+   - Verify functional correctness using `just equiv <unit>`.
+   - Verify pure-C compilation across modules using `just check-c`.
 
-## Rules
-
-- Use oracle-derived names, types, and boundaries from DWARF / donor; do not invent identities.
-- Use typed structs, descriptive enums, and named constants instead of raw byte offsets.
-- Naked attributes, inline assembly (`__asm__`), and raw `.inst` hex opcodes in C are prohibited.
-- Whole-library bit-exact parity (`just check`) must NEVER regress from 100.000% (`3b27eee0...`).
-- Always keep in-progress Stage 1 C guarded under `#ifndef MATCHING_PARITY` until verified for Stage 2 promotion.
+3. **No Phase 2 Token Burn**:
+   - Do NOT spend time adjusting compiler flags, register allocations, or instruction orders to match `objdiff`. That belongs to Phase 2 binary polish.
 
 ## Workflow
 
 ```sh
-just doctor                         # check toolchain and environment
-just next                           # triage next function / module
-just bundle <unit>                  # display assembly, types, and dependencies
-just equiv <unit> [--src <file>]    # Stage 1: test functional equivalence
-just diff <unit>                    # Stage 2: test binary parity match
-just promote <unit> --src <file> --apply # promote bit-exact candidate to C
-just check                          # verify whole-library bit parity
-just report                         # update coverage status
+just doctor                         # Verify toolchain, manifest, and environment
+just next --status ASM              # Triage next assembly function needing C
+just bundle <unit>                  # Display assembly, DWARF types, and signatures
+# Implement clean C in src/<module>.c under #ifndef MATCHING_PARITY
+just equiv <unit>                   # Stage 1 gate: Unicorn functional equivalence fuzzing
+just check-c                        # Verify all canonical C modules compile cleanly
+just check                          # Safety gate: whole-library bit-exact parity preserved
+just report                         # Regenerate Phase 1 coverage metrics
 ```

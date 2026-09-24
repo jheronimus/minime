@@ -3,11 +3,11 @@
 default:
     @just --list
 
-# Validate the private DraStic Phase 2 reconstruction tree when it is checked out.
+# Validate the private DraStic Phase 1 reconstruction tree when it is checked out.
 validate-drastic:
     just --justfile src/drastic/libs/justfile validate
 
-# Generate Phase 2 DraStic C candidates in scratch
+# Generate Phase 1 DraStic C candidates in scratch
 reconstruct *flags:
     just --justfile src/drastic/libs/justfile reconstruct {{flags}}
 
