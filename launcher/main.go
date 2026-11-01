@@ -9,6 +9,12 @@ import (
 )
 
 func main() {
+	if runtime.GOOS == "linux" {
+		if _, err := os.Stat("/mnt/sdcard"); err == nil {
+			_ = os.Chdir("/mnt/sdcard")
+		}
+	}
+
 	coreExtension := ".dylib"
 	if runtime.GOOS == "linux" {
 		coreExtension = ".so"

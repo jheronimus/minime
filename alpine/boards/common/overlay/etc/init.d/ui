@@ -89,7 +89,7 @@ start() {
 		export LD_LIBRARY_PATH="${UI_DIR}/lib:${LD_LIBRARY_PATH:-}"
 	fi
 
-	( "$UI_BIN" </dev/console >/tmp/ui.log 2>&1 ) &
+	( cd /mnt/sdcard 2>/dev/null || true; "$UI_BIN" </dev/console >/tmp/ui.log 2>&1 ) &
 	echo $! >/tmp/ui.pid
 
 	eend 0
