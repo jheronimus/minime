@@ -28,7 +28,9 @@ func TestGambatteCore(t *testing.T) {
 			if err != nil {
 				t.Fatalf("loadCore failed: %v", err)
 			}
-			defer loadedCore.Close()
+			defer func() {
+				_ = loadedCore.Close()
+			}()
 
 			if err := loadedCore.LoadGame(romPath); err != nil {
 				t.Fatalf("LoadGame failed: %v", err)

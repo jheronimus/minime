@@ -57,6 +57,8 @@ type core struct {
 	audioPlayer  *audio.Player
 	coreImage    *ebiten.Image
 	fps          float64
+
+	monitor *Monitor
 }
 
 func loadCore(coreFilePath, systemDirectory, saveDirectory string) (*core, error) {
@@ -134,7 +136,9 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 	if err != nil {
 		return fmt.Errorf("load core %s: %w", coreFilePath, err)
 	}
-	defer loadedCore.Close()
+	defer func() {
+		_ = loadedCore.Close()
+	}()
 
 	if err := loadedCore.LoadGame(romFilePath); err != nil {
 		return fmt.Errorf("load game %s: %w", romFilePath, err)
@@ -170,8 +174,23 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 	loadedCore.audioPlayer = player
 	loadedCore.audioPlayer.Play()
 
+	mon, err := NewMonitor()
+	if err == nil {
+		loadedCore.monitor = mon
+	}
+
+	windowWidth := 640
+	windowHeight := 480
+	if loadedCore.monitor != nil {
+		state := loadedCore.monitor.State()
+		if state.DisplayWidth > 0 && state.DisplayHeight > 0 {
+			windowWidth = state.DisplayWidth
+			windowHeight = state.DisplayHeight
+		}
+	}
+
 	ebiten.SetWindowTitle("Minime")
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetTPS(int(loadedCore.fps + 0.5))
 
@@ -197,7 +216,9 @@ func (loadedCore *core) LoadGame(gameFilePath string) error {
 		if err != nil {
 			return fmt.Errorf("open zip archive %s: %w", absoluteRomPath, err)
 		}
-		defer zipReader.Close()
+		defer func() {
+			_ = zipReader.Close()
+		}()
 
 		if len(zipReader.File) == 0 {
 			return fmt.Errorf("empty zip archive: %s", gameFilePath)
@@ -208,7 +229,9 @@ func (loadedCore *core) LoadGame(gameFilePath string) error {
 		if err != nil {
 			return fmt.Errorf("open entry %s in zip: %w", firstEntry.Name, err)
 		}
-		defer entryReader.Close()
+		defer func() {
+			_ = entryReader.Close()
+		}()
 
 		data, err = io.ReadAll(entryReader)
 		if err != nil {
@@ -243,8 +266,11 @@ func (loadedCore *core) Close() error {
 	if activeCore == loadedCore {
 		activeCore = nil
 	}
+	if loadedCore.monitor != nil {
+		_ = loadedCore.monitor.Close()
+	}
 	if loadedCore.audioPlayer != nil {
-		_ = loadedCore.audioPlayer.Close()
+		loadedCore.audioPlayer.PauseAndStopReading()
 	}
 	if loadedCore.retroUnloadGame != nil {
 		loadedCore.retroUnloadGame()
@@ -261,6 +287,22 @@ func (loadedCore *core) Close() error {
 func (loadedCore *core) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
+	}
+
+	if loadedCore.monitor != nil {
+		select {
+		case ev := <-loadedCore.monitor.Events():
+			if ev.Type == EventPowerSuspend {
+				if loadedCore.audioPlayer != nil {
+					loadedCore.audioPlayer.Pause()
+				}
+				_ = loadedCore.monitor.Suspend()
+				if loadedCore.audioPlayer != nil {
+					loadedCore.audioPlayer.Play()
+				}
+			}
+		default:
+		}
 	}
 
 	loadedCore.inputMask = pollInputMask()

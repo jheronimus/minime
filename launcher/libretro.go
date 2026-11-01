@@ -44,12 +44,12 @@ const deviceJoypad = 1
 
 // gameGeometry matches libretro's struct retro_game_geometry.
 type gameGeometry struct {
-	baseWidth   uint32
-	baseHeight  uint32
-	maxWidth    uint32
-	maxHeight   uint32
-	aspectRatio float32
-	padding     uint32
+	baseWidth  uint32
+	baseHeight uint32
+	_          uint32  // maxWidth
+	_          uint32  // maxHeight
+	_          float32 // aspectRatio
+	_          uint32  // padding
 }
 
 // systemTiming matches libretro's struct retro_system_timing.
@@ -69,5 +69,5 @@ type gameInfo struct {
 	path *byte
 	data unsafe.Pointer
 	size uintptr
-	meta *byte
+	_    *byte // meta
 }
