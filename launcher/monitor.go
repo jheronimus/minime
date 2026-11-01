@@ -492,7 +492,7 @@ func (m *Monitor) SetBrightness(value int) error {
 	if runtime.GOOS != "linux" || m.backlightPath == "" {
 		return nil
 	}
-	data := []byte(fmt.Sprintf("%d\n", value))
+	data := fmt.Appendf(nil, "%d\n", value)
 	return os.WriteFile(m.backlightPath, data, 0644)
 }
 
