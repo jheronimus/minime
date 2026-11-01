@@ -4,13 +4,14 @@ Minime is an appliance-like, minimal retro handheld OS and launcher built on Alp
 
 ## 1. Minimal Flat Frontend (Go + Ebitengine)
 * **Visual Language**: Clean, minimalist UI inspired by [es-theme-elementerial](https://github.com/mluizvitor/es-theme-elementerial) (subtle cards, elegant typography, uncluttered status indicators, high legibility on 3.5" 640x480 displays).
-* **Single Curated List**: Flat list of 30–50 games maximum; no console categorization or deep nested directories.
+* **Single Curated List & Flow**: Flat horizontal list of 30–50 games maximum without folders or console categorization, inspired by [onionKidsOS](https://github.com/coorasse/onionKidsOS). Features a clean "Resume / Start Over" prompt on game launch.
 * **Appliance-Grade System Menu**: Integrated UI for Wi-Fi management (`iwd` via D-Bus), Bluetooth pairing/status (`bluez` via D-Bus), audio sink selection, and brightness/volume controls.
 * **Display & Audio Output**: Seamless HDMI video out detection and Bluetooth A2DP audio switching (via PipeWire/ALSA).
 * **Cross-Platform Simulator**: UI must run natively on macOS for rapid development and testing (windowed mode with keyboard and gamepad emulation), matching Allium's simulator concept.
 * **DRM/KMS on Device**: Runs directly on Linux DRM/KMS via Ebitengine's native GBM backend without X11 or Wayland compositors.
 
 ## 2. Minimal Emulation Runner
+* **Purego Libretro Loader**: Load dynamic `.so` / `.dylib` cores via `ebitengine/purego`, eliminating Cgo cross-compilation while supporting runtime core swapping.
 * **Minarch-Style Core Launcher**: Minimal runner for libretro cores without exposing raw emulator internals.
 * **Opinionated Defaults (Batocera-Style)**: Abstract away complex core options; expose only essential, high-impact user settings (aspect ratio, filters, remapping).
 * **Efficient PSX Rewind on Cortex-A53 (H700)**: PSX rewind must run smoothly without stuttering or audio crackle. Achieved via delta compression, dirty page tracking (`userfaultfd`), or spaced keyframe snapshots rather than full frame-by-frame RAM serialization.
