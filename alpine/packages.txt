@@ -65,7 +65,7 @@ dropbear
 openresolv
 
 # --- Wi-Fi + regulatory ----------------------------------------------------
-wpa_supplicant
+iwd
 wireless-regdb
 
 # --- Bluetooth (with audio sink) -------------------------------------------
