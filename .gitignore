@@ -3,3 +3,5 @@ build/
 docs/
 .cache/
 deploy.cfg
+AGENTS.md
+
