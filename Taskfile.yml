@@ -34,7 +34,50 @@ tasks:
           alpine/scripts/system-image.sh \
           alpine/image/build.sh
 
+  test:
+    desc: Run Go unit and regression tests
+    deps: [core:fetch]
+    cmds:
+      - go test -v ./launcher
+
   clean:
     desc: Clean build outputs
     cmds:
       - make -C alpine clean
+      - rm -rf build/ minime
+
+  core:fetch:
+    desc: Fetch Gambatte cores from RetroArch buildbot for macOS and Linux aarch64
+    cmds:
+      - mkdir -p .cache/cores
+      - |
+        if [ ! -f .cache/cores/gambatte_libretro.dylib ]; then
+          curl -sSL -o .cache/cores/gambatte_macos.zip https://buildbot.libretro.com/nightly/apple/osx/arm64/latest/gambatte_libretro.dylib.zip
+          unzip -qo .cache/cores/gambatte_macos.zip -d .cache/cores/
+          rm -f .cache/cores/gambatte_macos.zip
+        fi
+      - |
+        if [ ! -f .cache/cores/gambatte_libretro.so ]; then
+          curl -sSL -o .cache/cores/gambatte_linux.zip https://buildbot.libretro.com/nightly/linux/aarch64/latest/gambatte_libretro.so.zip
+          unzip -qo .cache/cores/gambatte_linux.zip -d .cache/cores/
+          rm -f .cache/cores/gambatte_linux.zip
+        fi
+
+  build:mac:
+    desc: Build native runner for macOS
+    cmds:
+      - mkdir -p build
+      - go build -o build/minime ./launcher
+
+  build:linux:
+    desc: Cross-compile runner for Linux ARM64 (DRM/KMS)
+    cmds:
+      - mkdir -p build
+      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o build/minime-linux-arm64 ./launcher
+
+  test:run:
+    desc: Run Gambatte on macOS with default test ROM
+    deps: [core:fetch, build:mac]
+    cmds:
+      - ./build/minime -core .cache/cores/gambatte_libretro.dylib -rom "roms/gb/compo/Tobu Tobu Girl (World) (Unl).zip"
+
