@@ -23,9 +23,12 @@ Minime is a minimal, appliance-like Linux operating system built for retro handh
 # Run fast static checks and package verification
 task validate
 
-# Build kernel + rootfs components for H700
-task components BOARD=h700
+# Build flashable SD card image (defaults to BOARD=h700)
+task build
 
-# Build bootable SD card image
-task image BOARD=h700
+# Build for a specific target board (h700 | rk3566)
+task build BOARD=rk3566
+
+# Clean build outputs
+task clean
 ```
