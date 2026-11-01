@@ -43,29 +43,8 @@ jobs:
       - name: Fetch tags
         run: git fetch --force --tags origin
 
-      - name: Install go-task
-        uses: arduino/setup-task@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: 3.53.1
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: false
-
-      - name: Install golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
-
-      - name: Install shellcheck
-        run: |
-          set -euo pipefail
-          ver=0.10.0
-          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${ver}/shellcheck-v${ver}.linux.aarch64.tar.xz" \
-            | sudo tar -xJ --strip-components=1 -C /usr/local/bin shellcheck-v${ver}/shellcheck
-          shellcheck --version
+      - name: Setup Tools via Mise
+        uses: jdx/mise-action@v2
 
       - name: Validate
         run: task validate
@@ -86,17 +65,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install go-task
-        uses: arduino/setup-task@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: 3.53.1
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: false
+      - name: Setup Tools via Mise
+        uses: jdx/mise-action@v2
 
       - name: Free disk space
         run: |
