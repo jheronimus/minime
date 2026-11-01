@@ -361,7 +361,7 @@ func (m *Monitor) listenEventDevice(path string) {
 				}
 				cur := m.Volume()
 				m.SetVolume(cur + step)
-			} else {
+			} else if ev.Value <= 1 {
 				handleEvdevKey(ev.Code, ev.Value != 0)
 			}
 		}

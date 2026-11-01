@@ -76,7 +76,7 @@ func loadCore(coreFilePath, systemDirectory, saveDirectory string) (*core, error
 	loadedCore := &core{
 		handle:      handle,
 		pixelFormat: pixelFormat0RGB1555,
-		audioBuf:    &audioBuffer{data: make([]byte, defaultAudioCapacity)},
+		audioBuf:    &audioBuffer{data: make([]byte, audioBufferCapacity)},
 		systemDir:   append([]byte(systemDirectory), 0),
 		saveDir:     append([]byte(saveDirectory), 0),
 	}
@@ -168,7 +168,7 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 	}
 
 	otoCtx, ready, err := oto.NewContext(&oto.NewContextOptions{
-		SampleRate:   sampleRate,
+		SampleRate:   outputSampleRate,
 		ChannelCount: 2,
 		Format:       oto.FormatSignedInt16LE,
 	})
@@ -180,8 +180,11 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 		return fmt.Errorf("audio device init: %w", err)
 	}
 
+	loadedCore.audioBuf.SetRates(sampleRate, outputSampleRate)
+
 	loadedCore.audioContext = otoCtx
 	player := otoCtx.NewPlayer(loadedCore.audioBuf)
+	player.SetBufferSize(outputSampleRate * 4 * 60 / 1000)
 	loadedCore.audioPlayer = player
 	loadedCore.audioPlayer.Play()
 

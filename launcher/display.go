@@ -435,7 +435,7 @@ func (d *drmDisplay) Present(rgba []byte, srcW, srcH int) error {
 			rowStart := targetY * dstPitch
 			for sx := 0; sx < srcW; sx++ {
 				sp := sx * 4
-				b, g, r, a := srcRow[sp], srcRow[sp+1], srcRow[sp+2], srcRow[sp+3]
+				r, g, b, a := srcRow[sp], srcRow[sp+1], srcRow[sp+2], srcRow[sp+3]
 				for dx := 0; dx < scale; dx++ {
 					targetX := offsetX + sx*scale + dx
 					if targetX < 0 || targetX >= dstW {
