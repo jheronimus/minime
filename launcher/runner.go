@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 	"unsafe"
@@ -231,7 +232,9 @@ func runNativeGameLoop(loadedCore *core, disp Display) error {
 						loadedCore.audioPlayer.Play()
 					}
 				case EventVolumeChanged:
-					if loadedCore.audioPlayer != nil {
+					// Hardware ALSA mixer controls volume directly on Linux.
+					// On non-Linux (e.g. desktop simulator), scale the player volume.
+					if runtime.GOOS != "linux" && loadedCore.audioPlayer != nil {
 						if vol, ok := ev.Data.(int); ok {
 							loadedCore.audioPlayer.SetVolume(float64(vol) / 100.0)
 						}
@@ -375,7 +378,7 @@ func (loadedCore *core) Update() error {
 					loadedCore.audioPlayer.Play()
 				}
 			case EventVolumeChanged:
-				if loadedCore.audioPlayer != nil {
+				if runtime.GOOS != "linux" && loadedCore.audioPlayer != nil {
 					if vol, ok := ev.Data.(int); ok {
 						loadedCore.audioPlayer.SetVolume(float64(vol) / 100.0)
 					}

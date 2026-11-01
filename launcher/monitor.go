@@ -105,6 +105,7 @@ func NewMonitor() (*Monitor, error) {
 	m.probeDisplay()
 	m.probeBacklight()
 	m.probeBattery()
+	m.probeAudio()
 
 	go m.pollSysfsLoop()
 	go m.watchInputEvents()
@@ -275,6 +276,36 @@ func (m *Monitor) probeBattery() {
 			Type: EventBatteryChanged,
 			Data: m.State(),
 		})
+	}
+}
+
+func (m *Monitor) probeAudio() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	// Try reading mixer volume from traits or common ALSA controls
+	mixerControls := []string{"Line Out", "Master", "Playback", "Speaker"}
+	for _, ctrl := range mixerControls {
+		out, err := exec.Command("amixer", "sget", ctrl).Output()
+		if err != nil {
+			continue
+		}
+		// Look for [XX%] pattern in amixer output
+		str := string(out)
+		idx := strings.Index(str, "[")
+		if idx != -1 {
+			end := strings.Index(str[idx:], "%]")
+			if end != -1 {
+				valStr := str[idx+1 : idx+end]
+				if val, err := strconv.Atoi(valStr); err == nil && val >= 0 && val <= 100 {
+					m.updateState(func(s *SystemState) {
+						s.Volume = val
+					})
+					return
+				}
+			}
+		}
 	}
 }
 
