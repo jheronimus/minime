@@ -2,9 +2,9 @@
 #
 # Leaf makefile behind Taskfile.
 # Builds the Alpine foundation for retro handhelds:
-#   - components: kernel, DTBs, rootfs (system.erofs + initramfs.img)
-#   - image: flashable SD card image via genimage
-#   - builder: builder container
+#   - build: compiles kernel + rootfs and packages flashable SD card image
+#   - builder: ensures the builder container is ready (pull or local build)
+#   - clean: removes built outputs
 
 ALPINE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MINIME_ROOT := $(abspath $(ALPINE_DIR)/..)
@@ -50,27 +50,16 @@ define in_container
 		$(MOUNTS) $(CONTAINER_ENV) $(BUILDER_IMAGE) sh -c "$(1)"
 endef
 
-.PHONY: help components image builder clean
+.PHONY: build builder clean
 
-help:
-	@printf '%s\n' \
-		"Minime Alpine foundation (normally invoked as: task <name>):" \
-		"" \
-		"  components  Build the kernel and rootfs for BOARD" \
-		"  image       Package the flashable .img.zst for BOARD" \
-		"  builder     Build the builder image locally" \
-		"  clean       Remove built outputs"
-
-components:
+build: builder
 	$(call in_container,BOARD=$(BOARD) ALPINE_DIR=/minime/alpine MINIME_ROOT=/minime \
-		/minime/alpine/scripts/build.sh components)
-
-image:
-	$(call in_container,/minime/alpine/image/build.sh \
-		--board $(BOARD) \
-		--input-dir /minime/alpine/out/$(BOARD) \
-		--output-dir /minime/alpine/out/$(BOARD) \
-		--payload-dir /minime/releases)
+		/minime/alpine/scripts/build.sh components && \
+		/minime/alpine/image/build.sh \
+			--board $(BOARD) \
+			--input-dir /minime/alpine/out/$(BOARD) \
+			--output-dir /minime/alpine/out/$(BOARD) \
+			--payload-dir /minime/releases)
 
 builder:
 	@if [ -z "$$FORCE_BUILD_CONTAINER" ] && $(PODMAN_CMD) image inspect $(BUILDER_IMAGE) >/dev/null 2>&1; then \

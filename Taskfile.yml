@@ -1,70 +1,28 @@
 # Taskfile for Minime (Alpine OS Foundation).
-#
-# The entry point for build and validation tasks.
-# Modelled on Minime's original recipe structure, targeting Alpine + Panfrost.
 
 version: '3'
 
 vars:
-  BOARDS: 'h700 rk3566'
-  BOARDS_1: 'h700'
-  MAKE: make
+  DEFAULT_BOARD: 'h700'
 
 tasks:
   default:
-    desc: List available tasks
-    silent: true
+    desc: Build the flashable image for default board (h700)
     cmds:
-      - task --list
+      - task: build
 
-  # ── Boards ────────────────────────────────────────────────────────────────
-
-  boards:
-    desc: List supported boards and the DTBs each one must ship
+  build:
+    desc: Build flashable SD card image (BOARD=h700|rk3566)
+    vars:
+      BOARD: '{{.BOARD | default .DEFAULT_BOARD}}'
     cmds:
-      - |
-        set -eu
-        for b in {{.BOARDS}}; do
-          echo "board: $b"
-          ./alpine/boards/gentraits.sh dtbs "$b" | sed 's/^/  dtb /'
-        done
-
-  devices:
-    desc: List every device in the trait registry, per board
-    cmds:
-      - |
-        set -eu
-        for b in {{.BOARDS}}; do
-          echo "board: $b"
-          for f in alpine/boards/$b/traits/devices/*.ini; do
-            [ -f "$f" ] || continue
-            id=$(sed -n 's/^device_id=//p' "$f" | head -n1)
-            model=$(sed -n 's/^device_model=//p' "$f" | head -n1)
-            parent=$(sed -n 's/^parent=//p' "$f" | head -n1)
-            [ -z "$parent" ] || parent=" (inherits $parent)"
-            printf '  %-16s %s%s\n' "$id" "$model" "$parent"
-          done
-        done
-
-  # ── Validation ────────────────────────────────────────────────────────────
+      - make -C alpine build BOARD={{.BOARD}}
 
   validate:
     desc: Run fast static checks (pre-push gate)
-    deps: [check-boards, check-packages, check-shell]
-
-  check-packages:
-    desc: Verify every Alpine package name this project installs really exists
-    cmds:
-      - ./alpine/boards/check-packages.sh
-
-  check-boards:
-    desc: Validate trait registry, kernel configs and firmware blobs
     cmds:
       - ./alpine/boards/check-boards.sh
-
-  check-shell:
-    desc: Shellcheck the scripts this repo owns
-    cmds:
+      - ./alpine/boards/check-packages.sh
       - |
         set -eu
         shellcheck -s sh \
@@ -76,62 +34,7 @@ tasks:
           alpine/scripts/system-image.sh \
           alpine/image/build.sh
 
-  # ── OS Image Build ────────────────────────────────────────────────────────
-
-  builder:
-    desc: Build the Alpine builder container image locally
-    cmds:
-      - '{{.MAKE}} -C alpine builder'
-
-  components:
-    desc: Build the kernel and rootfs for a board (BOARD=h700|rk3566)
-    vars:
-      BOARD: '{{.BOARD | default .BOARDS_1}}'
-    cmds:
-      - |
-        set -eu
-        echo "board: {{.BOARD}}"
-        {{.MAKE}} -C alpine components BOARD={{.BOARD}}
-
-  image:
-    desc: Package the flashable .img.zst (BOARD=h700|rk3566)
-    vars:
-      BOARD: '{{.BOARD | default .BOARDS_1}}'
-    cmds:
-      - |
-        set -eu
-        echo "board: {{.BOARD}}"
-        {{.MAKE}} -C alpine image BOARD={{.BOARD}}
-
-  build:
-    desc: Build components and packaging image for a board (BOARD=h700|rk3566)
-    cmds:
-      - |
-        set -eu
-        skip_builder=0
-        for arg in "$@"; do
-          case "$arg" in
-          --skip-builder) skip_builder=1 ;;
-          *) echo "unknown option: $arg" >&2; exit 2 ;;
-          esac
-        done
-
-        if [ "$skip_builder" -eq 0 ]; then
-          echo "==> [1/3] builder container"
-          {{.MAKE}} -C alpine builder
-        else
-          echo "==> [1/3] builder container (skipped)"
-        fi
-
-        for b in {{if .BOARD}}{{.BOARD}}{{else}}{{.BOARDS}}{{end}}; do
-          echo "==> [2/3] foundation: kernel + rootfs ($b)"
-          {{.MAKE}} -C alpine components BOARD="$b"
-
-          echo "==> [3/3] image: packaging ($b)"
-          {{.MAKE}} -C alpine image BOARD="$b"
-        done
-
   clean:
     desc: Clean build outputs
     cmds:
-      - '{{.MAKE}} -C alpine clean'
+      - make -C alpine clean
