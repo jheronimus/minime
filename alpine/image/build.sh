@@ -183,13 +183,6 @@ if [ -d "${MINIME_ROOT}/.cache/cores" ]; then
 	cp -a "${MINIME_ROOT}/.cache/cores/." "${STAGE_DIR}/.cache/cores/"
 fi
 
-cat <<'EOF' >"${STAGE_DIR}/.minime/ui.env"
-UI_NAME="Minime"
-UI_BIN="/usr/bin/minime"
-UI_PROCESSES="minime"
-UI_STOP_CMD="killall -9 minime"
-EOF
-
 MINIME_COMMIT="$(git -C "$MINIME_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 cat <<JSON >"${STAGE_DIR}/.minime/manifest.json"
 {

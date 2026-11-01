@@ -258,7 +258,9 @@ fi
 log "installing ${SIZE} bytes (${rem_target:-?}/${rem_ui:-?} ${rem_min:-?}/${rem_ui_commit:-?})..."
 
 # Stop the UI so it is not running from files we are about to replace.
-/etc/init.d/ui stop >/dev/null 2>&1 || true
+# Stop launcher before updating
+/etc/init.d/minime stop >/dev/null 2>&1 || true
+killall -9 minime 2>/dev/null || true
 killall -9 minui.elf minarch.elf keymon.elf alliumd muxfrontend 2>/dev/null || true
 sleep 1
 

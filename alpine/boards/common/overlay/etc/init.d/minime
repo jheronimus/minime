@@ -1,0 +1,57 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# minime: launch the Minime launcher service.
+
+description="Minime Launcher"
+
+depend() {
+	after modules fb-unblank localmount udev
+}
+
+start() {
+	ebegin "Starting Minime"
+
+	dmesg -n 1 2>/dev/null || true
+
+	/usr/share/minime/scripts/audio.sh start-interface speakers 2>/dev/null || true
+
+	# Unmute and max hardware master channels on boot
+	amixer -q sset 'Line Out' 100% unmute >/dev/null 2>&1 || true
+	amixer -q sset 'Master' 100% unmute >/dev/null 2>&1 || true
+	amixer -q sset 'Speaker' unmute >/dev/null 2>&1 || true
+	amixer -q sset 'DAC' 100% unmute >/dev/null 2>&1 || true
+
+	export HOME=/mnt/sdcard
+	export XDG_RUNTIME_DIR=/run
+	export PATH="/mnt/sdcard/.ui/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"
+
+	BIN="/mnt/sdcard/minime"
+	if [ ! -x "$BIN" ] && [ -x "/usr/bin/minime" ]; then
+		BIN="/usr/bin/minime"
+	fi
+
+	if [ ! -x "$BIN" ]; then
+		eend 1 "No minime binary found"
+		return 1
+	fi
+
+	( cd /mnt/sdcard 2>/dev/null || true; "$BIN" </dev/console >/tmp/minime.log 2>&1 ) &
+	echo $! >/run/minime.pid
+
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping Minime"
+
+	if [ -f /run/minime.pid ]; then
+		pid="$(cat /run/minime.pid)"
+		pkill -P "$pid" 2>/dev/null || true
+		kill "$pid" 2>/dev/null || true
+		rm -f /run/minime.pid
+	fi
+
+	killall -9 minime 2>/dev/null || true
+
+	eend 0
+}
