@@ -109,19 +109,6 @@ cp -a "${FSCK_FAT}" "${INITRD_STAGE}/sbin/fsck.fat"
 cp -d "${TARGET_DIR}/lib/ld-"*.so* "${INITRD_STAGE}/lib/" 2>/dev/null || true
 cp -d "${TARGET_DIR}/lib/libc."* "${INITRD_STAGE}/lib/" 2>/dev/null || true
 
-# Optional: bootsplash reads the trait registry to size the framebuffer. We do
-# not build it (Minime has no LICENSE file, so we do not vendor its source), so
-# initramfs-init.sh's `if [ -x ... ]` guard simply skips it.
-if [ -x "${TARGET_DIR}/usr/bin/bootsplash" ]; then
-	mkdir -p "${INITRD_STAGE}/usr/bin"
-	cp -a "${TARGET_DIR}/usr/bin/bootsplash" "${INITRD_STAGE}/usr/bin/bootsplash"
-fi
-
-if [ -d "${TARGET_DIR}/usr/share/minime/traits" ]; then
-	mkdir -p "${INITRD_STAGE}/usr/share/nextui"
-	cp -a "${TARGET_DIR}/usr/share/minime/traits" "${INITRD_STAGE}/usr/share/minime/"
-fi
-
 if [ -f "${ALPINE_DIR}/boards/common/initramfs-init.sh" ]; then
 	cp -f "${ALPINE_DIR}/boards/common/initramfs-init.sh" "${INITRD_STAGE}/init"
 	chmod +x "${INITRD_STAGE}/init"

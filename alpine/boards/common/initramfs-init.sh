@@ -56,11 +56,6 @@ finish_card_mount() {
 	rm -f /mnt/sdcard/FSCK*.REC /mnt/sdcard/fsck*.rec 2>/dev/null || true
 	log_card "[INITRAMFS] Mounted MINIME FAT partition on $CARD_DEV"
 
-	if [ -z "$BOOTSPLASH_PID" ] && [ -x /usr/bin/bootsplash ]; then
-		/usr/bin/bootsplash --persist &
-		BOOTSPLASH_PID=$!
-	fi
-
 	return 0
 }
 

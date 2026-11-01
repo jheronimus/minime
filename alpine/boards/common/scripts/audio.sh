@@ -26,20 +26,8 @@ set -eu
 INTERFACES="speakers headphones bluetooth hdmi"
 ASOUNDRC_FILE="/mnt/sdcard/.asoundrc"
 RUN_ASOUNDRC="/run/asoundrc"
-TRAITS_FILE="/mnt/sdcard/.minime/traits"
-
-get_trait() {
-	key="$1"
-	[ -f "$TRAITS_FILE" ] || return 0
-	grep "^${key}=" "$TRAITS_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2 | tr -d '\r' || true
-}
 
 get_codec_card() {
-	audio_card=$(get_trait audio_card)
-	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
-		echo "$audio_card"
-		return
-	fi
 	if [ -f /proc/asound/cards ]; then
 		card=$(grep -v -i hdmi /proc/asound/cards 2>/dev/null | grep -o '\[.*\]' | head -n 1 | tr -d '[] ' || true)
 		if [ -n "$card" ]; then
@@ -66,11 +54,6 @@ get_connected_bt_sink() {
 }
 
 get_hdmi_card() {
-	card=$(get_trait audio_hdmi_card)
-	if [ -n "$card" ]; then
-		echo "$card"
-		return
-	fi
 	if [ -f /proc/asound/cards ]; then
 		grep -i hdmi /proc/asound/cards 2>/dev/null | grep -o '\[.*\]' | head -n 1 | tr -d '[] ' || true
 	fi

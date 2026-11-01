@@ -32,7 +32,7 @@ read_ui_env() {
 # --- OpenRC service ---
 
 depend() {
-	after modules fb-unblank traits gpudriver localmount udev
+	after modules fb-unblank localmount udev
 }
 
 start() {
@@ -44,23 +44,13 @@ start() {
 	UI_BIN=$(read_ui_env UI_BIN)
 	UI_PROCESSES=$(read_ui_env UI_PROCESSES)
 
-	audio_card=$(get_trait audio_card)
-	audio_mixer=$(get_trait audio_mixer)
-
-	# Firmware owns ALSA routing: generate the boot-time .asoundrc from traits.
 	/usr/share/minime/scripts/audio.sh start-interface speakers
 
-	if [ -n "$audio_mixer" ]; then
-		amixer sset "$audio_mixer" 100% unmute >/dev/null 2>&1 || true
-	fi
-
-	# Some codecs (sun4i/H616) keep a separate "DAC" pswitch and volume that must be
-	# unmuted and maxed for Line Out/Speaker volume to pass through.
-	if [ -n "$audio_card" ] && [ "$audio_card" != "default" ]; then
-		amixer -q -c "$audio_card" sset 'DAC' 100% unmute >/dev/null 2>&1 || true
-	else
-		amixer -q sset 'DAC' 100% unmute >/dev/null 2>&1 || true
-	fi
+	# Unmute and set common mixer controls across supported boards (H700, RK3566, RK3326)
+	amixer -q sset 'Line Out' 100% unmute >/dev/null 2>&1 || true
+	amixer -q sset 'Master' 100% unmute >/dev/null 2>&1 || true
+	amixer -q sset 'Speaker' unmute >/dev/null 2>&1 || true
+	amixer -q sset 'DAC' 100% unmute >/dev/null 2>&1 || true
 
 	export HOME=/mnt/sdcard
 	export XDG_RUNTIME_DIR=/run
