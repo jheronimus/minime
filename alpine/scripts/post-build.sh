@@ -102,4 +102,11 @@ ln -sf /run/resolv.conf "${TARGET_DIR}/etc/resolv.conf"
 #    hardware RTC is in the past (prevents OpenRC clock skew warnings).
 touch "${TARGET_DIR}/.build_time"
 
+# 7. Install Minime Go launcher if pre-built.
+MINIME_ROOT="${MINIME_ROOT:-$(cd "${ALPINE_DIR}/.." && pwd)}"
+if [ -f "${MINIME_ROOT}/build/minime-linux-arm64" ]; then
+	mkdir -p "${TARGET_DIR}/usr/bin"
+	install -m 0755 "${MINIME_ROOT}/build/minime-linux-arm64" "${TARGET_DIR}/usr/bin/minime"
+fi
+
 echo "Alpine post-build stage complete."

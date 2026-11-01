@@ -6,11 +6,13 @@ on:
     branches: ["**"]
     paths:
       - 'alpine/**'
+      - 'launcher/**'
       - 'Taskfile.yml'
       - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'alpine/**'
+      - 'launcher/**'
       - 'Taskfile.yml'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -47,6 +49,16 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           version: 3.53.1
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin
+
       - name: Install shellcheck
         run: |
           set -euo pipefail
@@ -79,6 +91,12 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           version: 3.53.1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
 
       - name: Free disk space
         run: |

@@ -15,7 +15,10 @@ tasks:
     desc: Build flashable SD card image (BOARD=h700|rk3566)
     vars:
       BOARD: '{{.BOARD | default .DEFAULT_BOARD}}'
+    deps: [fetch-cores]
     cmds:
+      - mkdir -p build
+      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o build/minime-linux-arm64 ./launcher
       - make -C alpine build BOARD={{.BOARD}}
 
   simulate:
@@ -25,6 +28,93 @@ tasks:
       - mkdir -p build
       - go build -o build/minime ./launcher
       - ./build/minime -core .cache/cores/gambatte_libretro.dylib -rom "roms/gb/compo/Tobu Tobu Girl (World) (Unl).zip"
+
+  deploy:
+    desc: Fetch image from testing release, flash to SD card, and configure Wi-Fi (reads deploy.cfg)
+    cmds:
+      - |
+        set -eu
+        if [ ! -f deploy.cfg ]; then
+          echo "ERROR: deploy.cfg not found."
+          echo "Copy deploy_sample.cfg to deploy.cfg and configure DISK, BOARD, and Wi-Fi credentials."
+          exit 1
+        fi
+
+        DISK="$(grep -E '^DISK=' deploy.cfg | cut -d= -f2- | tr -d '"\r')"
+        BOARD="$(grep -E '^BOARD=' deploy.cfg | cut -d= -f2- | tr -d '"\r')"
+        WIFI_SSID="$(grep -E '^WIFI_SSID=' deploy.cfg | cut -d= -f2- | tr -d '"\r')"
+        WIFI_PSK="$(grep -E '^WIFI_PSK=' deploy.cfg | cut -d= -f2- | tr -d '"\r')"
+
+        [ -n "$BOARD" ] || BOARD="{{.DEFAULT_BOARD}}"
+
+        if [ -z "$DISK" ]; then
+          echo "ERROR: DISK is not specified in deploy.cfg."
+          exit 1
+        fi
+
+        mkdir -p build/downloads
+        IMAGE_NAME="minime-alpine-${BOARD}.img.zst"
+        IMAGE="build/downloads/${IMAGE_NAME}"
+
+        echo "Fetching latest ${IMAGE_NAME} from GitHub testing release..."
+        if command -v gh >/dev/null 2>&1; then
+          gh release download testing --repo jheronimus/minime --pattern "${IMAGE_NAME}" --dir build/downloads --clobber
+        else
+          curl -fL --retry 3 -o "$IMAGE" "https://github.com/jheronimus/minime/releases/download/testing/${IMAGE_NAME}"
+        fi
+
+        if [ ! -f "$IMAGE" ]; then
+          echo "ERROR: Failed to download ${IMAGE} from testing release."
+          exit 1
+        fi
+
+        echo "Deploying ${IMAGE} to ${DISK}..."
+        if [ "$(uname)" = "Darwin" ]; then
+          diskutil unmountDisk "$DISK" 2>/dev/null || true
+          zstd -dc "$IMAGE" | sudo dd of="$DISK" bs=4m status=progress
+          sync
+          sleep 2
+
+          RAW_NUM="$(echo "$DISK" | sed -E 's/.*disk([0-9]+).*/\1/')"
+          PART="/dev/disk${RAW_NUM}s1"
+          echo "Mounting ${PART} to configure Wi-Fi..."
+          diskutil mount "$PART" || true
+
+          MOUNT_POINT="/Volumes/minime"
+          if [ ! -d "$MOUNT_POINT" ]; then
+            MOUNT_POINT="$(mount | grep "${PART}" | awk '{print $3}' || true)"
+          fi
+
+          if [ -n "$MOUNT_POINT" ] && [ -d "$MOUNT_POINT" ]; then
+            echo "Writing wifi.cfg to ${MOUNT_POINT}..."
+            printf 'SSID="%s"\nPassphrase="%s"\n' "${WIFI_SSID}" "${WIFI_PSK}" > "${MOUNT_POINT}/wifi.cfg"
+            mkdir -p "${MOUNT_POINT}/.minime/config/wifi"
+            echo 1 > "${MOUNT_POINT}/.minime/config/wifi/enabled"
+            sync
+            diskutil unmountDisk "$DISK"
+            echo "Deploy complete! SD card is ready to boot on ${BOARD}."
+          else
+            echo "WARNING: Could not automatically mount ${PART}. Please manually write wifi.cfg to SD card."
+          fi
+        else
+          sudo umount "${DISK}"* 2>/dev/null || true
+          zstd -dc "$IMAGE" | sudo dd of="$DISK" bs=4M status=progress conv=fsync
+          sync
+          sleep 2
+          PART="${DISK}1"
+          [ -b "$PART" ] || PART="${DISK}p1"
+          TMPMNT="$(mktemp -d)"
+          if sudo mount "$PART" "$TMPMNT"; then
+            echo "Writing wifi.cfg to SD card..."
+            printf 'SSID="%s"\nPassphrase="%s"\n' "${WIFI_SSID}" "${WIFI_PSK}" | sudo tee "${TMPMNT}/wifi.cfg" >/dev/null
+            sudo mkdir -p "${TMPMNT}/.minime/config/wifi"
+            echo 1 | sudo tee "${TMPMNT}/.minime/config/wifi/enabled" >/dev/null
+            sync
+            sudo umount "$TMPMNT"
+            rmdir "$TMPMNT"
+            echo "Deploy complete! SD card is ready to boot on ${BOARD}."
+          fi
+        fi
 
   validate:
     desc: Validate Go and shell code (formatting, vet, tests, linters, shellcheck, board checks)

@@ -174,6 +174,15 @@ else
 	log_stage "no payload zip found; staging base OS configuration"
 fi
 
+if [ -d "${MINIME_ROOT}/roms" ]; then
+	mkdir -p "${STAGE_DIR}/roms"
+	cp -a "${MINIME_ROOT}/roms/." "${STAGE_DIR}/roms/"
+fi
+if [ -d "${MINIME_ROOT}/.cache/cores" ]; then
+	mkdir -p "${STAGE_DIR}/.cache/cores"
+	cp -a "${MINIME_ROOT}/.cache/cores/." "${STAGE_DIR}/.cache/cores/"
+fi
+
 cat <<'EOF' >"${STAGE_DIR}/.minime/ui.env"
 UI_NAME="Minime"
 UI_BIN="/usr/bin/minime"
