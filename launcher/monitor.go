@@ -21,6 +21,8 @@ const (
 	keyPower      = 116
 	keyVolumeUp   = 115
 	keyVolumeDown = 114
+	keyMenu       = 316
+	keyMenuAlt    = 139
 	swLid         = 0x00
 )
 
@@ -41,6 +43,7 @@ const (
 	EventBatteryChanged EventType = "battery_changed"
 	EventHDMIHotplug    EventType = "hdmi_hotplug"
 	EventVolumeChanged  EventType = "volume_changed"
+	EventMenuPressed    EventType = "menu_pressed"
 )
 
 // Event represents an asynchronous notification from hardware monitoring.
@@ -349,6 +352,8 @@ func (m *Monitor) listenEventDevice(path string) {
 		if ev.Type == evKey {
 			if ev.Code == keyPower && ev.Value == 1 {
 				m.emit(Event{Type: EventPowerSuspend, Data: "power_key"})
+			} else if (ev.Code == keyMenu || ev.Code == keyMenuAlt) && ev.Value == 1 {
+				m.emit(Event{Type: EventMenuPressed, Data: "menu_key"})
 			} else if (ev.Code == keyVolumeUp || ev.Code == keyVolumeDown) && (ev.Value == 1 || ev.Value == 2) {
 				step := 5
 				if ev.Code == keyVolumeDown {

@@ -42,11 +42,21 @@ func TestMonitorEvents(t *testing.T) {
 	}()
 
 	mon.emit(Event{Type: EventPowerSuspend, Data: "test"})
+	mon.emit(Event{Type: EventMenuPressed, Data: "menu_key"})
 
 	select {
 	case ev := <-mon.Events():
 		if ev.Type != EventPowerSuspend {
 			t.Errorf("expected EventPowerSuspend, got %v", ev.Type)
+		}
+	default:
+		t.Errorf("expected event on channel")
+	}
+
+	select {
+	case ev := <-mon.Events():
+		if ev.Type != EventMenuPressed {
+			t.Errorf("expected EventMenuPressed, got %v", ev.Type)
 		}
 	default:
 		t.Errorf("expected event on channel")
