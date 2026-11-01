@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -15,10 +16,12 @@ import (
 
 // Linux evdev constants
 const (
-	evKey    = 0x01
-	evSw     = 0x05
-	keyPower = 116
-	swLid    = 0x00
+	evKey         = 0x01
+	evSw          = 0x05
+	keyPower      = 116
+	keyVolumeUp   = 115
+	keyVolumeDown = 114
+	swLid         = 0x00
 )
 
 type linuxInputEvent struct {
@@ -37,6 +40,7 @@ const (
 	EventPowerResume    EventType = "resume"
 	EventBatteryChanged EventType = "battery_changed"
 	EventHDMIHotplug    EventType = "hdmi_hotplug"
+	EventVolumeChanged  EventType = "volume_changed"
 )
 
 // Event represents an asynchronous notification from hardware monitoring.
@@ -56,6 +60,7 @@ type SystemState struct {
 	DisplayOrientation int // 0, 90, 180, 270 degrees
 	Brightness         int
 	MaxBrightness      int
+	Volume             int // 0-100
 }
 
 // Monitor coordinates hardware discovery and dynamic event monitoring.
@@ -83,6 +88,7 @@ func NewMonitor() (*Monitor, error) {
 			DisplayOrientation: 0,
 			Brightness:         10,
 			MaxBrightness:      10,
+			Volume:             100,
 		},
 	}
 
@@ -343,6 +349,13 @@ func (m *Monitor) listenEventDevice(path string) {
 		if ev.Type == evKey {
 			if ev.Code == keyPower && ev.Value == 1 {
 				m.emit(Event{Type: EventPowerSuspend, Data: "power_key"})
+			} else if (ev.Code == keyVolumeUp || ev.Code == keyVolumeDown) && (ev.Value == 1 || ev.Value == 2) {
+				step := 5
+				if ev.Code == keyVolumeDown {
+					step = -5
+				}
+				cur := m.Volume()
+				m.SetVolume(cur + step)
 			} else {
 				handleEvdevKey(ev.Code, ev.Value != 0)
 			}
@@ -352,6 +365,34 @@ func (m *Monitor) listenEventDevice(path string) {
 
 func errorsIs(err, target error) bool {
 	return strings.Contains(err.Error(), target.Error())
+}
+
+// Volume returns the current audio volume percentage (0-100).
+func (m *Monitor) Volume() int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.state.Volume
+}
+
+// SetVolume sets the audio volume percentage (0-100) and syncs to ALSA mixer.
+func (m *Monitor) SetVolume(value int) {
+	if value < 0 {
+		value = 0
+	}
+	if value > 100 {
+		value = 100
+	}
+	m.updateState(func(s *SystemState) {
+		s.Volume = value
+	})
+	m.emit(Event{Type: EventVolumeChanged, Data: value})
+
+	if runtime.GOOS == "linux" {
+		go func(v int) {
+			_ = exec.Command("amixer", "-q", "sset", "Master", fmt.Sprintf("%d%%", v)).Run()
+			_ = exec.Command("amixer", "-q", "sset", "Line Out", fmt.Sprintf("%d%%", v)).Run()
+		}(value)
+	}
 }
 
 // SetBrightness adjusts the display backlight.

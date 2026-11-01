@@ -22,6 +22,11 @@ func TestMonitorState(t *testing.T) {
 		t.Logf("SetBrightness returned: %v", err)
 	}
 
+	mon.SetVolume(80)
+	if mon.Volume() != 80 {
+		t.Errorf("expected volume 80, got %d", mon.Volume())
+	}
+
 	if err := mon.Suspend(); err != nil {
 		t.Logf("Suspend returned: %v", err)
 	}

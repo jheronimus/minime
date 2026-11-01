@@ -11,9 +11,9 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/ebitengine/oto/v3"
 	"github.com/ebitengine/purego"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
 // Types, constants and builders
@@ -54,8 +54,8 @@ type core struct {
 	romData []byte
 	romPath []byte
 
-	audioContext *audio.Context
-	audioPlayer  *audio.Player
+	audioContext *oto.Context
+	audioPlayer  *oto.Player
 	coreImage    *ebiten.Image
 	fps          float64
 
@@ -167,11 +167,21 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 		sampleRate = 44100
 	}
 
-	loadedCore.audioContext = audio.NewContext(sampleRate)
-	player, err := loadedCore.audioContext.NewPlayer(loadedCore.audioBuf)
+	otoCtx, ready, err := oto.NewContext(&oto.NewContextOptions{
+		SampleRate:   sampleRate,
+		ChannelCount: 2,
+		Format:       oto.FormatSignedInt16LE,
+	})
 	if err != nil {
-		return fmt.Errorf("create audio player: %w", err)
+		return fmt.Errorf("create audio context: %w", err)
 	}
+	<-ready
+	if err := otoCtx.Err(); err != nil {
+		return fmt.Errorf("audio device init: %w", err)
+	}
+
+	loadedCore.audioContext = otoCtx
+	player := otoCtx.NewPlayer(loadedCore.audioBuf)
 	loadedCore.audioPlayer = player
 	loadedCore.audioPlayer.Play()
 
@@ -208,13 +218,20 @@ func runNativeGameLoop(loadedCore *core, disp Display) error {
 		if loadedCore.monitor != nil {
 			select {
 			case ev := <-loadedCore.monitor.Events():
-				if ev.Type == EventPowerSuspend {
+				switch ev.Type {
+				case EventPowerSuspend:
 					if loadedCore.audioPlayer != nil {
 						loadedCore.audioPlayer.Pause()
 					}
 					_ = loadedCore.monitor.Suspend()
 					if loadedCore.audioPlayer != nil {
 						loadedCore.audioPlayer.Play()
+					}
+				case EventVolumeChanged:
+					if loadedCore.audioPlayer != nil {
+						if vol, ok := ev.Data.(int); ok {
+							loadedCore.audioPlayer.SetVolume(float64(vol) / 100.0)
+						}
 					}
 				}
 			default:
@@ -345,13 +362,20 @@ func (loadedCore *core) Update() error {
 	if loadedCore.monitor != nil {
 		select {
 		case ev := <-loadedCore.monitor.Events():
-			if ev.Type == EventPowerSuspend {
+			switch ev.Type {
+			case EventPowerSuspend:
 				if loadedCore.audioPlayer != nil {
 					loadedCore.audioPlayer.Pause()
 				}
 				_ = loadedCore.monitor.Suspend()
 				if loadedCore.audioPlayer != nil {
 					loadedCore.audioPlayer.Play()
+				}
+			case EventVolumeChanged:
+				if loadedCore.audioPlayer != nil {
+					if vol, ok := ev.Data.(int); ok {
+						loadedCore.audioPlayer.SetVolume(float64(vol) / 100.0)
+					}
 				}
 			}
 		default:
