@@ -389,8 +389,16 @@ func (m *Monitor) SetVolume(value int) {
 
 	if runtime.GOOS == "linux" {
 		go func(v int) {
-			_ = exec.Command("amixer", "-q", "sset", "Master", fmt.Sprintf("%d%%", v)).Run()
-			_ = exec.Command("amixer", "-q", "sset", "Line Out", fmt.Sprintf("%d%%", v)).Run()
+			if v > 0 {
+				_ = exec.Command("amixer", "-q", "sset", "DAC", "unmute").Run()
+				_ = exec.Command("amixer", "-q", "sset", "Speaker", "unmute").Run()
+				_ = exec.Command("amixer", "-q", "sset", "Master", fmt.Sprintf("%d%%", v), "unmute").Run()
+				_ = exec.Command("amixer", "-q", "sset", "Line Out", fmt.Sprintf("%d%%", v), "unmute").Run()
+			} else {
+				_ = exec.Command("amixer", "-q", "sset", "Speaker", "mute").Run()
+				_ = exec.Command("amixer", "-q", "sset", "Master", "mute").Run()
+				_ = exec.Command("amixer", "-q", "sset", "Line Out", "mute").Run()
+			}
 		}(value)
 	}
 }
