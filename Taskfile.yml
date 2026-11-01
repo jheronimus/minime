@@ -86,12 +86,13 @@ tasks:
           fi
 
           if [ -n "$MOUNT_POINT" ] && [ -d "$MOUNT_POINT" ]; then
+            touch "${MOUNT_POINT}/.metadata_never_index" 2>/dev/null || true
             echo "Writing wifi.cfg to ${MOUNT_POINT}..."
             printf 'SSID="%s"\nPassphrase="%s"\n' "${WIFI_SSID}" "${WIFI_PSK}" > "${MOUNT_POINT}/wifi.cfg"
             mkdir -p "${MOUNT_POINT}/.minime/config/wifi"
             echo 1 > "${MOUNT_POINT}/.minime/config/wifi/enabled"
             sync
-            diskutil unmountDisk "$DISK"
+            diskutil unmountDisk force "$DISK" 2>/dev/null || diskutil eject "$DISK" 2>/dev/null || true
             echo "Deploy complete! SD card is ready to boot on ${BOARD}."
           else
             echo "WARNING: Could not automatically mount ${PART}. Please manually write wifi.cfg to SD card."
