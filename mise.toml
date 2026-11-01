@@ -1,0 +1,4 @@
+[tools]
+task = "latest"
+shellcheck = "latest"
+go = "1.23.0"

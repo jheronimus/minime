@@ -1,0 +1,212 @@
+#!/sbin/openrc-run
+# shellcheck disable=SC2034
+# wifi: wpa_supplicant daemon for NextUI.
+# Communicates over /var/run/wpa_supplicant control socket (used by NextUI generic_wifi.c).
+# Manages wlan0 and runs udhcpc for DHCP.
+# Config persists on FAT at /mnt/sdcard/.minime/config/wifi/wpa_supplicant.conf.
+
+description="NextUI Wi-Fi (wpa_supplicant)"
+
+# --- Configuration ---
+wifi_interface="wlan0"
+wpa_sock_dir="/var/run/wpa_supplicant"
+wpa_conf_dir="/mnt/sdcard/.minime/config/wifi"
+wpa_conf_file="${wpa_conf_dir}/wpa_supplicant.conf"
+wifi_config_file="/mnt/sdcard/.minime/config/wifi.cfg"
+[ -f "${wifi_config_file}" ] || [ ! -f /mnt/sdcard/wifi.cfg ] || wifi_config_file="/mnt/sdcard/wifi.cfg"
+wpa_pidfile="/run/wpa_supplicant.pid"
+udhcpc_pidfile="/run/udhcpc.${wifi_interface}.pid"
+diagnostic_logfile="/tmp/wifi.diagnostics"
+
+wifi_driver_wait_seconds=5
+
+# --- Helper functions ---
+
+log_boot() {
+	/usr/share/minime/scripts/log-boot.sh WIFI "$@" 2>/dev/null || true
+}
+
+ensure_wpa_conf() {
+	mkdir -p "${wpa_conf_dir}"
+	if [ ! -f "${wpa_conf_file}" ]; then
+		{
+			printf 'ctrl_interface=%s\n' "${wpa_sock_dir}"
+			printf 'update_config=1\n'
+			printf 'disable_scan_offload=1\n'
+			printf 'wowlan_triggers=any\n\n'
+		} >"${wpa_conf_file}"
+	fi
+
+	# Import credentials from wifi.cfg if present
+	if [ -f "${wifi_config_file}" ]; then
+		ssid=""
+		psk=""
+		while IFS='=' read -r key val || [ -n "$key" ]; do
+			[ -n "$key" ] || continue
+			key=$(printf '%s' "$key" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+			val=$(printf '%s' "$val" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^"//;s/"$//')
+			case "$key" in
+			\#*) continue ;;
+			SSID)
+				if [ -n "$ssid" ]; then
+					append_network_if_missing "$ssid" "$psk"
+					psk=""
+				fi
+				ssid="$val"
+				;;
+			Passphrase) psk="$val" ;;
+			esac
+		done <"${wifi_config_file}"
+		if [ -n "$ssid" ]; then
+			append_network_if_missing "$ssid" "$psk"
+		fi
+	fi
+}
+
+append_network_if_missing() {
+	_ssid="$1"
+	_psk="$2"
+	[ -n "$_ssid" ] || return 0
+	if grep -Fq "ssid=\"${_ssid}\"" "${wpa_conf_file}" 2>/dev/null; then
+		return 0
+	fi
+	{
+		printf '\nnetwork={\n'
+		printf '\tssid="%s"\n' "${_ssid}"
+		if [ -n "$_psk" ]; then
+			printf '\tpsk="%s"\n' "${_psk}"
+		else
+			printf '\tkey_mgmt=NONE\n'
+		fi
+		printf '}\n'
+	} >>"${wpa_conf_file}"
+}
+
+check_wifi_hardware() {
+	i=0
+	if command -v rfkill >/dev/null 2>&1; then
+		rfkill unblock wifi >/dev/null 2>&1 || true
+	fi
+	while [ "${i}" -lt "${wifi_driver_wait_seconds}" ]; do
+		if ip link show "${wifi_interface}" >/dev/null 2>&1; then
+			return 0
+		fi
+		i=$((i + 1))
+		sleep 0.1
+	done
+	return 1
+}
+
+# --- OpenRC service ---
+
+depend() {
+	need localmount modules
+	before traits display ui
+	after fb-unblank
+}
+
+start() {
+	ebegin "Starting Wi-Fi (wpa_supplicant)"
+
+	# User-controlled enable gate (managed by NextUI settings or wifi.cfg).
+	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ] && [ ! -d /mnt/sdcard/.minime/config/wifi ]; then
+		if grep -q '^SSID=' "${wifi_config_file}" 2>/dev/null; then
+			mkdir -p /mnt/sdcard/.minime/config/wifi
+			echo 1 >/mnt/sdcard/.minime/config/wifi/enabled
+		fi
+	fi
+
+	if [ ! -f /mnt/sdcard/.minime/config/wifi/enabled ]; then
+		einfo "Wi-Fi disabled by user"
+		eend 0
+		return 0
+	fi
+
+	if ! check_wifi_hardware; then
+		eend 1 "no ${wifi_interface} interface found"
+		return 1
+	fi
+
+	mkdir -p "${wpa_sock_dir}"
+	chmod 755 "${wpa_sock_dir}"
+	ensure_wpa_conf
+
+	wpa_bin="$(command -v wpa_supplicant 2>/dev/null || echo /sbin/wpa_supplicant)"
+	if [ ! -x "${wpa_bin}" ]; then
+		wpa_bin="/usr/sbin/wpa_supplicant"
+	fi
+
+	# Start wpa_supplicant daemon
+	if ! start-stop-daemon -S -q -b -m -p "${wpa_pidfile}" \
+		-x "${wpa_bin}" -- \
+		-i "${wifi_interface}" \
+		-c "${wpa_conf_file}" \
+		-C "${wpa_sock_dir}" 2>>"${diagnostic_logfile}"; then
+		if [ -f "${wpa_pidfile}" ] && kill -0 "$(cat "${wpa_pidfile}" 2>/dev/null)" 2>/dev/null; then
+			log_boot "wpa_supplicant already running"
+		else
+			eend 1 "wpa_supplicant failed to start"
+			return 1
+		fi
+	fi
+
+	# Background worker: start udhcpc and sync NTP when connected
+	(
+		sleep 1
+		# Ensure DNS resolv.conf exists on tmpfs
+		mkdir -p /run/resolvconf
+		if [ ! -f /run/resolv.conf ]; then
+			printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' >/run/resolv.conf
+		fi
+		[ -e /run/resolvconf/resolv.conf ] || ln -sf /run/resolv.conf /run/resolvconf/resolv.conf
+
+		# Request DHCP lease in background
+		if command -v udhcpc >/dev/null 2>&1 && ! pgrep -f "udhcpc.*${wifi_interface}" >/dev/null 2>&1; then
+			udhcpc -i "${wifi_interface}" -b -p "${udhcpc_pidfile}" >/dev/null 2>&1 || true
+		fi
+
+		# Wait for IP address up to 30s
+		ticks=0
+		while [ "$ticks" -lt 60 ]; do
+			if ip -4 addr show "${wifi_interface}" 2>/dev/null | grep -q "inet "; then
+				log_boot "Wi-Fi connection established with IP"
+				if command -v ntpd >/dev/null 2>&1; then
+					killall ntpd 2>/dev/null || true
+					ntpd -p pool.ntp.org 2>/dev/null || true
+				fi
+				break
+			fi
+			ticks=$((ticks + 1))
+			sleep 0.5
+		done
+	) >/dev/null 2>&1 &
+
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping Wi-Fi"
+	if [ -f "${udhcpc_pidfile}" ]; then
+		kill "$(cat "${udhcpc_pidfile}")" >/dev/null 2>&1 || true
+		rm -f "${udhcpc_pidfile}"
+	fi
+	killall udhcpc 2>/dev/null || true
+
+	if [ -f "${wpa_pidfile}" ]; then
+		kill "$(cat "${wpa_pidfile}")" >/dev/null 2>&1 || true
+		rm -f "${wpa_pidfile}"
+	fi
+	killall wpa_supplicant 2>/dev/null || true
+
+	ip link set "${wifi_interface}" down >/dev/null 2>&1 || true
+	eend 0
+}
+
+reload() {
+	ebegin "Reloading Wi-Fi"
+	ensure_wpa_conf
+	if command -v wpa_cli >/dev/null 2>&1; then
+		wpa_cli -p "${wpa_sock_dir}" -i "${wifi_interface}" reconfigure >/dev/null 2>&1 || true
+	fi
+	eend 0
+}

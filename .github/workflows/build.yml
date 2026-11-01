@@ -1,0 +1,147 @@
+---
+name: Build & Release Minime
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - 'alpine/**'
+      - 'Taskfile.yml'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'alpine/**'
+      - 'Taskfile.yml'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      kernel:
+        description: Force a kernel rebuild
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --force --tags origin
+
+      - name: Install go-task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.53.1
+
+      - name: Install shellcheck
+        run: |
+          set -euo pipefail
+          ver=0.10.0
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${ver}/shellcheck-v${ver}.linux.aarch64.tar.xz" \
+            | sudo tar -xJ --strip-components=1 -C /usr/local/bin shellcheck-v${ver}/shellcheck
+          shellcheck --version
+
+      - name: Validate
+        run: task validate
+
+  build:
+    name: Build ${{ matrix.board }}
+    needs: validate
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [h700, rk3566]
+    env:
+      BOARD: ${{ matrix.board }}
+      FORCE_KERNEL_REBUILD: ${{ github.event.inputs.kernel == 'true' && '1' || '0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install go-task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.53.1
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+
+      - name: Restore cache
+        uses: actions/cache/restore@v4
+        id: cache-restore
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/alpine-dl
+            ~/alpine-output/${{ matrix.board }}/packages
+          key: alpine-v2-${{ matrix.board }}-${{ runner.arch }}-${{ hashFiles('alpine/**/APKBUILD', 'alpine/boards/*/tiny-*.config') }}-${{ github.run_id }}
+          restore-keys: |
+            alpine-v2-${{ matrix.board }}-${{ runner.arch }}-${{ hashFiles('alpine/**/APKBUILD', 'alpine/boards/*/tiny-*.config') }}-
+            alpine-v2-${{ matrix.board }}-${{ runner.arch }}-
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: task build BOARD=${{ matrix.board }}
+
+      - name: Fix cache permissions
+        if: always()
+        run: |
+          mkdir -p ~/alpine-ccache ~/alpine-dl ~/alpine-output/${{ matrix.board }}/packages
+          sudo chmod -R a+rX ~/alpine-ccache ~/alpine-dl ~/alpine-output 2>/dev/null || true
+
+      - name: Save cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            ~/alpine-ccache
+            ~/alpine-dl
+            ~/alpine-output/${{ matrix.board }}/packages
+          key: alpine-v2-${{ matrix.board }}-${{ runner.arch }}-${{ hashFiles('alpine/**/APKBUILD', 'alpine/boards/*/tiny-*.config') }}-${{ github.run_id }}
+
+      - name: Upload to Testing Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view testing >/dev/null 2>&1; then
+            gh release create testing \
+              --prerelease \
+              --title "Latest images and update packages" \
+              --notes "Rolling release for testing on device" || true
+          fi
+          for f in "alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.zst" "alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.tar.zst"; do
+            [ -f "$f" ] || continue
+            for attempt in 1 2 3 4 5; do
+              if gh release upload testing "$f" --clobber; then
+                break
+              fi
+              echo "Upload attempt $attempt failed, retrying..."
+              sleep 5
+            done
+          done
