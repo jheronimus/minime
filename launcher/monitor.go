@@ -38,12 +38,13 @@ type linuxInputEvent struct {
 type EventType string
 
 const (
-	EventPowerSuspend   EventType = "suspend"
-	EventPowerResume    EventType = "resume"
-	EventBatteryChanged EventType = "battery_changed"
-	EventHDMIHotplug    EventType = "hdmi_hotplug"
-	EventVolumeChanged  EventType = "volume_changed"
-	EventMenuPressed    EventType = "menu_pressed"
+	EventPowerSuspend      EventType = "suspend"
+	EventPowerResume       EventType = "resume"
+	EventBatteryChanged    EventType = "battery_changed"
+	EventHDMIHotplug       EventType = "hdmi_hotplug"
+	EventVolumeChanged     EventType = "volume_changed"
+	EventBrightnessChanged EventType = "brightness_changed"
+	EventMenuPressed       EventType = "menu_pressed"
 )
 
 // Event represents an asynchronous notification from hardware monitoring.
@@ -73,6 +74,7 @@ type Monitor struct {
 	events        chan Event
 	stopChannel   chan struct{}
 	backlightPath string
+	menuHeld      bool
 }
 
 // NewMonitor initializes hardware discovery and background monitoring.
@@ -352,15 +354,28 @@ func (m *Monitor) listenEventDevice(path string) {
 		if ev.Type == evKey {
 			if ev.Code == keyPower && ev.Value == 1 {
 				m.emit(Event{Type: EventPowerSuspend, Data: "power_key"})
-			} else if (ev.Code == keyMenu || ev.Code == keyMenuAlt) && ev.Value == 1 {
-				m.emit(Event{Type: EventMenuPressed, Data: "menu_key"})
-			} else if (ev.Code == keyVolumeUp || ev.Code == keyVolumeDown) && (ev.Value == 1 || ev.Value == 2) {
-				step := 5
-				if ev.Code == keyVolumeDown {
-					step = -5
+			} else if ev.Code == keyMenu || ev.Code == keyMenuAlt {
+				m.mutex.Lock()
+				m.menuHeld = (ev.Value != 0)
+				m.mutex.Unlock()
+				if ev.Value == 1 {
+					m.emit(Event{Type: EventMenuPressed, Data: "menu_key"})
 				}
-				cur := m.Volume()
-				m.SetVolume(cur + step)
+			} else if (ev.Code == keyVolumeUp || ev.Code == keyVolumeDown) && (ev.Value == 1 || ev.Value == 2) {
+				m.mutex.RLock()
+				menuHeld := m.menuHeld
+				m.mutex.RUnlock()
+
+				if menuHeld {
+					m.AdjustBrightness(ev.Code == keyVolumeUp)
+				} else {
+					step := 5
+					if ev.Code == keyVolumeDown {
+						step = -5
+					}
+					cur := m.Volume()
+					m.SetVolume(cur + step)
+				}
 			} else if ev.Value <= 1 {
 				handleEvdevKey(ev.Code, ev.Value != 0)
 			}
@@ -408,11 +423,41 @@ func (m *Monitor) SetVolume(value int) {
 	}
 }
 
+// AdjustBrightness changes the display backlight by one step (or ~10% of max).
+func (m *Monitor) AdjustBrightness(increase bool) {
+	m.mutex.RLock()
+	cur := m.state.Brightness
+	maxB := m.state.MaxBrightness
+	m.mutex.RUnlock()
+
+	step := 1
+	if maxB > 10 {
+		step = maxB / 10
+		if step < 1 {
+			step = 1
+		}
+	}
+
+	target := cur + step
+	if !increase {
+		target = cur - step
+	}
+	if target < 1 {
+		target = 1 // Don't turn screen completely black
+	}
+	if maxB > 0 && target > maxB {
+		target = maxB
+	}
+
+	_ = m.SetBrightness(target)
+}
+
 // SetBrightness adjusts the display backlight.
 func (m *Monitor) SetBrightness(value int) error {
 	m.updateState(func(s *SystemState) {
 		s.Brightness = value
 	})
+	m.emit(Event{Type: EventBrightnessChanged, Data: value})
 	if runtime.GOOS != "linux" || m.backlightPath == "" {
 		return nil
 	}
