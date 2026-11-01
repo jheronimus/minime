@@ -96,6 +96,8 @@ libpng
 zlib
 # libstdc++: C++ runtime for cores that need it.
 libstdc++
+# libretro-gambatte: Game Boy / Game Boy Color core for test runner.
+libretro-gambatte
 
 # --- Local packages (built from alpine/aports/*) ---------------------------
 # These MUST have a matching alpine/aports/<name>/APKBUILD. build.sh asserts

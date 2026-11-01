@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -179,6 +180,58 @@ func runGame(coreFilePath, romFilePath, systemDirectory, saveDirectory string) e
 		loadedCore.monitor = mon
 	}
 
+	// Try native hardware display first (e.g. Linux DRM KMS on handhelds)
+	nativeDisp, err := NewDisplay()
+	if err == nil && nativeDisp != nil {
+		defer func() {
+			_ = nativeDisp.Close()
+		}()
+		return runNativeGameLoop(loadedCore, nativeDisp)
+	}
+
+	// Desktop simulator fallback via Ebitengine (macOS / PC)
+	return runEbitenGameLoop(loadedCore)
+}
+
+func runNativeGameLoop(loadedCore *core, disp Display) error {
+	fps := loadedCore.fps
+	if fps <= 0 {
+		fps = 60.0
+	}
+	frameDuration := time.Duration(float64(time.Second) / fps)
+	ticker := time.NewTicker(frameDuration)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+
+		if loadedCore.monitor != nil {
+			select {
+			case ev := <-loadedCore.monitor.Events():
+				if ev.Type == EventPowerSuspend {
+					if loadedCore.audioPlayer != nil {
+						loadedCore.audioPlayer.Pause()
+					}
+					_ = loadedCore.monitor.Suspend()
+					if loadedCore.audioPlayer != nil {
+						loadedCore.audioPlayer.Play()
+					}
+				}
+			default:
+			}
+		}
+
+		loadedCore.inputMask = pollInputMask()
+		loadedCore.retroRun()
+
+		if loadedCore.frameReady {
+			_ = disp.Present(loadedCore.frameRGBA, loadedCore.frameWidth, loadedCore.frameHeight)
+			loadedCore.frameReady = false
+		}
+	}
+}
+
+func runEbitenGameLoop(loadedCore *core) error {
 	windowWidth := 640
 	windowHeight := 480
 	if loadedCore.monitor != nil {
@@ -398,7 +451,7 @@ func onEnvironment(command uintptr, data unsafe.Pointer) uintptr {
 			return 1
 		}
 	default:
-		return 1
+		return 0
 	}
 	return 0
 }

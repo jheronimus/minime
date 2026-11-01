@@ -1,8 +1,54 @@
 package main
 
 import (
+	"sync/atomic"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
+
+var hardwareInputMask uint32
+
+func handleEvdevKey(code uint16, pressed bool) {
+	var button = -1
+	switch code {
+	case 103, 544: // KEY_UP, BTN_DPAD_UP
+		button = retroJoypadUp
+	case 108, 545: // KEY_DOWN, BTN_DPAD_DOWN
+		button = retroJoypadDown
+	case 105, 546: // KEY_LEFT, BTN_DPAD_LEFT
+		button = retroJoypadLeft
+	case 106, 547: // KEY_RIGHT, BTN_DPAD_RIGHT
+		button = retroJoypadRight
+	case 305, 45: // BTN_EAST, KEY_X
+		button = retroJoypadA
+	case 304, 44: // BTN_SOUTH, KEY_Z
+		button = retroJoypadB
+	case 307, 31: // BTN_NORTH, KEY_S
+		button = retroJoypadX
+	case 308, 30: // BTN_WEST, KEY_A
+		button = retroJoypadY
+	case 315, 28: // BTN_START, KEY_ENTER
+		button = retroJoypadStart
+	case 314, 14, 54: // BTN_SELECT, KEY_BACKSPACE, KEY_RIGHTSHIFT
+		button = retroJoypadSelect
+	case 310, 16: // BTN_TL, KEY_Q
+		button = retroJoypadL
+	case 311, 18: // BTN_TR, KEY_E
+		button = retroJoypadR
+	case 312: // BTN_TL2
+		button = retroJoypadL2
+	case 313: // BTN_TR2
+		button = retroJoypadR2
+	}
+
+	if button >= 0 {
+		if pressed {
+			atomic.OrUint32(&hardwareInputMask, 1<<button)
+		} else {
+			atomic.AndUint32(&hardwareInputMask, ^(1 << button))
+		}
+	}
+}
 
 type keyMapping struct {
 	key         ebiten.Key
@@ -50,7 +96,7 @@ var gamepadMappings = []gamepadMapping{
 }
 
 func pollInputMask() uint16 {
-	var mask uint16
+	mask := uint16(atomic.LoadUint32(&hardwareInputMask))
 
 	for _, mapping := range keyboardMappings {
 		if ebiten.IsKeyPressed(mapping.key) {

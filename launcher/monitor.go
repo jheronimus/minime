@@ -340,8 +340,12 @@ func (m *Monitor) listenEventDevice(path string) {
 			}
 		}
 
-		if ev.Type == evKey && ev.Code == keyPower && ev.Value == 1 {
-			m.emit(Event{Type: EventPowerSuspend, Data: "power_key"})
+		if ev.Type == evKey {
+			if ev.Code == keyPower && ev.Value == 1 {
+				m.emit(Event{Type: EventPowerSuspend, Data: "power_key"})
+			} else {
+				handleEvdevKey(ev.Code, ev.Value != 0)
+			}
 		}
 	}
 }

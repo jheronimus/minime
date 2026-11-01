@@ -14,6 +14,14 @@ func main() {
 		coreExtension = ".so"
 	}
 	defaultCore := filepath.Join(".cache", "cores", "gambatte_libretro"+coreExtension)
+	if runtime.GOOS == "linux" {
+		if _, err := os.Stat(defaultCore); err != nil {
+			systemCore := "/usr/lib/libretro/gambatte_libretro.so"
+			if _, err := os.Stat(systemCore); err == nil {
+				defaultCore = systemCore
+			}
+		}
+	}
 
 	var (
 		coreFlag    string

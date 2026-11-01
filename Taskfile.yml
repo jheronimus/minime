@@ -18,7 +18,7 @@ tasks:
     deps: [fetch-cores]
     cmds:
       - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o build/minime-linux-arm64 ./launcher
+      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-I /lib/ld-musl-aarch64.so.1" -o build/minime-linux-arm64 ./launcher
       - make -C alpine build BOARD={{.BOARD}}
 
   simulate:
