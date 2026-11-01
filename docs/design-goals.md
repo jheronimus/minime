@@ -3,6 +3,7 @@
 Minime is an appliance-like, minimal retro handheld OS and launcher built on Alpine Linux and Go + Ebitengine.
 
 ## 1. Minimal Flat Frontend (Go + Ebitengine)
+* **Visual Language**: Clean, minimalist UI inspired by [es-theme-elementerial](https://github.com/mluizvitor/es-theme-elementerial) (subtle cards, elegant typography, uncluttered status indicators, high legibility on 3.5" 640x480 displays).
 * **Single Curated List**: Flat list of 30–50 games maximum; no console categorization or deep nested directories.
 * **Appliance-Grade System Menu**: Integrated UI for Wi-Fi management (`iwd` via D-Bus), Bluetooth pairing/status (`bluez` via D-Bus), audio sink selection, and brightness/volume controls.
 * **Display & Audio Output**: Seamless HDMI video out detection and Bluetooth A2DP audio switching (via PipeWire/ALSA).
