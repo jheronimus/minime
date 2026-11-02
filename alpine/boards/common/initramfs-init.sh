@@ -212,7 +212,7 @@ if [ -f /mnt/sdcard/.minime/config/first_boot_expand ]; then
 
 	# Wipe and recreate FAT32 at the full resized partition size.
 	log_card "[INITRAMFS] Recreating FAT32 on $CARD_DEV..."
-	MKFS_OUT="$(chroot /mnt/system mkfs.vfat -F 32 -s 32 -n nextui "$CARD_DEV" 2>&1)"
+	MKFS_OUT="$(chroot /mnt/system mkfs.vfat -F 32 -s 32 -n minime "$CARD_DEV" 2>&1)"
 	MKFS_RC=$?
 	log_card "[INITRAMFS] mkfs.vfat output: ${MKFS_OUT} (exit ${MKFS_RC})"
 	if [ "$MKFS_RC" -ne 0 ]; then

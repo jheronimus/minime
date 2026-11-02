@@ -89,7 +89,15 @@ tasks:
             touch "${MOUNT_POINT}/.metadata_never_index" 2>/dev/null || true
             echo "Configuring Wi-Fi profile in ${MOUNT_POINT}..."
             mkdir -p "${MOUNT_POINT}/.minime/config/iwd"
-            PROFILE_NAME="$(echo "${WIFI_SSID}" | tr ' /' '__')"
+            case "${WIFI_SSID}" in
+              *[!A-Za-z0-9_\ -]*)
+                HEX="$(printf '%s' "${WIFI_SSID}" | od -An -tx1 | tr -d ' \n')"
+                PROFILE_NAME="=${HEX}"
+                ;;
+              *)
+                PROFILE_NAME="${WIFI_SSID}"
+                ;;
+            esac
             printf '[Security]\nPassphrase=%s\n[Settings]\nAutoConnect=true\n' "${WIFI_PSK}" > "${MOUNT_POINT}/.minime/config/iwd/${PROFILE_NAME}.psk"
             chmod 600 "${MOUNT_POINT}/.minime/config/iwd/${PROFILE_NAME}.psk" 2>/dev/null || true
             sync
@@ -109,7 +117,15 @@ tasks:
           if sudo mount "$PART" "$TMPMNT"; then
             echo "Configuring Wi-Fi profile on SD card..."
             sudo mkdir -p "${TMPMNT}/.minime/config/iwd"
-            PROFILE_NAME="$(echo "${WIFI_SSID}" | tr ' /' '__')"
+            case "${WIFI_SSID}" in
+              *[!A-Za-z0-9_\ -]*)
+                HEX="$(printf '%s' "${WIFI_SSID}" | od -An -tx1 | tr -d ' \n')"
+                PROFILE_NAME="=${HEX}"
+                ;;
+              *)
+                PROFILE_NAME="${WIFI_SSID}"
+                ;;
+            esac
             printf '[Security]\nPassphrase=%s\n[Settings]\nAutoConnect=true\n' "${WIFI_PSK}" | sudo tee "${TMPMNT}/.minime/config/iwd/${PROFILE_NAME}.psk" >/dev/null
             sudo chmod 600 "${TMPMNT}/.minime/config/iwd/${PROFILE_NAME}.psk" 2>/dev/null || true
             sync
