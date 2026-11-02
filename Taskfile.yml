@@ -31,6 +31,7 @@ tasks:
 
   deploy:
     desc: Fetch image from testing release, flash to SD card, and configure Wi-Fi (reads deploy.cfg)
+    silent: true
     cmds:
       - |
         set -eu
