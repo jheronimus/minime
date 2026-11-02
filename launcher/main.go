@@ -6,27 +6,27 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"unsafe"
 
-	"github.com/ebitengine/oto/v3"
+	"github.com/ebitengine/purego"
 )
 
 func main() {
-	if runtime.GOOS == "linux" {
+	defaultCore := filepath.Join(".cache", "cores", "gambatte_libretro.dylib")
+
+	switch runtime.GOOS {
+	case "linux":
 		if _, err := os.Stat("/mnt/sdcard"); err == nil {
 			_ = os.Chdir("/mnt/sdcard")
 		}
-	}
 
-	coreExtension := ".dylib"
-	if runtime.GOOS == "linux" {
-		coreExtension = ".so"
-	}
-	defaultCore := filepath.Join(".cache", "cores", "gambatte_libretro"+coreExtension)
-	if runtime.GOOS == "linux" {
+		defaultCore = filepath.Join(".cache", "cores", "gambatte_libretro.so")
 		systemCore := "/usr/lib/libretro/gambatte_libretro.so"
 		if _, err := os.Stat(systemCore); err == nil {
 			defaultCore = systemCore
 		}
+
+		initMusl()
 	}
 
 	var (
@@ -81,43 +81,21 @@ func main() {
 		_ = input.Close()
 	}()
 
-	// 2. Initialize shared audio device context (48 kHz 16-bit stereo)
-	otoCtx, ready, err := oto.NewContext(&oto.NewContextOptions{
-		SampleRate:   outputSampleRate,
-		ChannelCount: 2,
-		Format:       oto.FormatSignedInt16LE,
-	})
+	audio, err := NewAudioService()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to initialize audio context: %v\n", err)
-		os.Exit(1)
-	}
-	<-ready
-	if err := otoCtx.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "audio device error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "failed to initialize audio service: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 3. Initialize hardware display (Linux DRM KMS dumb buffer) or desktop fallback
-	display, err := NewDisplay()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: native display initialization failed: %v\n", err)
-	}
-	if display != nil {
-		defer func() {
-			_ = display.Close()
-		}()
-	}
-
-	// 4. Launch game session
+	// 2. Launch game session
 	session, err := NewGameSession(SessionConfig{
-		CorePath:     coreFlag,
-		ROMPath:      romFlag,
-		SystemDir:    sysDirFlag,
-		SaveDir:      saveDirFlag,
-		Platform:     platform,
-		Input:        input,
-		AudioContext: otoCtx,
-		Display:      display,
+		CorePath:  coreFlag,
+		ROMPath:   romFlag,
+		SystemDir: sysDirFlag,
+		SaveDir:   saveDirFlag,
+		Platform:  platform,
+		Input:     input,
+		Audio:     audio,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create game session: %v\n", err)
@@ -127,5 +105,28 @@ func main() {
 	if err := session.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "game session error: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+// initMusl fixes uninitialized process name pointers in musl libc.
+// Purego/non-CGO Go binaries bypass musl's __libc_start_main, leaving __progname
+// NULL. Mesa's drirc queries it during GBM startup and crashes if uninitialized.
+func initMusl() {
+	for _, libName := range []string{"libc.musl-aarch64.so.1", "libc.musl-armhf.so.1", "libc.musl-x86_64.so.1"} {
+		libc, err := purego.Dlopen(libName, purego.RTLD_LAZY|purego.RTLD_GLOBAL)
+		if err != nil {
+			continue
+		}
+		nameBytes := []byte("minime\x00")
+		namePtr := uintptr(unsafe.Pointer(&nameBytes[0]))
+		for _, sym := range []string{"program_invocation_name", "program_invocation_short_name", "__progname", "__progname_full"} {
+			addr, err := purego.Dlsym(libc, sym)
+			if err == nil && addr != 0 {
+				var p *uintptr
+				*(*uintptr)(unsafe.Pointer(&p)) = addr
+				*p = namePtr
+			}
+		}
+		break
 	}
 }

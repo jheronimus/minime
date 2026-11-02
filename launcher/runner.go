@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 	"unsafe"
 
 	"github.com/ebitengine/oto/v3"
@@ -18,14 +17,13 @@ import (
 
 // SessionConfig provides the dependencies needed to execute an emulation session.
 type SessionConfig struct {
-	CorePath     string
-	ROMPath      string
-	SystemDir    string
-	SaveDir      string
-	Platform     *PlatformService
-	Input        *InputService
-	AudioContext *oto.Context
-	Display      Display
+	CorePath  string
+	ROMPath   string
+	SystemDir string
+	SaveDir   string
+	Platform  *PlatformService
+	Input     *InputService
+	Audio     *AudioService
 }
 
 // GameSession coordinates execution of an active Libretro core and ROM.
@@ -33,7 +31,7 @@ type GameSession struct {
 	core     *RetroCore
 	platform *PlatformService
 	input    *InputService
-	display  Display
+	renderer FrameRenderer
 
 	audioBuf    *AudioBuffer
 	audioPlayer *oto.Player
@@ -41,7 +39,6 @@ type GameSession struct {
 
 	fps         float64
 	latestFrame Frame
-	frameReady  bool
 }
 
 // NewGameSession loads the core and ROM, binding all subsystems for execution.
@@ -76,18 +73,17 @@ func NewGameSession(cfg SessionConfig) (*GameSession, error) {
 	audioBuf.SetRates(sampleRate, outputSampleRate)
 
 	var audioPlayer *oto.Player
-	if cfg.AudioContext != nil {
-		audioPlayer = cfg.AudioContext.NewPlayer(audioBuf)
-		// 60ms player buffer size to absorb scheduling jitter
-		audioPlayer.SetBufferSize(outputSampleRate * 4 * 60 / 1000)
-		audioPlayer.Play()
+	if cfg.Audio != nil {
+		audioPlayer = cfg.Audio.NewPlayer(audioBuf)
+		if audioPlayer != nil {
+			audioPlayer.Play()
+		}
 	}
 
 	s := &GameSession{
 		core:        core,
 		platform:    cfg.Platform,
 		input:       cfg.Input,
-		display:     cfg.Display,
 		audioBuf:    audioBuf,
 		audioPlayer: audioPlayer,
 		fps:         fps,
@@ -96,7 +92,6 @@ func NewGameSession(cfg SessionConfig) (*GameSession, error) {
 	core.SetCallbacks(
 		func(data unsafe.Pointer, width, height, pitch int, format uint32) {
 			s.latestFrame = s.videoConv.Convert(data, width, height, pitch, format)
-			s.frameReady = true
 		},
 		func(samples []int16) {
 			s.audioBuf.WriteSamples(samples)
@@ -118,32 +113,6 @@ func (s *GameSession) Run() error {
 		_ = s.Close()
 	}()
 
-	if s.display != nil {
-		return s.runNativeLoop()
-	}
-
-	return s.runDesktopLoop()
-}
-
-func (s *GameSession) runNativeLoop() error {
-	frameDuration := time.Duration(float64(time.Second) / s.fps)
-	ticker := time.NewTicker(frameDuration)
-	defer ticker.Stop()
-
-	for {
-		<-ticker.C
-
-		s.pollHotkeys()
-		s.core.Step()
-
-		if s.frameReady {
-			_ = s.display.Show(s.latestFrame)
-			s.frameReady = false
-		}
-	}
-}
-
-func (s *GameSession) runDesktopLoop() error {
 	w, h := 640, 480
 	if s.platform != nil {
 		st := s.platform.State()
@@ -158,7 +127,7 @@ func (s *GameSession) runDesktopLoop() error {
 	ebiten.SetTPS(int(s.fps + 0.5))
 
 	if err := ebiten.RunGame(s); err != nil && !errors.Is(err, ebiten.Termination) {
-		return fmt.Errorf("desktop game loop: %w", err)
+		return fmt.Errorf("game loop: %w", err)
 	}
 	return nil
 }
@@ -175,10 +144,7 @@ func (s *GameSession) Update() error {
 
 // Draw implements ebiten.Game.
 func (s *GameSession) Draw(screen *ebiten.Image) {
-	if s.frameReady {
-		DrawFrame(screen, s.latestFrame)
-		s.frameReady = false
-	}
+	s.renderer.Draw(screen, s.latestFrame)
 }
 
 // Layout implements ebiten.Game.

@@ -1,8 +1,43 @@
 package main
 
 import (
+	"io"
 	"sync"
+
+	"github.com/ebitengine/oto/v3"
 )
+
+// AudioService manages the shared hardware audio context (48 kHz 16-bit stereo).
+type AudioService struct {
+	ctx *oto.Context
+}
+
+// NewAudioService initializes the audio output device.
+func NewAudioService() (*AudioService, error) {
+	ctx, ready, err := oto.NewContext(&oto.NewContextOptions{
+		SampleRate:   outputSampleRate,
+		ChannelCount: 2,
+		Format:       oto.FormatSignedInt16LE,
+	})
+	if err != nil {
+		return nil, err
+	}
+	<-ready
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return &AudioService{ctx: ctx}, nil
+}
+
+// NewPlayer creates an audio player configured with a 60ms jitter buffer.
+func (s *AudioService) NewPlayer(r io.Reader) *oto.Player {
+	if s == nil || s.ctx == nil {
+		return nil
+	}
+	p := s.ctx.NewPlayer(r)
+	p.SetBufferSize(outputSampleRate * 4 * 60 / 1000)
+	return p
+}
 
 const (
 	outputSampleRate = 48000
