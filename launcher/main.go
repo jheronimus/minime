@@ -21,11 +21,10 @@ func main() {
 	}
 	defaultCore := filepath.Join(".cache", "cores", "gambatte_libretro"+coreExtension)
 	if runtime.GOOS == "linux" {
-		if _, err := os.Stat(defaultCore); err != nil {
-			systemCore := "/usr/lib/libretro/gambatte_libretro.so"
-			if _, err := os.Stat(systemCore); err == nil {
-				defaultCore = systemCore
-			}
+		// Prefer the system core if present, as it is dynamically linked against musl libc
+		systemCore := "/usr/lib/libretro/gambatte_libretro.so"
+		if _, err := os.Stat(systemCore); err == nil {
+			defaultCore = systemCore
 		}
 	}
 

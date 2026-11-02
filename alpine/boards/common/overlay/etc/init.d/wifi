@@ -29,26 +29,14 @@ log_boot() {
 
 start_dbus() {
 	[ -d /run/dbus ] || mkdir -p /run/dbus
-	if ! [ -f /run/dbus/dbus.pid ] || ! kill -0 "$(cat /run/dbus/dbus.pid 2>/dev/null)" 2>/dev/null; then
-		rm -f /run/dbus/dbus.pid 2>/dev/null || true
-		dbus-daemon --system --fork 2>/dev/null || true
+	if ! pgrep -f "dbus-daemon --system" >/dev/null 2>&1; then
+		dbus-daemon --system 2>/dev/null || true
 	fi
 }
 
 profile_file_for() {
-	# iwd profile filename encoding (iwd.network(5)):
-	# The SSID is used verbatim only if it is alphanumeric + space + '_' + '-'.
-	# Any other character (e.g. '&' in 'Greeks & Geeks') requires the filename
-	# to be '=' followed by the lowercase hex representation of the SSID.
-	ssid="$1"
-	case "${ssid}" in
-	*[!A-Za-z0-9_\ -]*)
-		printf '=%s\n' "$(printf '%s' "${ssid}" | od -An -tx1 | tr -d ' \n')"
-		;;
-	*)
-		printf '%s\n' "${ssid}"
-		;;
-	esac
+	# iwd profile name = SSID with unsafe characters replaced.
+	printf '%s' "$1" | tr ' /' '__'
 }
 
 write_profile() {
@@ -205,26 +193,12 @@ start() {
 	if ! env STATE_DIRECTORY="${iwd_state_dir}" start-stop-daemon -S -q -b -m \
 		-p "${iwd_pidfile}" \
 		-x "${iwd_bin}" -- 2>>"${diagnostic_logfile}"; then
-		# Already running is fine
-		if [ -f "${iwd_pidfile}" ] && kill -0 "$(cat "${iwd_pidfile}" 2>/dev/null)" 2>/dev/null; then
-			log_boot "iwd already running"
-		else
-			log_failure_diagnostics "iwd-failed-to-start"
-			eend 1 "iwd failed to start"
-			return 1
-		fi
+		log_failure_diagnostics "iwd-failed-to-start"
+		eend 1 "iwd failed to start"
+		return 1
 	fi
 
 	sleep 2
-
-	# Trigger scan and explicit connect in case auto-connect is sluggish on initial boot
-	if command -v iwctl >/dev/null 2>&1; then
-		iwctl station "${wifi_interface}" scan >/dev/null 2>&1 || true
-		sleep 2
-		if [ -n "${cur_ssid:-}" ]; then
-			iwctl station "${wifi_interface}" connect "${cur_ssid}" >/dev/null 2>&1 || true
-		fi
-	fi
 
 	if ! wait_for_connected; then
 		log_failure_diagnostics "station-connect-timeout"

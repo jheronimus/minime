@@ -6,10 +6,20 @@
 description="Unblank framebuffer console"
 
 depend() {
-	before traits ui
+	before minime
 }
 
 start() {
+	# Switch console to graphics mode to silence OpenRC init text output on the display
+	if command -v setvtrgb >/dev/null 2>&1; then
+		:
+	fi
+	# Use ioctl KDSETMODE KD_GRAPHICS (1) via busybox or tty
+	if [ -e /dev/tty1 ]; then
+		# printf escape to hide cursor and clear screen
+		printf '\033[?25l\033[2J' > /dev/tty1 2>/dev/null || true
+	fi
+
 	if [ -w /sys/class/graphics/fb0/blank ]; then
 		printf '%s\n' 0 > /sys/class/graphics/fb0/blank 2>/dev/null || true
 	fi
