@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/ebitengine/oto/v3"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 // SessionConfig provides the dependencies needed to execute an emulation session.
@@ -135,7 +137,7 @@ func (s *GameSession) runNativeLoop() error {
 		s.core.Step()
 
 		if s.frameReady {
-			_ = s.display.Present(s.latestFrame)
+			_ = s.display.Show(s.latestFrame)
 			s.frameReady = false
 		}
 	}
@@ -150,18 +152,41 @@ func (s *GameSession) runDesktopLoop() error {
 		}
 	}
 
-	var ed *EbitenDisplay
-	ed = NewEbitenDisplay(w, h, s.fps, func() error {
-		s.pollHotkeys()
-		s.core.Step()
-		if s.frameReady {
-			_ = ed.Present(s.latestFrame)
-			s.frameReady = false
-		}
-		return nil
-	})
+	ebiten.SetWindowTitle("Minime")
+	ebiten.SetWindowSize(w, h)
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetTPS(int(s.fps + 0.5))
 
-	return ed.Run()
+	if err := ebiten.RunGame(s); err != nil && !errors.Is(err, ebiten.Termination) {
+		return fmt.Errorf("desktop game loop: %w", err)
+	}
+	return nil
+}
+
+// Update implements ebiten.Game.
+func (s *GameSession) Update() error {
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		return ebiten.Termination
+	}
+	s.pollHotkeys()
+	s.core.Step()
+	return nil
+}
+
+// Draw implements ebiten.Game.
+func (s *GameSession) Draw(screen *ebiten.Image) {
+	if s.frameReady {
+		DrawFrame(screen, s.latestFrame)
+		s.frameReady = false
+	}
+}
+
+// Layout implements ebiten.Game.
+func (s *GameSession) Layout(w, h int) (int, int) {
+	if w <= 0 || h <= 0 {
+		return 640, 480
+	}
+	return w, h
 }
 
 func (s *GameSession) pollHotkeys() {

@@ -372,16 +372,8 @@ func newDRMDisplay() (Display, error) {
 	return disp, nil
 }
 
-func (d *drmDisplay) Width() int {
-	return d.width
-}
-
-func (d *drmDisplay) Height() int {
-	return d.height
-}
-
-// Present copies and aspect-fits the frame into the back buffer, then initiates a page flip.
-func (d *drmDisplay) Present(frame Frame) error {
+// Show copies and aspect-fits the frame into the back buffer, then initiates a page flip.
+func (d *drmDisplay) Show(frame Frame) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
