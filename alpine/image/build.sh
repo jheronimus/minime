@@ -336,14 +336,98 @@ for item in "${STAGE_DIR}"/*; do
 	MTOOLS_SKIP_CHECK=1 mcopy -i "${BINARIES_DIR}/userdata.vfat" -s "$item" ::
 done
 
-GENIMAGE_CFG="${BOARD_DIR}/genimage.cfg"
-[ -f "$GENIMAGE_CFG" ] || GENIMAGE_CFG="${COMMON_DIR}/genimage.cfg"
-cp -f "$GENIMAGE_CFG" "${ROOTPATH_TMP}/genimage.cfg"
-sed -i "s/__IMAGE_NAME__/${PKG_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
+if [ "${IS_H700_BSP}" -eq 1 ]; then
+	python3 - "${BINARIES_DIR}" "${OUTPUT_DIR}/${PKG_NAME}.img" <<'PY'
+import binascii, os, struct, sys, uuid
 
-genimage --rootpath "${ROOTPATH_TMP}" --tmppath "${WORK_TMP}/genimage.tmp" \
-	--inputpath "${BINARIES_DIR}" --outputpath "${OUTPUT_DIR}" \
-	--config "${ROOTPATH_TMP}/genimage.cfg"
+bdir, out_img = sys.argv[1], sys.argv[2]
+SECTOR = 512
+LINUX_FS_GUID = uuid.UUID("0FC63DAF-8483-4772-8E79-3D69D8477DE4").bytes_le
+MS_DATA_GUID = uuid.UUID("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7").bytes_le
+
+parts_spec = [
+    ("special", LINUX_FS_GUID, None, 32768),
+    ("boot-resource", MS_DATA_GUID, os.path.join(bdir, "boot-resource.fat"), None),
+    ("env", LINUX_FS_GUID, os.path.join(bdir, "env.img"), None),
+    ("boot", LINUX_FS_GUID, os.path.join(bdir, "boot.img"), None),
+    ("minime", MS_DATA_GUID, os.path.join(bdir, "userdata.vfat"), None),
+]
+
+cur_lba = 73728  # 36 MiB, matches stock H700 gap for boot0 + boot_package
+entries = []
+for name, tguid, path, fixed_sectors in parts_spec:
+    if path is not None:
+        sz = os.path.getsize(path)
+        sectors = (sz + SECTOR - 1) // SECTOR
+    else:
+        sectors = fixed_sectors
+    entries.append((name, tguid, uuid.uuid4().bytes_le, cur_lba, cur_lba + sectors - 1, path))
+    cur_lba += sectors
+
+backup_entries_lba = cur_lba
+backup_lba = cur_lba + 2
+total_sectors = backup_lba + 1
+first_usable = 4
+last_usable = backup_entries_lba - 1
+
+table = bytearray(8 * 128)
+for idx, (name, tguid, uguid, start, end, _) in enumerate(entries):
+    off = idx * 128
+    table[off:off + 16] = tguid
+    table[off + 16:off + 32] = uguid
+    struct.pack_into("<QQQ", table, off + 32, start, end, 0)
+    enc = name.encode("utf-16-le")[:72]
+    table[off + 56:off + 56 + len(enc)] = enc
+
+entries_crc = binascii.crc32(table) & 0xFFFFFFFF
+disk_guid = uuid.uuid4().bytes_le
+
+def make_hdr(cur, alt, ent_lba):
+    hdr = bytearray(92)
+    struct.pack_into("<8sIIIIQQQQ16sQIII", hdr, 0,
+        b"EFI PART", 0x00010000, 92, 0, 0,
+        cur, alt, first_usable, last_usable, disk_guid,
+        ent_lba, 8, 128, entries_crc)
+    struct.pack_into("<I", hdr, 16, binascii.crc32(hdr) & 0xFFFFFFFF)
+    return bytes(hdr).ljust(SECTOR, b"\0")
+
+mbr = bytearray(SECTOR)
+struct.pack_into("<BBBBBBBBII", mbr, 446, 0x00, 0x00, 0x02, 0x00, 0xEE, 0xFF, 0xFF, 0xFF, 1, min(total_sectors - 1, 0xFFFFFFFF))
+mbr[510:512] = b"\x55\xAA"
+
+with open(out_img, "wb") as out:
+    out.truncate(total_sectors * SECTOR)
+    out.seek(0)
+    out.write(mbr)
+    out.write(make_hdr(1, backup_lba, 2))
+    out.write(table)
+    with open(os.path.join(bdir, "boot0_uboot.bin"), "rb") as bf:
+        out.seek(8192)
+        out.write(bf.read())
+    for _, _, _, start, _, path in entries:
+        if path is None:
+            continue
+        out.seek(start * SECTOR)
+        with open(path, "rb") as pf:
+            while True:
+                buf = pf.read(4 * 1024 * 1024)
+                if not buf:
+                    break
+                out.write(buf)
+    out.seek(backup_entries_lba * SECTOR)
+    out.write(table)
+    out.write(make_hdr(backup_lba, 1, backup_entries_lba))
+PY
+else
+	GENIMAGE_CFG="${BOARD_DIR}/genimage.cfg"
+	[ -f "$GENIMAGE_CFG" ] || GENIMAGE_CFG="${COMMON_DIR}/genimage.cfg"
+	cp -f "$GENIMAGE_CFG" "${ROOTPATH_TMP}/genimage.cfg"
+	sed -i "s/__IMAGE_NAME__/${PKG_NAME}.img/g" "${ROOTPATH_TMP}/genimage.cfg"
+
+	genimage --rootpath "${ROOTPATH_TMP}" --tmppath "${WORK_TMP}/genimage.tmp" \
+		--inputpath "${BINARIES_DIR}" --outputpath "${OUTPUT_DIR}" \
+		--config "${ROOTPATH_TMP}/genimage.cfg"
+fi
 zstd -q -9 -T0 -f "${OUTPUT_DIR}/${PKG_NAME}.img" -o "${OUTPUT_DIR}/${PKG_NAME}.img.zst"
 rm -f "${OUTPUT_DIR}/${PKG_NAME}.img"
 cp -f "${OUTPUT_DIR}/${PKG_NAME}.img.zst" "${OUTPUT_DIR}/minime-alpine-${BOARD}.img.zst"
