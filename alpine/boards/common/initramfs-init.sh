@@ -64,7 +64,7 @@ mkdir -p /mnt/sdcard
 # Wait for Linux to enumerate SD/eMMC devices and mount the partition.
 log_console "Waiting for block devices..."
 for _i in 1 2 3 4 5 6 7 8 9 10; do
-	for dev in /dev/mmcblk*p1 /dev/vd*1 /dev/sd*1; do
+	for dev in /dev/mmcblk*p* /dev/vd*1 /dev/sd*1; do
 		[ -b "$dev" ] || continue
 		card_label="$(blkid -s LABEL -o value "$dev" 2>/dev/null || true)"
 		if [ "$card_label" = "nextui" ] || [ "$card_label" = "minime" ]; then
@@ -153,7 +153,7 @@ fi
 # the approach used by EmuELEC, dArkOS, and similar single-FAT32 firmware.
 if [ -f /mnt/sdcard/.minime/config/first_boot_expand ]; then
 	log_card "[INITRAMFS] Expanding SD card on $CARD_DEV..."
-	DISK_DEV="${CARD_DEV%p1}"
+	DISK_DEV="${CARD_DEV%p*}"
 	PART_NUM="${CARD_DEV##*p}"
 
 	# Stage all FAT contents into a RAM-backed tmpfs BEFORE resizing the
@@ -187,7 +187,7 @@ if [ -f /mnt/sdcard/.minime/config/first_boot_expand ]; then
 	# survive the reformat) and run them via chroot with the device nodes,
 	# proc, and sysfs bind-mounted.
 	mkdir -p /mnt/system
-	if ! mount -t erofs -o loop,ro "$STAGE/.minime/system" /mnt/system 2>/dev/null; then
+	if ! mount -o loop,ro "$STAGE/.minime/system" /mnt/system 2>/dev/null; then
 		log_card "ERROR: failed to mount /mnt/system for partition expansion"
 		exec sh
 	fi
@@ -250,13 +250,13 @@ if [ -f /mnt/sdcard/.minime/config/first_boot_expand ]; then
 	reboot -f
 fi
 
-log_card "[INITRAMFS] Mounting EROFS system image..."
+log_card "[INITRAMFS] Mounting system image..."
 mkdir -p /mnt/system
-if ! mount -t erofs -o loop,ro /mnt/sdcard/.minime/system /mnt/system; then
+if ! mount -o loop,ro /mnt/sdcard/.minime/system /mnt/system; then
 	log_card "ERROR: failed to mount /mnt/sdcard/.minime/system"
 	exec sh
 fi
-log_card "[INITRAMFS] EROFS system image mounted successfully."
+log_card "[INITRAMFS] System image mounted successfully."
 
 # Pre-emptively fix clock skew by advancing the system time to the rootfs build time
 # if the RTC woke up in the past (e.g. 2017). This prevents OpenRC from printing

@@ -116,27 +116,45 @@ mkdir -p "$OUTPUT_DIR" "$BINARIES_DIR" "$ROOTPATH_TMP" \
 
 # --- 1. Stage the OS payload ------------------------------------------------
 
-for f in Image:kernel initramfs.img:initramfs system.erofs:system; do
-	src="${f%%:*}"
-	dst="${f##*:}"
-	[ -f "${INPUT_DIR}/${src}" ] || {
-		echo "ERROR: ${src} missing in ${INPUT_DIR}" >&2
-		exit 1
-	}
-	cp -f "${INPUT_DIR}/${src}" "${STAGE_DIR}/.minime/${dst}"
-done
-cp -f "${INPUT_DIR}"/*.dtb "${STAGE_DIR}/.minime/devices/" 2>/dev/null || true
-
-DEFAULT_DEVICE=""
-if [ -f "${BOARD_DIR}/boot.env" ]; then
-	DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${BOARD_DIR}/boot.env" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+BSP_BOOT_TAR="${MINIME_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst"
+IS_H700_BSP=0
+if [ "${BOARD}" = "h700" ] && [ -f "${BSP_BOOT_TAR}" ]; then
+	IS_H700_BSP=1
 fi
-if [ -n "$DEFAULT_DEVICE" ] && [ -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" ]; then
-	cp -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" "${STAGE_DIR}/.minime/dtb"
+
+if [ "${IS_H700_BSP}" -eq 1 ]; then
+	for f in initramfs.img:initramfs system.erofs:system; do
+		src="${f%%:*}"
+		dst="${f##*:}"
+		[ -f "${INPUT_DIR}/${src}" ] || {
+			echo "ERROR: ${src} missing in ${INPUT_DIR}" >&2
+			exit 1
+		}
+		cp -f "${INPUT_DIR}/${src}" "${STAGE_DIR}/.minime/${dst}"
+	done
 else
-	first_dtb="$(find "${STAGE_DIR}/.minime/devices" -name '*.dtb' 2>/dev/null | sort | head -1 || true)"
-	[ -n "$first_dtb" ] && cp -f "$first_dtb" "${STAGE_DIR}/.minime/dtb" ||
-		echo "WARNING: no DTBs found in ${INPUT_DIR}; boot.cmd will fall back to its built-in default_device" >&2
+	for f in Image:kernel initramfs.img:initramfs system.erofs:system; do
+		src="${f%%:*}"
+		dst="${f##*:}"
+		[ -f "${INPUT_DIR}/${src}" ] || {
+			echo "ERROR: ${src} missing in ${INPUT_DIR}" >&2
+			exit 1
+		}
+		cp -f "${INPUT_DIR}/${src}" "${STAGE_DIR}/.minime/${dst}"
+	done
+	cp -f "${INPUT_DIR}"/*.dtb "${STAGE_DIR}/.minime/devices/" 2>/dev/null || true
+
+	DEFAULT_DEVICE=""
+	if [ -f "${BOARD_DIR}/boot.env" ]; then
+		DEFAULT_DEVICE="$(grep '^DEFAULT_DEVICE=' "${BOARD_DIR}/boot.env" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+	fi
+	if [ -n "$DEFAULT_DEVICE" ] && [ -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" ]; then
+		cp -f "${STAGE_DIR}/.minime/devices/${DEFAULT_DEVICE}" "${STAGE_DIR}/.minime/dtb"
+	else
+		first_dtb="$(find "${STAGE_DIR}/.minime/devices" -name '*.dtb' 2>/dev/null | sort | head -1 || true)"
+		[ -n "$first_dtb" ] && cp -f "$first_dtb" "${STAGE_DIR}/.minime/dtb" ||
+			echo "WARNING: no DTBs found in ${INPUT_DIR}; boot.cmd will fall back to its built-in default_device" >&2
+	fi
 fi
 
 # --- 2. Stage UI payload (if present) ---------------------------------------
@@ -244,7 +262,31 @@ stage_bootloader_file() {
 	fi
 }
 
-if [ -d "$BOOTLOADER_DIR" ]; then
+if [ "${IS_H700_BSP}" -eq 1 ]; then
+	log_stage "staging H700 BSP boot blobs from ${BSP_BOOT_TAR}"
+	zstd -dc "${BSP_BOOT_TAR}" | tar -xf - -C "${BINARIES_DIR}"
+	python3 - "${BINARIES_DIR}/boot.img" "${INPUT_DIR}/initramfs.img" <<'PY'
+import gzip, struct, sys
+boot_img, initrd_path = sys.argv[1], sys.argv[2]
+with open(initrd_path, "rb") as f:
+    new_ramdisk = gzip.compress(f.read(), compresslevel=6)
+with open(boot_img, "r+b") as f:
+    hdr = bytearray(f.read(2048))
+    magic, ksize, _, rsize, _, ssize, _, _, psize = struct.unpack_from("<8sIIIIIIII", hdr, 0)
+    assert magic == b"ANDROID!", f"unexpected magic {magic!r}"
+    assert ssize == 0, f"unexpected second_size {ssize}"
+    kpages = (ksize + psize - 1) // psize
+    ramdisk_off = (1 + kpages) * psize
+    struct.pack_into("<I", hdr, 16, len(new_ramdisk))
+    f.seek(0)
+    f.write(hdr)
+    f.seek(ramdisk_off)
+    f.write(new_ramdisk)
+    pad = (-len(new_ramdisk)) % psize
+    if pad:
+        f.write(b"\0" * pad)
+PY
+elif [ -d "$BOOTLOADER_DIR" ]; then
 	if [ "${BOARD}" = "h700" ]; then
 		stage_bootloader_file "${BOOTLOADER_DIR}/u-boot-sunxi-with-spl.bin" \
 			"${BINARIES_DIR}/" || true

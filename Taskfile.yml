@@ -18,7 +18,12 @@ tasks:
     deps: [fetch-cores]
     cmds:
       - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-I /lib/ld-musl-aarch64.so.1" -o build/minime-linux-arm64 ./launcher
+      - |
+        INTERP="/lib/ld-musl-aarch64.so.1"
+        if [ "{{.BOARD}}" = "h700" ] && [ -f alpine/vendor/h700/boot/h700-bsp-boot.tar.zst ]; then
+          INTERP="/lib/ld-linux-aarch64.so.1"
+        fi
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-I ${INTERP}" -o build/minime-linux-arm64 ./launcher
       - make -C alpine build BOARD={{.BOARD}}
 
   simulate:
@@ -57,11 +62,15 @@ tasks:
         IMAGE_NAME="minime-alpine-${BOARD}.img.zst"
         IMAGE="build/downloads/${IMAGE_NAME}"
 
-        echo "Fetching latest ${IMAGE_NAME} from GitHub testing release..."
+        RELEASE_TAG="testing"
+        if [ "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)" = "bsp" ]; then
+          RELEASE_TAG="bsp-testing"
+        fi
+        echo "Fetching latest ${IMAGE_NAME} from GitHub ${RELEASE_TAG} release..."
         if command -v gh >/dev/null 2>&1; then
-          gh release download testing --repo jheronimus/minime --pattern "${IMAGE_NAME}" --dir build/downloads --clobber
+          gh release download "${RELEASE_TAG}" --repo jheronimus/minime --pattern "${IMAGE_NAME}" --dir build/downloads --clobber
         else
-          curl -fL --retry 3 -o "$IMAGE" "https://github.com/jheronimus/minime/releases/download/testing/${IMAGE_NAME}"
+          curl -fL --retry 3 -o "$IMAGE" "https://github.com/jheronimus/minime/releases/download/${RELEASE_TAG}/${IMAGE_NAME}"
         fi
 
         if [ ! -f "$IMAGE" ]; then
@@ -78,6 +87,7 @@ tasks:
 
           RAW_NUM="$(echo "$DISK" | sed -E 's/.*disk([0-9]+).*/\1/')"
           PART="/dev/disk${RAW_NUM}s1"
+          [ -b "/dev/disk${RAW_NUM}s5" ] && PART="/dev/disk${RAW_NUM}s5"
           echo "Mounting ${PART} to configure Wi-Fi..."
           diskutil mount "$PART" || true
 
@@ -101,6 +111,8 @@ tasks:
             esac
             printf '[Security]\nPassphrase=%s\n[Settings]\nAutoConnect=true\n' "${WIFI_PSK}" > "${MOUNT_POINT}/.minime/config/iwd/${PROFILE_NAME}.psk"
             chmod 600 "${MOUNT_POINT}/.minime/config/iwd/${PROFILE_NAME}.psk" 2>/dev/null || true
+            printf 'SSID=%s\nPassphrase=%s\n' "${WIFI_SSID}" "${WIFI_PSK}" > "${MOUNT_POINT}/.minime/config/wifi.cfg"
+            chmod 600 "${MOUNT_POINT}/.minime/config/wifi.cfg" 2>/dev/null || true
             sync
             diskutil unmountDisk force "$DISK" 2>/dev/null || diskutil eject "$DISK" 2>/dev/null || true
             echo "Deploy complete! SD card is ready to boot on ${BOARD}."

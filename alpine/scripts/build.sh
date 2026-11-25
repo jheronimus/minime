@@ -161,8 +161,12 @@ build_local_apks() {
 
 	# tinykernel is built separately because it drives the host kernel toolchain
 	# (not the cross-compiler) and is staged into the SD image directly, not
-	# installed as a rootfs package.
-	build_tinykernel
+	# installed as a rootfs package. Skip when using harvested BSP kernel.
+	if [ "${BOARD}" = "h700" ] && [ -f "${NEXTUI_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst" ]; then
+		log "h700 BSP mode: skipping tinykernel build"
+	else
+		build_tinykernel
+	fi
 
 	# Local packages that go into the rootfs. Keep this list in sync with the
 	# "Local packages" section of alpine/packages.txt; check-boards.sh does not
@@ -344,8 +348,12 @@ assemble_rootfs() {
 	chroot "${ALPINE_ROOTFS_DIR}" /bin/sh -c \
 		"passwd -d root 2>/dev/null || sed -i 's/^root:.*/root::0:0:root:\/root:\/bin\/sh/' /etc/shadow" 2>/dev/null || true
 
-	# Install the tinykernel modules into the immutable EROFS rootfs.
-	if [ -d "${ALPINE_OUTPUT_DIR}/boot/lib/modules" ]; then
+	# Install kernel modules into the immutable rootfs.
+	if [ "${BOARD}" = "h700" ] && [ -d "${NEXTUI_ROOT}/alpine/vendor/h700/modules" ]; then
+		mkdir -p "${ALPINE_ROOTFS_DIR}/lib/modules/4.9.170"
+		cp -a "${NEXTUI_ROOT}/alpine/vendor/h700/modules/." "${ALPINE_ROOTFS_DIR}/lib/modules/4.9.170/"
+		chroot "${ALPINE_ROOTFS_DIR}" /sbin/depmod -a 4.9.170 2>/dev/null || true
+	elif [ -d "${ALPINE_OUTPUT_DIR}/boot/lib/modules" ]; then
 		cp -a "${ALPINE_OUTPUT_DIR}/boot/lib/modules/." "${ALPINE_ROOTFS_DIR}/lib/modules/"
 		TK_KVER=$(find "${ALPINE_ROOTFS_DIR}/lib/modules" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | head -1)
 		TK_KVER=$(basename "$TK_KVER" 2>/dev/null || true)
@@ -353,6 +361,15 @@ assemble_rootfs() {
 			chroot "${ALPINE_ROOTFS_DIR}" \
 				/sbin/depmod -a "${TK_KVER}" 2>/dev/null || true
 		fi
+	fi
+
+	# Stage isolated glibc + libmali runtime for H700 BSP.
+	if [ "${BOARD}" = "h700" ] && [ -d "${NEXTUI_ROOT}/alpine/vendor/h700/glibc" ]; then
+		mkdir -p "${ALPINE_ROOTFS_DIR}/opt/glibc/lib" "${ALPINE_ROOTFS_DIR}/lib"
+		cp -a "${NEXTUI_ROOT}/alpine/vendor/h700/glibc/." "${ALPINE_ROOTFS_DIR}/opt/glibc/lib/"
+		[ -d "${NEXTUI_ROOT}/alpine/vendor/h700/lib" ] && \
+			cp -a "${NEXTUI_ROOT}/alpine/vendor/h700/lib/." "${ALPINE_ROOTFS_DIR}/opt/glibc/lib/"
+		ln -sf /opt/glibc/lib/ld-linux-aarch64.so.1 "${ALPINE_ROOTFS_DIR}/lib/ld-linux-aarch64.so.1"
 	fi
 
 	# Unmount bind-mounted pseudo filesystems.
@@ -375,11 +392,15 @@ build_system_image() {
 	TARGET_OUT="${ALPINE_DIR}/out/${BOARD}"
 	mkdir -p "${TARGET_OUT}"
 
-	cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${TARGET_OUT}/Image"
-	[ -f "${TARGET_OUT}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
+	if [ "${BOARD}" = "h700" ] && [ -f "${NEXTUI_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst" ]; then
+		log "h700 BSP mode: kernel and DTB come from alpine/vendor/h700/boot"
+	else
+		cp -f "${ALPINE_OUTPUT_DIR}/boot/Image" "${TARGET_OUT}/Image"
+		[ -f "${TARGET_OUT}/Image" ] || die "kernel Image missing in ${ALPINE_OUTPUT_DIR}/boot/"
 
-	[ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ] || die "kernel DTBs missing in ${ALPINE_OUTPUT_DIR}/boot/dtbs"
-	find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' -exec cp -f {} "${TARGET_OUT}/" \;
+		[ -d "${ALPINE_OUTPUT_DIR}/boot/dtbs" ] || die "kernel DTBs missing in ${ALPINE_OUTPUT_DIR}/boot/dtbs"
+		find "${ALPINE_OUTPUT_DIR}/boot/dtbs" -name '*.dtb' -exec cp -f {} "${TARGET_OUT}/" \;
+	fi
 
 	TARGET_DIR="${ALPINE_ROOTFS_DIR}" BINARIES_DIR="${TARGET_OUT}" \
 		"${ALPINE_DIR}/scripts/system-image.sh" -b "${BOARD}"

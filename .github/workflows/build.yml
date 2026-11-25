@@ -7,12 +7,14 @@ on:
     paths:
       - 'alpine/**'
       - 'launcher/**'
+      - 'vendor/**'
       - 'Taskfile.yml'
       - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'alpine/**'
       - 'launcher/**'
+      - 'vendor/**'
       - 'Taskfile.yml'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -56,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        board: [h700, rk3566]
+        board: [h700]
     env:
       BOARD: ${{ matrix.board }}
       FORCE_KERNEL_REBUILD: ${{ github.event.inputs.kernel == 'true' && '1' || '0' }}
@@ -113,20 +115,26 @@ jobs:
           key: alpine-v2-${{ matrix.board }}-${{ runner.arch }}-${{ hashFiles('alpine/**/APKBUILD', 'alpine/boards/*/tiny-*.config') }}-${{ github.run_id }}
 
       - name: Upload to Testing Release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/bsp'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! gh release view testing >/dev/null 2>&1; then
-            gh release create testing \
+          RELEASE_TAG="testing"
+          RELEASE_TITLE="Latest images and update packages"
+          if [ "${{ github.ref }}" = "refs/heads/bsp" ]; then
+            RELEASE_TAG="bsp-testing"
+            RELEASE_TITLE="BSP + libmali test images (h700)"
+          fi
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
               --prerelease \
-              --title "Latest images and update packages" \
+              --title "$RELEASE_TITLE" \
               --notes "Rolling release for testing on device" || true
           fi
           for f in "alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.img.zst" "alpine/out/${{ matrix.board }}/minime-alpine-${{ matrix.board }}.tar.zst"; do
             [ -f "$f" ] || continue
             for attempt in 1 2 3 4 5; do
-              if gh release upload testing "$f" --clobber; then
+              if gh release upload "$RELEASE_TAG" "$f" --clobber; then
                 break
               fi
               echo "Upload attempt $attempt failed, retrying..."

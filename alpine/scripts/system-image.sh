@@ -66,7 +66,11 @@ umount -f -R "${TARGET_DIR}/dev" 2>/dev/null || umount -lf "${TARGET_DIR}/dev" 2
 (cd "${TARGET_DIR}" && tar -cf - --exclude='./proc/*' --exclude='./sys/*' --exclude='./dev/*' .) |
 	(cd "${EROF_STAGE}" && tar -xf -)
 mkdir -p "${EROF_STAGE}/mnt/sdcard"
-mkfs.erofs -z lz4hc "${BINARIES_DIR}/system.erofs" "${EROF_STAGE}"
+if [ "${BOARD_NAME}" = "h700" ]; then
+	mksquashfs "${EROF_STAGE}" "${BINARIES_DIR}/system.erofs" -comp gzip -noappend
+else
+	mkfs.erofs -z lz4hc "${BINARIES_DIR}/system.erofs" "${EROF_STAGE}"
+fi
 rm -rf "${EROF_STAGE}"
 
 # Assemble the custom boot-stage initramfs.

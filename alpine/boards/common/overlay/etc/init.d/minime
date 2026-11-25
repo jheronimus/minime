@@ -23,6 +23,7 @@ start() {
 
 	export HOME=/mnt/sdcard
 	export XDG_RUNTIME_DIR=/run
+	export LD_LIBRARY_PATH="/opt/glibc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 	export PATH="/mnt/sdcard/.ui/bin:/usr/bin:/bin:/sbin:/usr/sbin:${PATH:-}"
 
 	BIN="/mnt/sdcard/minime"
