@@ -118,7 +118,11 @@ mkdir -p "$OUTPUT_DIR" "$BINARIES_DIR" "$ROOTPATH_TMP" \
 
 BSP_BOOT_TAR="${MINIME_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst"
 IS_H700_BSP=0
-if [ "${BOARD}" = "h700" ] && [ -f "${BSP_BOOT_TAR}" ]; then
+if [ "${BOARD}" = "h700" ]; then
+	[ -f "${BSP_BOOT_TAR}" ] || {
+		echo "ERROR: ${BSP_BOOT_TAR} missing" >&2
+		exit 1
+	}
 	IS_H700_BSP=1
 fi
 

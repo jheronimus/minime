@@ -44,3 +44,5 @@ local-repo/
 # unless the directory itself is un-ignored first.
 !bootloader/
 !bootloader/**
+!vendor/
+!vendor/**

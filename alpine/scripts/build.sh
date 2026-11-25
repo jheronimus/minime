@@ -162,7 +162,9 @@ build_local_apks() {
 	# tinykernel is built separately because it drives the host kernel toolchain
 	# (not the cross-compiler) and is staged into the SD image directly, not
 	# installed as a rootfs package. Skip when using harvested BSP kernel.
-	if [ "${BOARD}" = "h700" ] && [ -f "${NEXTUI_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst" ]; then
+	if [ "${BOARD}" = "h700" ]; then
+		[ -f "${NEXTUI_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst" ] || \
+			die "missing ${NEXTUI_ROOT}/alpine/vendor/h700/boot/h700-bsp-boot.tar.zst"
 		log "h700 BSP mode: skipping tinykernel build"
 	else
 		build_tinykernel
